@@ -9,6 +9,7 @@ import Sms from './channels/Sms.vue';
 import Whatsapp from './channels/Whatsapp.vue';
 import Line from './channels/Line.vue';
 import Telegram from './channels/Telegram.vue';
+import Instagram from './channels/Instagram.vue';
 import NotificaMe from './channels/NotificaMe.vue';
 
 const channelViewList = {
@@ -21,6 +22,7 @@ const channelViewList = {
   whatsapp: Whatsapp,
   line: Line,
   telegram: Telegram,
+  instagram: Instagram,
   notifica_me: NotificaMe,
 };
 

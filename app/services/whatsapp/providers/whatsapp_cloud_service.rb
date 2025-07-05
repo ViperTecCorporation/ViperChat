@@ -1,5 +1,7 @@
 class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseService
   def send_message(phone_number, message)
+    @message = message
+
     if message.attachments.present?
       send_attachment_message(phone_number, message)
     elsif message.content_type == 'input_select'
@@ -21,7 +23,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       }.to_json
     )
 
-    process_response(message, response)
+    process_response(response)
   end
 
   def sync_templates
@@ -112,7 +114,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       }.to_json
     )
 
-    process_response(message, response)
+    process_response(response)
   end
 
   def format_content(message)
@@ -120,7 +122,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     config = whatsapp_channel.provider_config['send_agent_name']
     return message.content if !feature && !config
 
-    message.sender_name&.present? ? "*#{message&.sender_name}*: #{message.content}" : message.content
+    message.sender_name&.present? ? "*#{message&.sender_name}*: #{message.outgoing_content}" : message.outgoing_content
   end
 
   def send_attachment_message(phone_number, message)
@@ -129,7 +131,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     type_content = {
       'link': attachment.download_url
     }
-    type_content['caption'] = message.content unless %w[audio sticker].include?(type)
+    type_content['caption'] = message.outgoing_content unless %w[audio sticker].include?(type)
     type_content['filename'] = attachment.file.filename if type == 'document'
     response = HTTParty.post(
       "#{phone_id_path}/messages",
@@ -143,17 +145,12 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       }.to_json
     )
 
-    process_response(message, response)
+    process_response(response)
   end
 
-  def process_response(message, response)
-    if response.success?
-      response['messages'].first['id']
-    else
-      Rails.logger.error response.body
-      message.update!(status: :failed, external_error: response.body)
-      nil
-    end
+  def error_message(response)
+    # https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes/#sample-response
+    response.parsed_response&.dig('error', 'message')
   end
 
   def template_body_parameters(template_info)
@@ -193,6 +190,6 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       }.to_json
     )
 
-    process_response(message, response)
+    process_response(response)
   end
 end

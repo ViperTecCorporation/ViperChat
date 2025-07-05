@@ -22,13 +22,15 @@ import {
 // https://tanstack.com/virtual/latest/docs/framework/vue/examples/variable
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import ChatListHeader from './ChatListHeader.vue';
-import ConversationAdvancedFilter from './widgets/conversation/ConversationAdvancedFilter.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import ConversationFilter from 'next/filter/ConversationFilter.vue';
+import SaveCustomView from 'next/filter/SaveCustomView.vue';
 import ChatTypeTabs from './widgets/ChatTypeTabs.vue';
 import ConversationItem from './ConversationItem.vue';
-import AddCustomViews from 'dashboard/routes/dashboard/customviews/AddCustomViews.vue';
 import DeleteCustomViews from 'dashboard/routes/dashboard/customviews/DeleteCustomViews.vue';
 import ConversationBulkActions from './widgets/conversation/conversationBulkActions/Index.vue';
 import IntersectionObserver from './IntersectionObserver.vue';
+import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAlert } from 'dashboard/composables';
@@ -37,8 +39,14 @@ import { useBulkActions } from 'dashboard/composables/chatlist/useBulkActions';
 import { useFilter } from 'shared/composables/useFilter';
 import { useTrack } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
+import {
+  useCamelCase,
+  useSnakeCase,
+} from 'dashboard/composables/useTransformKeys';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useEventListener } from '@vueuse/core';
+
+import { emitter } from 'shared/helpers/mitt';
 
 import wootConstants from 'dashboard/constants/globals';
 import advancedFilterOptions from './widgets/conversation/advancedFilterItems';
@@ -51,12 +59,12 @@ import {
   isOnMentionsView,
   isOnUnattendedView,
 } from '../store/modules/conversations/helpers/actionHelpers';
-import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
-import { emitter } from 'shared/helpers/mitt';
 import {
   getUserPermissions,
   filterItemsByPermission,
 } from 'dashboard/helper/permissionsHelper.js';
+import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
+import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
@@ -75,10 +83,13 @@ const emit = defineEmits(['conversationLoad']);
 const { uiSettings } = useUISettings();
 const { t } = useI18n();
 const router = useRouter();
+const route = useRoute();
 const store = useStore();
 
 const conversationListRef = ref(null);
 const conversationDynamicScroller = ref(null);
+
+provide('contextMenuElementTarget', conversationDynamicScroller);
 
 const activeAssigneeTab = ref(wootConstants.ASSIGNEE_TYPE.ME);
 const activeStatus = ref(wootConstants.STATUS_TYPE.OPEN);
@@ -100,14 +111,14 @@ const advancedFilterTypes = ref(
 );
 
 const currentUser = useMapGetter('getCurrentUser');
-const chatLists = useMapGetter('getAllConversations');
+const chatLists = useMapGetter('getFilteredConversations');
 const mineChatsList = useMapGetter('getMineChats');
 const allChatList = useMapGetter('getAllStatusChats');
 const unAssignedChatsList = useMapGetter('getUnAssignedChats');
 const chatListLoading = useMapGetter('getChatListLoadingStatus');
 const activeInbox = useMapGetter('getSelectedInbox');
 const conversationStats = useMapGetter('conversationStats/getStats');
-const appliedFilters = useMapGetter('getAppliedConversationFilters');
+const appliedFilters = useMapGetter('getAppliedConversationFiltersV2');
 const folders = useMapGetter('customViews/getConversationCustomViews');
 const agentList = useMapGetter('agents/getAgents');
 const teamsList = useMapGetter('teams/getTeams');
@@ -365,6 +376,14 @@ const conversationList = computed(() => {
   } else {
     localConversationList = [...chatLists.value];
   }
+
+  if (activeFolder.value) {
+    const { payload } = activeFolder.value.query;
+    localConversationList = localConversationList.filter(conversation => {
+      return matchesFilters(conversation, payload);
+    });
+  }
+
   return localConversationList;
 });
 
@@ -394,10 +413,11 @@ function setFiltersFromUISettings() {
   const { conversations_filter_by: filterBy = {} } = uiSettings.value;
   const { status, order_by: orderBy } = filterBy;
   activeStatus.value = status || wootConstants.STATUS_TYPE.OPEN;
-  activeSortBy.value =
-    Object.keys(wootConstants.SORT_BY_TYPE).find(
-      sortField => sortField === orderBy
-    ) || wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC;
+  activeSortBy.value = Object.values(wootConstants.SORT_BY_TYPE).includes(
+    orderBy
+  )
+    ? orderBy
+    : wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC;
 }
 
 function emitConversationLoaded() {
@@ -417,6 +437,7 @@ function emitConversationLoaded() {
 }
 
 function fetchFilteredConversations(payload) {
+  payload = useSnakeCase(payload);
   let page = currentFiltersPage.value + 1;
   store
     .dispatch('fetchFilteredConversations', {
@@ -429,6 +450,7 @@ function fetchFilteredConversations(payload) {
 }
 
 function fetchSavedFilteredConversations(payload) {
+  payload = useSnakeCase(payload);
   let page = currentFiltersPage.value + 1;
   store
     .dispatch('fetchFilteredConversations', {
@@ -439,6 +461,7 @@ function fetchSavedFilteredConversations(payload) {
 }
 
 function onApplyFilter(payload) {
+  payload = useSnakeCase(payload);
   resetBulkActions();
   foldersQuery.value = filterQueryGenerator(payload);
   store.dispatch('conversationPage/reset');
@@ -452,10 +475,11 @@ function closeAdvanceFiltersModal() {
 }
 
 function onUpdateSavedFilter(payload, folderName) {
+  const transformedPayload = useSnakeCase(payload);
   const payloadData = {
     ...unref(activeFolder),
     name: unref(folderName),
-    query: filterQueryGenerator(payload),
+    query: filterQueryGenerator(transformedPayload),
   };
   store.dispatch('customViews/update', payloadData);
   closeAdvanceFiltersModal();
@@ -496,6 +520,12 @@ function setParamsForEditFolderModal() {
     campaigns: campaigns.value,
     languages: languages,
     countries: countries,
+    priority: [
+      { id: 'low', name: t('CONVERSATION.PRIORITY.OPTIONS.LOW') },
+      { id: 'medium', name: t('CONVERSATION.PRIORITY.OPTIONS.MEDIUM') },
+      { id: 'high', name: t('CONVERSATION.PRIORITY.OPTIONS.HIGH') },
+      { id: 'urgent', name: t('CONVERSATION.PRIORITY.OPTIONS.URGENT') },
+    ],
     filterTypes: advancedFilterTypes.value,
     allCustomAttributes: conversationCustomAttributes.value,
   };
@@ -507,17 +537,19 @@ function initializeExistingFilterToModal() {
     currentUserDetails.value,
     activeAssigneeTab.value
   );
+  // TODO: Remove the usage of useCamelCase after migrating useFilter to camelcase
   if (statusFilter) {
-    appliedFilter.value = [...appliedFilter.value, statusFilter];
+    appliedFilter.value = [...appliedFilter.value, useCamelCase(statusFilter)];
   }
 
+  // TODO: Remove the usage of useCamelCase after migrating useFilter to camelcase
   const otherFilters = initializeInboxTeamAndLabelFilterToModal(
     props.conversationInbox,
     inbox.value,
     props.teamId,
     activeTeam.value,
     props.label
-  );
+  ).map(useCamelCase);
 
   appliedFilter.value = [...appliedFilter.value, ...otherFilters];
 }
@@ -532,26 +564,46 @@ function initializeFolderToFilterModal(newActiveFolder) {
   const query = unref(newActiveFolder)?.query?.payload;
   if (!Array.isArray(query)) return;
 
-  const newFilters = query.map(filter => ({
-    attribute_key: filter.attribute_key,
-    attribute_model: filter.attribute_model,
-    filter_operator: filter.filter_operator,
-    values: Array.isArray(filter.values)
-      ? generateValuesForEditCustomViews(filter, setParamsForEditFolderModal())
-      : [],
-    query_operator: filter.query_operator,
-    custom_attribute_type: filter.custom_attribute_type,
-  }));
+  const newFilters = query.map(filter => {
+    const transformed = useCamelCase(filter);
+    const values = Array.isArray(transformed.values)
+      ? generateValuesForEditCustomViews(
+          useSnakeCase(filter),
+          setParamsForEditFolderModal()
+        )
+      : [];
+
+    return {
+      attributeKey: transformed.attributeKey,
+      attributeModel: transformed.attributeModel,
+      customAttributeType: transformed.customAttributeType,
+      filterOperator: transformed.filterOperator,
+      queryOperator: transformed.queryOperator ?? 'and',
+      values,
+    };
+  });
 
   appliedFilter.value = [...appliedFilter.value, ...newFilters];
 }
 
+function initalizeAppliedFiltersToModal() {
+  appliedFilter.value = [...appliedFilters.value];
+}
+
 function onToggleAdvanceFiltersModal() {
+  if (showAdvancedFilters.value === true) {
+    closeAdvanceFiltersModal();
+    return;
+  }
+
   if (!hasAppliedFilters.value && !hasActiveFolders.value) {
     initializeExistingFilterToModal();
   }
   if (hasActiveFolders.value) {
     initializeFolderToFilterModal(activeFolder.value);
+  }
+  if (hasAppliedFilters.value) {
+    initalizeAppliedFiltersToModal();
   }
 
   showAdvancedFilters.value = true;
@@ -642,6 +694,30 @@ function openLastItemAfterDeleteInFolder() {
   }
 }
 
+function redirectToConversationList() {
+  const {
+    params: { accountId, inbox_id: inboxId, label, teamId },
+    name,
+  } = route;
+
+  let conversationType = '';
+  if (isOnMentionsView({ route: { name } })) {
+    conversationType = 'mention';
+  } else if (isOnUnattendedView({ route: { name } })) {
+    conversationType = 'unattended';
+  }
+  router.push(
+    conversationListPageURL({
+      accountId,
+      conversationType: conversationType,
+      customViewId: props.foldersId,
+      inboxId,
+      label,
+      teamId,
+    })
+  );
+}
+
 async function assignPriority(priority, conversationId = null) {
   store.dispatch('setCurrentChatPriority', {
     priority,
@@ -666,30 +742,21 @@ async function markAsUnread(conversationId) {
     await store.dispatch('markMessagesUnread', {
       id: conversationId,
     });
-    const {
-      params: { accountId, inbox_id: inboxId, label, teamId },
-      name,
-    } = useRoute();
-    let conversationType = '';
-    if (isOnMentionsView({ route: { name } })) {
-      conversationType = 'mention';
-    } else if (isOnUnattendedView({ route: { name } })) {
-      conversationType = 'unattended';
-    }
-    router.push(
-      conversationListPageURL({
-        accountId,
-        conversationType: conversationType,
-        customViewId: props.foldersId,
-        inboxId,
-        label,
-        teamId,
-      })
-    );
+    redirectToConversationList();
   } catch (error) {
     // Ignore error
   }
 }
+async function markAsRead(conversationId) {
+  try {
+    await store.dispatch('markMessagesRead', {
+      id: conversationId,
+    });
+  } catch (error) {
+    // Ignore error
+  }
+}
+
 async function onAssignTeam(team, conversationId = null) {
   try {
     await store.dispatch('assignTeam', {
@@ -751,6 +818,26 @@ onMounted(() => {
   }
 });
 
+const deleteConversationDialogRef = ref(null);
+const selectedConversationId = ref(null);
+
+async function deleteConversation() {
+  try {
+    await store.dispatch('deleteConversation', selectedConversationId.value);
+    redirectToConversationList();
+    selectedConversationId.value = null;
+    deleteConversationDialogRef.value.close();
+    useAlert(t('CONVERSATION.SUCCESS_DELETE_CONVERSATION'));
+  } catch (error) {
+    useAlert(t('CONVERSATION.FAIL_DELETE_CONVERSATION'));
+  }
+}
+
+const handleDelete = conversationId => {
+  selectedConversationId.value = conversationId;
+  deleteConversationDialogRef.value.open();
+};
+
 provide('selectConversation', selectConversation);
 provide('deSelectConversation', deSelectConversation);
 provide('assignAgent', onAssignAgent);
@@ -759,8 +846,10 @@ provide('assignLabels', onAssignLabels);
 provide('updateConversationStatus', toggleConversationStatus);
 provide('toggleContextMenu', onContextMenuToggle);
 provide('markAsUnread', markAsUnread);
+provide('markAsRead', markAsRead);
 provide('assignPriority', assignPriority);
 provide('isConversationSelected', isConversationSelected);
+provide('deleteConversation', handleDelete);
 
 watch(activeTeam, () => resetAndFetchData());
 
@@ -797,10 +886,10 @@ watch(conversationFilters, (newVal, oldVal) => {
 
 <template>
   <div
-    class="flex flex-col flex-shrink-0 overflow-hidden border-r conversations-list-wrap rtl:border-r-0 rtl:border-l border-slate-50 dark:border-slate-800/50"
+    class="flex flex-col flex-shrink-0 bg-n-solid-1 conversations-list-wrap"
     :class="[
       { hidden: !showConversationList },
-      isOnExpandedLayout ? 'basis-full' : 'flex-basis-clamp',
+      isOnExpandedLayout ? 'basis-full' : 'w-[340px] 2xl:w-[412px]',
     ]"
   >
     <slot />
@@ -810,6 +899,9 @@ watch(conversationFilters, (newVal, oldVal) => {
       :has-hide-filters-for-agents="hideFiltersForAgents"
       :has-active-folders="hasActiveFolders"
       :active-status="activeStatus"
+      :is-on-expanded-layout="isOnExpandedLayout"
+      :conversation-stats="conversationStats"
+      :is-list-loading="chatListLoading && !conversationList.length"
       @add-folders="onClickOpenAddFoldersModal"
       @delete-folders="onClickOpenDeleteFoldersModal"
       @filters-modal="onToggleAdvanceFiltersModal"
@@ -817,12 +909,17 @@ watch(conversationFilters, (newVal, oldVal) => {
       @basic-filter-change="onBasicFilterChange"
     />
 
-    <AddCustomViews
+    <TeleportWithDirection
       v-if="showAddFoldersModal"
-      :custom-views-query="foldersQuery"
-      :open-last-saved-item="openLastSavedItemInFolder"
-      @close="onCloseAddFoldersModal"
-    />
+      to="#saveFilterTeleportTarget"
+    >
+      <SaveCustomView
+        v-model="appliedFilter"
+        :custom-views-query="foldersQuery"
+        :open-last-saved-item="openLastSavedItemInFolder"
+        @close="onCloseAddFoldersModal"
+      />
+    </TeleportWithDirection>
 
     <DeleteCustomViews
       v-if="showDeleteFoldersModal"
@@ -837,6 +934,7 @@ watch(conversationFilters, (newVal, oldVal) => {
       v-if="!hasAppliedFiltersOrActiveFolders"
       :items="assigneeTabItems"
       :active-tab="activeAssigneeTab"
+      is-compact
       @chat-tab-change="updateAssigneeTab"
     />
 
@@ -918,30 +1016,31 @@ watch(conversationFilters, (newVal, oldVal) => {
         </template>
       </DynamicScroller>
     </div>
-    <woot-modal
-      v-model:show="showAdvancedFilters"
-      :on-close="closeAdvanceFiltersModal"
-      size="medium"
+    <Dialog
+      ref="deleteConversationDialogRef"
+      type="alert"
+      :title="
+        $t('CONVERSATION.DELETE_CONVERSATION.TITLE', {
+          conversationId: selectedConversationId,
+        })
+      "
+      :description="$t('CONVERSATION.DELETE_CONVERSATION.DESCRIPTION')"
+      :confirm-button-label="$t('CONVERSATION.DELETE_CONVERSATION.CONFIRM')"
+      @confirm="deleteConversation"
+      @close="selectedConversationId = null"
+    />
+    <TeleportWithDirection
+      v-if="showAdvancedFilters"
+      to="#conversationFilterTeleportTarget"
     >
-      <ConversationAdvancedFilter
-        v-if="showAdvancedFilters"
-        :initial-filter-types="advancedFilterTypes"
-        :initial-applied-filters="appliedFilter"
-        :active-folder-name="activeFolderName"
-        :on-close="closeAdvanceFiltersModal"
+      <ConversationFilter
+        v-model="appliedFilter"
+        :folder-name="activeFolderName"
         :is-folder-view="hasActiveFolders"
         @apply-filter="onApplyFilter"
         @update-folder="onUpdateSavedFilter"
+        @close="closeAdvanceFiltersModal"
       />
-    </woot-modal>
+    </TeleportWithDirection>
   </div>
 </template>
-
-<style scoped>
-@tailwind components;
-@layer components {
-  .flex-basis-clamp {
-    flex-basis: clamp(20rem, 4vw + 21.25rem, 27.5rem);
-  }
-}
-</style>

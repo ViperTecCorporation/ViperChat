@@ -17,6 +17,9 @@ export default {
     hasFbConfigured() {
       return window.chatwootConfig?.fbAppId;
     },
+    hasInstagramConfigured() {
+      return window.chatwootConfig?.instagramAppId;
+    },
     isActive() {
       const { key } = this.channel;
       if (Object.keys(this.enabledFeatures).length === 0) {
@@ -44,7 +47,22 @@ export default {
         return this.enabledFeatures.channel_api;
       }
 
-      return ['twilio', 'sms', 'telegram', 'line'].includes(key);
+      if (key === 'instagram') {
+        return (
+          this.enabledFeatures.channel_instagram && this.hasInstagramConfigured
+        );
+      }
+
+      return [
+        'website',
+        'twilio',
+        'api',
+        'whatsapp',
+        'sms',
+        'telegram',
+        'line',
+        'instagram',
+      ].includes(key);
     },
   },
   methods: {

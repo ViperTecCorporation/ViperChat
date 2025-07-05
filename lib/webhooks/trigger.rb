@@ -45,7 +45,7 @@ class Webhooks::Trigger
   end
 
   def update_message_status(error)
-    message.update!(status: :failed, external_error: error.message)
+    Messages::StatusUpdateService.new(message, 'failed', error.message).perform
   end
 
   def message

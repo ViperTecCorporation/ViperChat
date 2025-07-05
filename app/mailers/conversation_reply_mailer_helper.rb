@@ -17,36 +17,42 @@ module ConversationReplyMailerHelper
     google_smtp_settings
     set_delivery_method
 
-    Rails.logger.info("Email sent from #{email_from} to #{to_emails} with subject #{mail_subject}")
+    # Email type detection logic:
+    # - email_reply: Sets @message with a single message
+    # - Other actions: Set @messages with a collection of messages
+    #
+    # So this check implicitly determines we're handling an email_reply
+    # and not one of the other email types (summary, transcript, etc.)
+    process_attachments_as_files_for_email_reply if @message&.attachments.present?
+    mail(@options)
+  end
 
-    if @message.attachments.present?
-      @options[:attachments] = []
+  def process_attachments_as_files_for_email_reply
+    # Attachment processing for direct email replies (when replying to a single message)
+    #
+    # How attachments are handled:
+    # 1. Total file size (<20MB): Added directly to the email as proper attachments
+    # 2. Total file size (>20MB): Added to @large_attachments to be displayed as links in the email
 
-      @message.attachments.each do |attachment|
-        raw_data = attachment.file.download
-        attachment_name = attachment.file.filename.to_s
-        temp_dir = Rails.root.join('tmp/uploads')
-        FileUtils.mkdir_p(temp_dir)
-        temp_file_path = File.join(temp_dir, attachment_name)
-        File.write(temp_file_path, raw_data, mode: 'wb')
-        temp_file_path
+    @options[:attachments] = []
+    @large_attachments = []
+    current_total_size = 0
 
-        # Get the size of the file before downloading
-        file_size = raw_data.bytesize
+    @message.attachments.each do |attachment|
+      raw_data = attachment.file.download
+      attachment_name = attachment.file.filename.to_s
+      file_size = raw_data.bytesize
 
-        if file_size < 25.megabytes
-          # Store the temp file path and attachment name
-          @options[:attachments] << { name: attachment_name, path: temp_file_path }
-          mail.attachments[attachment_name] = File.read(temp_file_path)
-
-          Rails.logger.info("Attachment saved to #{temp_file_path}.")
-        else
-          Rails.logger.warn("Attachment #{attachment_name} is larger than 25MB and will be sent as a link")
-        end
+      # Attach files directly until we hit 20MB total
+      # After reaching 20MB, send remaining files as links
+      if current_total_size + file_size <= 20.megabytes
+        mail.attachments[attachment_name] = raw_data
+        @options[:attachments] << { name: attachment_name }
+        current_total_size += file_size
+      else
+        @large_attachments << attachment
       end
     end
-
-    mail(@options)
   end
 
   private
@@ -79,6 +85,8 @@ module ConversationReplyMailerHelper
       tls: false,
       enable_starttls_auto: true,
       openssl_verify_mode: 'none',
+      open_timeout: 15,
+      read_timeout: 15,
       authentication: 'xoauth2'
     }
   end

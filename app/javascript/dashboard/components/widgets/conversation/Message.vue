@@ -27,6 +27,7 @@ import { emitter } from 'shared/helpers/mitt';
 
 // stores and apis
 import { mapGetters } from 'vuex';
+import NextButton from 'dashboard/components-next/button/Button.vue';
 
 export default {
   components: {
@@ -43,6 +44,7 @@ export default {
     InstagramStory,
     InstagramStoryReply,
     Spinner,
+    NextButton,
   },
   props: {
     data: {
@@ -193,8 +195,16 @@ export default {
         copy: this.hasText,
         delete:
           !this.hideDeleteMessageForAgents &&
-          (this.hasText || this.hasAttachments),
-        cannedResponse: this.isOutgoing && this.hasText,
+          (this.hasText || this.hasAttachments) &&
+          !this.isMessageDeleted &&
+          !this.isFailed,
+        cannedResponse:
+          this.isOutgoing && this.hasText && !this.isMessageDeleted,
+        copyLink: !this.isFailed || !this.isProcessing,
+        translate:
+          (!this.isFailed || !this.isProcessing) &&
+          !this.isMessageDeleted &&
+          this.hasText,
         replyTo: !this.data.private && this.inboxSupportsReplyTo.outgoing,
       };
     },
@@ -345,7 +355,7 @@ export default {
       return !this.sender.type || this.sender.type === 'agent_bot';
     },
     shouldShowContextMenu() {
-      return !(this.isFailed || this.isPending || this.isUnsupported);
+      return !this.isUnsupported;
     },
     showAvatar() {
       if (this.isOutgoing || this.isTemplate) {
@@ -475,12 +485,12 @@ export default {
         "
         class="message-failed--alert"
       >
-        <woot-button
+        <NextButton
           v-tooltip.top-end="$t('CONVERSATION.TRY_AGAIN')"
-          size="tiny"
-          color-scheme="alert"
-          variant="clear"
-          icon="arrow-clockwise"
+          ghost
+          xs
+          ruby
+          icon="i-lucide-refresh-ccw"
           @click="retrySendMessage"
         />
       </div>
@@ -684,10 +694,10 @@ export default {
     }
 
     &.is-failed {
-      @apply bg-red-200 dark:bg-red-200;
+      @apply bg-n-ruby-4 dark:bg-n-ruby-4 text-n-slate-12;
 
       .message-text--metadata .time {
-        @apply text-red-50 dark:text-red-50;
+        @apply text-n-ruby-12 dark:text-n-ruby-12;
       }
     }
   }
@@ -748,7 +758,7 @@ li.right {
   }
 
   .wrap.is-failed {
-    @apply flex items-end ml-auto;
+    @apply flex items-end ltr:ml-auto rtl:mr-auto;
   }
 }
 
