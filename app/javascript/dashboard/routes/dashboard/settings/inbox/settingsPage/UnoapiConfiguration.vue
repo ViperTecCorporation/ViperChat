@@ -1,3 +1,202 @@
+<script type="module">
+import { io } from 'socket.io-client';
+import { useVuelidate } from '@vuelidate/core';
+import { useAlert } from 'dashboard/composables';
+import inboxMixin from 'shared/mixins/inboxMixin';
+import { required } from '@vuelidate/validators';
+import { mapGetters } from 'vuex';
+// import { createConsumer } from '@rails/actioncable';
+import NextButton from 'dashboard/components-next/button/Button.vue';
+
+export default {
+  components: { NextButton },
+  mixins: [inboxMixin],
+  props: {
+    inbox: {
+      type: Object,
+      default: () => ({}),
+    },
+  },
+  setup() {
+    return { v$: useVuelidate() };
+  },
+  data() {
+    return {
+      apiKey: '',
+      wavoipToken: '',
+      url: 'https://unoapi.cloud',
+      ignoreGroupMessages: true,
+      ignoreHistoryMessages: true,
+      webhookSendNewMessages: true,
+      sendAgentName: true,
+      ignoreBroadcastStatuses: true,
+      ignoreBroadcastMessages: true,
+      ignoreOwnMessages: true,
+      ignoreYourselfMessages: true,
+      sendConnectionStatus: true,
+      notifyFailedMessages: true,
+      composingMessage: true,
+      sendReactionAsReply: true,
+      sendProfilePicture: true,
+      connect: false,
+      disconnect: false,
+      qrcode: '',
+      notice: '',
+      rejectCalls: '',
+      messageCallsWebhook: '',
+    };
+  },
+  computed: {
+    ...mapGetters({ uiFlags: 'inboxes/getUIFlags' }),
+  },
+  validations: {
+    apiKey: { required },
+    ignoreGroupMessages: { required },
+    ignoreHistoryMessages: { required },
+    webhookSendNewMessages: { required },
+    sendAgentName: { required },
+    url: { required },
+    ignoreBroadcastStatuses: { required },
+    ignoreBroadcastMessages: { required },
+    ignoreOwnMessages: { required },
+    ignoreYourselfMessages: { required },
+    sendConnectionStatus: { required },
+    notifyFailedMessages: { required },
+    composingMessage: { required },
+    sendReactionAsReply: { required },
+    sendProfilePicture: { required },
+    rejectCalls: { required },
+    messageCallsWebhook: { required },
+    wavoipToken: { required },
+  },
+  watch: {
+    inbox() {
+      this.setDefaults();
+    },
+  },
+  mounted() {
+    this.setDefaults();
+    this.listenerQrCode();
+  },
+  methods: {
+    setDefaults() {
+      this.apiKey = this.inbox.provider_config.api_key;
+      this.wavoipToken = this.inbox.provider_config.wavoip_token;
+      this.url = this.inbox.provider_config.url;
+      this.ignoreGroupMessages = this.inbox.provider_config.ignore_group_messages;
+      this.ignoreHistoryMessages = this.inbox.provider_config.ignore_history_messages;
+      this.webhookSendNewMessages = this.inbox.provider_config.webhook_send_new_messages;
+      this.sendAgentName = this.inbox.provider_config.send_agent_name;
+      this.ignoreBroadcastStatuses = this.inbox.provider_config.ignore_broadcast_statuses;
+      this.ignoreBroadcastMessages = this.inbox.provider_config.ignore_broadcast_messages;
+      this.ignoreOwnMessages = this.inbox.provider_config.ignore_own_messages;
+      this.ignoreYourselfMessages = this.inbox.provider_config.ignore_yourself_messages;
+      this.sendConnectionStatus = this.inbox.provider_config.send_connection_status;
+      this.notifyFailedMessages = this.inbox.provider_config.notify_failed_messages;
+      this.composingMessage = this.inbox.provider_config.composing_message;
+      this.sendReactionAsReply = this.inbox.provider_config.send_reaction_as_reply;
+      this.sendProfilePicture = this.inbox.provider_config.send_profile_picture;
+      this.rejectCalls = this.inbox.provider_config.reject_calls;
+      this.messageCallsWebhook = this.inbox.provider_config.message_calls_webhook;
+      this.connect = false;
+      this.disconnect = false;
+    },
+    listenerQrCode() {
+      const url = `${this.inbox.provider_config.url}`
+        .replace('https', 'wss')
+        .replace('http', 'ws');
+      const socket = io(url, { path: '/ws' });
+      socket.on('broadcast', data => {
+        console.log('data', data)
+        if (data.phone !== this.inbox.provider_config.phone_number_id) {
+          this.notice = `Received message from ${data.phone} but the current number in chatwoot is ${this.inbox.provider_config.phone_number_id}`;
+          this.qrcode = '';
+          // broadcast phone is other
+          return;
+        }
+        if (data.type === 'status') {
+          this.notice = data.content;
+          this.qrcode = '';
+        } else if (data.type === 'qrcode') {
+          this.qrcode = data.content;
+          this.notice = '';
+        }
+      });
+      // const url = `${this.inbox.provider_config.url}/ws`;
+      // const cable = createConsumer(url);
+      // cable.subscriptions.create(
+      //   {
+      //     channel: 'broadcast',
+      //     phone_number: this.inbox.provider_config.phone_number_id,
+      //   },
+      //   {
+      //     broadcast: data => {
+      //       console.log('broadcast');
+      //       this.qrcode = data;
+      //     },
+      //     connected: () => {
+      //       console.log('connected');
+      //       this.qrcode = 'waiting for qrcode';
+      //     },
+      //   }
+      // );
+    },
+    generateToken() {
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let token = '';
+      for (let i = 0; i < 64; i++) {
+        token += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+
+      if (this.apiKey) {
+        if (confirm('A token already exists. Do you want to replace it?')) {
+          this.apiKey = token;
+        }
+      } else {
+        this.apiKey = token;
+      }
+    },
+    async updateInbox() {
+      try {
+        const payload = {
+          id: this.inbox.id,
+          formData: false,
+          channel: {
+            provider_config: {
+              ...this.inbox.provider_config,
+              api_key: this.apiKey,
+              wavoip_token: this.wavoipToken,
+              ignore_history_messages: this.ignoreHistoryMessages,
+              ignore_group_messages: this.ignoreGroupMessages,
+              send_agent_name: this.sendAgentName,
+              webhook_send_new_messages: this.webhookSendNewMessages,
+              url: this.url,
+              ignore_broadcast_statuses: this.ignoreBroadcastStatuses,
+              ignore_broadcast_messages: this.ignoreBroadcastMessages,
+              ignore_own_messages: this.ignoreOwnMessages,
+              ignore_yourself_messages: this.ignoreYourselfMessages,
+              send_connection_status: this.sendConnectionStatus,
+              notify_failed_messages: this.notifyFailedMessages,
+              composing_message: this.composingMessage,
+              send_reaction_as_reply: this.sendReactionAsReply,
+              send_profile_picture: this.sendProfilePicture,
+              reject_calls: this.rejectCalls,
+              message_calls_webhook: this.messageCallsWebhook,
+              connect: this.connect,
+              disconnect: this.disconnect,
+            },
+          },
+        };
+        await this.$store.dispatch('inboxes/updateInbox', payload);
+        useAlert(this.$t('INBOX_MGMT.EDIT.API.SUCCESS_MESSAGE'));
+      } catch (error) {
+        useAlert(this.$t('INBOX_MGMT.EDIT.API.ERROR_MESSAGE'));
+      }
+    },
+  },
+};
+</script>
+
 <template>
   <div class="my-2 mx-8 text-base">
     <form class="flex flex-col" @submit.prevent="updateInbox()">
@@ -274,225 +473,33 @@
       </div>
 
       <div class="my-4 w-auto">
-        <woot-submit-button
-          :loading="uiFlags.isUpdating"
-          :button-text="`${$t(
+        <NextButton
+          :is-loading="uiFlags.isCreating"
+          solid
+          blue
+          :label="`${$t(
           'INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_SECTION_UPDATE_BUTTON'
           )} and ${$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_CONNECT')}`"
           @click="connect = true"
         />
-        <woot-submit-button
-          :loading="uiFlags.isUpdating"
-          :button-text="$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_DISCONNECT')"
+        <NextButton
+          :is-loading="uiFlags.isCreating"
+          solid
+          blue
+          :label="$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_DISCONNECT')"
           @click="disconnect = true"
         />
-        <woot-submit-button
-          :loading="uiFlags.isUpdating"          
-          :button-text="$t('INBOX_MGMT.ADD.WHATSAPP.GENERATE_API_KEY.LABEL')"
+        <NextButton
+          :is-loading="uiFlags.isCreating"
+          solid
+          blue
+          :label="$t('INBOX_MGMT.ADD.WHATSAPP.GENERATE_API_KEY.LABEL')"
           @click="generateToken"
         />
       </div>
     </form>
   </div>
 </template>
-
-<script type="module">
-import { io } from 'socket.io-client';
-import { useVuelidate } from '@vuelidate/core';
-import { useAlert } from 'dashboard/composables';
-import inboxMixin from 'shared/mixins/inboxMixin';
-import { required } from '@vuelidate/validators';
-import { mapGetters } from 'vuex';
-// import { createConsumer } from '@rails/actioncable';
-
-export default {
-  setup() {
-    return { v$: useVuelidate() };
-  },
-  components: {},
-  mixins: [inboxMixin],
-  props: {
-    inbox: {
-      type: Object,
-      default: () => ({}),
-    },
-  },
-  data() {
-    return {
-      apiKey: '',
-      wavoipToken: '',
-      url: 'https://unoapi.cloud',
-      ignoreGroupMessages: true,
-      ignoreHistoryMessages: true,
-      webhookSendNewMessages: true,
-      sendAgentName: true,
-      ignoreBroadcastStatuses: true,
-      ignoreBroadcastMessages: true,
-      ignoreOwnMessages: true,
-      ignoreYourselfMessages: true,
-      sendConnectionStatus: true,
-      notifyFailedMessages: true,
-      composingMessage: true,
-      sendReactionAsReply: true,
-      sendProfilePicture: true,       
-      connect: false,
-      disconnect: false,
-      qrcode: '',
-      notice: '',
-      rejectCalls: '',
-      messageCallsWebhook: '',      
-    };
-  },
-  computed: {
-    ...mapGetters({ uiFlags: 'inboxes/getUIFlags' }),
-  },
-  validations: {
-    apiKey: { required },
-    ignoreGroupMessages: { required },
-    ignoreHistoryMessages: { required },
-    webhookSendNewMessages: { required },
-    sendAgentName: { required },
-    url: { required },
-    ignoreBroadcastStatuses: { required },
-    ignoreBroadcastMessages: { required },
-    ignoreOwnMessages: { required },
-    ignoreYourselfMessages: { required },
-    sendConnectionStatus: { required },
-    notifyFailedMessages: { required },
-    composingMessage: { required },
-    sendReactionAsReply: { required },
-    sendProfilePicture: { required },
-    rejectCalls: { required },
-    messageCallsWebhook: { required },
-    wavoipToken: { required },
-  },
-  watch: {
-    inbox() {
-      this.setDefaults();
-    },
-  },
-  mounted() {
-    this.setDefaults();
-    this.listenerQrCode();
-  },
-  methods: {
-    setDefaults() {
-      this.apiKey = this.inbox.provider_config.api_key;
-      this.wavoipToken = this.inbox.provider_config.wavoip_token;
-      this.url = this.inbox.provider_config.url;
-      this.ignoreGroupMessages = this.inbox.provider_config.ignore_group_messages;
-      this.ignoreHistoryMessages = this.inbox.provider_config.ignore_history_messages;
-      this.webhookSendNewMessages = this.inbox.provider_config.webhook_send_new_messages;
-      this.sendAgentName = this.inbox.provider_config.send_agent_name;
-      this.ignoreBroadcastStatuses = this.inbox.provider_config.ignore_broadcast_statuses;
-      this.ignoreBroadcastMessages = this.inbox.provider_config.ignore_broadcast_messages;
-      this.ignoreOwnMessages = this.inbox.provider_config.ignore_own_messages;
-      this.ignoreYourselfMessages = this.inbox.provider_config.ignore_yourself_messages;
-      this.sendConnectionStatus = this.inbox.provider_config.send_connection_status;
-      this.notifyFailedMessages = this.inbox.provider_config.notify_failed_messages;
-      this.composingMessage = this.inbox.provider_config.composing_message;
-      this.sendReactionAsReply = this.inbox.provider_config.send_reaction_as_reply;
-      this.sendProfilePicture = this.inbox.provider_config.send_profile_picture;
-      this.rejectCalls = this.inbox.provider_config.reject_calls;
-      this.messageCallsWebhook = this.inbox.provider_config.message_calls_webhook;
-      this.connect = false;
-      this.disconnect = false;
-    },
-    listenerQrCode() {
-      const url = `${this.inbox.provider_config.url}`
-        .replace('https', 'wss')
-        .replace('http', 'ws');
-      const socket = io(url, { path: '/ws' });
-      socket.on('broadcast', data => {
-        console.log('data', data)
-        if (data.phone !== this.inbox.provider_config.phone_number_id) {
-          this.notice = `Received message from ${data.phone} but the current number in chatwoot is ${this.inbox.provider_config.phone_number_id}`;
-          this.qrcode = '';
-          // broadcast phone is other
-          return;
-        }
-        if (data.type === 'status') {
-          this.notice = data.content;
-          this.qrcode = '';
-        } else if (data.type === 'qrcode') {
-          this.qrcode = data.content;
-          this.notice = '';
-        }
-      });
-      // const url = `${this.inbox.provider_config.url}/ws`;
-      // const cable = createConsumer(url);
-      // cable.subscriptions.create(
-      //   {
-      //     channel: 'broadcast',
-      //     phone_number: this.inbox.provider_config.phone_number_id,
-      //   },
-      //   {
-      //     broadcast: data => {
-      //       console.log('broadcast');
-      //       this.qrcode = data;
-      //     },
-      //     connected: () => {
-      //       console.log('connected');
-      //       this.qrcode = 'waiting for qrcode';
-      //     },
-      //   }
-      // );
-    },
-    generateToken() {
-      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let token = '';
-      for (let i = 0; i < 64; i++) {
-        token += characters.charAt(Math.floor(Math.random() * characters.length));
-      }
-
-      if (this.apiKey) {
-        if (confirm('A token already exists. Do you want to replace it?')) {
-          this.apiKey = token;
-        }
-      } else {
-        this.apiKey = token;
-      }
-    },
-    async updateInbox() {
-      try {
-        const payload = {
-          id: this.inbox.id,
-          formData: false,
-          channel: {
-            provider_config: {
-              ...this.inbox.provider_config,
-              api_key: this.apiKey,
-              wavoip_token: this.wavoipToken,
-              ignore_history_messages: this.ignoreHistoryMessages,
-              ignore_group_messages: this.ignoreGroupMessages,
-              send_agent_name: this.sendAgentName,
-              webhook_send_new_messages: this.webhookSendNewMessages,
-              url: this.url,
-              ignore_broadcast_statuses: this.ignoreBroadcastStatuses,
-              ignore_broadcast_messages: this.ignoreBroadcastMessages,
-              ignore_own_messages: this.ignoreOwnMessages,
-              ignore_yourself_messages: this.ignoreYourselfMessages,
-              send_connection_status: this.sendConnectionStatus,
-              notify_failed_messages: this.notifyFailedMessages,
-              composing_message: this.composingMessage,
-              send_reaction_as_reply: this.sendReactionAsReply,
-              send_profile_picture: this.sendProfilePicture,
-              reject_calls: this.rejectCalls,
-              message_calls_webhook: this.messageCallsWebhook,              
-              connect: this.connect,
-              disconnect: this.disconnect,
-            },
-          },
-        };
-        await this.$store.dispatch('inboxes/updateInbox', payload);
-        useAlert(this.$t('INBOX_MGMT.EDIT.API.SUCCESS_MESSAGE'));
-      } catch (error) {
-        useAlert(this.$t('INBOX_MGMT.EDIT.API.ERROR_MESSAGE'));
-      }
-    },
-  },
-};
-</script>
 
 <style lang="scss" scoped>
 .whatsapp-settings--content {

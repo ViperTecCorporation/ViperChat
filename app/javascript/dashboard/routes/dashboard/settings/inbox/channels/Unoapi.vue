@@ -1,3 +1,109 @@
+<script>
+import { mapGetters } from 'vuex';
+import { useVuelidate } from '@vuelidate/core';
+import { useAlert } from 'dashboard/composables';
+import { required } from '@vuelidate/validators';
+import router from '../../../../index';
+import { isPhoneE164OrEmpty } from 'shared/helpers/Validators';
+import NextButton from 'dashboard/components-next/button/Button.vue';
+
+export default {
+  components: {
+    NextButton,
+  },
+  setup() {
+    return { v$: useVuelidate() };
+  },
+  data() {
+    return {
+      inboxName: '',
+      phoneNumber: '',
+      apiKey: '',
+      url: 'https://unoapi.cloud',
+      ignoreGroupMessages: true,
+      ignoreHistoryMessages: true,
+      sendAgentName: true,
+      webhookSendNewMessages: true,
+    };
+  },
+  computed: {
+    ...mapGetters({ uiFlags: 'inboxes/getUIFlags' }),
+  },
+  validations: {
+    inboxName: { required },
+    phoneNumber: { required, isPhoneE164OrEmpty },
+    apiKey: { required },
+    ignoreGroupMessages: { required },
+    ignoreHistoryMessages: { required },
+    sendAgentName: { required },
+    webhookSendNewMessages: { required },
+    url: { required },
+  },
+  methods: {
+    generateToken() {
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let token = '';
+      for (let i = 0; i < 64; i++) {
+        token += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+
+      if (this.apiKey) {
+        if (confirm('A token already exists. Do you want to replace it?')) {
+          this.apiKey = token;
+        }
+      } else {
+        this.apiKey = token;
+      }
+    },
+    async createChannel() {
+      this.v$.$touch();
+      if (this.v$.$invalid) {
+        return;
+      }
+
+      try {
+        const whatsappChannel = await this.$store.dispatch(
+          'inboxes/createChannel',
+          {
+            name: this.inboxName,
+            channel: {
+              type: 'whatsapp',
+              phone_number: this.phoneNumber,
+              provider: 'unoapi',
+              provider_config: {
+                api_key: this.apiKey,
+                phone_number: this.phoneNumber,
+                phone_number_id: this.phoneNumber.replace('+', ''),
+                business_account_id: this.phoneNumber.replace('+', ''),
+                ignore_history_messages: this.ignoreHistoryMessages,
+                ignore_group_messages: this.ignoreGroupMessages,
+                send_agent_name: this.sendAgentName,
+                webhook_send_new_messages: this.webhookSendNewMessages,
+                url: this.url,
+              },
+            },
+          }
+        );
+
+        router.replace({
+          name: 'settings_inboxes_add_agents',
+          params: {
+            page: 'new',
+            inbox_id: whatsappChannel.id,
+          },
+        });
+      } catch (error) {
+        useAlert(
+          this.$t('INBOX_MGMT.ADD.WHATSAPP.API.ERROR_MESSAGE') +
+            '\n detail:' +
+            error
+        );
+      }
+    },
+  },
+};
+</script>
+
 <template>
   <form class="mx-0 flex flex-wrap" @submit.prevent="createChannel()">
     <div class="w-[65%] flex-shrink-0 flex-grow-0 max-w-[65%]">
@@ -118,120 +224,23 @@
     </div>
 
     <div class="w-full" style="margin-top: 20px;">
-      <woot-submit-button
-        :loading="uiFlags.isCreating"
-        :button-text="$t('INBOX_MGMT.ADD.WHATSAPP.SUBMIT_BUTTON')"
+      <NextButton
+        :is-loading="uiFlags.isCreating"
+        type="submit"
+        solid
+        blue
+        :label="$t('INBOX_MGMT.ADD.WHATSAPP.SUBMIT_BUTTON')"
       />
-      <woot-submit-button
-        :loading="uiFlags.isUpdating"          
-        :button-text="$t('INBOX_MGMT.ADD.WHATSAPP.GENERATE_API_KEY.LABEL')"
+      <NextButton
+        :is-loading="uiFlags.isCreating"
+        solid
+        blue
+        :label="$t('INBOX_MGMT.ADD.WHATSAPP.GENERATE_API_KEY.LABEL')"
         @click="generateToken"
-      /> 
-    </div>    
+      />
+    </div>
   </form>
 </template>
-
-<script>
-import { mapGetters } from 'vuex';
-import { useVuelidate } from '@vuelidate/core';
-import { useAlert } from 'dashboard/composables';
-import { required } from '@vuelidate/validators';
-import router from '../../../../index';
-import { isPhoneE164OrEmpty } from 'shared/helpers/Validators';
-
-export default {
-  setup() {
-    return { v$: useVuelidate() };
-  },
-  data() {
-    return {
-      inboxName: '',
-      phoneNumber: '',
-      apiKey: '',
-      url: 'https://unoapi.cloud',
-      ignoreGroupMessages: true,
-      ignoreHistoryMessages: true,
-      sendAgentName: true,
-      webhookSendNewMessages: true,
-    };
-  },
-  computed: {
-    ...mapGetters({ uiFlags: 'inboxes/getUIFlags' }),
-  },
-  validations: {
-    inboxName: { required },
-    phoneNumber: { required, isPhoneE164OrEmpty },
-    apiKey: { required },
-    ignoreGroupMessages: { required },
-    ignoreHistoryMessages: { required },
-    sendAgentName: { required },
-    webhookSendNewMessages: { required },
-    url: { required },
-  },
-  methods: {
-    generateToken() {
-      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let token = '';
-      for (let i = 0; i < 64; i++) {
-        token += characters.charAt(Math.floor(Math.random() * characters.length));
-      }
-
-      if (this.apiKey) {
-        if (confirm('A token already exists. Do you want to replace it?')) {
-          this.apiKey = token;
-        }
-      } else {
-        this.apiKey = token;
-      }
-    },
-    async createChannel() {
-      this.v$.$touch();
-      if (this.v$.$invalid) {
-        return;
-      }
-
-      try {
-        const whatsappChannel = await this.$store.dispatch(
-          'inboxes/createChannel',
-          {
-            name: this.inboxName,
-            channel: {
-              type: 'whatsapp',
-              phone_number: this.phoneNumber,
-              provider: 'unoapi',
-              provider_config: {
-                api_key: this.apiKey,
-                phone_number: this.phoneNumber,
-                phone_number_id: this.phoneNumber.replace('+', ''),
-                business_account_id: this.phoneNumber.replace('+', ''),
-                ignore_history_messages: this.ignoreHistoryMessages,
-                ignore_group_messages: this.ignoreGroupMessages,
-                send_agent_name: this.sendAgentName,
-                webhook_send_new_messages: this.webhookSendNewMessages,
-                url: this.url,
-              },
-            },
-          }
-        );
-
-        router.replace({
-          name: 'settings_inboxes_add_agents',
-          params: {
-            page: 'new',
-            inbox_id: whatsappChannel.id,
-          },
-        });
-      } catch (error) {
-        useAlert(
-          this.$t('INBOX_MGMT.ADD.WHATSAPP.API.ERROR_MESSAGE') +
-            '\n detail:' +
-            error
-        );
-      }
-    },
-  },
-};
-</script>
 
 <style lang="scss" scoped>
 .switch {
