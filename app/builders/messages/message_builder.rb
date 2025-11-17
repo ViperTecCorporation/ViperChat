@@ -18,14 +18,18 @@ class Messages::MessageBuilder
   end
 
   def perform
-    @message = @conversation.messages.build(message_params)
-    process_attachments
-    process_emails
-    # When the message has no quoted content, it will just be rendered as a regular message
-    # The frontend is equipped to handle this case
-    process_email_content if @account.feature_enabled?(:quoted_email_reply)
-    @message.save!
-    @message
+    if split_attachments_per_message?
+      build_multiple_attachment_messages
+    else
+      @message = @conversation.messages.build(message_params)
+      process_attachments
+      process_emails
+      # When the message has no quoted content, it will just be rendered as a regular message
+      # The frontend is equipped to handle this case
+      process_email_content if @account.feature_enabled?(:quoted_email_reply)
+      @message.save!
+      @message
+    end
   end
 
   private
@@ -79,6 +83,43 @@ class Messages::MessageBuilder
                                file_type(uploaded_attachment&.content_type)
                              end
     end
+  end
+
+  def split_attachments_per_message?
+    return false if @attachments.blank?
+
+    # For WhatsApp / NotificaMe we want one attachment per message
+    whatsapp_or_notificame_inbox = @conversation.inbox&.whatsapp? || @conversation.inbox&.notifica_me?
+    whatsapp_or_notificame_inbox && @attachments.size > 1
+  end
+
+  def build_multiple_attachment_messages
+    created_messages = []
+
+    @attachments.each_with_index do |uploaded_attachment, index|
+      # For the first attachment keep the original content, for subsequent ones we can omit content
+      content_for_message = index.zero? ? @params[:content] : nil
+
+      @message = @conversation.messages.build(message_params.merge(content: content_for_message))
+
+      # Temporarily set @attachments so that process_attachments only attaches the current file
+      original_attachments = @attachments
+      @attachments = [uploaded_attachment]
+
+      process_attachments
+      process_emails
+      process_email_content if @account.feature_enabled?(:quoted_email_reply)
+
+      @message.save!
+      created_messages << @message
+
+      # Restore full attachments list for next iteration
+      @attachments = original_attachments
+    end
+
+    # Return the first created message as the primary response
+    @message = created_messages.first
+    @message
   end
 
   def process_emails

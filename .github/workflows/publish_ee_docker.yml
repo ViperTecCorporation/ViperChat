@@ -4,22 +4,23 @@
 # # and when tags are created.
 # #
 
-name: Publish Chatwoot EE docker images
+name: Publish Chatwoot EE docker images (disabled)
 
 on:
-  push:
-    branches:
-      - develop
-      - master
-    tags:
-      - v*
+  # Workflow deliberately disabled; kept only for history.
   workflow_dispatch:
+    inputs:
+      note:
+        description: 'EE Docker publish workflow is disabled and does nothing.'
+        required: false
+        default: 'disabled'
 
 env:
   DOCKER_REPO: chatwoot/chatwoot
 
 jobs:
   build:
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -91,6 +92,7 @@ jobs:
           retention-days: 1
 
   merge:
+    if: false
     runs-on: ubuntu-latest
     needs:
       - build

@@ -6,7 +6,7 @@
  * Badge - Chat source indication { fb / telegram }
  * Username - Username for avatar
  */
-import Avatar from './Avatar.vue';
+import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import { removeEmoji } from 'shared/helpers/emoji';
 
 export default {
@@ -150,9 +150,11 @@ export default {
       />
       <Avatar
         v-show="!shouldShowImage"
-        :username="userNameWithoutEmoji"
+        :name="userNameWithoutEmoji"
+        :src="''"
         :class="thumbnailClass"
         :size="avatarSize"
+        :rounded-full="variant === 'circle'"
       />
     </slot>
     <img

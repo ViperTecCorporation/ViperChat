@@ -3,7 +3,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     @message = message
 
     if message.attachments.present?
-      send_attachment_message(phone_number, message)
+      send_attachments(phone_number, message)
     elsif message.content_type == 'input_select'
       send_interactive_text_message(phone_number, message)
     else
@@ -108,6 +108,23 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     "#{api_base_path}/v14.0/#{whatsapp_channel.provider_config['business_account_id']}"
   end
 
+  def send_attachments(phone_number, message)
+    attachments = message.attachments
+    last_message_id = nil
+
+    attachments.each_with_index do |attachment, index|
+      include_caption = index.zero?
+      last_message_id = send_attachment_message(
+        phone_number,
+        message,
+        attachment,
+        include_caption: include_caption
+      )
+    end
+
+    last_message_id
+  end
+
   def send_text_message(phone_number, message)
     response = HTTParty.post(
       messages_path,
@@ -132,13 +149,12 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     message.sender_name&.present? ? "*#{message&.sender_name}*: #{message.outgoing_content}" : message.outgoing_content
   end
 
-  def send_attachment_message(phone_number, message)
-    attachment = message.attachments.first
+  def send_attachment_message(phone_number, message, attachment, include_caption: true)
     type = %w[image audio video].include?(attachment.file_type) ? attachment.file_type : 'document'
     type_content = {
       'link': attachment.download_url
     }
-    type_content['caption'] = message.outgoing_content unless %w[audio sticker].include?(type)
+    type_content['caption'] = message.outgoing_content unless %w[audio sticker].include?(type) || !include_caption
     type_content['filename'] = attachment.file.filename if type == 'document'
     response = HTTParty.post(
       "#{phone_id_path}/messages",

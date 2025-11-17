@@ -2,7 +2,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
   def send_message(phone_number, message)
     @message = message
     if message.attachments.present?
-      send_attachment_message(phone_number, message)
+      send_attachments(phone_number, message)
     elsif message.content_type == 'input_select'
       send_interactive_text_message(phone_number, message)
     else
@@ -79,8 +79,18 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
     process_response(response, message)
   end
 
-  def send_attachment_message(phone_number, message)
-    attachment = message.attachments.first
+  def send_attachments(phone_number, message)
+    attachments = message.attachments
+    last_message_id = nil
+
+    attachments.each do |attachment|
+      last_message_id = send_attachment_message(phone_number, message, attachment)
+    end
+
+    last_message_id
+  end
+
+  def send_attachment_message(phone_number, message, attachment)
     type = %w[image audio video].include?(attachment.file_type) ? attachment.file_type : 'document'
     type_content = {
       'link': attachment.download_url
