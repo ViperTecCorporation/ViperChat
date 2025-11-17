@@ -261,6 +261,7 @@
     "CONTEXT_MENU": {
       "COPY": "Copiar",
       "REPLY_TO": "Responder mensagem",
+      "FORWARD_MESSAGES": "Encaminhar mensagens",
       "DELETE": "Excluir",
       "CREATE_A_CANNED_RESPONSE": "Adicionar às respostas prontas",
       "TRANSLATE": "Traduzir",
@@ -272,6 +273,15 @@
         "DELETE": "Excluir",
         "CANCEL": "Cancelar"
       }
+    },
+    "FORWARD_MESSAGES": {
+      "TITLE": "Encaminhar mensagens",
+      "DESCRIPTION": "Escolha um contato e uma caixa de entrada para encaminhar as mensagens selecionadas.",
+      "SELECTED_COUNT": "{count} mensagens selecionadas",
+      "ACTION_LABEL": "Encaminhar",
+      "CANCEL": "Cancelar",
+      "ERROR_NO_CONTENT": "As mensagens selecionadas não possuem conteúdo para encaminhar.",
+      "ERROR_API": "Não foi possível encaminhar as mensagens. Tente novamente."
     },
     "SIDEBAR": {
       "CONTACT": "Contatos",

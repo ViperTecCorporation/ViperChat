@@ -261,6 +261,7 @@
     "CONTEXT_MENU": {
       "COPY": "Copy",
       "REPLY_TO": "Reply to this message",
+      "FORWARD_MESSAGES": "Forward messages",
       "DELETE": "Delete",
       "CREATE_A_CANNED_RESPONSE": "Add to canned responses",
       "TRANSLATE": "Translate",
@@ -272,6 +273,15 @@
         "DELETE": "Delete",
         "CANCEL": "Cancel"
       }
+    },
+    "FORWARD_MESSAGES": {
+      "TITLE": "Forward messages",
+      "DESCRIPTION": "Choose a contact and inbox to forward the selected messages to.",
+      "SELECTED_COUNT": "{count} messages selected",
+      "ACTION_LABEL": "Forward",
+      "CANCEL": "Cancel",
+      "ERROR_NO_CONTENT": "Selected messages do not contain any content to forward.",
+      "ERROR_API": "Unable to forward messages. Please try again."
     },
     "SIDEBAR": {
       "CONTACT": "Contact",

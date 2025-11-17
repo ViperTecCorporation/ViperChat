@@ -44,7 +44,7 @@ export default {
       default: false,
     },
   },
-  emits: ['open', 'close', 'replyTo'],
+  emits: ['open', 'close', 'replyTo', 'forward'],
   setup() {
     const { getPlainText } = useMessageFormatter();
 
@@ -130,6 +130,10 @@ export default {
       this.$emit('replyTo', this.message);
       this.handleClose();
     },
+    handleForward() {
+      this.$emit('forward', this.message);
+      this.handleClose();
+    },
     openDeleteModal() {
       this.handleClose();
       this.showDeleteModal = true;
@@ -202,6 +206,15 @@ export default {
           }"
           variant="icon"
           @click.stop="handleReplyTo"
+        />
+        <MenuItem
+          v-if="enabledOptions['forward']"
+          :option="{
+            icon: 'arrow-forward',
+            label: $t('CONVERSATION.CONTEXT_MENU.FORWARD_MESSAGES'),
+          }"
+          variant="icon"
+          @click.stop="handleForward"
         />
         <MenuItem
           v-if="enabledOptions['copy']"

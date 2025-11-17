@@ -130,9 +130,11 @@ const props = defineProps({
   senderId: { type: Number, default: null },
   senderType: { type: String, default: null },
   sourceId: { type: String, default: '' }, // eslint-disable-line vue/no-unused-properties
+  isForwardSelectionActive: { type: Boolean, default: false },
+  isForwardSelected: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['retry']);
+const emit = defineEmits(['retry', 'toggle-forward-selection']);
 
 const contextMenuPosition = ref({});
 const showBackgroundHighlight = ref(false);
@@ -368,6 +370,7 @@ const contextMenuEnabledOptions = computed(() => {
 
   return {
     copy: hasText,
+    forward: hasText && !isFailedOrProcessing && !isMessageDeleted.value,
     delete:
       !hideDeleteMessageForAgents &&
       (hasText || hasAttachments) &&
@@ -429,6 +432,13 @@ function handleReplyTo() {
 
   LocalStorage.updateJsonStore(replyStorageKey, conversationId, replyTo);
   emitter.emit(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, props);
+}
+
+function handleForwardMessages() {
+  emitter.emit(BUS_EVENTS.FORWARD_MESSAGES, {
+    conversationId: props.conversationId,
+    messageId: props.id,
+  });
 }
 
 const avatarInfo = computed(() => {
@@ -535,6 +545,17 @@ provideMessageContext({
         }"
         @contextmenu="openContextMenu($event)"
       >
+        <div
+          v-if="props.isForwardSelectionActive"
+          class="flex items-start pt-1 ltr:mr-2 rtl:ml-2"
+        >
+          <input
+            type="checkbox"
+            class="mt-1 size-4 rounded border border-n-weak"
+            :checked="props.isForwardSelected"
+            @change="emit('toggle-forward-selection', props.id)"
+          />
+        </div>
         <Component :is="componentToRender" />
       </div>
       <MessageError
@@ -556,6 +577,7 @@ provideMessageContext({
         @open="openContextMenu"
         @close="closeContextMenu"
         @reply-to="handleReplyTo"
+        @forward="handleForwardMessages"
       />
     </div>
   </div>

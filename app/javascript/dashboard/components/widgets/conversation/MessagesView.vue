@@ -13,8 +13,10 @@ import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 import ReplyBox from './ReplyBox.vue';
 import MessageList from 'next/message/MessageList.vue';
 import ConversationLabelSuggestion from './conversation/LabelSuggestion.vue';
+import ForwardMessagesModal from './ForwardMessagesModal.vue';
 import Banner from 'dashboard/components/ui/Banner.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 
 // stores and apis
 import { mapGetters } from 'vuex';
@@ -42,10 +44,12 @@ import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
 export default {
   components: {
+    Banner,
+    Button,
+    ConversationLabelSuggestion,
+    ForwardMessagesModal,
     MessageList,
     ReplyBox,
-    Banner,
-    ConversationLabelSuggestion,
     Spinner,
   },
   mixins: [inboxMixin],
@@ -92,6 +96,11 @@ export default {
       isProgrammaticScroll: false,
       messageSentSinceOpened: false,
       labelSuggestions: [],
+      forwardSelection: {
+        isActive: false,
+        selectedMessageIds: [],
+      },
+      showForwardModal: false,
     };
   },
 
@@ -247,6 +256,24 @@ export default {
 
       return { incoming, outgoing };
     },
+    isForwardSelectionActive() {
+      return this.forwardSelection.isActive;
+    },
+    forwardSelectedMessages() {
+      if (!this.forwardSelection.isActive) {
+        return [];
+      }
+      const selectedIds = this.forwardSelection.selectedMessageIds;
+      if (!selectedIds.length) {
+        return [];
+      }
+      return this.getMessages.filter(message =>
+        selectedIds.includes(message.id)
+      );
+    },
+    forwardSelectionCount() {
+      return this.forwardSelection.selectedMessageIds.length;
+    },
   },
 
   watch: {
@@ -269,6 +296,7 @@ export default {
     emitter.on(BUS_EVENTS.MESSAGE_SENT, () => {
       this.messageSentSinceOpened = true;
     });
+    emitter.on(BUS_EVENTS.FORWARD_MESSAGES, this.onForwardMessagesStart);
   },
 
   mounted() {
@@ -334,6 +362,7 @@ export default {
     },
     removeBusListeners() {
       emitter.off(BUS_EVENTS.SCROLL_TO_MESSAGE, this.onScrollToMessage);
+      emitter.off(BUS_EVENTS.FORWARD_MESSAGES, this.onForwardMessagesStart);
     },
     onScrollToMessage({ messageId = '' } = {}) {
       this.$nextTick(() => {
@@ -347,6 +376,52 @@ export default {
         }
       });
       this.makeMessagesRead();
+    },
+    onForwardMessagesStart({ messageId } = {}) {
+      if (!messageId) {
+        return;
+      }
+      this.forwardSelection.isActive = true;
+      this.forwardSelection.selectedMessageIds = [messageId];
+    },
+    toggleForwardSelection(messageId) {
+      if (!this.forwardSelection.isActive) {
+        return;
+      }
+      const selectedIds = this.forwardSelection.selectedMessageIds;
+      const index = selectedIds.indexOf(messageId);
+      if (index === -1) {
+        selectedIds.push(messageId);
+      } else {
+        selectedIds.splice(index, 1);
+      }
+      if (!selectedIds.length) {
+        this.cancelForwardSelection();
+      }
+    },
+    cancelForwardSelection() {
+      this.forwardSelection.isActive = false;
+      this.forwardSelection.selectedMessageIds = [];
+      this.showForwardModal = false;
+    },
+    openForwardModal() {
+      if (!this.forwardSelection.selectedMessageIds.length) {
+        return;
+      }
+      this.showForwardModal = true;
+    },
+    onForwardCompleted(conversation) {
+      this.cancelForwardSelection();
+      if (!conversation || !conversation.id) {
+        return;
+      }
+      this.$router.push({
+        name: 'inbox_conversation',
+        params: {
+          accountId: this.currentAccountId,
+          conversation_id: conversation.id,
+        },
+      });
     },
     addScrollListener() {
       this.conversationPanel = this.$el.querySelector('.conversation-panel');
@@ -491,6 +566,42 @@ export default {
       class="mx-2 mt-2 overflow-hidden rounded-lg"
       :banner-message="$t('CONVERSATION.OLD_INSTAGRAM_INBOX_REPLY_BANNER')"
     />
+    <ForwardMessagesModal
+      v-if="isForwardSelectionActive"
+      v-model:show="showForwardModal"
+      :selected-messages="forwardSelectedMessages"
+      :conversation-id="currentChat.id"
+      @forwarded="onForwardCompleted"
+      @close="cancelForwardSelection"
+    />
+    <div
+      v-if="isForwardSelectionActive"
+      class="flex items-center justify-between mx-2 mt-2 mb-1 rounded-lg bg-n-alpha-2 px-3 py-2"
+    >
+      <p class="m-0 text-xs font-medium text-n-slate-12">
+        {{
+          $t('CONVERSATION.FORWARD_MESSAGES.SELECTED_COUNT', {
+            count: forwardSelectionCount,
+          })
+        }}
+      </p>
+      <div class="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          color="slate"
+          size="xs"
+          :label="$t('CONVERSATION.FORWARD_MESSAGES.CANCEL')"
+          @click="cancelForwardSelection"
+        />
+        <Button
+          color="brand"
+          size="xs"
+          :disabled="forwardSelectionCount === 0"
+          :label="$t('CONVERSATION.FORWARD_MESSAGES.ACTION_LABEL')"
+          @click="openForwardModal"
+        />
+      </div>
+    </div>
     <MessageList
       ref="conversationPanelRef"
       class="conversation-panel flex-shrink flex-grow basis-px flex flex-col overflow-y-auto relative h-full m-0 pb-4"
@@ -500,7 +611,10 @@ export default {
       :inbox-supports-reply-to="inboxSupportsReplyTo"
       :style="globalConfig.conversationStyleCss"
       :messages="getMessages"
+      :is-forward-selection-active="isForwardSelectionActive"
+      :forward-selected-message-ids="forwardSelection.selectedMessageIds"
       @retry="handleMessageRetry"
+      @toggle-forward-selection="toggleForwardSelection"
     >
       <template #beforeAll>
         <transition name="slide-up">

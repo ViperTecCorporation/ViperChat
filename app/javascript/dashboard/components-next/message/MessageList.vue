@@ -15,6 +15,8 @@ import MessageApi from 'dashboard/api/inbox/message.js';
  * @property {Boolean} isAnEmailChannel - Whether this is an email channel
  * @property {Object} inboxSupportsReplyTo - Inbox reply support configuration
  * @property {Array} messages - Array of all messages [These are not in camelcase]
+ * @property {Boolean} isForwardSelectionActive - Whether forward selection mode is active
+ * @property {Array} forwardSelectedMessageIds - IDs of messages selected for forwarding
  */
 const props = defineProps({
   currentUserId: {
@@ -37,9 +39,17 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  isForwardSelectionActive: {
+    type: Boolean,
+    default: false,
+  },
+  forwardSelectedMessageIds: {
+    type: Array,
+    default: () => [],
+  },
 });
 
-const emit = defineEmits(['retry']);
+const emit = defineEmits(['retry', 'toggleForwardSelection']);
 
 const allMessages = computed(() => {
   return useCamelCase(props.messages, { deep: true });
@@ -174,8 +184,11 @@ const getInReplyToMessage = parentMessage => {
         :group-with-next="shouldGroupWithNext(index, allMessages)"
         :inbox-supports-reply-to="inboxSupportsReplyTo"
         :current-user-id="currentUserId"
+        :is-forward-selection-active="isForwardSelectionActive"
+        :is-forward-selected="forwardSelectedMessageIds.includes(message.id)"
         data-clarity-mask="True"
         @retry="emit('retry', message)"
+        @toggle-forward-selection="emit('toggleForwardSelection', message.id)"
       />
     </template>
     <slot name="after" />
