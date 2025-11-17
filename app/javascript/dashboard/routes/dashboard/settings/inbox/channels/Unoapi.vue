@@ -6,10 +6,12 @@ import { required } from '@vuelidate/validators';
 import router from '../../../../index';
 import { isPhoneE164OrEmpty } from 'shared/helpers/Validators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import Switch from 'dashboard/components-next/switch/Switch.vue';
 
 export default {
   components: {
     NextButton,
+    Switch,
   },
   setup() {
     return { v$: useVuelidate() };
@@ -169,9 +171,8 @@ export default {
 
     <div class="w-[65%] flex-shrink-0 flex-grow-0 max-w-[65%] config-helptext">
       <label :class="{ error: v$.sendAgentName.$error }" style="display: flex; align-items: center;">
-        <woot-switch
+        <Switch
           v-model="sendAgentName"
-          :value="sendAgentName"
           style="flex: 0 0 auto; margin-right: 10px;"
         />
         {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_AGENT_NAME.LABEL') }}
@@ -183,9 +184,8 @@ export default {
 
     <div class="w-[65%] flex-shrink-0 flex-grow-0 max-w-[65%] config-helptext">
       <label :class="{ error: v$.ignoreGroupMessages.$error }" style="display: flex; align-items: center;">
-        <woot-switch
+        <Switch
           v-model="ignoreGroupMessages"
-          :value="ignoreGroupMessages"
           style="flex: 0 0 auto; margin-right: 10px;"
         />
         {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUPS.LABEL') }}
@@ -197,9 +197,8 @@ export default {
 
     <div class="w-[65%] flex-shrink-0 flex-grow-0 max-w-[65%] config-helptext">
       <label :class="{ error: v$.ignoreHistoryMessages.$error }" style="display: flex; align-items: center;">
-        <woot-switch
+        <Switch
           v-model="ignoreHistoryMessages"
-          :value="ignoreHistoryMessages"
           style="flex: 0 0 auto; margin-right: 10px;"
         />
         {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_HISTORY.LABEL') }}
@@ -211,9 +210,8 @@ export default {
 
     <div class="w-[65%] flex-shrink-0 flex-grow-0 max-w-[65%] config-helptext">
       <label :class="{ error: v$.webhookSendNewMessages.$error }" style="display: flex; align-items: center;">
-        <woot-switch
+        <Switch
           v-model="webhookSendNewMessages"
-          :value="webhookSendNewMessages"
           style="flex: 0 0 auto; margin-right: 10px;"
         />
         {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBWOOK_SEND_NEW_MESSAGES.LABEL') }}

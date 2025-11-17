@@ -202,7 +202,7 @@ useKeyboardEvents(keyboardEvents);
         v-if="isEmailOrWebWidgetInbox"
         ref="uploadAttachment"
         input-id="composeNewConversationAttachment"
-        :size="4096 * 4096"
+        :size="150 * 1024 * 1024"
         :accept="ALLOWED_FILE_TYPES"
         multiple
         :drop-directory="false"

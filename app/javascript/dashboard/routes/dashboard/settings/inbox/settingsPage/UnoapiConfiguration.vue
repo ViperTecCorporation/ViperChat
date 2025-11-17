@@ -7,9 +7,10 @@ import { required } from '@vuelidate/validators';
 import { mapGetters } from 'vuex';
 // import { createConsumer } from '@rails/actioncable';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import Switch from 'dashboard/components-next/switch/Switch.vue';
 
 export default {
-  components: { NextButton },
+  components: { NextButton, Switch },
   mixins: [inboxMixin],
   props: {
     inbox: {
@@ -287,9 +288,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.sendAgentName.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="sendAgentName"
-            :value="sendAgentName"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_AGENT_NAME.LABEL') }}
@@ -301,9 +301,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.ignoreGroupMessages.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="ignoreGroupMessages"
-            :value="ignoreGroupMessages"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUPS.LABEL') }}
@@ -315,9 +314,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.ignoreHistoryMessages.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="ignoreHistoryMessages"
-            :value="ignoreHistoryMessages"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_HISTORY.LABEL') }}
@@ -329,9 +327,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.webhookSendNewMessages.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="webhookSendNewMessages"
-            :value="webhookSendNewMessages"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBWOOK_SEND_NEW_MESSAGES.LABEL') }}
@@ -343,9 +340,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.ignoreBroadcastStatuses.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="ignoreBroadcastStatuses"
-            :value="ignoreBroadcastStatuses"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_STATUSES.LABEL') }}
@@ -357,9 +353,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.ignoreBroadcastMessages.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="ignoreBroadcastMessages"
-            :value="ignoreBroadcastMessages"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_MESSAGES.LABEL') }}
@@ -371,9 +366,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.ignoreOwnMessages.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="ignoreOwnMessages"
-            :value="ignoreOwnMessages"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_OWN_MESSAGES.LABEL') }}
@@ -385,9 +379,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.ignoreYourselfMessages.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="ignoreYourselfMessages"
-            :value="ignoreYourselfMessages"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_YOURSELF_MESSAGES.LABEL') }}
@@ -399,9 +392,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.sendConnectionStatus.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="sendConnectionStatus"
-            :value="sendConnectionStatus"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_CONNECTION_STATUS.LABEL') }}
@@ -413,9 +405,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.notifyFailedMessages.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="notifyFailedMessages"
-            :value="notifyFailedMessages"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.NOTIFY_FAILED_MESSAGES.LABEL') }}
@@ -427,9 +418,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.composingMessage.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="composingMessage"
-            :value="composingMessage"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.COMPOSING_MESSAGE.LABEL') }}
@@ -441,9 +431,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.sendReactionAsReply.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="sendReactionAsReply"
-            :value="sendReactionAsReply"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_REACTION_AS_REPLY.LABEL') }}
@@ -455,9 +444,8 @@ export default {
 
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.sendProfilePicture.$error }" style="display: flex; align-items: center;">
-          <woot-switch
+          <Switch
             v-model="sendProfilePicture"
-            :value="sendProfilePicture"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_PROFILE_PICTURE.LABEL') }}

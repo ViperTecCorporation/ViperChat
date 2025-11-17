@@ -319,12 +319,7 @@ export default {
       return !this.isOnPrivateNote && this.isAnEmailChannel;
     },
     enableMultipleFileUpload() {
-      return (
-        this.isAnEmailChannel ||
-        this.isAWebWidgetInbox ||
-        this.isAPIInbox ||
-        this.isATelegramChannel
-      );
+      return true;
     },
     isSignatureEnabledForInbox() {
       return !this.isPrivate && this.sendWithSignature;
