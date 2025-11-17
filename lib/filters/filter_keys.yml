@@ -144,7 +144,7 @@ contacts:
       - "does_not_contain"
   phone_number:
     attribute_type: "standard"
-    data_type: "text_case_insensitive"
+    data_type: "text" # Text is not explicity defined in filters, default filter will be used
     filter_operators:
       - "equal_to"
       - "not_equal_to"

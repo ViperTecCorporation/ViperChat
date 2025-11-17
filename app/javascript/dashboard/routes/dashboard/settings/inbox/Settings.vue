@@ -3,6 +3,7 @@ import { mapGetters } from 'vuex';
 import { shouldBeUrl } from 'shared/helpers/Validators';
 import { useAlert } from 'dashboard/composables';
 import { useVuelidate } from '@vuelidate/core';
+import Avatar from 'next/avatar/Avatar.vue';
 import SettingIntroBanner from 'dashboard/components/widgets/SettingIntroBanner.vue';
 import SettingsSection from '../../../../components/SettingsSection.vue';
 import inboxMixin from 'shared/mixins/inboxMixin';
@@ -11,6 +12,8 @@ import InstagramReauthorize from './channels/instagram/Reauthorize.vue';
 import DuplicateInboxBanner from './channels/instagram/DuplicateInboxBanner.vue';
 import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
 import GoogleReauthorize from './channels/google/Reauthorize.vue';
+import WhatsappReauthorize from './channels/whatsapp/Reauthorize.vue';
+import InboxHealthAPI from 'dashboard/api/inboxHealth';
 import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
@@ -20,11 +23,13 @@ import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import WidgetBuilder from './WidgetBuilder.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import UnoapiConfiguration from './settingsPage/UnoapiConfiguration.vue';
+import AccountHealth from './components/AccountHealth.vue';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import SenderNameExamplePreview from './components/SenderNameExamplePreview.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { WIDGET_BUILDER_EDITOR_MENU_OPTIONS } from 'dashboard/constants/editor';
+import { getInboxIconByType } from 'dashboard/helper/inbox';
 import Editor from 'dashboard/components-next/Editor/Editor.vue';
 
 export default {
@@ -45,9 +50,12 @@ export default {
     GoogleReauthorize,
     NextButton,
     InstagramReauthorize,
+    WhatsappReauthorize,
     DuplicateInboxBanner,
     Editor,
     UnoapiConfiguration,
+    Avatar,
+    AccountHealth,
   },
   mixins: [inboxMixin],
   setup() {
@@ -76,6 +84,9 @@ export default {
       selectedPortalSlug: '',
       showBusinessNameInput: false,
       welcomeTaglineEditorMenuOptions: WIDGET_BUILDER_EDITOR_MENU_OPTIONS,
+      healthData: null,
+      isLoadingHealth: false,
+      healthError: null,
     };
   },
   computed: {
@@ -87,6 +98,9 @@ export default {
     }),
     selectedTabKey() {
       return this.tabs[this.selectedTabIndex]?.key;
+    },
+    shouldShowWhatsAppConfiguration() {
+      return this.isAWhatsAppCloudChannel;
     },
     whatsAppAPIProviderName() {
       if (this.isAWhatsAppCloudChannel) {
@@ -113,15 +127,21 @@ export default {
           key: 'collaborators',
           name: this.$t('INBOX_MGMT.TABS.COLLABORATORS'),
         },
-        {
-          key: 'businesshours',
-          name: this.$t('INBOX_MGMT.TABS.BUSINESS_HOURS'),
-        },
-        {
-          key: 'csat',
-          name: this.$t('INBOX_MGMT.TABS.CSAT'),
-        },
       ];
+
+      if (!this.isAVoiceChannel) {
+        visibleToAllChannelTabs = [
+          ...visibleToAllChannelTabs,
+          {
+            key: 'businesshours',
+            name: this.$t('INBOX_MGMT.TABS.BUSINESS_HOURS'),
+          },
+          {
+            key: 'csat',
+            name: this.$t('INBOX_MGMT.TABS.CSAT'),
+          },
+        ];
+      }
 
       if (this.isAWebWidgetInbox) {
         visibleToAllChannelTabs = [
@@ -149,8 +169,9 @@ export default {
         this.isATwilioChannel ||
         this.isALineChannel ||
         this.isAPIInbox ||
+        this.isAVoiceChannel ||
         (this.isAnEmailChannel && !this.inbox.provider) ||
-        this.isAWhatsAppChannel ||
+        this.shouldShowWhatsAppConfiguration ||
         this.isAWebWidgetInbox
       ) {
         visibleToAllChannelTabs = [
@@ -173,6 +194,16 @@ export default {
           },
         ];
       }
+      if (this.shouldShowWhatsAppConfiguration) {
+        visibleToAllChannelTabs = [
+          ...visibleToAllChannelTabs,
+          {
+            key: 'whatsappHealth',
+            name: this.$t('INBOX_MGMT.TABS.ACCOUNT_HEALTH'),
+          },
+        ];
+      }
+
       return visibleToAllChannelTabs;
     },
     currentInboxId() {
@@ -181,7 +212,10 @@ export default {
     inbox() {
       return this.$store.getters['inboxes/getInbox'](this.currentInboxId);
     },
-
+    inboxIcon() {
+      const { medium, channel_type: type } = this.inbox;
+      return getInboxIconByType(type, medium);
+    },
     inboxName() {
       if (this.isATwilioSMSChannel || this.isATwilioWhatsAppChannel) {
         return `${this.inbox.name} (${
@@ -201,7 +235,8 @@ export default {
         this.isASmsInbox ||
         this.isAWhatsAppChannel ||
         this.isAFacebookInbox ||
-        this.isAPIInbox
+        this.isAPIInbox ||
+        this.isATelegramChannel
       );
     },
     inboxNameLabel() {
@@ -254,6 +289,30 @@ export default {
         this.inbox.reauthorization_required
       );
     },
+    isEmbeddedSignupWhatsApp() {
+      return this.inbox.provider_config?.source === 'embedded_signup';
+    },
+    whatsappUnauthorized() {
+      return (
+        this.isAWhatsAppCloudChannel &&
+        this.isEmbeddedSignupWhatsApp &&
+        this.inbox.reauthorization_required
+      );
+    },
+    whatsappRegistrationIncomplete() {
+      if (
+        !this.healthData ||
+        !this.isAWhatsAppCloudChannel ||
+        !this.isEmbeddedSignupWhatsApp
+      ) {
+        return false;
+      }
+
+      return (
+        this.healthData.platform_type === 'NOT_APPLICABLE' ||
+        this.healthData.throughput?.level === 'NOT_APPLICABLE'
+      );
+    },
   },
   watch: {
     $route(to) {
@@ -261,14 +320,39 @@ export default {
         this.fetchInboxSettings();
       }
     },
+    inbox: {
+      handler() {
+        this.fetchHealthData();
+      },
+      immediate: false,
+    },
   },
   mounted() {
     this.fetchInboxSettings();
     this.fetchPortals();
+    this.fetchHealthData();
   },
   methods: {
     fetchPortals() {
       this.$store.dispatch('portals/index');
+    },
+    async fetchHealthData() {
+      if (!this.inbox) return;
+
+      if (!this.isAWhatsAppCloudChannel) {
+        return;
+      }
+
+      try {
+        this.isLoadingHealth = true;
+        this.healthError = null;
+        const response = await InboxHealthAPI.getHealthStatus(this.inbox.id);
+        this.healthData = response.data;
+      } catch (error) {
+        this.healthError = error.message || 'Failed to fetch health data';
+      } finally {
+        this.isLoadingHealth = false;
+      }
     },
     handleFeatureFlag(e) {
       this.selectedFeatureFlags = this.toggleInput(
@@ -283,8 +367,17 @@ export default {
       }
       return [...selected, current];
     },
+    refreshAvatarUrlOnTabChange(index) {
+      // Refresh avatar URL on tab change from inbox_settings and widgetBuilder tabs, to ensure real-time updates
+      if (
+        this.inbox &&
+        ['inbox_settings', 'widgetBuilder'].includes(this.tabs[index].key)
+      )
+        this.avatarUrl = this.inbox.avatar_url;
+    },
     onTabChange(selectedTabIndex) {
       this.selectedTabIndex = selectedTabIndex;
+      this.refreshAvatarUrlOnTabChange(selectedTabIndex);
     },
     fetchInboxSettings() {
       this.selectedTabIndex = 0;
@@ -306,7 +399,7 @@ export default {
         this.continuityViaEmail = this.inbox.continuity_via_email;
         this.channelWebsiteUrl = this.inbox.website_url;
         this.channelWelcomeTitle = this.inbox.welcome_title;
-        this.channelWelcomeTagline = this.inbox.welcome_tagline;
+        this.channelWelcomeTagline = this.inbox.welcome_tagline || '';
         this.selectedFeatureFlags = this.inbox.selected_feature_flags || [];
         this.replyTime = this.inbox.reply_time;
         this.locktoSingleConversation = this.inbox.lock_to_single_conversation;
@@ -319,7 +412,7 @@ export default {
       try {
         const payload = {
           id: this.currentInboxId,
-          name: this.selectedInboxName,
+          name: this.selectedInboxName?.trim(),
           enable_email_collect: this.emailCollectEnabled,
           allow_messages_after_resolved: this.allowMessagesAfterResolved,
           greeting_enabled: this.greetingEnabled,
@@ -396,14 +489,14 @@ export default {
 
 <template>
   <div
-    class="flex-grow flex-shrink w-full min-w-0 pl-0 pr-0 overflow-auto settings"
+    class="overflow-auto flex-grow flex-shrink pr-0 pl-0 w-full min-w-0 settings"
   >
     <SettingIntroBanner
       :header-image="inbox.avatarUrl"
       :header-title="inboxName"
     >
       <woot-tabs
-        class="settings--tabs"
+        class="[&_ul]:p-0"
         :index="selectedTabIndex"
         :border="false"
         @change="onTabChange"
@@ -414,14 +507,20 @@ export default {
           :index="index"
           :name="tab.name"
           :show-badge="false"
+          is-compact
         />
       </woot-tabs>
     </SettingIntroBanner>
-    <section class="w-full max-w-6xl mx-auto">
+    <section class="mx-auto w-full max-w-6xl">
       <MicrosoftReauthorize v-if="microsoftUnauthorized" :inbox="inbox" />
       <FacebookReauthorize v-if="facebookUnauthorized" :inbox="inbox" />
       <GoogleReauthorize v-if="googleUnauthorized" :inbox="inbox" />
       <InstagramReauthorize v-if="instagramUnauthorized" :inbox="inbox" />
+      <WhatsappReauthorize
+        v-if="whatsappUnauthorized"
+        :whatsapp-registration-incomplete="whatsappRegistrationIncomplete"
+        :inbox="inbox"
+      />
       <DuplicateInboxBanner
         v-if="hasDuplicateInstagramInbox"
         :content="$t('INBOX_MGMT.ADD.INSTAGRAM.DUPLICATE_INBOX_BANNER')"
@@ -433,14 +532,21 @@ export default {
           :sub-title="$t('INBOX_MGMT.SETTINGS_POPUP.INBOX_UPDATE_SUB_TEXT')"
           :show-border="false"
         >
-          <woot-avatar-uploader
-            :label="$t('INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_AVATAR.LABEL')"
-            :src="avatarUrl"
-            class="pb-4"
-            delete-avatar
-            @on-avatar-select="handleImageUpload"
-            @on-avatar-delete="handleAvatarDelete"
-          />
+          <div class="flex flex-col gap-1 items-start mb-4">
+            <label class="mb-0.5 text-sm font-medium text-n-slate-12">
+              {{ $t('INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_AVATAR.LABEL') }}
+            </label>
+            <Avatar
+              :src="avatarUrl"
+              :size="72"
+              :icon-name="inboxIcon"
+              name=""
+              allow-upload
+              rounded-full
+              @upload="handleImageUpload"
+              @delete="handleAvatarDelete"
+            />
+          </div>
           <woot-input
             v-model="selectedInboxName"
             class="pb-4"
@@ -652,7 +758,7 @@ export default {
               }}
             </p>
           </label>
-          <div class="pb-4">
+          <div v-if="!isAVoiceChannel" class="pb-4">
             <label>
               {{ $t('INBOX_MGMT.HELP_CENTER.LABEL') }}
             </label>
@@ -747,7 +853,7 @@ export default {
               :business-name="businessName"
               @update="toggleSenderNameType"
             />
-            <div class="flex flex-col items-start gap-2 mt-2">
+            <div class="flex flex-col gap-2 items-start mt-2">
               <NextButton
                 ghost
                 blue
@@ -824,17 +930,12 @@ export default {
       <div v-if="selectedTabKey === 'botConfiguration'">
         <BotConfiguration :inbox="inbox" />
       </div>
-      <div v-if="selectedTabKey === 'unoApiConfiguration'">
-        <UnoapiConfiguration :inbox="inbox" />
-      </div>
+        <div v-if="selectedTabKey === 'unoApiConfiguration'">
+          <UnoapiConfiguration :inbox="inbox" />
+        </div>
+        <div v-if="selectedTabKey === 'whatsappHealth'">
+          <AccountHealth :health-data="healthData" />
+        </div>
     </section>
   </div>
 </template>
-
-<style scoped lang="scss">
-.settings--tabs {
-  ::v-deep .tabs {
-    @apply p-0;
-  }
-}
-</style>

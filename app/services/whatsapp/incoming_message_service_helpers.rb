@@ -65,19 +65,17 @@ module Whatsapp::IncomingMessageServiceHelpers
     normalised_number
   end
 
-  def processed_waid(waid)
-    # in case of Brazil, we need to do additional processing
-    # https://github.com/chatwoot/chatwoot/issues/5840
-    if brazil_phone_number?(waid)
-      # check if there is an existing contact inbox with the normalised waid
-      # We will create conversation against it
-      contact_inbox = inbox.contact_inboxes.find_by(source_id: normalised_brazil_mobile_number(waid))
+  def argentina_phone_number?(phone_number)
+    phone_number.match(/^54/)
+  end
 
-      # if there is no contact inbox with the waid without 9,
-      # We will create contact inboxes and contacts with the number 9 added
-      waid = contact_inbox.source_id if contact_inbox.present?
-    end
-    waid
+  def normalised_argentina_mobil_number(phone_number)
+    # Remove 9 before country code
+    phone_number.sub(/^549/, '54')
+  end
+
+  def processed_waid(waid)
+    Whatsapp::PhoneNumberNormalizationService.new(inbox).normalize_and_find_contact(waid)
   end
 
   def error_webhook_event?(message)
