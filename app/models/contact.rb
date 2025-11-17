@@ -48,8 +48,8 @@ class Contact < ApplicationRecord
   include LlmFormattable
 
   validates :account_id, presence: true
-  validates :email, allow_blank: true, uniqueness: { scope: [:account_id], case_sensitive: false },
-                    format: { with: Devise.email_regexp, message: I18n.t('errors.contacts.email.invalid') }
+  validates :email, allow_blank: true, uniqueness: { scope: [:account_id], case_sensitive: false }
+  validate :email_format_with_lid
   validates :identifier, allow_blank: true, uniqueness: { scope: [:account_id] }
   validates :phone_number,
             allow_blank: true, uniqueness: { scope: [:account_id] },
@@ -213,6 +213,8 @@ class Contact < ApplicationRecord
   def email_format
     return if email.blank?
 
+    return if email&.end_with?('@lid')
+
     self.email = email_was unless email.match(Devise.email_regexp)
   end
 
@@ -233,6 +235,16 @@ class Contact < ApplicationRecord
 
   def sync_contact_attributes
     ::Contacts::SyncAttributes.new(self).perform
+  end
+
+  def email_format_with_lid
+    return if email.blank?
+
+    return if email&.end_with?('@lid')
+
+    return if email.match?(Devise.email_regexp)
+
+    errors.add(:email, I18n.t('errors.contacts.email.invalid'))
   end
 
   def dispatch_create_event

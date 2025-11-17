@@ -85,6 +85,48 @@ Para campanhas WhatsApp com provider `unoapi`, o envio pode usar a API da Groq p
 
 Se `GROQ_API_KEY` não estiver definido, as campanhas Unoapi continuam funcionando normalmente, apenas sem variação automática de texto.
 
+## Encaminhar mensagens entre conversas
+
+Este fork adiciona uma forma de encaminhar mensagens (texto e mídias) de uma conversa para outra, inclusive em caixas de entrada WhatsApp com provider `unoapi`.
+
+### Como usar
+
+- No painel de conversas, clique com o **botão direito** sobre uma mensagem (ou use o botão de **menu de contexto** da bolha).
+- Escolha a opção **“Encaminhar mensagens”**.
+- Um modo de seleção é ativado:
+  - A mensagem clicada já vem selecionada.
+  - Você pode marcar ou desmarcar outras mensagens usando os checkboxes ao lado das bolhas.
+- Na barra que aparece acima da lista de mensagens, clique em **Encaminhar**.
+- No modal:
+  - Escolha o **contato** de destino (pode pesquisar ou criar um novo).
+  - Escolha a **caixa de entrada** (inbox) pela qual deseja encaminhar.
+  - Revise o **preview de texto** (apenas texto; anexos serão encaminhados mesmo sem aparecer no preview).
+  - Clique em **Encaminhar** para confirmar.
+
+### O que é encaminhado
+
+- Para cada mensagem selecionada, o sistema cria uma nova mensagem de saída na conversa de destino com:
+  - Mesmo tipo de conteúdo (`content_type`) e texto (`outgoing_content`), quando houver.
+  - Metadados indicando de qual conversa/mensagem original o conteúdo foi encaminhado.
+- Todos os anexos suportados são clonados:
+  - Imagens, vídeos, documentos e áudios.
+  - Os arquivos são copiados em nível de storage para a nova mensagem, como se tivessem sido enviados novamente.
+
+### Reaproveitamento de conversas (lock_to_single_conversation)
+
+O comportamento da conversa de destino respeita a configuração `lock_to_single_conversation` do inbox:
+
+- **Quando `lock_to_single_conversation` está ativo** no inbox de destino:
+  - Se existir uma conversa anterior para aquele contato/inbox, o encaminhamento **reabre a última conversa** (se estiver resolvida).
+  - Essa conversa é **atribuída ao agente** que está encaminhando.
+  - As mensagens encaminhadas são adicionadas **nessa** conversa reaproveitada.
+- **Quando `lock_to_single_conversation` está desativado**:
+  - Se já houver **uma conversa aberta** para o contato nesse inbox, ela é reutilizada e atribuída ao agente que está encaminhando.
+  - Se não houver conversa aberta, é criada **uma nova conversa aberta**, já atribuída ao agente.
+
+Esse fluxo funciona também para caixas de entrada WhatsApp com provider `unoapi`, reaproveitando a mesma lógica de envio usada nas respostas normais.
+
+
 # Chatwoot
 
 The modern customer support platform, an open-source alternative to Intercom, Zendesk, Salesforce Service Cloud etc.
