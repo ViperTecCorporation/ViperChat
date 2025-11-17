@@ -21,7 +21,6 @@ import { mapGetters } from 'vuex';
 
 // mixins
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
-import globalConfigMixin from 'shared/mixins/globalConfigMixin';
 
 // utils
 import { emitter } from 'shared/helpers/mitt';
@@ -49,7 +48,7 @@ export default {
     ConversationLabelSuggestion,
     Spinner,
   },
-  mixins: [inboxMixin, globalConfigMixin],
+  mixins: [inboxMixin],
   setup() {
     const isPopOutReplyBox = ref(false);
     const conversationPanelRef = ref(null);
