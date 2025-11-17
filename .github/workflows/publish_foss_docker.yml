@@ -20,7 +20,8 @@ permissions:
   packages: write
 
 env:
-  DOCKER_REPO: ghcr.io/${{ github.repository }}
+  # Docker/OCI image names precisam ser minúsculos
+  DOCKER_REPO: ghcr.io/viperteccorporation/chatwoot
 
 jobs:
   build:
