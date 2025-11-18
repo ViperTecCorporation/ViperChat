@@ -405,7 +405,7 @@ const shouldRenderMessage = computed(() => {
 function openContextMenu(e) {
   const shouldSkipContextMenu =
     e.target?.classList.contains('skip-context-menu') ||
-    ['a', 'img'].includes(e.target?.tagName.toLowerCase());
+    ['a'].includes(e.target?.tagName.toLowerCase());
   if (shouldSkipContextMenu || getSelection().toString()) {
     return;
   }

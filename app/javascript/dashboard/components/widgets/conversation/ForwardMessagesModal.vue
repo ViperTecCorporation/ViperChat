@@ -277,7 +277,7 @@ const handleForward = async () => {
           @click="handleClose"
         />
         <Button
-          color="brand"
+          color="blue"
           size="sm"
           :disabled="!canSubmit"
           :label="$t('CONVERSATION.FORWARD_MESSAGES.ACTION_LABEL')"

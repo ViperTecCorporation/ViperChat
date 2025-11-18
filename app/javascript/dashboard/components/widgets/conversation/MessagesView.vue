@@ -594,7 +594,7 @@ export default {
           @click="cancelForwardSelection"
         />
         <Button
-          color="brand"
+          color="blue"
           size="xs"
           :disabled="forwardSelectionCount === 0"
           :label="$t('CONVERSATION.FORWARD_MESSAGES.ACTION_LABEL')"
