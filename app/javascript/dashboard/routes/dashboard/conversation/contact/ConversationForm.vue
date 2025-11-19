@@ -524,7 +524,7 @@ export default {
             <FileUpload
               ref="uploadAttachment"
               input-id="newConversationAttachment"
-              :size="150 * 1024 * 1024"
+              :size="4096 * 4096"
               :accept="allowedFileTypes"
               :multiple="enableMultipleFileUpload"
               :drop="true"

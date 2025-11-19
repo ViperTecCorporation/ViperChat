@@ -19,11 +19,25 @@ export default {
         return MAXIMUM_FILE_UPLOAD_SIZE;
       }
 
-      return getMaxUploadSizeByChannel({
+      const globalLimit =
+        Number(this.globalConfig?.maxFileUploadSizeInMb) ||
+        MAXIMUM_FILE_UPLOAD_SIZE;
+
+      if (this.isAUnoapiChannel) {
+        return globalLimit;
+      }
+
+      const channelLimit = getMaxUploadSizeByChannel({
         channelType: this.inbox?.channel_type,
-        medium: this.inbox?.medium, // e.g. 'sms' | 'whatsapp'
-        mime, // e.g. 'image/png'
+        medium: this.inbox?.medium,
+        mime,
       });
+
+      if (!channelLimit) {
+        return globalLimit;
+      }
+
+      return Math.min(globalLimit, channelLimit);
     },
     alertOverLimit(maxSizeMB) {
       useAlert(

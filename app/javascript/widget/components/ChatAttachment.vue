@@ -149,7 +149,7 @@ export default {
 <template>
   <FileUpload
     ref="upload"
-    :size="fileUploadSizeLimit * 1024 * 1024"
+    :size="4096 * 2048"
     :accept="allowedFileTypes"
     :data="{
       direct_upload_url: '/api/v1/widget/direct_uploads',

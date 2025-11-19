@@ -28,7 +28,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def attachments
     @attachments_count = @conversation.attachments.count
     @attachments = @conversation.attachments
-                                .includes(:message)
+                                .includes(message: :inbox)
                                 .order(created_at: :desc)
                                 .page(attachment_params[:page])
                                 .per(ATTACHMENT_RESULTS_PER_PAGE)

@@ -296,7 +296,7 @@ export default {
         ref="uploadRef"
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_ATTACH_ICON')"
         input-id="conversationAttachment"
-        :size="150 * 1024 * 1024"
+        :size="4096 * 4096"
         :accept="allowedFileTypes"
         :multiple="enableMultipleFileUpload"
         :drop="enableDragAndDrop"
