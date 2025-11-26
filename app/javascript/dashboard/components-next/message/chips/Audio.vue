@@ -59,6 +59,27 @@ const displayDuration = computed(() => {
   return isReadyToPlay.value ? formatTime(duration.value) : '--:--';
 });
 
+const scheduleReload = () => {
+  const hasValidUrl = !!attachment.dataUrl;
+  const hasRetries = retryCount.value < retryDelays.length;
+
+  if (!hasValidUrl || !hasRetries) {
+    isPlaying.value = false;
+    duration.value = 0;
+    currentTime.value = 0;
+    return;
+  }
+
+  const delay = retryDelays[retryCount.value];
+  retryCount.value += 1;
+
+  clearRetryTimer();
+  retryTimer = setTimeout(() => {
+    cacheBust.value = Date.now();
+    audioPlayer.value?.load();
+  }, delay);
+};
+
 const clearRetryTimer = () => {
   if (retryTimer) {
     clearTimeout(retryTimer);
@@ -90,7 +111,7 @@ const onLoadedMetadata = () => {
   if (player) {
     player.playbackRate = playbackSpeed.value;
   }
-  if (resumeTime.value) {
+  if (resumeTime.value && player) {
     audioPlayer.value.currentTime = Math.min(
       resumeTime.value,
       audioPlayer.value.duration || resumeTime.value
@@ -160,7 +181,7 @@ const playOrPause = () => {
   } else {
     if (!isReadyToPlay.value) {
       resumeOnLoad.value = true;
-      audioPlayer.value?.load();
+      scheduleReload();
       return;
     }
     // Emit event to pause all other audio
@@ -205,13 +226,7 @@ const handlePlaybackError = () => {
   resumeOnLoad.value = isPlaying.value;
   isPlaying.value = false;
 
-  const delay = retryDelays[retryCount.value];
-  retryCount.value += 1;
-
-  clearRetryTimer();
-  retryTimer = setTimeout(() => {
-    cacheBust.value = Date.now();
-  }, delay);
+  scheduleReload();
 };
 
 watch(audioSrc, newSrc => {
@@ -228,6 +243,7 @@ watch(
     currentTime.value = 0;
     resetRetryState();
     cacheBust.value = Date.now();
+    audioPlayer.value?.load();
   }
 );
 
@@ -240,6 +256,7 @@ onBeforeUnmount(clearRetryTimer);
     controls
     class="hidden"
     playsinline
+    preload="metadata"
     @loadedmetadata="onLoadedMetadata"
     @timeupdate="onTimeUpdate"
     @ended="onEnd"
@@ -253,14 +270,18 @@ onBeforeUnmount(clearRetryTimer);
     class="rounded-xl w-full gap-2 p-1.5 bg-n-alpha-white flex flex-col items-center border border-n-container shadow-[0px_2px_8px_0px_rgba(94,94,94,0.06)]"
   >
     <div class="flex gap-1 w-full flex-1 items-center justify-start">
-      <button class="p-0 border-0 size-8" @click="playOrPause">
+      <button
+        class="p-0 border-0 size-8 disabled:opacity-40 disabled:cursor-not-allowed"
+        :disabled="!isReadyToPlay && !resumeOnLoad"
+        @click="playOrPause"
+      >
         <Icon
           v-if="isReadyToPlay && isPlaying"
           class="size-8"
           icon="i-teenyicons-pause-small-solid"
         />
         <Icon
-          v-else-if="isReadyToPlay"
+          v-else-if="isReadyToPlay || resumeOnLoad"
           class="size-8"
           icon="i-teenyicons-play-small-solid"
         />
