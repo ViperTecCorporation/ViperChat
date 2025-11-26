@@ -5,9 +5,10 @@ import {
   useTemplateRef,
   ref,
   getCurrentInstance,
+  watch,
+  onBeforeUnmount,
 } from 'vue';
 import Icon from 'next/icon/Icon.vue';
-import { timeStampAppendedURL } from 'dashboard/helper/URLHelper';
 import { downloadFile } from '@chatwoot/utils';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { emitter } from 'shared/helpers/mitt';
@@ -23,22 +24,73 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const timeStampURL = computed(() => {
-  return timeStampAppendedURL(attachment.dataUrl);
-});
-
 const audioPlayer = useTemplateRef('audioPlayer');
 
+const retryDelays = [500, 1000, 2000, 4000];
 const isPlaying = ref(false);
 const isMuted = ref(false);
 const currentTime = ref(0);
 const duration = ref(0);
 const playbackSpeed = ref(1);
+const cacheBust = ref(0);
+const retryCount = ref(0);
+const resumeTime = ref(0);
+const resumeOnLoad = ref(false);
+let retryTimer;
 
 const { uid } = getCurrentInstance();
 
+const clearRetryTimer = () => {
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+};
+
+const resetRetryState = () => {
+  clearRetryTimer();
+  retryCount.value = 0;
+  resumeTime.value = 0;
+  resumeOnLoad.value = false;
+};
+
+const audioSrc = computed(() => {
+  const url = attachment.dataUrl || '';
+  if (!url) return '';
+
+  if (!cacheBust.value) return url;
+
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}t=${cacheBust.value}`;
+});
+
 const onLoadedMetadata = () => {
   duration.value = audioPlayer.value?.duration;
+  if (audioPlayer.value) {
+    audioPlayer.value.playbackRate = playbackSpeed.value;
+  }
+  if (resumeTime.value) {
+    audioPlayer.value.currentTime = Math.min(
+      resumeTime.value,
+      audioPlayer.value.duration || resumeTime.value
+    );
+  }
+
+  if (resumeOnLoad.value && audioSrc.value) {
+    audioPlayer.value
+      ?.play()
+      .then(() => {
+        isPlaying.value = true;
+      })
+      .catch(() => {
+        isPlaying.value = false;
+      })
+      .finally(() => {
+        resumeOnLoad.value = false;
+      });
+  }
+
+  resetRetryState();
 };
 
 const playbackSpeedLabel = computed(() => {
@@ -118,6 +170,45 @@ const downloadAudio = async () => {
   const { fileType, dataUrl, extension } = attachment;
   downloadFile({ url: dataUrl, type: fileType, extension });
 };
+
+const handlePlaybackError = () => {
+  const hasValidUrl = !!attachment.dataUrl;
+  const hasRetries = retryCount.value < retryDelays.length;
+
+  if (!hasValidUrl || !hasRetries) {
+    isPlaying.value = false;
+    return;
+  }
+
+  resumeTime.value = audioPlayer.value?.currentTime || 0;
+  resumeOnLoad.value = isPlaying.value;
+  isPlaying.value = false;
+
+  const delay = retryDelays[retryCount.value];
+  retryCount.value += 1;
+
+  clearRetryTimer();
+  retryTimer = setTimeout(() => {
+    cacheBust.value = Date.now();
+  }, delay);
+};
+
+watch(audioSrc, newSrc => {
+  if (!newSrc) return;
+
+  // reload the element to fetch the fresh source
+  audioPlayer.value?.load();
+});
+
+watch(
+  () => attachment.dataUrl,
+  () => {
+    resetRetryState();
+    cacheBust.value = Date.now();
+  }
+);
+
+onBeforeUnmount(clearRetryTimer);
 </script>
 
 <template>
@@ -129,8 +220,10 @@ const downloadAudio = async () => {
     @loadedmetadata="onLoadedMetadata"
     @timeupdate="onTimeUpdate"
     @ended="onEnd"
+    @error="handlePlaybackError"
+    @stalled="handlePlaybackError"
   >
-    <source :src="timeStampURL" />
+    <source :src="audioSrc" />
   </audio>
   <div
     v-bind="$attrs"

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import BaseBubble from './Base.vue';
@@ -20,13 +20,54 @@ const attachment = computed(() => {
   return attachments.value[0];
 });
 
+const retryDelays = [500, 1000, 2000, 4000];
 const hasError = ref(false);
 const showGallery = ref(false);
 const isDownloading = ref(false);
+const cacheBust = ref(0);
+const retryCount = ref(0);
+let retryTimer;
+
+const clearRetryTimer = () => {
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+};
+
+const resetRetryState = () => {
+  clearRetryTimer();
+  hasError.value = false;
+  retryCount.value = 0;
+};
+
+const imageSrc = computed(() => {
+  const url = attachment.value?.dataUrl || '';
+  if (!url) return '';
+
+  if (!cacheBust.value) return url;
+
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}t=${cacheBust.value}`;
+});
 
 const handleError = () => {
-  hasError.value = true;
-  emit('error');
+  const hasMoreRetries = retryCount.value < retryDelays.length;
+  const hasValidUrl = !!attachment.value?.dataUrl;
+
+  if (!hasMoreRetries || !hasValidUrl) {
+    hasError.value = true;
+    emit('error');
+    return;
+  }
+
+  const delay = retryDelays[retryCount.value];
+  retryCount.value += 1;
+
+  clearRetryTimer();
+  retryTimer = setTimeout(() => {
+    cacheBust.value = Date.now();
+  }, delay);
 };
 
 const downloadAttachment = async () => {
@@ -40,6 +81,16 @@ const downloadAttachment = async () => {
     isDownloading.value = false;
   }
 };
+
+watch(
+  () => attachment.value?.dataUrl,
+  () => {
+    resetRetryState();
+    cacheBust.value = Date.now();
+  }
+);
+
+onBeforeUnmount(clearRetryTimer);
 </script>
 
 <template>
@@ -57,7 +108,7 @@ const downloadAttachment = async () => {
     <div v-else class="relative group rounded-lg overflow-hidden">
       <img
         class="skip-context-menu"
-        :src="attachment.dataUrl"
+        :src="imageSrc"
         :width="attachment.width"
         :height="attachment.height"
         @click="onClick"
