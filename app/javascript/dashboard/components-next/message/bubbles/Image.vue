@@ -42,7 +42,7 @@ const resetRetryState = () => {
 };
 
 const imageSrc = computed(() => {
-  const url = attachment.value?.dataUrl || '';
+  const url = attachment.value?.dataUrl || attachment.value?.thumbUrl || '';
   if (!url) return '';
 
   if (!cacheBust.value) return url;
@@ -71,10 +71,10 @@ const handleError = () => {
 };
 
 const downloadAttachment = async () => {
-  const { fileType, dataUrl, extension } = attachment.value;
+  const { fileType, dataUrl, thumbUrl, extension } = attachment.value;
   try {
     isDownloading.value = true;
-    await downloadFile({ url: dataUrl, type: fileType, extension });
+    await downloadFile({ url: dataUrl || thumbUrl, type: fileType, extension });
   } catch (error) {
     useAlert(t('GALLERY_VIEW.ERROR_DOWNLOADING'));
   } finally {
@@ -83,7 +83,7 @@ const downloadAttachment = async () => {
 };
 
 watch(
-  () => attachment.value?.dataUrl,
+  () => attachment.value?.dataUrl || attachment.value?.thumbUrl,
   () => {
     resetRetryState();
     cacheBust.value = Date.now();
