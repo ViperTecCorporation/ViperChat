@@ -311,8 +311,9 @@ class Message < ApplicationRecord
   def ensure_attachments_available
     return if attachments.blank?
 
-    attempts = 5
-    base_delay = 0.5
+    attempts = attachment_availability_attempts
+    base_delay = attachment_availability_base_delay
+    max_delay = [base_delay * 8, base_delay].max
 
     attachments.each do |attachment|
       blob = attachment.file&.blob
@@ -325,11 +326,21 @@ class Message < ApplicationRecord
         break if service.exist?(blob.key)
 
         sleep(delay)
-        delay = [delay * 2, 4].min
+        delay = [delay * 2, max_delay].min
       end
     rescue StandardError => e
       Rails.logger.warn("Attachment availability check failed for message #{id}: #{e.message}")
     end
+  end
+
+  def attachment_availability_attempts
+    attempts = ENV.fetch('ATTACHMENT_AVAILABILITY_ATTEMPTS', 5).to_i
+    attempts.positive? ? attempts : 5
+  end
+
+  def attachment_availability_base_delay
+    delay = ENV.fetch('ATTACHMENT_AVAILABILITY_BASE_DELAY', 0.5).to_f
+    delay.positive? ? delay : 0.5
   end
 
   def execute_after_create_commit_callbacks
