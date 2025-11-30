@@ -42,7 +42,7 @@ const resetRetryState = () => {
 };
 
 const imageSrc = computed(() => {
-  const url = attachment.value?.dataUrl || attachment.value?.thumbUrl || '';
+  const url = attachment.value?.dataUrl || '';
   if (!url) return '';
 
   if (!cacheBust.value) return url;
@@ -53,7 +53,7 @@ const imageSrc = computed(() => {
 
 const handleError = () => {
   const hasMoreRetries = retryCount.value < retryDelays.length;
-  const hasValidUrl = !!attachment.value?.dataUrl || !!attachment.value?.thumbUrl;
+  const hasValidUrl = !!attachment.value?.dataUrl ;
 
   if (!hasMoreRetries || !hasValidUrl) {
     hasError.value = true;
