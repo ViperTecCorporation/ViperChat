@@ -76,4 +76,11 @@ class Webhooks::Trigger
   def message_id
     @payload[:id]
   end
+
+  def webhook_timeout
+    raw_timeout = GlobalConfig.get_value('WEBHOOK_TIMEOUT')
+    timeout = raw_timeout.presence&.to_i
+
+    timeout&.positive? ? timeout : 5
+  end
 end

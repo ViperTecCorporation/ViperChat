@@ -1,11 +1,11 @@
 <script>
 import FileUpload from 'vue-upload-component';
 import Spinner from 'shared/components/Spinner.vue';
-import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import {
-  MAXIMUM_FILE_UPLOAD_SIZE,
-  ALLOWED_FILE_TYPES,
-} from 'shared/constants/messages';
+  checkFileSizeLimit,
+  resolveMaximumFileUploadSize,
+} from 'shared/helpers/FileHelper';
+import { ALLOWED_FILE_TYPES } from 'shared/constants/messages';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import FluentIcon from 'shared/components/FluentIcon/Index.vue';
 import { DirectUpload } from 'activestorage';
@@ -77,7 +77,7 @@ export default {
       }
       this.isUploading = true;
       try {
-        if (checkFileSizeLimit(file, MAXIMUM_FILE_UPLOAD_SIZE)) {
+        if (checkFileSizeLimit(file, this.fileUploadSizeLimit)) {
           const { websiteToken } = window.chatwootWebChannel;
           const upload = new DirectUpload(
             file.file,
@@ -119,7 +119,7 @@ export default {
       }
       this.isUploading = true;
       try {
-        if (checkFileSizeLimit(file, MAXIMUM_FILE_UPLOAD_SIZE)) {
+        if (checkFileSizeLimit(file, this.fileUploadSizeLimit)) {
           await this.onAttach({
             file: file.file,
             ...this.getLocalFileAttributes(file),

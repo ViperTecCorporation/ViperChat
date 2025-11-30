@@ -20,6 +20,10 @@ export const useFileUpload = ({ inbox, attachFile, isPrivateNote = false }) => {
   const currentChat = useMapGetter('getSelectedChat');
   const globalConfig = useMapGetter('globalConfig/get');
 
+  const installationLimit = resolveMaximumFileUploadSize(
+    globalConfig.value?.maximumFileUploadSize
+  );
+
   // helper: compute max upload size for a given file's mime
   const maxSizeFor = mime => {
     const configured =

@@ -3,20 +3,29 @@ import { useAlert } from 'dashboard/composables';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { getMaxUploadSizeByChannel } from '@chatwoot/utils';
 import { DirectUpload } from 'activestorage';
-import { MAXIMUM_FILE_UPLOAD_SIZE } from 'shared/constants/messages';
+import {
+  DEFAULT_MAXIMUM_FILE_UPLOAD_SIZE,
+  resolveMaximumFileUploadSize,
+} from 'shared/helpers/FileHelper';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
 export default {
   computed: {
     ...mapGetters({
       accountId: 'getCurrentAccountId',
     }),
+    installationLimit() {
+      return resolveMaximumFileUploadSize(
+        this.globalConfig.maximumFileUploadSize
+      );
+    },
   },
 
   methods: {
     maxSizeFor(mime) {
-      // Use default file size limit for private notes
+      // Use default/installation limit for private notes
       if (this.isOnPrivateNote) {
-        return MAXIMUM_FILE_UPLOAD_SIZE;
+        return this.installationLimit;
       }
 
       const globalLimit =
