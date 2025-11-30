@@ -26,6 +26,11 @@ defineOptions({
 
 const audioPlayer = useTemplateRef('audioPlayer');
 
+const logDebug = (...args) => {
+  // eslint-disable-next-line no-console
+  console.debug('[AudioChip]', ...args);
+};
+
 const retryDelays = [500, 1000, 2000, 4000];
 const isPlaying = ref(false);
 const isMuted = ref(false);
@@ -65,6 +70,7 @@ const scheduleReload = () => {
   const hasRetries = retryCount.value < retryDelays.length;
 
   if (!hasValidUrl || !hasRetries) {
+    logDebug('scheduleReload aborted', { hasValidUrl, hasRetries });
     isPlaying.value = false;
     duration.value = 0;
     currentTime.value = 0;
@@ -78,6 +84,10 @@ const scheduleReload = () => {
   retryTimer = setTimeout(() => {
     cacheBust.value = Date.now();
     audioPlayer.value?.load();
+    logDebug('retrying audio load', {
+      retryCount: retryCount.value,
+      cacheBust: cacheBust.value,
+    });
   }, delay);
 };
 
@@ -127,6 +137,10 @@ const onLoadedMetadata = () => {
   const metaDuration = player?.duration;
   duration.value = Number.isFinite(metaDuration) ? metaDuration : 0;
   clearMetadataTimer();
+  logDebug('loadedmetadata', {
+    duration: duration.value,
+    src: audioSrc.value,
+  });
   if (player) {
     player.playbackRate = playbackSpeed.value;
   }
@@ -239,6 +253,7 @@ const handlePlaybackError = () => {
   const hasRetries = retryCount.value < retryDelays.length;
 
   if (!hasValidUrl || !hasRetries) {
+    logDebug('scheduleReload aborted', { hasValidUrl, hasRetries });
     isPlaying.value = false;
     duration.value = 0;
     currentTime.value = 0;
@@ -250,6 +265,10 @@ const handlePlaybackError = () => {
   isPlaying.value = false;
 
   scheduleReload();
+  logDebug('handlePlaybackError', {
+    resumeTime: resumeTime.value,
+    retryCount: retryCount.value,
+  });
 };
 
 watch(audioSrc, newSrc => {
