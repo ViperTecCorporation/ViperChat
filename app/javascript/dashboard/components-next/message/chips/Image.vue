@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import Icon from 'next/icon/Icon.vue';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 import { useMessageContext } from '../provider.js';
@@ -12,14 +12,64 @@ defineProps({
     required: true,
   },
 });
+const retryDelays = [500, 1000, 2000, 4000];
 const hasError = ref(false);
 const showGallery = ref(false);
+const cacheBust = ref(0);
+const retryCount = ref(0);
+let retryTimer;
 
 const { filteredCurrentChatAttachments } = useMessageContext();
 
-const handleError = () => {
-  hasError.value = true;
+const clearRetryTimer = () => {
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
 };
+
+const resetRetryState = () => {
+  clearRetryTimer();
+  hasError.value = false;
+  retryCount.value = 0;
+};
+
+const imageSrc = computed(() => {
+  const url = attachment.dataUrl || '';
+  if (!url) return '';
+  if (!cacheBust.value) return url;
+
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}t=${cacheBust.value}`;
+});
+
+const handleError = () => {
+  const hasMoreRetries = retryCount.value < retryDelays.length;
+  const hasValidUrl = !!attachment.dataUrl;
+
+  if (!hasMoreRetries || !hasValidUrl) {
+    hasError.value = true;
+    return;
+  }
+
+  const delay = retryDelays[retryCount.value];
+  retryCount.value += 1;
+
+  clearRetryTimer();
+  retryTimer = setTimeout(() => {
+    cacheBust.value = Date.now();
+  }, delay);
+};
+
+watch(
+  () => attachment.dataUrl,
+  () => {
+    resetRetryState();
+    cacheBust.value = Date.now();
+  }
+);
+
+onBeforeUnmount(clearRetryTimer);
 </script>
 
 <template>
@@ -37,7 +87,7 @@ const handleError = () => {
     <img
       v-else
       class="object-cover w-full h-full skip-context-menu"
-      :src="attachment.dataUrl"
+      :src="imageSrc"
       @error="handleError"
     />
   </div>
