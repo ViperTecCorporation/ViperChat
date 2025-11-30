@@ -43,7 +43,7 @@ const isActive = computed(() => {
     );
   }
   if (key === 'voice') {
-    return props.enabledFeatures.channel_voice;
+    return true;
   }
   if (key === 'notifica_me') {
     return props.enabledFeatures.channel_notifica_me;
