@@ -2,7 +2,6 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
-import { useLoadWithRetry } from 'dashboard/composables/loadWithRetry';
 import BaseBubble from './Base.vue';
 import Button from 'next/button/Button.vue';
 import Icon from 'next/icon/Icon.vue';
@@ -24,6 +23,7 @@ const retryDelays = [500, 1000, 2000, 4000, 8000, 16000, 32000, 64000];
 const hasError = ref(false);
 const showGallery = ref(false);
 const isDownloading = ref(false);
+const hasLoaded = ref(false);
 const cacheBust = ref(0);
 const retryCount = ref(0);
 let retryTimer;
@@ -61,6 +61,7 @@ const handleError = () => {
     return;
   }
 
+  hasLoaded.value = false;
   const delay = retryDelays[retryCount.value];
   retryCount.value += 1;
 
@@ -68,6 +69,11 @@ const handleError = () => {
   retryTimer = setTimeout(() => {
     cacheBust.value = Date.now();
   }, delay);
+};
+
+const handleLoad = () => {
+  hasError.value = false;
+  hasLoaded.value = true;
 };
 
 const downloadAttachment = async () => {
@@ -105,7 +111,7 @@ onBeforeUnmount(clearRetryTimer);
         {{ $t('COMPONENTS.MEDIA.IMAGE_UNAVAILABLE') }}
       </p>
     </div>
-    <div v-else-if="isLoaded" class="relative group rounded-lg overflow-hidden">
+    <div v-else class="relative group rounded-lg overflow-hidden">
       <img
         class="skip-context-menu"
         :src="imageSrc"
@@ -135,7 +141,7 @@ onBeforeUnmount(clearRetryTimer);
     v-model:show="showGallery"
     :attachment="useSnakeCase(attachment)"
     :all-attachments="filteredCurrentChatAttachments"
-    @error="handleImageError"
+    @error="handleError"
     @close="() => (showGallery = false)"
   />
 </template>
