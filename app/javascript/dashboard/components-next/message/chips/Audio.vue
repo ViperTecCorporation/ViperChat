@@ -322,17 +322,16 @@ onBeforeUnmount(() => {
   >
     <div class="flex gap-1 w-full flex-1 items-center justify-start">
       <button class="p-0 border-0 size-8" @click="playOrPause">
-        <Icon
+            <Icon
           v-if="isReadyToPlay && isPlaying"
           class="size-8"
           icon="i-teenyicons-pause-small-solid"
         />
         <Icon
-          v-else-if="isReadyToPlay || resumeOnLoad"
+          v-else
           class="size-8"
           icon="i-teenyicons-play-small-solid"
         />
-        <Icon v-else class="size-6 animate-spin" icon="i-lucide-loader-2" />
       </button>
       <div class="tabular-nums text-xs">
         {{ displayCurrentTime }} / {{ displayDuration }}
