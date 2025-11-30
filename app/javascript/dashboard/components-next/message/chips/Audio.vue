@@ -31,7 +31,9 @@ const logDebug = (...args) => {
   console.log('[AudioChip]', ...args);
 };
 
-const retryDelays = [500, 1000, 2000, 4000];
+const retryDelays = [
+  500, 1000, 2000, 4000, 8000, 16000, 32000, 64000,
+];
 const isPlaying = ref(false);
 const isMuted = ref(false);
 const currentTime = ref(0);
@@ -319,11 +321,7 @@ onBeforeUnmount(() => {
     class="rounded-xl w-full gap-2 p-1.5 bg-n-alpha-white flex flex-col items-center border border-n-container shadow-[0px_2px_8px_0px_rgba(94,94,94,0.06)]"
   >
     <div class="flex gap-1 w-full flex-1 items-center justify-start">
-      <button
-        class="p-0 border-0 size-8 disabled:opacity-40 disabled:cursor-not-allowed"
-        :disabled="!isReadyToPlay && !resumeOnLoad"
-        @click="playOrPause"
-      >
+      <button class="p-0 border-0 size-8" @click="playOrPause">
         <Icon
           v-if="isReadyToPlay && isPlaying"
           class="size-8"
