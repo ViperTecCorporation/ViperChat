@@ -28,7 +28,7 @@ const audioPlayer = useTemplateRef('audioPlayer');
 
 const logDebug = (...args) => {
   // eslint-disable-next-line no-console
-  console.debug('[AudioChip]', ...args);
+  console.log('[AudioChip]', ...args);
 };
 
 const retryDelays = [500, 1000, 2000, 4000];
