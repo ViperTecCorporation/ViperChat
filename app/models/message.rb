@@ -304,6 +304,7 @@ class Message < ApplicationRecord
   end
 
     def execute_after_create_commit_callbacks
+    schedule_attachment_availability_check
     # rails issue with order of active record callbacks being executed https://github.com/rails/rails/issues/20911
     reopen_conversation
     set_conversation_activity
@@ -415,3 +416,9 @@ class Message < ApplicationRecord
 end
 
 Message.prepend_mod_with('Message')
+
+  def schedule_attachment_availability_check
+    return if attachments.blank?
+
+    Attachments::EnsureAvailabilityJob.perform_later(id)
+  end
