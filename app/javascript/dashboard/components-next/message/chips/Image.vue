@@ -13,6 +13,11 @@ const props = defineProps({
   },
 });
 const attachment = computed(() => props.attachment || {});
+const logDebug = (...args) => {
+  // eslint-disable-next-line no-console
+  console.log('[ImageChip]', ...args);
+};
+
 const retryDelays = [500, 1000, 2000, 4000];
 const hasError = ref(false);
 const showGallery = ref(false);
@@ -50,6 +55,7 @@ const handleError = () => {
   const hasValidUrl = !!attachment.value?.dataUrl;
 
   if (!hasMoreRetries || !hasValidUrl) {
+    logDebug('handleError aborted', { hasMoreRetries, hasValidUrl });
     hasError.value = true;
     return;
   }
@@ -60,6 +66,7 @@ const handleError = () => {
   clearRetryTimer();
   retryTimer = setTimeout(() => {
     cacheBust.value = Date.now();
+    logDebug('retrying image load', { retryCount: retryCount.value, cacheBust: cacheBust.value });
   }, delay);
 };
 
@@ -68,6 +75,7 @@ watch(
   () => {
     resetRetryState();
     cacheBust.value = Date.now();
+    logDebug('dataUrl changed', { dataUrl: attachment.value?.dataUrl, thumbUrl: attachment.value?.thumbUrl });
   }
 );
 
