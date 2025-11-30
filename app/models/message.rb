@@ -308,7 +308,32 @@ class Message < ApplicationRecord
     self.content_type ||= Message.content_types[:text]
   end
 
+  def ensure_attachments_available
+    return if attachments.blank?
+
+    attempts = 5
+    base_delay = 0.5
+
+    attachments.each do |attachment|
+      blob = attachment.file&.blob
+      next if blob.blank?
+
+      service = blob.service
+      delay = base_delay
+
+      attempts.times do
+        break if service.exist?(blob.key)
+
+        sleep(delay)
+        delay = [delay * 2, 4].min
+      end
+    rescue StandardError => e
+      Rails.logger.warn("Attachment availability check failed for message #{id}: #{e.message}")
+    end
+  end
+
   def execute_after_create_commit_callbacks
+    ensure_attachments_available
     # rails issue with order of active record callbacks being executed https://github.com/rails/rails/issues/20911
     reopen_conversation
     notify_via_mail
