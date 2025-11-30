@@ -41,8 +41,7 @@ const resetRetryState = () => {
 };
 
 const imageSrc = computed(() => {
-  const url =
-    attachment.value?.dataUrl || attachment.value?.thumbUrl || '';
+  const url = attachment.value?.dataUrl || '';
   if (!url) return '';
   if (!cacheBust.value) return url;
 
