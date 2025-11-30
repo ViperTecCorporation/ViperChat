@@ -185,6 +185,17 @@ const handleSelectedContact = async ({ value, action, ...rest }) => {
     contact = rest;
   }
 
+  const email = (contact?.email || '').toLowerCase();
+  const isLidEmail = email.endsWith('@lid');
+  if (isLidEmail) {
+    const lidPhone = email.split('@')[0];
+    contact = {
+      ...contact,
+      email: null,
+      phoneNumber: contact.phoneNumber || lidPhone,
+    };
+  }
+
   selectedContact.value = contact;
 
   if (contact?.id) {
