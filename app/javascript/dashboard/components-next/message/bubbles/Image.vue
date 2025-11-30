@@ -2,6 +2,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
+import { useLoadWithRetry } from 'dashboard/composables/loadWithRetry';
 import BaseBubble from './Base.vue';
 import Button from 'next/button/Button.vue';
 import Icon from 'next/icon/Icon.vue';
@@ -11,7 +12,6 @@ import { downloadFile } from '@chatwoot/utils';
 
 import GalleryView from 'dashboard/components/widgets/conversation/components/GalleryView.vue';
 
-const emit = defineEmits(['error']);
 const { t } = useI18n();
 
 const { filteredCurrentChatAttachments, attachments } = useMessageContext();
@@ -105,14 +105,12 @@ onBeforeUnmount(clearRetryTimer);
         {{ $t('COMPONENTS.MEDIA.IMAGE_UNAVAILABLE') }}
       </p>
     </div>
-    <div v-else class="relative group rounded-lg overflow-hidden">
+    <div v-else-if="isLoaded" class="relative group rounded-lg overflow-hidden">
       <img
         class="skip-context-menu"
         :src="imageSrc"
         :width="attachment.width"
         :height="attachment.height"
-        @click="onClick"
-        @error="handleError"
       />
       <div
         class="inset-0 p-2 pointer-events-none absolute bg-gradient-to-tl from-n-slate-12/30 dark:from-n-slate-1/50 via-transparent to-transparent hidden group-hover:flex"
@@ -137,7 +135,7 @@ onBeforeUnmount(clearRetryTimer);
     v-model:show="showGallery"
     :attachment="useSnakeCase(attachment)"
     :all-attachments="filteredCurrentChatAttachments"
-    @error="handleError"
+    @error="handleImageError"
     @close="() => (showGallery = false)"
   />
 </template>
