@@ -37,6 +37,7 @@ const retryCount = ref(0);
 const resumeTime = ref(0);
 const resumeOnLoad = ref(false);
 let retryTimer;
+let metadataTimer;
 
 const { uid } = getCurrentInstance();
 
@@ -87,8 +88,25 @@ const clearRetryTimer = () => {
   }
 };
 
+const clearMetadataTimer = () => {
+  if (metadataTimer) {
+    clearTimeout(metadataTimer);
+    metadataTimer = null;
+  }
+};
+
+const scheduleMetadataTimeout = () => {
+  clearMetadataTimer();
+  metadataTimer = setTimeout(() => {
+    if (!isReadyToPlay.value) {
+      handlePlaybackError();
+    }
+  }, 1500);
+};
+
 const resetRetryState = () => {
   clearRetryTimer();
+  clearMetadataTimer();
   retryCount.value = 0;
   resumeTime.value = 0;
   resumeOnLoad.value = false;
@@ -108,6 +126,7 @@ const onLoadedMetadata = () => {
   const player = audioPlayer.value;
   const metaDuration = player?.duration;
   duration.value = Number.isFinite(metaDuration) ? metaDuration : 0;
+  clearMetadataTimer();
   if (player) {
     player.playbackRate = playbackSpeed.value;
   }
@@ -133,6 +152,10 @@ const onLoadedMetadata = () => {
   }
 
   resetRetryState();
+
+  if (!isReadyToPlay.value) {
+    scheduleMetadataTimeout();
+  }
 };
 
 const playbackSpeedLabel = computed(() => {
@@ -234,6 +257,7 @@ watch(audioSrc, newSrc => {
 
   // reload the element to fetch the fresh source
   audioPlayer.value?.load();
+  scheduleMetadataTimeout();
 });
 
 watch(
@@ -244,10 +268,14 @@ watch(
     resetRetryState();
     cacheBust.value = Date.now();
     audioPlayer.value?.load();
+    scheduleMetadataTimeout();
   }
 );
 
-onBeforeUnmount(clearRetryTimer);
+onBeforeUnmount(() => {
+  clearRetryTimer();
+  clearMetadataTimer();
+});
 </script>
 
 <template>
@@ -258,6 +286,8 @@ onBeforeUnmount(clearRetryTimer);
     playsinline
     preload="metadata"
     @loadedmetadata="onLoadedMetadata"
+    @loadeddata="clearMetadataTimer"
+    @canplay="clearMetadataTimer"
     @timeupdate="onTimeUpdate"
     @ended="onEnd"
     @error="handlePlaybackError"
