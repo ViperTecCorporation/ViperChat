@@ -370,7 +370,7 @@ const contextMenuEnabledOptions = computed(() => {
 
   return {
     copy: hasText,
-    forward: hasText && !isFailedOrProcessing && !isMessageDeleted.value,
+    forward: (hasText || hasAttachments) && !isFailedOrProcessing && !isMessageDeleted.value,
     delete:
       !hideDeleteMessageForAgents &&
       (hasText || hasAttachments) &&
