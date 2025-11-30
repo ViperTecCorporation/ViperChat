@@ -51,11 +51,14 @@ const contactableInboxesList = computed(() => {
 
   const email = (selectedContact.value?.email || '').toLowerCase();
   const isLidEmail = email.endsWith('@lid');
+  const isGusEmail = email.endsWith('@g.us');
   const lidPhone = isLidEmail ? email.split('@')[0] : null;
-  const contactPhone = selectedContact.value?.phoneNumber || lidPhone;
+  const gusPhone = isGusEmail ? email : null;
+  const contactPhone =
+    selectedContact.value?.phoneNumber || lidPhone || gusPhone;
 
   const unoFallbackInboxes = (() => {
-    if (!isLidEmail || !contactPhone) return [];
+    if (!(isLidEmail || isGusEmail) || !contactPhone) return [];
 
     return (
       inboxesList.value
@@ -187,12 +190,16 @@ const handleSelectedContact = async ({ value, action, ...rest }) => {
 
   const email = (contact?.email || '').toLowerCase();
   const isLidEmail = email.endsWith('@lid');
-  if (isLidEmail) {
-    const lidPhone = email.split('@')[0];
+  const isGusEmail = email.endsWith('@g.us');
+
+  if (isLidEmail || isGusEmail) {
+    const lidPhone = isLidEmail ? email.split('@')[0] : null;
+    const gusPhone = isGusEmail ? email : null;
+
     contact = {
       ...contact,
       email: null,
-      phoneNumber: contact.phoneNumber || lidPhone,
+      phoneNumber: contact.phoneNumber || lidPhone || gusPhone,
     };
   }
 
