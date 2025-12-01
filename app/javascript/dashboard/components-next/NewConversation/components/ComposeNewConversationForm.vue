@@ -62,20 +62,31 @@ const state = reactive({
   attachedFiles: [],
 });
 
+const inboxChannelType = computed(
+  () => props.targetInbox?.channelType || props.targetInbox?.channel_type || ''
+);
+
+const targetInboxProvider = computed(() =>
+  (props.targetInbox?.provider || props.targetInbox?.providerName || '').toLowerCase()
+);
+
 const inboxTypes = computed(() => ({
-  isEmail: props.targetInbox?.channelType === INBOX_TYPES.EMAIL,
-  isTwilio: props.targetInbox?.channelType === INBOX_TYPES.TWILIO,
-  isWhatsapp: props.targetInbox?.channelType === INBOX_TYPES.WHATSAPP,
-  isWebWidget: props.targetInbox?.channelType === INBOX_TYPES.WEB,
-  isApi: props.targetInbox?.channelType === INBOX_TYPES.API,
+  isEmail: inboxChannelType.value === INBOX_TYPES.EMAIL,
+  isTwilio: inboxChannelType.value === INBOX_TYPES.TWILIO,
+  isWhatsapp:
+    inboxChannelType.value === INBOX_TYPES.WHATSAPP ||
+    inboxChannelType.value.toLowerCase().includes('whatsapp') ||
+    ['unoapi', 'unoprovider'].includes(targetInboxProvider.value),
+  isWebWidget: inboxChannelType.value === INBOX_TYPES.WEB,
+  isApi: inboxChannelType.value === INBOX_TYPES.API,
   isEmailOrWebWidget:
-    props.targetInbox?.channelType === INBOX_TYPES.EMAIL ||
-    props.targetInbox?.channelType === INBOX_TYPES.WEB,
+    inboxChannelType.value === INBOX_TYPES.EMAIL ||
+    inboxChannelType.value === INBOX_TYPES.WEB,
   isTwilioSMS:
-    props.targetInbox?.channelType === INBOX_TYPES.TWILIO &&
+    inboxChannelType.value === INBOX_TYPES.TWILIO &&
     props.targetInbox?.medium === 'sms',
   isTwilioWhatsapp:
-    props.targetInbox?.channelType === INBOX_TYPES.TWILIO &&
+    inboxChannelType.value === INBOX_TYPES.TWILIO &&
     props.targetInbox?.medium === 'whatsapp',
 }));
 
@@ -84,8 +95,6 @@ const whatsappMessageTemplates = computed(() =>
     ? props.targetInbox.messageTemplates
     : []
 );
-
-const inboxChannelType = computed(() => props.targetInbox?.channelType || '');
 
 const validationRules = computed(() => ({
   selectedContact: { required },
