@@ -102,6 +102,19 @@ const inboxTypes = computed(() => ({
     props.targetInbox?.medium === 'whatsapp',
 }));
 
+if (import.meta.env.DEV) {
+  watch(
+    () => props.targetInbox,
+    inbox => {
+      // Log para inspecionar rapidamente o payload que vem do backend
+      // sem afetar builds de produção.
+      // eslint-disable-next-line no-console
+      console.info('[compose:new-conversation] targetInbox debug', inbox);
+    },
+    { deep: true }
+  );
+}
+
 const whatsappMessageTemplates = computed(() =>
   Object.keys(props.targetInbox?.messageTemplates || {}).length
     ? props.targetInbox.messageTemplates
