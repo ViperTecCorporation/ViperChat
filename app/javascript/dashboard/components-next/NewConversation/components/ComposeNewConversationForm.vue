@@ -66,26 +66,28 @@ const inboxChannelType = computed(
   () => props.targetInbox?.channelType || props.targetInbox?.channel_type || ''
 );
 
+const toLower = value => (value || '').toString().toLowerCase();
+
 const targetInboxProvider = computed(() =>
-  (
+  toLower(
     props.targetInbox?.provider ||
-    props.targetInbox?.providerName ||
-    props.targetInbox?.provider_name ||
-    ''
-  ).toLowerCase()
+      props.targetInbox?.providerName ||
+      props.targetInbox?.provider_name ||
+      props.targetInbox?.channel?.provider
+  )
 );
 
-const targetInboxMedium = computed(
-  () => (props.targetInbox?.medium || '').toLowerCase()
-);
+const targetInboxMedium = computed(() => toLower(props.targetInbox?.medium));
+const targetInboxChannelType = computed(() => toLower(inboxChannelType.value));
 
 const inboxTypes = computed(() => ({
   isEmail: inboxChannelType.value === INBOX_TYPES.EMAIL,
   isTwilio: inboxChannelType.value === INBOX_TYPES.TWILIO,
   isWhatsapp:
     inboxChannelType.value === INBOX_TYPES.WHATSAPP ||
-    inboxChannelType.value.toLowerCase().includes('whatsapp') ||
+    targetInboxChannelType.value.includes('whatsapp') ||
     targetInboxMedium.value === 'whatsapp' ||
+    targetInboxProvider.value.includes('whatsapp') ||
     ['unoapi', 'unoprovider'].includes(targetInboxProvider.value),
   isWebWidget: inboxChannelType.value === INBOX_TYPES.WEB,
   isApi: inboxChannelType.value === INBOX_TYPES.API,
