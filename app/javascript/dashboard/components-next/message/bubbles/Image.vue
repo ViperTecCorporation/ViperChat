@@ -15,7 +15,6 @@ const { t } = useI18n();
 
 const { filteredCurrentChatAttachments, attachments } = useMessageContext();
 const emit = defineEmits(['error']);
-const emit = defineEmits(['error']);
 
 const attachment = computed(() => {
   return attachments.value[0];
@@ -119,6 +118,8 @@ onBeforeUnmount(clearRetryTimer);
         :src="imageSrc"
         :width="attachment.width"
         :height="attachment.height"
+        @load="handleLoad"
+        @error="handleError"
       />
       <div
         class="inset-0 p-2 pointer-events-none absolute bg-gradient-to-tl from-n-slate-12/30 dark:from-n-slate-1/50 via-transparent to-transparent hidden group-hover:flex"
