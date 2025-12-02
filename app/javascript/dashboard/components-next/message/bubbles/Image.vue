@@ -17,8 +17,10 @@ const { filteredCurrentChatAttachments, attachments } = useMessageContext();
 const emit = defineEmits(['error']);
 
 const attachment = computed(() => {
-  return attachments.value[0];
+  // pick the first image-like attachment
+  return attachments.value.find(item => item?.fileType === 'image') || attachments.value[0];
 });
+const galleryAttachment = computed(() => useSnakeCase(attachment.value || {}));
 
 const retryDelays = [500, 1000, 2000, 4000, 8000, 16000, 32000, 64000];
 const hasError = ref(false);
@@ -43,7 +45,7 @@ const resetRetryState = () => {
 };
 
 const imageSrc = computed(() => {
-  const url = attachment.value?.dataUrl || '';
+  const url = attachment.value?.dataUrl || attachment.value?.thumbUrl || '';
   if (!url) return '';
 
   if (!cacheBust.value) return url;
@@ -142,7 +144,7 @@ onBeforeUnmount(clearRetryTimer);
   <GalleryView
     v-if="showGallery"
     v-model:show="showGallery"
-    :attachment="useSnakeCase(attachment)"
+    :attachment="galleryAttachment"
     :all-attachments="filteredCurrentChatAttachments"
     @error="handleError"
     @close="() => (showGallery = false)"
