@@ -65,6 +65,9 @@ class ChatwootHub
   end
 
   def self.sync_with_hub
+    # Telemetry desabilitada globalmente
+    return if true
+
     begin
       info = instance_config
       info = info.merge(instance_metrics) unless ENV['DISABLE_TELEMETRY']
@@ -108,7 +111,7 @@ class ChatwootHub
   end
 
   def self.emit_event(event_name, event_data)
-    return if ENV['DISABLE_TELEMETRY']
+    return if true
 
     info = { event_name: event_name, event_data: event_data }
     RestClient.post(EVENTS_URL, info.merge(instance_config).to_json, { content_type: :json, accept: :json })
