@@ -1,6 +1,6 @@
 {
   "name": "@chatwoot/chatwoot",
-  "version": "4.8.0-uno-alpha-14",
+  "version": "4.8.0-uno-alpha-15",
   "license": "MIT",
   "scripts": {
     "eslint": "eslint app/**/*.{js,vue}",
