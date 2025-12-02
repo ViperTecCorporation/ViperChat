@@ -118,8 +118,8 @@ const onClose = () => emit('close');
 
 const setImageAndVideoSrc = attachment => {
   if (!attachment) return;
-  const { file_type: type } = attachment || {};
-  if (!type || !Object.values(ALLOWED_FILE_TYPES).includes(type)) return;
+  const { file_type: type, data_url: dataUrl } = attachment || {};
+  if (!type || !dataUrl) return;
 
   activeAttachment.value = attachment;
   activeFileType.value = type;
