@@ -18,19 +18,19 @@ class FixUnoDefaultFeaturesAgain < ActiveRecord::Migration[7.0]
     disable_whatsapp_messaging_window
     channel_email
     email_continuity_on_api_channel
-    facebook_channel
+    channel_facebook
     help_center
     ip_lookup
     inbound_emails
     inbox_management
-    instagram_channel
+    channel_instagram
     integrations
     labels
     macros
     reports
     team_management
     voice_recorder
-    website_channel
+    channel_website
     whatsapp_campaign
     send_agent_name_in_whatsapp_message
     captain_integration
