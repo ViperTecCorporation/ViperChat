@@ -118,27 +118,47 @@ export function useMessageContext() {
   }
 
   const currentChatAttachments = useMapGetter('getSelectedChatAttachments');
+  const normalizeType = type => {
+    if (!type) return '';
+    const lower = type.toString().toLowerCase();
+    if (lower.includes('image')) return ATTACHMENT_TYPES.IMAGE;
+    if (lower.includes('video')) return ATTACHMENT_TYPES.VIDEO;
+    if (lower.includes('audio')) return ATTACHMENT_TYPES.AUDIO;
+    if (lower.includes('ig_reel')) return ATTACHMENT_TYPES.IG_REEL;
+    return lower;
+  };
+
   const filteredCurrentChatAttachments = computed(() => {
-    const attachments = currentChatAttachments.value.filter(attachment => {
-      if (!attachment) return false;
-      const {
-        file_type: fileType,
-        data_url: dataUrl,
-        dataUrl: camelDataUrl,
-        thumb_url: thumbUrl,
-        thumbUrl: camelThumbUrl,
-      } = attachment;
-      const allowedTypes = [
-        ATTACHMENT_TYPES.IMAGE,
-        ATTACHMENT_TYPES.VIDEO,
-        ATTACHMENT_TYPES.IG_REEL,
-        ATTACHMENT_TYPES.AUDIO,
-      ];
-      return (
-        allowedTypes.includes(fileType) &&
-        (dataUrl || camelDataUrl || thumbUrl || camelThumbUrl)
-      );
-    });
+    const attachments = currentChatAttachments.value
+      .map(attachment => {
+        if (!attachment) return null;
+        const {
+          file_type: rawFileType,
+          data_url: dataUrl,
+          dataUrl: camelDataUrl,
+          thumb_url: thumbUrl,
+          thumbUrl: camelThumbUrl,
+        } = attachment;
+
+        const normalizedType = normalizeType(rawFileType);
+        const hasUrl = dataUrl || camelDataUrl || thumbUrl || camelThumbUrl;
+        const allowedTypes = [
+          ATTACHMENT_TYPES.IMAGE,
+          ATTACHMENT_TYPES.VIDEO,
+          ATTACHMENT_TYPES.IG_REEL,
+          ATTACHMENT_TYPES.AUDIO,
+        ];
+
+        if (!hasUrl || !allowedTypes.includes(normalizedType)) return null;
+
+        return {
+          ...attachment,
+          file_type: normalizedType,
+          data_url: dataUrl || camelDataUrl || thumbUrl || camelThumbUrl,
+          thumb_url: thumbUrl || camelThumbUrl || dataUrl || camelDataUrl,
+        };
+      })
+      .filter(Boolean);
 
     return useSnakeCase(attachments);
   });
