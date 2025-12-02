@@ -65,6 +65,23 @@ const initialActiveIndex = props.allAttachments.findIndex(
   attachment => getAttachmentId(attachment) === getAttachmentId(props.attachment)
 );
 
+if (import.meta.env.DEV) {
+  // eslint-disable-next-line no-console
+  console.info('[GalleryView] attachment', props.attachment);
+  // eslint-disable-next-line no-console
+  console.info('[GalleryView] allAttachments count', props.allAttachments.length);
+  // eslint-disable-next-line no-console
+  console.info(
+    '[GalleryView] initialActiveIndex',
+    initialActiveIndex,
+    'firstIds',
+    {
+      incoming: getAttachmentId(props.attachment),
+      firstList: getAttachmentId(props.allAttachments[0]),
+    }
+  );
+}
+
 const isDownloading = ref(false);
 const activeAttachment = ref({});
 const activeFileType = ref('');
