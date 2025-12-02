@@ -1,23 +1,56 @@
 class EnableUnoDefaultFeatures < ActiveRecord::Migration[7.0]
+  # Flags marcadas na tela de features (print do usuário)
   FEATURES_TO_ENABLE = %w[
-    ip_lookup
-    disable_branding
-    email_continuity_on_api_channel
-    custom_reply_email
-    custom_reply_domain
+    agent_conversation_viewed
+    agent_management
+    automations
+    crm
     crm_integration
-    disable_whatsapp_messaging_window
-    channel_whatsapp
+    campaigns
+    canned_responses
     channel_api
     channel_notifica_me
+    channel_whatsapp
+    chatwoot_v4
+    custom_attributes
+    custom_reply_domain
+    custom_reply_email
+    disable_branding
+    disable_whatsapp_messaging_window
+    email_channel
+    email_continuity_on_api_channel
+    facebook_channel
+    help_center
+    ip_lookup
+    inbound_emails
+    inbox_management
+    instagram_channel
+    integrations
+    labels
+    macros
+    reports
+    team_management
+    voice_recorder
+    website_channel
     whatsapp_campaign
+    send_agent_name_in_whatsapp_message
     captain_integration
+    captain_integration_v2
     custom_roles
+    audit_logs
     sla
   ].freeze
 
   FEATURES_TO_DISABLE = %w[
     read_message
+    saml
+    linear_integration
+    hide_all_chats_for_agent
+    hide_filters_for_agent
+    hide_contacts_for_agent
+    hide_unassigned_for_agent
+    agent_bots
+    auto_resolve_conversations
   ].freeze
 
   def up
@@ -61,6 +94,12 @@ class EnableUnoDefaultFeatures < ActiveRecord::Migration[7.0]
   end
 
   def update_pricing_plan_configs
+    # Limpa limites de Captain (deixa vazio / ilimitado)
+    captain_limits_config =
+      InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_CLOUD_PLAN_LIMITS')
+    captain_limits_config.value = ''
+    captain_limits_config.save!
+
     # Set INSTALLATION_PRICING_PLAN to "premium"
     plan_config =
       InstallationConfig.find_or_initialize_by(name: 'INSTALLATION_PRICING_PLAN')
