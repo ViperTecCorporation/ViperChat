@@ -16,7 +16,7 @@ class FixUnoDefaultFeaturesAgain < ActiveRecord::Migration[7.0]
     custom_reply_email
     disable_branding
     disable_whatsapp_messaging_window
-    email_channel
+    channel_email
     email_continuity_on_api_channel
     facebook_channel
     help_center
