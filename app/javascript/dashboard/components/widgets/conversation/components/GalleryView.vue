@@ -51,6 +51,16 @@ const getAttachmentUrl = attachment =>
   attachment?.thumbUrl ||
   '';
 
+const normalizeType = type => {
+  if (!type) return '';
+  const lower = type.toString().toLowerCase();
+  if (lower.includes('image')) return ALLOWED_FILE_TYPES.IMAGE;
+  if (lower.includes('video')) return ALLOWED_FILE_TYPES.VIDEO;
+  if (lower.includes('audio')) return ALLOWED_FILE_TYPES.AUDIO;
+  if (lower.includes('ig_reel')) return ALLOWED_FILE_TYPES.IG_REEL;
+  return lower;
+};
+
 const initialActiveIndex = props.allAttachments.findIndex(
   attachment => getAttachmentId(attachment) === getAttachmentId(props.attachment)
 );
@@ -126,8 +136,9 @@ const onClose = () => emit('close');
 
 const setImageAndVideoSrc = attachment => {
   if (!attachment) return;
-  const { file_type: type } = attachment || {};
+  const { file_type: rawType } = attachment || {};
   const url = getAttachmentUrl(attachment);
+  const type = normalizeType(rawType);
   if (!type || !url) return;
 
   activeAttachment.value = attachment;
@@ -143,7 +154,8 @@ const onClickChangeAttachment = (attachment, index) => {
 };
 
 const onClickDownload = async () => {
-  const { file_type: type, data_url: url, extension } = activeAttachment.value;
+  const { file_type: rawType, data_url: url, extension } = activeAttachment.value;
+  const type = normalizeType(rawType);
   if (!Object.values(ALLOWED_FILE_TYPES).includes(type)) return;
 
   try {
