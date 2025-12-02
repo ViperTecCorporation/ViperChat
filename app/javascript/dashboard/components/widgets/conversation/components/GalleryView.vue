@@ -117,8 +117,9 @@ const fileNameFromDataUrl = computed(() => {
 const onClose = () => emit('close');
 
 const setImageAndVideoSrc = attachment => {
-  const { file_type: type } = attachment;
-  if (!Object.values(ALLOWED_FILE_TYPES).includes(type)) return;
+  if (!attachment) return;
+  const { file_type: type } = attachment || {};
+  if (!type || !Object.values(ALLOWED_FILE_TYPES).includes(type)) return;
 
   activeAttachment.value = attachment;
   activeFileType.value = type;
@@ -150,18 +151,14 @@ const keyboardEvents = {
   Escape: { action: onClose },
   ArrowLeft: {
     action: () => {
-      onClickChangeAttachment(
-        props.allAttachments[activeImageIndex.value - 1],
-        activeImageIndex.value - 1
-      );
+      const nextIndex = activeImageIndex.value - 1;
+      onClickChangeAttachment(props.allAttachments[nextIndex], nextIndex);
     },
   },
   ArrowRight: {
     action: () => {
-      onClickChangeAttachment(
-        props.allAttachments[activeImageIndex.value + 1],
-        activeImageIndex.value + 1
-      );
+      const nextIndex = activeImageIndex.value + 1;
+      onClickChangeAttachment(props.allAttachments[nextIndex], nextIndex);
     },
   },
 };
