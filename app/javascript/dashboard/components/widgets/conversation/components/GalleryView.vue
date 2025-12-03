@@ -29,6 +29,15 @@ const show = defineModel('show', { type: Boolean, default: false });
 
 const { t } = useI18n();
 const getters = useStoreGetters();
+const shouldLog =
+  (import.meta.env?.VITE_CONSOLE_LOG ?? 'false').toString().toLowerCase() ===
+  'true';
+const logDebug = (...args) => {
+  if (shouldLog) {
+    // eslint-disable-next-line no-console
+    console.log('[GalleryView]', ...args);
+  }
+};
 
 const ALLOWED_FILE_TYPES = {
   IMAGE: 'image',
@@ -204,7 +213,17 @@ const keyboardEvents = {
 useKeyboardEvents(keyboardEvents);
 
 onMounted(() => {
+  logDebug('mount', {
+    attachment: props.attachment,
+    allAttachmentsCount: props.allAttachments.length,
+  });
   setImageAndVideoSrc(props.attachment);
+  logDebug('after setImageAndVideoSrc', {
+    activeAttachment: activeAttachment.value,
+    activeFileType: activeFileType.value,
+    activeAttachmentUrl: activeAttachmentUrl.value,
+    activeImageIndex: activeImageIndex.value,
+  });
 });
 </script>
 
