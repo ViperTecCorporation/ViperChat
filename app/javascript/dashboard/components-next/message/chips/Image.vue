@@ -13,9 +13,14 @@ const props = defineProps({
   },
 });
 const attachment = computed(() => props.attachment || {});
+const shouldLog =
+  (import.meta.env?.VITE_CONSOLE_LOG ?? 'false').toString().toLowerCase() ===
+  'true';
 const logDebug = (...args) => {
-  // eslint-disable-next-line no-console
-  console.log('[ImageChip]', ...args);
+  if (shouldLog) {
+    // eslint-disable-next-line no-console
+    console.log('[ImageChip]', ...args);
+  }
 };
 
 const retryDelays = [500, 1000, 2000, 4000, 8000, 16000, 32000, 64000];
@@ -75,6 +80,17 @@ watch(
     resetRetryState();
     cacheBust.value = Date.now();
     logDebug('dataUrl changed', { dataUrl: attachment.value?.dataUrl, thumbUrl: attachment.value?.thumbUrl });
+  }
+);
+
+watch(
+  () => showGallery.value,
+  value => {
+    if (!value) return;
+    logDebug('opening gallery', {
+      attachment: attachment.value,
+      filteredCurrentChatAttachmentsCount: filteredCurrentChatAttachments.value.length,
+    });
   }
 );
 
