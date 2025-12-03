@@ -213,11 +213,15 @@ const keyboardEvents = {
 useKeyboardEvents(keyboardEvents);
 
 onMounted(() => {
+  const initialAttachment =
+    props.attachment ||
+    props.allAttachments[initialActiveIndex >= 0 ? initialActiveIndex : 0] ||
+    props.allAttachments[0];
   logDebug('mount', {
-    attachment: props.attachment,
+    attachment: initialAttachment,
     allAttachmentsCount: props.allAttachments.length,
   });
-  setImageAndVideoSrc(props.attachment);
+  setImageAndVideoSrc(initialAttachment);
   logDebug('after setImageAndVideoSrc', {
     activeAttachment: activeAttachment.value,
     activeFileType: activeFileType.value,
