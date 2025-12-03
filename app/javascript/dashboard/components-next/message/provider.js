@@ -140,7 +140,7 @@ export function useMessageContext() {
           thumbUrl: camelThumbUrl,
         } = attachment;
 
-        const normalizedType = normalizeType(rawFileType);
+        let normalizedType = normalizeType(rawFileType);
         const hasUrl = dataUrl || camelDataUrl || thumbUrl || camelThumbUrl;
         const allowedTypes = [
           ATTACHMENT_TYPES.IMAGE,
@@ -148,6 +148,11 @@ export function useMessageContext() {
           ATTACHMENT_TYPES.IG_REEL,
           ATTACHMENT_TYPES.AUDIO,
         ];
+
+        // Se não veio file_type mas tem URL, assume image para liberar galeria
+        if (!normalizedType && hasUrl) {
+          normalizedType = ATTACHMENT_TYPES.IMAGE;
+        }
 
         if (!hasUrl || !allowedTypes.includes(normalizedType)) return null;
 

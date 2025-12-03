@@ -52,7 +52,7 @@ const getAttachmentUrl = attachment =>
   '';
 
 const normalizeType = type => {
-  if (!type) return '';
+  if (!type) return ALLOWED_FILE_TYPES.IMAGE; // assume image when missing
   const lower = type.toString().toLowerCase();
   if (lower.includes('image')) return ALLOWED_FILE_TYPES.IMAGE;
   if (lower.includes('video')) return ALLOWED_FILE_TYPES.VIDEO;
