@@ -56,6 +56,12 @@ const channelList = computed(() => {
       icon: 'i-woot-api',
     },
     {
+      key: 'internal',
+      title: t('INBOX_MGMT.ADD.AUTH.CHANNEL.INTERNAL.TITLE'),
+      description: t('INBOX_MGMT.ADD.AUTH.CHANNEL.INTERNAL.DESCRIPTION'),
+      icon: 'i-ri-chat-1-fill',
+    },
+    {
       key: 'telegram',
       title: t('INBOX_MGMT.ADD.AUTH.CHANNEL.TELEGRAM.TITLE'),
       description: t('INBOX_MGMT.ADD.AUTH.CHANNEL.TELEGRAM.DESCRIPTION'),

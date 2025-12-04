@@ -11,7 +11,10 @@ class InboxPolicy < ApplicationPolicy
     end
 
     def resolve
-      user.assigned_inboxes
+      assigned_inboxes = user.assigned_inboxes.where(account_id: account.id)
+      internal_inboxes = scope.where(account_id: account.id, channel_type: 'Channel::Internal')
+
+      scope.where(id: assigned_inboxes.select(:id)).or(internal_inboxes).distinct
     end
   end
 
@@ -22,6 +25,7 @@ class InboxPolicy < ApplicationPolicy
   def show?
     # FIXME: for agent bots, lets bring this validation to policies as well in future
     return true if @user.is_a?(AgentBot)
+    return true if record.internal_chat? && @account_user.present?
 
     Current.user.assigned_inboxes.include? record
   end

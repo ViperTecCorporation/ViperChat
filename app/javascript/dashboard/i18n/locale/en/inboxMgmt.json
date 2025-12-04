@@ -455,6 +455,19 @@
           "ERROR_MESSAGE": "We were not able to save the api channel"
         }
       },
+      "INTERNAL_CHANNEL": {
+        "TITLE": "Internal Chat",
+        "DESC": "Create an inbox dedicated to agent-to-agent conversations.",
+        "CHANNEL_NAME": {
+          "LABEL": "Channel Name",
+          "PLACEHOLDER": "Please enter a channel name",
+          "ERROR": "This field is required"
+        },
+        "SUBMIT_BUTTON": "Create internal chat inbox",
+        "API": {
+          "ERROR_MESSAGE": "We were not able to create the internal chat inbox"
+        }
+      },
       "NOTIFICA_ME_CHANNEL": {
         "TITLE": "NotificaMe Channel",
         "DESC": "Integrate with NotificaMe Hub.",
@@ -584,6 +597,10 @@
           "INSTAGRAM": {
             "TITLE": "Instagram",
             "DESCRIPTION": "Connect your instagram account"
+          },
+          "INTERNAL": {
+            "TITLE": "Internal chat",
+            "DESCRIPTION": "Chat between your agents inside Chatwoot"
           },
           "VOICE": {
             "TITLE": "Voice",
@@ -1127,7 +1144,8 @@
       "API": "API Channel",
       "INSTAGRAM": "Instagram",
       "NOTIFICA_ME": "NotificaMe",
-      "VOICE": "Voice"
+      "VOICE": "Voice",
+      "INTERNAL": "Internal chat"
     }
   }
 }

@@ -12,6 +12,7 @@ import Telegram from './channels/Telegram.vue';
 import Instagram from './channels/Instagram.vue';
 import NotificaMe from './channels/NotificaMe.vue';
 import Voice from './channels/Voice.vue';
+import Internal from './channels/Internal.vue';
 
 const channelViewList = {
   facebook: Facebook,
@@ -25,6 +26,7 @@ const channelViewList = {
   telegram: Telegram,
   instagram: Instagram,
   notifica_me: NotificaMe,
+  internal: Internal,
   voice: Voice,
   voice: Voice,
 };

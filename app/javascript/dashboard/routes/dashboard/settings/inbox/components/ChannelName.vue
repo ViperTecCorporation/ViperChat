@@ -31,6 +31,7 @@ const i18nMap = {
   'Channel::Instagram': 'INSTAGRAM',
   'Channel::NotificaMe': 'NOTIFICA_ME',
   'Channel::Voice': 'VOICE',
+  'Channel::Internal': 'INTERNAL',
 };
 
 const twilioChannelName = () => {

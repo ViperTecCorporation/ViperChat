@@ -12,6 +12,7 @@ export const INBOX_TYPES = {
   INSTAGRAM: 'Channel::Instagram',
   NOTIFICA_ME: 'Channel::NotificaMe',
   VOICE: 'Channel::Voice',
+  INTERNAL: 'Channel::Internal',
 };
 
 const INBOX_ICON_MAP_FILL = {
@@ -26,6 +27,7 @@ const INBOX_ICON_MAP_FILL = {
   [INBOX_TYPES.INSTAGRAM]: 'i-ri-instagram-fill',
   [INBOX_TYPES.NOTIFICA_ME]: 'i-ri-instagram-fill',
   [INBOX_TYPES.VOICE]: 'i-ri-phone-fill',
+  [INBOX_TYPES.INTERNAL]: 'i-ri-chat-1-fill',
   [INBOX_TYPES.VOICE]: 'i-ri-phone-fill',
 };
 
@@ -43,6 +45,7 @@ const INBOX_ICON_MAP_LINE = {
   [INBOX_TYPES.INSTAGRAM]: 'i-ri-instagram-line',
   [INBOX_TYPES.NOTIFICA_ME]: 'i-ri-instagram-fill',
   [INBOX_TYPES.VOICE]: 'i-ri-phone-line',
+  [INBOX_TYPES.INTERNAL]: 'i-ri-chat-1-line',
   [INBOX_TYPES.VOICE]: 'i-ri-phone-line',
 };
 
@@ -99,6 +102,8 @@ export const getReadableInboxByType = (type, phoneNumber) => {
 
     case INBOX_TYPES.VOICE:
       return 'voice';
+    case INBOX_TYPES.INTERNAL:
+      return 'internal';
 
     default:
       return 'chat';

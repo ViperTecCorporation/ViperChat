@@ -60,6 +60,7 @@ const isActive = computed(() => {
     'instagram',
     'voice',
     'notifica_me',
+    'internal',
   ].includes(key);
 });
 

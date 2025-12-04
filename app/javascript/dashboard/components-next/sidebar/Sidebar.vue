@@ -18,6 +18,7 @@ import ChannelLeaf from './ChannelLeaf.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
 import Logo from 'next/icon/Logo.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
+import ComposeInternalChat from 'dashboard/components-next/InternalChat/ComposeInternalChat.vue';
 
 const props = defineProps({
   isMobileSidebarOpen: {
@@ -623,17 +624,31 @@ const menuItems = computed(() => {
             {{ searchShortcut }}
           </span>
         </RouterLink>
-        <ComposeConversation align-position="right">
-          <template #trigger="{ toggle }">
-            <Button
-              icon="i-lucide-pen-line"
-              color="slate"
-              size="sm"
-              class="!h-7 !bg-n-solid-3 dark:!bg-n-black/30 !outline-n-weak !text-n-slate-11"
-              @click="toggle"
-            />
-          </template>
-        </ComposeConversation>
+        <div class="flex gap-2">
+          <ComposeInternalChat align-position="right">
+            <template #trigger="{ toggle }">
+              <Button
+                icon="i-lucide-users"
+                color="slate"
+                size="sm"
+                class="!h-7 !bg-n-solid-3 dark:!bg-n-black/30 !outline-n-weak !text-n-slate-11"
+                v-tooltip.bottom="$t('CONVERSATION.INTERNAL_CHAT.TITLE')"
+                @click="toggle"
+              />
+            </template>
+          </ComposeInternalChat>
+          <ComposeConversation align-position="right">
+            <template #trigger="{ toggle }">
+              <Button
+                icon="i-lucide-pen-line"
+                color="slate"
+                size="sm"
+                class="!h-7 !bg-n-solid-3 dark:!bg-n-black/30 !outline-n-weak !text-n-slate-11"
+                @click="toggle"
+              />
+            </template>
+          </ComposeConversation>
+        </div>
       </div>
     </section>
     <nav class="grid overflow-y-scroll flex-grow gap-2 px-2 pb-5 no-scrollbar">

@@ -148,6 +148,7 @@ Rails.application.routes.draw do
               get :reporting_events if ChatwootApp.enterprise?
             end
           end
+          resources :internal_conversations, only: [:index, :create]
 
           resources :search, only: [:index] do
             collection do

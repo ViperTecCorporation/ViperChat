@@ -8,7 +8,7 @@ class ConversationPolicy < ApplicationPolicy
   end
 
   def show?
-    administrator? || agent_bot? || agent_can_view_conversation?
+    administrator? || agent_bot? || agent_can_view_conversation? || participant_access?
   end
 
   private
@@ -41,6 +41,12 @@ class ConversationPolicy < ApplicationPolicy
 
   def participant?
     record.conversation_participants.exists?(user_id: user.id)
+  end
+
+  def participant_access?
+    return false unless participant?
+
+    record.inbox.internal_chat?
   end
 end
 

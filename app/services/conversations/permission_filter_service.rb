@@ -16,7 +16,15 @@ class Conversations::PermissionFilterService
   private
 
   def accessible_conversations
-    conversations.where(inbox: user.inboxes.where(account_id: account.id))
+    internal_participant_access = conversations.joins(:inbox, :conversation_participants)
+                                               .where(inboxes: { channel_type: 'Channel::Internal' },
+                                                      conversation_participants: { user_id: user.id })
+
+    inbox_access = conversations.joins(:inbox)
+                                .where.not(inboxes: { channel_type: 'Channel::Internal' })
+                                .where(inbox: user.inboxes.where(account_id: account.id))
+
+    inbox_access.or(internal_participant_access).distinct
   end
 
   def account_user

@@ -436,5 +436,27 @@
   },
   "GALLERY_VIEW": {
     "ERROR_DOWNLOADING": "Unable to download attachment. Please try again"
+  },
+  "INTERNAL_CHAT": {
+    "TITLE": "New internal chat",
+    "DESCRIPTION": "Start a chat between agents in an internal inbox.",
+    "NO_INBOX": "Create an internal inbox in Settings → Inboxes to start a chat.",
+    "INBOX_LABEL": "Internal inbox",
+    "INBOX_PLACEHOLDER": "Select an internal inbox",
+    "TITLE_LABEL": "Title",
+    "TITLE_PLACEHOLDER": "Optional subject for this chat",
+    "OPTIONAL": "optional",
+    "PARTICIPANTS_LABEL": "Participants",
+    "ADD_PARTICIPANTS": "Add participants",
+    "ADD_ME": "Add me",
+    "NO_PARTICIPANT_SELECTED": "No participants selected yet",
+    "SEARCH_PARTICIPANTS": "Search agents",
+    "MESSAGE_LABEL": "Message",
+    "MESSAGE_PLACEHOLDER": "Type your message",
+    "CANCEL": "Cancel",
+    "SUBMIT": "Start chat",
+    "SUCCESS": "Internal chat created",
+    "GO_TO_CONVERSATION": "Open conversation",
+    "ERROR": "Could not create the internal chat"
   }
 }
