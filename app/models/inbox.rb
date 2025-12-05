@@ -85,7 +85,8 @@ class Inbox < ApplicationRecord
   after_create_commit :dispatch_create_event
   after_update_commit :dispatch_update_event
 
-  scope :order_by_name, -> { order('lower(name) ASC') }
+  # Avoid using lower(name) with DISTINCT to keep Postgres happy on ordered distinct queries
+  scope :order_by_name, -> { order(:name) }
 
   # Adds multiple members to the inbox
   # @param user_ids [Array<Integer>] Array of user IDs to add as members
