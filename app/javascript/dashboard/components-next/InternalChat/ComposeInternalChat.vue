@@ -10,11 +10,17 @@ import InternalConversationsAPI from 'dashboard/api/internalConversations';
 import Avatar from 'next/avatar/Avatar.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import MultiselectDropdownItems from 'shared/components/ui/MultiselectDropdownItems.vue';
+import { useWindowSize } from '@vueuse/core';
+import wootConstants from 'dashboard/constants/globals';
 
 const props = defineProps({
   alignPosition: {
     type: String,
     default: 'left',
+  },
+  isModal: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -28,6 +34,7 @@ const { accountId } = useAccount();
 const agents = useMapGetter('agents/getVerifiedAgents');
 const currentUser = useMapGetter('getCurrentUser');
 const inboxes = useMapGetter('inboxes/getInboxes');
+const { width: windowWidth } = useWindowSize();
 
 const showCompose = ref(false);
 const showParticipantsDropdown = ref(false);
@@ -141,6 +148,12 @@ const composePopoverClass = computed(() => {
     : 'absolute rtl:left-0 rtl:right-[unset] ltr:right-0 ltr:left-[unset]';
 });
 
+const viewInModal = computed(
+  () =>
+    props.isModal ||
+    windowWidth.value < wootConstants.SMALL_SCREEN_BREAKPOINT
+);
+
 onMounted(() => {
   store.dispatch('agents/get');
   store.dispatch('inboxes/get');
@@ -156,11 +169,19 @@ onMounted(() => {
     <slot name="trigger" :is-open="showCompose" :toggle="toggle" />
     <div
       v-if="showCompose"
-      class="fixed z-50 bg-n-alpha-black1 backdrop-blur-[4px] flex items-start pt-[clamp(3rem,15vh,10rem)] justify-center inset-0"
-      @click.self="handleClickOutside"
+      :class="{
+        'fixed z-50 bg-n-alpha-black1 backdrop-blur-[4px] inset-0 flex items-start justify-center pt-[clamp(3rem,15vh,10rem)]':
+          viewInModal,
+        'absolute z-50 w-full': !viewInModal,
+      }"
+      class="flex items-start justify-center"
+      @click.self="viewInModal && handleClickOutside"
     >
       <div
-        :class="composePopoverClass"
+        :class="[
+          { 'mt-2': !viewInModal },
+          viewInModal ? '' : composePopoverClass,
+        ]"
         class="bg-n-solid-1 border border-n-strong rounded-xl shadow-2xl w-full max-w-xl mx-auto p-4 grid gap-4"
       >
         <div class="flex items-start justify-between gap-3">

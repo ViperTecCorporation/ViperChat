@@ -11,10 +11,11 @@ class InboxPolicy < ApplicationPolicy
     end
 
     def resolve
-      assigned_inboxes = user.assigned_inboxes.where(account_id: account.id)
-      internal_inboxes = scope.where(account_id: account.id, channel_type: 'Channel::Internal')
+      assigned_ids = user.assigned_inboxes.where(account_id: account.id).pluck(:id)
+      internal_ids = scope.where(account_id: account.id, channel_type: 'Channel::Internal').pluck(:id)
+      allowed_ids = (assigned_ids + internal_ids).uniq
 
-      scope.where(id: assigned_inboxes.select(:id)).or(internal_inboxes).distinct
+      scope.reorder(nil).where(account_id: account.id, id: allowed_ids)
     end
   end
 
