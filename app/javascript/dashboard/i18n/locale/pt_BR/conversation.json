@@ -283,153 +283,32 @@
       "ERROR_NO_CONTENT": "As mensagens selecionadas não possuem conteúdo para encaminhar.",
       "ERROR_API": "Não foi possível encaminhar as mensagens. Tente novamente."
     },
+    "INTERNAL_CHAT": {
+      "TITLE": "Nova conversa interna",
+      "DESCRIPTION": "Inicie um chat entre agentes usando uma caixa de entrada interna.",
+      "NO_INBOX": "Crie uma caixa de entrada interna em ConfiguraÇõÇæes -> Caixas de entrada para iniciar um chat.",
+      "INBOX_LABEL": "Caixa de entrada interna",
+      "INBOX_PLACEHOLDER": "Selecione uma caixa de entrada interna",
+      "TITLE_LABEL": "TÇ­tulo",
+      "TITLE_PLACEHOLDER": "Assunto opcional para esta conversa",
+      "OPTIONAL": "opcional",
+      "PARTICIPANTS_LABEL": "Participantes",
+      "ADD_PARTICIPANTS": "Adicionar participantes",
+      "ADD_ME": "Adicionar eu",
+      "NO_PARTICIPANT_SELECTED": "Nenhum participante selecionado ainda",
+      "SEARCH_PARTICIPANTS": "Buscar agentes",
+      "MESSAGE_LABEL": "Mensagem",
+      "MESSAGE_PLACEHOLDER": "Digite sua mensagem",
+      "CANCEL": "Cancelar",
+      "SUBMIT": "Iniciar conversa",
+      "SUCCESS": "Conversa interna criada",
+      "GO_TO_CONVERSATION": "Abrir conversa",
+      "ERROR": "NÇœo foi possÇðvel criar a conversa interna"
+    },
     "SIDEBAR": {
       "CONTACT": "Contatos",
       "COPILOT": "Copiloto"
     }
-  },
-  "EMAIL_TRANSCRIPT": {
-    "TITLE": "Enviar transcrição de conversa",
-    "DESC": "Enviar uma cópia da transcrição da conversa para o endereço de e-mail especificado",
-    "SUBMIT": "Enviar",
-    "CANCEL": "Cancelar",
-    "SEND_EMAIL_SUCCESS": "A transcrição do chat foi enviada com sucesso",
-    "SEND_EMAIL_ERROR": "Ocorreu um erro, por favor tente novamente",
-    "FORM": {
-      "SEND_TO_CONTACT": "Envie a transcrição para o cliente",
-      "SEND_TO_AGENT": "Envie a transcrição para o agente designado",
-      "SEND_TO_OTHER_EMAIL_ADDRESS": "Enviar a transcrição para outro endereço de e-mail",
-      "EMAIL": {
-        "PLACEHOLDER": "Digite um endereço de e-mail",
-        "ERROR": "Por favor, insira um endereço de e-mail válido"
-      }
-    }
-  },
-  "ONBOARDING": {
-    "TITLE": "Olá, 👋. Bem-vindo ao {installationName}!",
-    "DESCRIPTION": "Obrigado por se inscrever. Queremos que você aproveite o máximo de {installationName}. Aqui estão algumas coisas que você consegue fazer em {installationName} para que tenha uma experiência agradável.",
-    "GREETING_MORNING": "👋 Bom dia, {name}. Bem-vindo a {installationName}.",
-    "GREETING_AFTERNOON": "👋 Boa tarde, {name}. Bem-vindo a {installationName}.",
-    "GREETING_EVENING": "👋 Boa noite, {name}. Bem-vindo a {installationName}.",
-    "READ_LATEST_UPDATES": "Leia as últimas atualizações",
-    "ALL_CONVERSATION": {
-      "TITLE": "Todas as suas conversas em um só lugar",
-      "DESCRIPTION": "Veja todas as conversas dos seus clientes em um único painel. Você pode filtrar as conversas pelo canal de entrada, rótulo e status.",
-      "NEW_LINK": "Clique aqui para criar uma caixa de entrada"
-    },
-    "TEAM_MEMBERS": {
-      "TITLE": "Convidar membros de seu time",
-      "DESCRIPTION": "Já que você está se preparando para conversar com seu cliente, traga seus colegas para ajudá-lo. Você pode convidar seus colegas adicionando os endereços de e-mail deles na lista de agentes.",
-      "NEW_LINK": "Clique aqui para convidar um membro do time"
-    },
-    "LABELS": {
-      "TITLE": "Organizar conversas com etiquetas",
-      "DESCRIPTION": "Etiquetas fornecem uma forma mais fácil de organizar a sua conversa. Criar algumas etiquetas como #solicitação-suporte, #fatura-assunto etc., assim você poderá futuramente utiliza-las em uma conversa posteriormente.",
-      "NEW_LINK": "Clique aqui para criar etiquetas"
-    },
-    "CANNED_RESPONSES": {
-      "TITLE": "Criar respostas prontas",
-      "DESCRIPTION": "Os modelos de respostas prontas ajudam você a responder rapidamente a uma conversa. Os agentes podem digitar o caractere '/' seguido pelo atalho para inserir uma resposta.",
-      "NEW_LINK": "Clique aqui para criar uma resposta pronta"
-    }
-  },
-  "CONVERSATION_SIDEBAR": {
-    "ASSIGNEE_LABEL": "Agente atribuído",
-    "SELF_ASSIGN": "Atribuir a mim",
-    "TEAM_LABEL": "Time atribuído",
-    "SELECT": {
-      "PLACEHOLDER": "Nenhuma"
-    },
-    "ACCORDION": {
-      "CONTACT_DETAILS": "Detalhes do contato",
-      "CONVERSATION_ACTIONS": "Ações da conversa",
-      "CONVERSATION_LABELS": "Etiquetas da conversa",
-      "CONVERSATION_INFO": "Informação da conversa",
-      "CONTACT_NOTES": "Notas do contato",
-      "CONTACT_ATTRIBUTES": "Atributos do contato",
-      "PREVIOUS_CONVERSATION": "Conversas anteriores",
-      "MACROS": "Macros",
-      "LINEAR_ISSUES": "Problemas do Linear vinculados",
-      "SHOPIFY_ORDERS": "Shopify Orders"
-    },
-    "SHOPIFY": {
-      "ORDER_ID": "Order #{id}",
-      "ERROR": "Error loading orders",
-      "NO_SHOPIFY_ORDERS": "No orders found",
-      "FINANCIAL_STATUS": {
-        "PENDING": "Pendentes",
-        "AUTHORIZED": "Authorized",
-        "PARTIALLY_PAID": "Partially Paid",
-        "PAID": "Paid",
-        "PARTIALLY_REFUNDED": "Partially Refunded",
-        "REFUNDED": "Refunded",
-        "VOIDED": "Voided"
-      },
-      "FULFILLMENT_STATUS": {
-        "FULFILLED": "Fulfilled",
-        "PARTIALLY_FULFILLED": "Partially Fulfilled",
-        "UNFULFILLED": "Unfulfilled"
-      }
-    }
-  },
-  "CONVERSATION_CUSTOM_ATTRIBUTES": {
-    "ADD_BUTTON_TEXT": "Criar atributo",
-    "NO_RECORDS_FOUND": "Nenhum atributo encontrado",
-    "UPDATE": {
-      "SUCCESS": "Atributo atualizado com sucesso",
-      "ERROR": "Não foi possível atualizar o atributo. Por favor, tente mais tarde"
-    },
-    "ADD": {
-      "TITLE": "Adicionar",
-      "SUCCESS": "Atributo adicionado com sucesso",
-      "ERROR": "Não foi possível adicionar o atributo. Por favor, tente mais tarde"
-    },
-    "DELETE": {
-      "SUCCESS": "Atributo excluído com sucesso",
-      "ERROR": "Não foi possível excluir o atributo. Por favor, tente mais tarde"
-    },
-    "ATTRIBUTE_SELECT": {
-      "TITLE": "Adicionar atributos",
-      "PLACEHOLDER": "Procurar atributos",
-      "NO_RESULT": "Nenhum atributo encontrado"
-    }
-  },
-  "EMAIL_HEADER": {
-    "FROM": "De",
-    "TO": "Para",
-    "BCC": "CCO",
-    "CC": "Cc",
-    "SUBJECT": "Assunto",
-    "EXPAND": "Expandir e-mail"
-  },
-  "CONVERSATION_PARTICIPANTS": {
-    "SIDEBAR_MENU_TITLE": "Participantes",
-    "SIDEBAR_TITLE": "Participantes da conversa",
-    "NO_RECORDS_FOUND": "Nenhum resultado encontrado",
-    "ADD_PARTICIPANTS": "Selecionar participantes",
-    "REMANING_PARTICIPANTS_TEXT": "+{count} participantes",
-    "REMANING_PARTICIPANT_TEXT": "+{count} participante",
-    "TOTAL_PARTICIPANTS_TEXT": "{count} pessoas estão participando.",
-    "TOTAL_PARTICIPANT_TEXT": "{count} pessoa está participando.",
-    "NO_PARTICIPANTS_TEXT": "Ninguém está participando!",
-    "WATCH_CONVERSATION": "Participar da conversa",
-    "YOU_ARE_WATCHING": "Você está participando",
-    "API": {
-      "ERROR_MESSAGE": "Não foi possível atualizar, tente novamente!",
-      "SUCCESS_MESSAGE": "Participantes atualizados!"
-    }
-  },
-  "TRANSLATE_MODAL": {
-    "TITLE": "Ver conteúdo traduzido",
-    "DESC": "Você pode visualizar o conteúdo traduzido em cada idioma.",
-    "ORIGINAL_CONTENT": "Conteúdo original",
-    "TRANSLATED_CONTENT": "Conteúdo traduzido",
-    "NO_TRANSLATIONS_AVAILABLE": "Nenhuma tradução está disponível para este conteúdo"
-  },
-  "TYPING": {
-    "ONE": "{user} está digitando",
-    "TWO": "{user} e {secondUser} estão digitando",
-    "MULTIPLE": "{user} e {count} outros estão digitando"
   },
   "COPILOT": {
     "TRY_THESE_PROMPTS": "Experimente estes comandos"

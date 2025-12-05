@@ -8,7 +8,9 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   before_action :validate_whatsapp_cloud_channel, only: [:health]
 
   def index
-    @inboxes = policy_scope(Current.account.inboxes.order_by_name.includes(:channel, { avatar_attachment: [:blob] }))
+    # Run policy scope on the base relation, then apply ordering and preload avatars only.
+    scoped = policy_scope(Current.account.inboxes)
+    @inboxes = scoped.order_by_name.includes({ avatar_attachment: [:blob] })
   end
 
   def show; end

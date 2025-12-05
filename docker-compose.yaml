@@ -14,6 +14,8 @@ services:
     stdin_open: true
     image: chatwoot:development
     env_file: .env
+    environment:
+      - BUNDLER_VERSION=2.7.2
 
   rails:
     <<: *base
@@ -40,6 +42,7 @@ services:
       - VITE_DEV_SERVER_HOST=vite
       - NODE_ENV=development
       - RAILS_ENV=development
+      - BUNDLER_VERSION=2.7.2
     entrypoint: ["sh", "docker/entrypoints/rails.sh"]
     command: ["bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0"]
 
@@ -60,6 +63,7 @@ services:
     environment:
       - NODE_ENV=development
       - RAILS_ENV=development
+      - BUNDLER_VERSION=2.7.2
     command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
 
   vite:
@@ -81,6 +85,7 @@ services:
       - VITE_DEV_SERVER_HOST=0.0.0.0
       - NODE_ENV=development
       - RAILS_ENV=development
+      - BUNDLER_VERSION=2.7.2
     entrypoint: ["sh", "docker/entrypoints/vite.sh"]
     command: bin/vite dev
 

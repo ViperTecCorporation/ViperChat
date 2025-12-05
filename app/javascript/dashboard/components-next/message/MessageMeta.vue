@@ -20,6 +20,7 @@ const {
   isAWhatsAppChannel,
   isAnEmailChannel,
   isAnInstagramChannel,
+  isAnInternalChannel,
 } = useInbox();
 
 const {
@@ -67,6 +68,7 @@ const isSent = computed(() => {
 
   // All messages will be mark as sent for the Line channel, as there is no source ID.
   if (isALineChannel.value) return true;
+  if (isAnInternalChannel.value) return status.value === MESSAGE_STATUS.SENT;
 
   return false;
 });
@@ -83,7 +85,7 @@ const isDelivered = computed(() => {
     return sourceId.value && status.value === MESSAGE_STATUS.DELIVERED;
   }
   // All messages marked as delivered for the web widget inbox and API inbox once they are sent.
-  if (isAWebWidgetInbox.value || isAPIInbox.value) {
+  if (isAWebWidgetInbox.value || isAPIInbox.value || isAnInternalChannel.value) {
     return status.value === MESSAGE_STATUS.SENT;
   }
   if (isALineChannel.value) {
@@ -105,7 +107,7 @@ const isRead = computed(() => {
     return sourceId.value && status.value === MESSAGE_STATUS.READ;
   }
 
-  if (isAWebWidgetInbox.value || isAPIInbox.value) {
+  if (isAWebWidgetInbox.value || isAPIInbox.value || isAnInternalChannel.value) {
     return status.value === MESSAGE_STATUS.READ;
   }
 

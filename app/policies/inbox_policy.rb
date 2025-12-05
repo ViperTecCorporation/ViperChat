@@ -11,11 +11,22 @@ class InboxPolicy < ApplicationPolicy
     end
 
     def resolve
+      base_scope = scope
+                    .reorder(nil)
+                    .where(account_id: account.id)
+                    .unscope(:includes)
+                    .preload(nil)
+                    .eager_load(nil)
+                    .includes(nil) # remove any inherited eager loads that might include polymorphic :channel
+
+      # Admins visualizam todas as inboxes da conta.
+      return base_scope if account_user&.administrator?
+
       assigned_ids = user.assigned_inboxes.where(account_id: account.id).pluck(:id)
       internal_ids = scope.where(account_id: account.id, channel_type: 'Channel::Internal').pluck(:id)
       allowed_ids = (assigned_ids + internal_ids).uniq
 
-      scope.reorder(nil).where(account_id: account.id, id: allowed_ids)
+      base_scope.where(id: allowed_ids)
     end
   end
 

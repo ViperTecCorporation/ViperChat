@@ -24,7 +24,7 @@ const props = defineProps({
     required: true,
   },
   firstUnreadId: {
-    type: Number,
+    type: [Number, String],
     default: null,
   },
   isAnEmailChannel: {

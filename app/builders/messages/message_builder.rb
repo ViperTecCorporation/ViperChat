@@ -171,12 +171,18 @@ class Messages::MessageBuilder
   end
 
   def status_param
+    return { status: :read } if internal_chat?
+
     @params[:status] = :progress if params_status_progress?
     @params[:status].present? ? { status: @params[:status] } : {}
   end
 
   def source_id_param
     @params[:source_id].present? ? { source_id: @params[:source_id] } : {}
+  end
+
+  def internal_chat?
+    @conversation.inbox&.internal_chat?
   end
 
   def message_params

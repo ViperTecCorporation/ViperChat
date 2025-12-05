@@ -35,6 +35,8 @@ if Rails.env.development?
       'exclude_controllers' => 'true',
       'exclude_helpers' => 'true',
       'exclude_sti_subclasses' => 'false',
+      # InstallationConfig has YAML serialization hacks that confuse annotate; skip it.
+      'exclude_models' => 'InstallationConfig',
       'ignore_model_sub_dir' => 'false',
       'ignore_columns' => nil,
       'ignore_routes' => nil,

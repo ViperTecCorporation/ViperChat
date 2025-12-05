@@ -34,7 +34,8 @@ s3_compatible:
   access_key_id: <%= ENV.fetch('STORAGE_ACCESS_KEY_ID', '') %>
   secret_access_key: <%= ENV.fetch('STORAGE_SECRET_ACCESS_KEY', '') %>
   region: <%= ENV.fetch('STORAGE_REGION', '') %>
-  bucket: <%= ENV.fetch('STORAGE_BUCKET_NAME', '') %>
+  # fallback to S3_BUCKET_NAME for setups that still use the older env var
+  bucket: <%= ENV.fetch('STORAGE_BUCKET_NAME', ENV.fetch('S3_BUCKET_NAME', '')) %>
   endpoint: <%= ENV.fetch('STORAGE_ENDPOINT', '') %>
   force_path_style: <%= ENV.fetch('STORAGE_FORCE_PATH_STYLE', false) %>
 

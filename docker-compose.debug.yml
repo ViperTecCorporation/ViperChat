@@ -1,0 +1,26 @@
+services:
+  rails:
+    command:
+      - rdbg
+      - --open
+      - --host
+      - 0.0.0.0
+      - --port
+      - "12345"
+      - --
+      - bundle
+      - exec
+      - rails
+      - s
+      - -p
+      - "3000"
+      - -b
+      - 0.0.0.0
+    ports:
+      - "12345:12345"
+
+  vite:
+    environment:
+      - NODE_OPTIONS=--inspect=0.0.0.0:9229
+    ports:
+      - "9229:9229"

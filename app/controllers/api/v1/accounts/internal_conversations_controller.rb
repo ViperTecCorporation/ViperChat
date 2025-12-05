@@ -26,7 +26,13 @@ class Api::V1::Accounts::InternalConversationsController < Api::V1::Accounts::Ba
         @inbox.inbox_members.find_or_create_by(user_id: user_id)
       end
 
-      Messages::MessageBuilder.new(Current.user, @conversation, message_params).perform if params[:message].present?
+      if params[:message].present?
+        message = Messages::MessageBuilder.new(Current.user, @conversation, message_params).perform
+        # Garantir que mensagens internas nasçam como lidas
+        if message&.persisted?
+          message.update_column(:status, Message.statuses[:read])
+        end
+      end
     end
 
     render 'api/v1/accounts/conversations/create'
@@ -78,6 +84,9 @@ class Api::V1::Accounts::InternalConversationsController < Api::V1::Accounts::Ba
   end
 
   def message_params
-    internal_conversation_params[:message].present? ? internal_conversation_params.require(:message).permit(:content, :private, :content_type, attachments: []) : {}
+    return {} unless internal_conversation_params[:message].present?
+
+    permitted = internal_conversation_params.require(:message).permit(:content, :private, :content_type, attachments: [])
+    permitted.merge(status: :read)
   end
 end

@@ -64,6 +64,7 @@ class Message < ApplicationRecord
 
   before_validation :ensure_content_type
   before_validation :prevent_message_flooding
+  before_validation :ensure_internal_messages_are_read
   before_save :ensure_processed_message_content
   before_save :ensure_in_reply_to
 
@@ -172,6 +173,12 @@ class Message < ApplicationRecord
     data[:sender] = sender.push_event_data if sender && !sender.is_a?(AgentBot)
     data[:sender] = sender.push_event_data(inbox) if sender.is_a?(AgentBot)
     data
+  end
+
+  def ensure_internal_messages_are_read
+    return unless inbox&.internal_chat?
+
+    self.status = :read
   end
 
   def sender_name
