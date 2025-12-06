@@ -69,9 +69,13 @@ export const mutations = {
     const isInternalRequest =
       requestedAssigneeType === 'internal' ||
       requestedConversationType === 'internal';
+    const nextInternalCount =
+      internalCount === undefined || internalCount === null
+        ? $state.internalCount
+        : internalCount;
 
     if (isInternalRequest) {
-      $state.internalCount = internalCount || 0;
+      $state.internalCount = nextInternalCount || 0;
       $state.updatedOn = new Date();
       return;
     }
@@ -79,7 +83,7 @@ export const mutations = {
     $state.mineCount = mineCount || 0;
     $state.allCount = allCount || 0;
     $state.unAssignedCount = unAssignedCount || 0;
-    $state.internalCount = internalCount || 0;
+    $state.internalCount = nextInternalCount || 0;
     $state.updatedOn = new Date();
   },
 };
