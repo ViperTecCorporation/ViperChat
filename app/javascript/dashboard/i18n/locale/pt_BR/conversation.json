@@ -454,6 +454,20 @@
     "TRANSLATED_CONTENT": "Translated Content",
     "NO_TRANSLATIONS_AVAILABLE": "No translations are available for this content"
   },
+  "MEDIA_LIBRARY": {
+    "BUTTON": "Mídias",
+    "TITLE": "Mídias, documentos e links",
+    "TAB_MEDIA": "Mídias",
+    "TAB_DOCS": "Docs",
+    "TAB_LINKS": "Links",
+    "MEDIA_SUMMARY": "{photos} fotos · {videos} vídeos · {audios} áudios",
+    "DOC_COUNT": "{count} documentos",
+    "LINK_COUNT": "{count} links",
+    "EMPTY": "Nada por aqui ainda",
+    "LOADING": "Carregando itens",
+    "LOAD_ERROR": "Não foi possível carregar os anexos. Tente novamente.",
+    "THIS_MONTH": "Este mês"
+  },
   "TYPING": {
     "ONE": "{user} is typing",
     "TWO": "{user} and {secondUser} are typing",

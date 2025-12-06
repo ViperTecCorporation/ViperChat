@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onUnmounted } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import { useToggle } from '@vueuse/core';
 import { useStore } from 'vuex';
 import { useAlert } from 'dashboard/composables';
@@ -9,6 +9,7 @@ import EmailTranscriptModal from './EmailTranscriptModal.vue';
 import ResolveAction from '../../buttons/ResolveAction.vue';
 import ButtonV4 from 'dashboard/components-next/button/Button.vue';
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
+import MediaLibraryModal from './MediaLibraryModal.vue';
 
 import {
   CMD_MUTE_CONVERSATION,
@@ -22,9 +23,19 @@ const { t } = useI18n();
 
 const [showEmailActionsModal, toggleEmailModal] = useToggle(false);
 const [showActionsDropdown, toggleDropdown] = useToggle(false);
+const showMediaModal = ref(false);
+const isLoadingMedia = ref(false);
 
 const currentChat = computed(() => store.getters.getSelectedChat);
 const callInfo = computed(() => store.getters['webphone/getCallInfo']);
+const currentAttachments = computed(
+  () => store.getters.getSelectedChatAttachments
+);
+const conversationMessages = computed(
+  () => currentChat.value?.messages || []
+);
+
+const mediaCounter = computed(() => currentAttachments.value.length || 0);
 
 const actionMenuItems = computed(() => {
   const items = [];
@@ -112,6 +123,23 @@ const startCall = async () => {
   }
 };
 
+const openMediaModal = async () => {
+  if (!currentChat.value?.id) {
+    showMediaModal.value = true;
+    return;
+  }
+
+  try {
+    isLoadingMedia.value = true;
+    await store.dispatch('fetchAllAttachments', currentChat.value.id);
+  } catch (error) {
+    useAlert(t('CONVERSATION.MEDIA_LIBRARY.LOAD_ERROR'));
+  } finally {
+    isLoadingMedia.value = false;
+    showMediaModal.value = true;
+  }
+};
+
 emitter.on(CMD_MUTE_CONVERSATION, mute);
 emitter.on(CMD_UNMUTE_CONVERSATION, unmute);
 emitter.on(CMD_SEND_TRANSCRIPT, toggleEmailModal);
@@ -127,6 +155,24 @@ onUnmounted(() => {
 
 <template>
   <div class="relative flex items-center gap-2 actions--container">
+    <ButtonV4
+      v-tooltip="$t('CONVERSATION.MEDIA_LIBRARY.BUTTON')"
+      size="sm"
+      variant="ghost"
+      color="slate"
+      icon="i-lucide-images"
+      class="rounded-md group-hover:bg-n-alpha-2"
+      @click="openMediaModal"
+    >
+      <span class="flex items-center gap-2">
+        <span>{{ $t('CONVERSATION.MEDIA_LIBRARY.BUTTON') }}</span>
+        <span
+          class="rounded-md capitalize text-xs leading-5 font-medium text-center outline outline-1 px-1 flex-shrink-0 text-n-slate-11 outline-n-strong"
+        >
+          {{ mediaCounter }}
+        </span>
+      </span>
+    </ButtonV4>
     <ResolveAction
       :conversation-id="currentChat.id"
       :status="currentChat.status"
@@ -156,6 +202,13 @@ onUnmounted(() => {
       :show="showEmailActionsModal"
       :current-chat="currentChat"
       @cancel="toggleEmailModal"
+    />
+    <MediaLibraryModal
+      :show="showMediaModal"
+      :attachments="currentAttachments"
+      :messages="conversationMessages"
+      :is-loading="isLoadingMedia"
+      @close="showMediaModal = false"
     />
   </div>
 </template>
