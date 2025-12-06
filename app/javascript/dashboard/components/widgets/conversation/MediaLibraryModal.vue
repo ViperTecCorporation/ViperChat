@@ -409,14 +409,28 @@ const openPreview = attachment => {
 
         <div v-else class="flex flex-col gap-6">
           <div v-if="activeTab === 'media'" class="flex flex-col gap-4">
-            <div class="text-sm text-n-slate-11">
-              {{
-                $t('CONVERSATION.MEDIA_LIBRARY.MEDIA_SUMMARY', {
-                  photos: mediaSummary.photos,
-                  videos: mediaSummary.videos,
-                  audios: mediaSummary.audios,
-                })
-              }}
+            <div class="flex flex-wrap gap-4 text-sm text-n-slate-11">
+              <span class="inline-flex items-center gap-1">
+                <span class="i-lucide-image w-4 h-4" />
+                <span>
+                  {{ mediaSummary.photos }}
+                  {{ $t('CONVERSATION.MEDIA_LIBRARY.PHOTOS_LABEL') }}
+                </span>
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="i-lucide-clapperboard w-4 h-4" />
+                <span>
+                  {{ mediaSummary.videos }}
+                  {{ $t('CONVERSATION.MEDIA_LIBRARY.VIDEOS_LABEL') }}
+                </span>
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="i-lucide-waveform w-4 h-4" />
+                <span>
+                  {{ mediaSummary.audios }}
+                  {{ $t('CONVERSATION.MEDIA_LIBRARY.AUDIOS_LABEL') }}
+                </span>
+              </span>
             </div>
             <div
               v-if="mediaAttachments.length"
