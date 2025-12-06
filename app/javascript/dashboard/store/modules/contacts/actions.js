@@ -216,6 +216,11 @@ export const actions = {
   },
 
   fetchContactableInbox: async ({ commit }, id) => {
+    if (!id) {
+      commit(types.SET_CONTACT_UI_FLAG, { isFetchingInboxes: false });
+      return;
+    }
+
     commit(types.SET_CONTACT_UI_FLAG, { isFetchingInboxes: true });
     try {
       const response = await ContactAPI.getContactableInboxes(id);

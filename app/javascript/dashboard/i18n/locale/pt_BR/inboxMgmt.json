@@ -400,6 +400,19 @@
           "ERROR_MESSAGE": "Não foi possível criar o canal do NotificaMe Hub"
         }
       },
+      "INTERNAL_CHANNEL": {
+        "TITLE": "Chat interno",
+        "DESC": "Crie uma caixa dedicada a conversas entre agentes.",
+        "CHANNEL_NAME": {
+          "LABEL": "Nome do canal",
+          "PLACEHOLDER": "Informe um nome para o canal",
+          "ERROR": "Este campo é obrigatório"
+        },
+        "SUBMIT_BUTTON": "Criar caixa de chat interno",
+        "API": {
+          "ERROR_MESSAGE": "Não foi possível criar a caixa de chat interno"
+        }
+      },
       "EMAIL_CHANNEL": {
         "TITLE": "Canal de e-mail",
         "DESC": "Integre sua caixa de entrada de e-mail.",
@@ -906,7 +919,8 @@
       "TELEGRAM": "Telegram",
       "LINE": "Line",
       "API": "Canal da API",
-      "INSTAGRAM": "Instagram"
+      "INSTAGRAM": "Instagram",
+      "INTERNAL": "Chat interno"
     }
   }
 }

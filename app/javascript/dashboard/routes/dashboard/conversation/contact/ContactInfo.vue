@@ -96,6 +96,7 @@ export default {
   watch: {
     'contact.id': {
       handler(id) {
+        if (!id) return;
         this.$store.dispatch('contacts/fetchContactableInbox', id);
       },
       immediate: true,

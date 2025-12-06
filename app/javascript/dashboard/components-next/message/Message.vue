@@ -41,6 +41,7 @@ import VoiceCallBubble from './bubbles/VoiceCall.vue';
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
+import { useInbox } from 'dashboard/composables/useInbox';
 
 /**
  * @typedef {Object} Attachment
@@ -141,6 +142,7 @@ const showBackgroundHighlight = ref(false);
 const showContextMenu = ref(false);
 const { t } = useI18n();
 const route = useRoute();
+const { isAnInternalChannel } = useInbox(props.inboxId);
 
 /**
  * Computes the message variant based on props
@@ -209,16 +211,29 @@ const isBotOrAgentMessage = computed(() => {
   return senderType.toLowerCase() === SENDER_TYPES.USER.toLowerCase();
 });
 
+const isCurrentUserSender = computed(() => {
+  const senderId = props.senderId ?? props.sender?.id;
+  if (!senderId || !props.currentUserId) return false;
+
+  return Number(senderId) === Number(props.currentUserId);
+});
+
 /**
  * Computes the message orientation based on sender type and message type
  * @returns {import('vue').ComputedRef<'left'|'right'|'center'>} The computed orientation
  */
 const orientation = computed(() => {
+  if (props.messageType === MESSAGE_TYPES.ACTIVITY) {
+    return ORIENTATION.CENTER;
+  }
+
+  if (isAnInternalChannel.value) {
+    return isCurrentUserSender.value ? ORIENTATION.RIGHT : ORIENTATION.LEFT;
+  }
+
   if (isBotOrAgentMessage.value) {
     return ORIENTATION.RIGHT;
   }
-
-  if (props.messageType === MESSAGE_TYPES.ACTIVITY) return ORIENTATION.CENTER;
 
   return ORIENTATION.LEFT;
 });
@@ -233,9 +248,15 @@ const flexOrientationClass = computed(() => {
   return map[orientation.value];
 });
 
+const hasAvatarColumnOnLeft = computed(() => {
+  return isAnInternalChannel.value && orientation.value === ORIENTATION.LEFT;
+});
+
 const gridClass = computed(() => {
   const map = {
-    [ORIENTATION.LEFT]: 'grid grid-cols-1fr',
+    [ORIENTATION.LEFT]: hasAvatarColumnOnLeft.value
+      ? 'grid grid-cols-[24px_1fr]'
+      : 'grid grid-cols-1fr',
     [ORIENTATION.RIGHT]: 'grid grid-cols-[1fr_24px]',
   };
 
@@ -243,16 +264,27 @@ const gridClass = computed(() => {
 });
 
 const gridTemplate = computed(() => {
-  const map = {
-    [ORIENTATION.LEFT]: `
-      "bubble"
-      "meta"
+  const map = hasAvatarColumnOnLeft.value
+    ? {
+        [ORIENTATION.LEFT]: `
+      "avatar bubble"
+      "spacer meta"
     `,
-    [ORIENTATION.RIGHT]: `
+        [ORIENTATION.RIGHT]: `
       "bubble avatar"
       "meta spacer"
     `,
-  };
+      }
+    : {
+        [ORIENTATION.LEFT]: `
+      "bubble"
+      "meta"
+    `,
+        [ORIENTATION.RIGHT]: `
+      "bubble avatar"
+      "meta spacer"
+    `,
+      };
 
   return map[orientation.value];
 });
@@ -265,6 +297,8 @@ const shouldGroupWithNext = computed(() => {
 
 const shouldShowAvatar = computed(() => {
   if (props.messageType === MESSAGE_TYPES.ACTIVITY) return false;
+
+  if (hasAvatarColumnOnLeft.value) return true;
   if (orientation.value === ORIENTATION.LEFT) return false;
 
   return true;
@@ -546,7 +580,7 @@ provideMessageContext({
         class="[grid-area:bubble] flex"
         :class="{
           'ltr:ml-8 rtl:mr-8 justify-end': orientation === ORIENTATION.RIGHT,
-          'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT,
+          'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT && !hasAvatarColumnOnLeft,
           'min-w-0': variant === MESSAGE_VARIANTS.EMAIL,
         }"
         @contextmenu="openContextMenu($event)"

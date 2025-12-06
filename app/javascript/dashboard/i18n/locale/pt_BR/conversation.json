@@ -286,10 +286,10 @@
     "INTERNAL_CHAT": {
       "TITLE": "Nova conversa interna",
       "DESCRIPTION": "Inicie um chat entre agentes usando uma caixa de entrada interna.",
-      "NO_INBOX": "Crie uma caixa de entrada interna em ConfiguraÇõÇæes -> Caixas de entrada para iniciar um chat.",
+      "NO_INBOX": "Crie uma caixa de entrada do tipo chat interno, em Configurações -> Caixas de entrada para iniciar um chat.",
       "INBOX_LABEL": "Caixa de entrada interna",
       "INBOX_PLACEHOLDER": "Selecione uma caixa de entrada interna",
-      "TITLE_LABEL": "TÇ­tulo",
+      "TITLE_LABEL": "Título",
       "TITLE_PLACEHOLDER": "Assunto opcional para esta conversa",
       "OPTIONAL": "opcional",
       "PARTICIPANTS_LABEL": "Participantes",
@@ -303,7 +303,7 @@
       "SUBMIT": "Iniciar conversa",
       "SUCCESS": "Conversa interna criada",
       "GO_TO_CONVERSATION": "Abrir conversa",
-      "ERROR": "NÇœo foi possÇðvel criar a conversa interna"
+      "ERROR": "Não foi possível criar a conversa interna"
     },
     "SIDEBAR": {
       "CONTACT": "Contatos",
@@ -315,5 +315,83 @@
   },
   "GALLERY_VIEW": {
     "ERROR_DOWNLOADING": "Não foi possível baixar o anexo. Por favor, tente novamente"
+  },
+  "CONVERSATION_PARTICIPANTS": {
+    "SIDEBAR_MENU_TITLE": "Participantes",
+    "SIDEBAR_TITLE": "Participantes da conversa",
+    "NO_RECORDS_FOUND": "Nenhum resultado encontrado",
+    "ADD_PARTICIPANTS": "Selecionar participantes",
+    "REMANING_PARTICIPANTS_TEXT": "+{count} outros",
+    "REMANING_PARTICIPANT_TEXT": "+{count} outro",
+    "TOTAL_PARTICIPANTS_TEXT": "{count} pessoas estão participando.",
+    "TOTAL_PARTICIPANT_TEXT": "{count} pessoa está participando.",
+    "NO_PARTICIPANTS_TEXT": "Ninguém está participando!",
+    "WATCH_CONVERSATION": "Participar da conversa",
+    "YOU_ARE_WATCHING": "Você está participando",
+    "API": {
+      "ERROR_MESSAGE": "Não foi possível atualizar, tente novamente!",
+      "SUCCESS_MESSAGE": "Participantes atualizados!"
+    }
+  },
+  "CONVERSATION_SIDEBAR": {
+    "ASSIGNEE_LABEL": "Agente atribuído",
+    "SELF_ASSIGN": "Atribuir para mim",
+    "TEAM_LABEL": "Time atribuído",
+    "SELECT": {
+      "PLACEHOLDER": "Nenhum"
+    },
+    "ACCORDION": {
+      "CONTACT_DETAILS": "Detalhes do contato",
+      "CONVERSATION_ACTIONS": "Ações da conversa",
+      "CONVERSATION_LABELS": "Etiquetas da conversa",
+      "CONVERSATION_INFO": "Informações da conversa",
+      "CONTACT_NOTES": "Notas do contato",
+      "CONTACT_ATTRIBUTES": "Atributos do contato",
+      "PREVIOUS_CONVERSATION": "Conversas anteriores",
+      "MACROS": "Macros",
+      "LINEAR_ISSUES": "Issues do Linear vinculadas",
+      "SHOPIFY_ORDERS": "Pedidos Shopify"
+    },
+    "SHOPIFY": {
+      "ORDER_ID": "Pedido #{id}",
+      "ERROR": "Erro ao carregar pedidos",
+      "NO_SHOPIFY_ORDERS": "Nenhum pedido encontrado",
+      "FINANCIAL_STATUS": {
+        "PENDING": "Pendente",
+        "AUTHORIZED": "Autorizado",
+        "PARTIALLY_PAID": "Parcialmente pago",
+        "PAID": "Pago",
+        "PARTIALLY_REFUNDED": "Parcialmente reembolsado",
+        "REFUNDED": "Reembolsado",
+        "VOIDED": "Anulado"
+      },
+      "FULFILLMENT_STATUS": {
+        "FULFILLED": "Atendido",
+        "PARTIALLY_FULFILLED": "Parcialmente atendido",
+        "UNFULFILLED": "Não atendido"
+      }
+    }
+  },
+  "CONVERSATION_CUSTOM_ATTRIBUTES": {
+    "ADD_BUTTON_TEXT": "Criar atributo",
+    "NO_RECORDS_FOUND": "Nenhum atributo encontrado",
+    "UPDATE": {
+      "SUCCESS": "Atributo atualizado com sucesso",
+      "ERROR": "Não foi possível atualizar o atributo. Tente novamente mais tarde"
+    },
+    "ADD": {
+      "TITLE": "Adicionar",
+      "SUCCESS": "Atributo adicionado com sucesso",
+      "ERROR": "Não foi possível adicionar o atributo. Tente novamente mais tarde"
+    },
+    "DELETE": {
+      "SUCCESS": "Atributo excluído com sucesso",
+      "ERROR": "Não foi possível excluir o atributo. Tente novamente mais tarde"
+    },
+    "ATTRIBUTE_SELECT": {
+      "TITLE": "Adicionar atributos",
+      "PLACEHOLDER": "Buscar atributos",
+      "NO_RESULT": "Nenhum atributo encontrado"
+    }
   }
 }
