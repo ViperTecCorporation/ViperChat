@@ -179,10 +179,15 @@ class ConversationFinder
   end
 
   def set_count_for_all_conversations
+    count_scope = @conversations
+    unless params[:conversation_type] == 'internal' || @assignee_type == 'internal'
+      count_scope = count_scope.joins(:inbox).where.not(inboxes: { channel_type: 'Channel::Internal' })
+    end
+
     [
-      @conversations.assigned_to(current_user).count,
-      @conversations.unassigned.count,
-      @conversations.count,
+      count_scope.assigned_to(current_user).count,
+      count_scope.unassigned.count,
+      count_scope.count,
       @conversations.joins(:inbox).where(inboxes: { channel_type: 'Channel::Internal' }).count
     ]
   end
