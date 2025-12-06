@@ -308,6 +308,20 @@
       "SUCCESS": "Conversa interna criada",
       "GO_TO_CONVERSATION": "Abrir conversa",
       "ERROR": "Não foi possível criar a conversa interna"
+    },
+    "MEDIA_LIBRARY": {
+      "BUTTON": "Media",
+      "TITLE": "Media, documents and links",
+      "TAB_MEDIA": "Media",
+      "TAB_DOCS": "Docs",
+      "TAB_LINKS": "Links",
+      "MEDIA_SUMMARY": "{photos} photos | {videos} videos | {audios} audios",
+      "DOC_COUNT": "{count} documents",
+      "LINK_COUNT": "{count} links",
+      "EMPTY": "Nothing here yet",
+      "LOADING": "Loading items",
+      "LOAD_ERROR": "Could not load attachments. Please try again.",
+      "THIS_MONTH": "This month"
     }
   },
   "EMAIL_TRANSCRIPT": {
@@ -458,19 +472,5 @@
   },
   "GALLERY_VIEW": {
     "ERROR_DOWNLOADING": "Unable to download attachment. Please try again"
-  },
-  "MEDIA_LIBRARY": {
-    "BUTTON": "Media",
-    "TITLE": "Media, documents and links",
-    "TAB_MEDIA": "Media",
-    "TAB_DOCS": "Docs",
-    "TAB_LINKS": "Links",
-    "MEDIA_SUMMARY": "{photos} photos · {videos} videos · {audios} audios",
-    "DOC_COUNT": "{count} documents",
-    "LINK_COUNT": "{count} links",
-    "EMPTY": "Nothing here yet",
-    "LOADING": "Loading items",
-    "LOAD_ERROR": "Could not load attachments. Please try again.",
-    "THIS_MONTH": "This month"
   }
 }

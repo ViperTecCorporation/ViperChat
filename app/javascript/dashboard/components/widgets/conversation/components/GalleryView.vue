@@ -238,6 +238,7 @@ onMounted(() => {
       full-width
       :show-close-button="false"
       :on-close="onClose"
+      :style="{ zIndex: 120 }"
     >
       <div
         class="bg-n-background flex flex-col h-[inherit] w-[inherit] overflow-hidden select-none"

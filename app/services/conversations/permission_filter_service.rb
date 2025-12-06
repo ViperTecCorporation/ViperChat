@@ -8,23 +8,35 @@ class Conversations::PermissionFilterService
   end
 
   def perform
-    return conversations if user_role == 'administrator'
+    base_scope = conversations.reorder(nil)
+    return base_scope if user_role == 'administrator'
 
-    accessible_conversations
+    accessible_conversations(base_scope)
   end
 
   private
 
-  def accessible_conversations
-    internal_participant_access = conversations.joins(:inbox, :conversation_participants)
-                                               .where(inboxes: { channel_type: 'Channel::Internal' },
-                                                      conversation_participants: { user_id: user.id })
+  def accessible_conversations(base_scope = conversations.reorder(nil))
+    internal_participant_ids = Conversation
+                               .joins(:inbox, :conversation_participants)
+                               .where(inboxes: { channel_type: 'Channel::Internal' },
+                                      conversation_participants: { user_id: user.id },
+                                      account_id: account.id)
+                               .distinct
+                               .pluck(:id)
 
-    inbox_access = conversations.joins(:inbox)
-                                .where.not(inboxes: { channel_type: 'Channel::Internal' })
-                                .where(inbox: user.inboxes.where(account_id: account.id))
+    inbox_access_ids = Conversation
+                       .joins(:inbox)
+                       .where.not(inboxes: { channel_type: 'Channel::Internal' })
+                       .where(account_id: account.id)
+                       .where(inbox: user.inboxes.where(account_id: account.id))
+                       .distinct
+                       .pluck(:id)
 
-    inbox_access.or(internal_participant_access).distinct
+    allowed_ids = (internal_participant_ids + inbox_access_ids).uniq
+    return base_scope.none if allowed_ids.empty?
+
+    base_scope.where(id: allowed_ids)
   end
 
   def account_user
