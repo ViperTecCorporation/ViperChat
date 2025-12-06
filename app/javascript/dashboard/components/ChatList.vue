@@ -630,6 +630,7 @@ function onToggleAdvanceFiltersModal() {
 
 function fetchConversations() {
   store.dispatch('updateChatListFilters', conversationFilters.value);
+  store.dispatch('conversationStats/get', conversationFilters.value);
   store.dispatch('fetchAllConversations').then(emitConversationLoaded);
 }
 
