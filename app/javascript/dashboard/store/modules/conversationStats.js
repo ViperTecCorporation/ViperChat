@@ -22,9 +22,8 @@ const fetchMetaData = async (commit, params) => {
     } = response;
     commit(types.SET_CONV_TAB_META, {
       ...meta,
-      internal_only:
-        params?.conversationType === 'internal' ||
-        params?.assigneeType === 'internal',
+      requested_assignee_type: params?.assigneeType,
+      requested_conversation_type: params?.conversationType,
     });
   } catch (error) {
     // ignore
@@ -63,10 +62,15 @@ export const mutations = {
       unassigned_count: unAssignedCount,
       all_count: allCount,
       internal_count: internalCount,
-      internal_only: internalOnly,
+      requested_assignee_type: requestedAssigneeType,
+      requested_conversation_type: requestedConversationType,
     } = {}
   ) {
-    if (internalOnly) {
+    const isInternalRequest =
+      requestedAssigneeType === 'internal' ||
+      requestedConversationType === 'internal';
+
+    if (isInternalRequest) {
       $state.internalCount = internalCount || 0;
       $state.updatedOn = new Date();
       return;
