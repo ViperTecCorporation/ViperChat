@@ -49,12 +49,31 @@ const getAttachmentUrl = attachment =>
   '';
 
 const getExtension = attachment => {
-  const type = (attachment?.file_type || attachment?.fileType || '').toString();
+  const type = (
+    attachment?.file_type ||
+    attachment?.fileType ||
+    attachment?.content_type ||
+    attachment?.contentType ||
+    attachment?.mime_type ||
+    attachment?.mimeType ||
+    ''
+  ).toString();
   const byType =
     attachment?.extension ||
     (type.includes('/') ? type.split('/')[1] : type.includes('.') ? type.split('.').pop() : '');
 
+  const byName =
+    attachment?.file_name ||
+    attachment?.filename ||
+    attachment?.name ||
+    attachment?.title ||
+    '';
+
   if (byType) return byType.toLowerCase();
+  if (byName && byName.includes('.')) {
+    const parts = byName.split('.');
+    return parts.pop().toLowerCase();
+  }
 
   const url = getAttachmentUrl(attachment);
   if (!url) return '';
@@ -64,12 +83,29 @@ const getExtension = attachment => {
 };
 
 const getNormalizedType = attachment => {
-  const rawType = (attachment?.file_type || attachment?.fileType || '').toString().toLowerCase();
+  const rawType = (
+    attachment?.file_type ||
+    attachment?.fileType ||
+    attachment?.content_type ||
+    attachment?.contentType ||
+    attachment?.mime_type ||
+    attachment?.mimeType ||
+    ''
+  )
+    .toString()
+    .toLowerCase();
   const ext = getExtension(attachment);
+  const url = getAttachmentUrl(attachment);
 
   if (rawType.includes('audio')) return 'audio';
   if (rawType.includes('video') || rawType.includes('ig_reel')) return 'video';
   if (rawType.includes('image')) return 'image';
+
+  if (url.startsWith('data:')) {
+    if (url.includes('audio')) return 'audio';
+    if (url.includes('video')) return 'video';
+    if (url.includes('image')) return 'image';
+  }
 
   const audioExts = ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'oga', 'flac', 'opus', 'amr'];
   const videoExts = ['mp4', 'mov', 'mkv', 'webm', 'avi', 'm4v'];
@@ -134,18 +170,17 @@ const downloadAttachment = async attachment => {
 
 const openDocument = (attachment, event) => {
   const url = getAttachmentUrl(attachment);
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
   if (!url) {
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
     useAlert(t('GALLERY_VIEW.ERROR_DOWNLOADING'));
     return;
   }
 
-  // Let the anchor with target="_blank" handle opening a new tab.
-  // If the browser blocks the default navigation (e.g., programmatic trigger),
-  // fall back to window.open.
-  if (event?.defaultPrevented) {
-    window.open(url, '_blank', 'noopener');
+  const opened = window.open(url, '_blank', 'noopener');
+  if (!opened) {
+    useAlert(t('GALLERY_VIEW.ERROR_DOWNLOADING'));
   }
 };
 
@@ -257,11 +292,13 @@ const mediaSummary = computed(() => {
   const photos = mediaAttachments.value.filter(item => isImage(item)).length;
   const videos = mediaAttachments.value.filter(item => isVideo(item)).length;
   const audios = mediaAttachments.value.filter(item => isAudio(item)).length;
+  const total = photos + videos + audios;
 
   return {
     photos,
     videos,
     audios,
+    total,
   };
 });
 
@@ -325,7 +362,7 @@ const openPreview = attachment => {
               <span
                 class="min-w-[1.75rem] px-2 rounded-md text-xs leading-5 font-medium text-center text-n-slate-11 outline outline-1 outline-n-strong"
               >
-                {{ mediaSummary.photos }}
+                {{ mediaSummary.total }}
               </span>
             </span>
           </Button>
@@ -458,7 +495,7 @@ const openPreview = attachment => {
                     :download="getDisplayName(doc) || undefined"
                     target="_blank"
                     rel="noopener noreferrer"
-                    @click="openDocument(doc, $event)"
+                    @click.prevent.stop="openDocument(doc, $event)"
                   >
                     <span class="i-lucide-file-text w-5 h-5 text-n-slate-11 flex-shrink-0" />
                     <div class="flex flex-col min-w-0 gap-0.5">

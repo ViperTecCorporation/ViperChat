@@ -35,6 +35,14 @@ export const filterByUnattended = (
     : shouldFilter;
 };
 
+const filterByInternal = (shouldFilter, conversationType, inbox = {}) => {
+  if (conversationType !== 'internal') {
+    return shouldFilter;
+  }
+
+  return inbox.channel_type === 'Channel::Internal' && shouldFilter;
+};
+
 export const applyPageFilters = (conversation, filters) => {
   const { inboxId, status, labels = [], teamId, conversationType } = filters;
   const {
@@ -47,6 +55,7 @@ export const applyPageFilters = (conversation, filters) => {
   } = conversation;
   const team = meta.team || {};
   const { id: chatTeamId } = team;
+  const inbox = conversation.inbox || {};
 
   let shouldFilter = filterByStatus(chatStatus, status);
   shouldFilter = filterByInbox(shouldFilter, inboxId, chatInboxId);
@@ -58,6 +67,7 @@ export const applyPageFilters = (conversation, filters) => {
     firstReplyOn,
     waitingSince
   );
+  shouldFilter = filterByInternal(shouldFilter, conversationType, inbox);
 
   return shouldFilter;
 };

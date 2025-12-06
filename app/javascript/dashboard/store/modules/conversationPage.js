@@ -5,12 +5,15 @@ const state = {
     me: 0,
     unassigned: 0,
     all: 0,
+    internal: 0,
     appliedFilters: 0,
   },
   hasEndReached: {
     me: false,
     unassigned: false,
     all: false,
+    internal: false,
+    appliedFilters: false,
   },
 };
 
@@ -40,9 +43,10 @@ export const actions = {
 
 export const mutations = {
   [types.default.SET_CURRENT_PAGE]: ($state, { filter, page }) => {
+    const safePage = Number.isFinite(Number(page)) ? Number(page) : 0;
     $state.currentPage = {
       ...$state.currentPage,
-      [filter]: page,
+      [filter]: safePage,
     };
   },
   [types.default.SET_CONVERSATION_END_REACHED]: ($state, { filter }) => {
@@ -63,6 +67,7 @@ export const mutations = {
       me: 0,
       unassigned: 0,
       all: 0,
+      internal: 0,
       appliedFilters: 0,
     };
 
@@ -70,6 +75,7 @@ export const mutations = {
       me: false,
       unassigned: false,
       all: false,
+      internal: false,
       appliedFilters: false,
     };
   },

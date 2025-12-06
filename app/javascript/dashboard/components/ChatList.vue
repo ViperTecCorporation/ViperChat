@@ -315,15 +315,24 @@ const conversationListPagination = computed(() => {
 });
 
 const conversationFilters = computed(() => {
+  const isInternalTab =
+    activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.INTERNAL;
+
+  const normalizedPage = Number.isFinite(Number(conversationListPagination.value))
+    ? Number(conversationListPagination.value)
+    : 1;
+
   return {
     inboxId: props.conversationInbox ? props.conversationInbox : undefined,
     assigneeType: activeAssigneeTab.value,
     status: activeStatus.value,
     sortBy: activeSortBy.value,
-    page: conversationListPagination.value,
+    page: normalizedPage,
     labels: props.label ? [props.label] : undefined,
     teamId: props.teamId || undefined,
-    conversationType: props.conversationType || undefined,
+    conversationType: isInternalTab
+      ? 'internal'
+      : props.conversationType || undefined,
   };
 });
 
@@ -371,6 +380,10 @@ const conversationList = computed(() => {
       localConversationList = [...mineChatsList.value(filters)];
     } else if (activeAssigneeTab.value === 'unassigned') {
       localConversationList = [...unAssignedChatsList.value(filters)];
+    } else if (
+      activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.INTERNAL
+    ) {
+      localConversationList = [...allChatList.value(filters)];
     } else {
       localConversationList = [...allChatList.value(filters)];
     }

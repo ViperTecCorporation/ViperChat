@@ -39,7 +39,7 @@ class ConversationFinder
   def perform
     set_up
 
-    mine_count, unassigned_count, all_count, = set_count_for_all_conversations
+    mine_count, unassigned_count, all_count, internal_count = set_count_for_all_conversations
     assigned_count = all_count - unassigned_count
 
     filter_by_assignee_type
@@ -50,6 +50,7 @@ class ConversationFinder
         mine_count: mine_count,
         assigned_count: assigned_count,
         unassigned_count: unassigned_count,
+        internal_count: internal_count,
         all_count: all_count
       }
     }
@@ -114,6 +115,9 @@ class ConversationFinder
       @conversations = @conversations.unassigned
     when 'assigned'
       @conversations = @conversations.assigned
+    when 'internal'
+      @conversations = @conversations.joins(:inbox)
+                                     .where(inboxes: { channel_type: 'Channel::Internal' })
     end
     @conversations
   end
@@ -128,9 +132,8 @@ class ConversationFinder
     when 'unattended'
       @conversations = @conversations.unattended
     when 'internal'
-      @conversations = @conversations.joins(:inbox, :conversation_participants)
-                                     .where(inboxes: { channel_type: 'Channel::Internal' },
-                                            conversation_participants: { user_id: current_user.id })
+      @conversations = @conversations.joins(:inbox)
+                                     .where(inboxes: { channel_type: 'Channel::Internal' })
     end
     @conversations
   end
@@ -174,17 +177,27 @@ class ConversationFinder
     [
       @conversations.assigned_to(current_user).count,
       @conversations.unassigned.count,
-      @conversations.count
+      @conversations.count,
+      @conversations.joins(:inbox).where(inboxes: { channel_type: 'Channel::Internal' }).count
     ]
   end
 
   def current_page
-    params[:page] || 1
+    page_param = params[:page]
+    page = Integer(page_param)
+    page.positive? ? page : 1
+  rescue StandardError
+    1
   end
 
   def conversations_base_query
     @conversations.includes(
-      :taggings, :inbox, { assignee: { avatar_attachment: [:blob] } }, { contact: { avatar_attachment: [:blob] } }, :team, :contact_inbox
+      :inbox,
+      :assignee_agent_bot,
+      { assignee: { avatar_attachment: [:blob] } },
+      { contact: { avatar_attachment: [:blob] } },
+      :team,
+      :contact_inbox
     )
   end
 
