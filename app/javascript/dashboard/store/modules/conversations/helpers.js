@@ -35,17 +35,25 @@ export const filterByUnattended = (
     : shouldFilter;
 };
 
-const filterByInternal = (shouldFilter, conversationType, inbox = {}) => {
+const filterByInternal = (shouldFilter, conversationType, conversation = {}) => {
   if (conversationType !== 'internal') {
     return shouldFilter;
   }
 
-  if (!inbox || !inbox.channel_type) {
-    // If inbox details are not present in the payload, rely on backend filtering.
-    return shouldFilter;
+  const inbox = conversation.inbox || {};
+  const metaInbox = conversation.meta?.inbox || {};
+  const channelType =
+    inbox.channel_type ||
+    metaInbox.channel_type ||
+    conversation.channel_type ||
+    conversation.channelType;
+
+  if (!channelType) {
+    // Without channel metadata we cannot reliably decide; hide non-internal by default.
+    return false;
   }
 
-  return inbox.channel_type === 'Channel::Internal' && shouldFilter;
+  return channelType === 'Channel::Internal' && shouldFilter;
 };
 
 export const applyPageFilters = (conversation, filters) => {
@@ -60,8 +68,6 @@ export const applyPageFilters = (conversation, filters) => {
   } = conversation;
   const team = meta.team || {};
   const { id: chatTeamId } = team;
-  const inbox = conversation.inbox || {};
-
   let shouldFilter = filterByStatus(chatStatus, status);
   shouldFilter = filterByInbox(shouldFilter, inboxId, chatInboxId);
   shouldFilter = filterByTeam(shouldFilter, teamId, chatTeamId);
@@ -72,7 +78,7 @@ export const applyPageFilters = (conversation, filters) => {
     firstReplyOn,
     waitingSince
   );
-  shouldFilter = filterByInternal(shouldFilter, conversationType, inbox);
+  shouldFilter = filterByInternal(shouldFilter, conversationType, conversation);
 
   return shouldFilter;
 };
