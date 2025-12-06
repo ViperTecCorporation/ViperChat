@@ -322,8 +322,13 @@ const conversationFilters = computed(() => {
     ? Number(conversationListPagination.value)
     : 1;
 
+  const inboxId =
+    isInternalTab || props.conversationType === 'internal'
+      ? undefined
+      : props.conversationInbox || undefined;
+
   return {
-    inboxId: props.conversationInbox ? props.conversationInbox : undefined,
+    inboxId,
     assigneeType: activeAssigneeTab.value,
     status: activeStatus.value,
     sortBy: activeSortBy.value,
