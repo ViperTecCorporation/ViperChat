@@ -7,8 +7,26 @@ export const findPendingMessageIndex = (chat, message) => {
   );
 };
 
-export const filterByStatus = (chatStatus, filterStatus) =>
-  filterStatus === 'all' ? true : chatStatus === filterStatus;
+const STATUS_ENUM = {
+  0: 'open',
+  1: 'resolved',
+  2: 'pending',
+  3: 'snoozed',
+};
+
+const normalizeStatus = value => {
+  if (typeof value === 'number') {
+    return STATUS_ENUM[value] || value;
+  }
+  return (value || '').toString();
+};
+
+export const filterByStatus = (chatStatus, filterStatus) => {
+  if (filterStatus === 'all') {
+    return true;
+  }
+  return normalizeStatus(chatStatus) === normalizeStatus(filterStatus);
+};
 
 export const filterByInbox = (shouldFilter, inboxId, chatInboxId) => {
   const isOnInbox = Number(inboxId) === chatInboxId;
