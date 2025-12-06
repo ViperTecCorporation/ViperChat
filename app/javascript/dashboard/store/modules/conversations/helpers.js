@@ -45,6 +45,7 @@ const filterByInternal = (shouldFilter, conversationType, conversation = {}) => 
   const channelType =
     inbox.channel_type ||
     metaInbox.channel_type ||
+    conversation.meta?.channel ||
     conversation.channel_type ||
     conversation.channelType;
 
