@@ -334,6 +334,7 @@ const handleForward = async () => {
           color="slate"
           size="sm"
           :label="$t('CONVERSATION.FORWARD_MESSAGES.CANCEL')"
+          type="button"
           @click="handleClose"
         />
         <Button
@@ -341,6 +342,7 @@ const handleForward = async () => {
           size="sm"
           :disabled="!canSubmit"
           :label="$t('CONVERSATION.FORWARD_MESSAGES.ACTION_LABEL')"
+          type="button"
           @click="handleForward"
         />
       </div>

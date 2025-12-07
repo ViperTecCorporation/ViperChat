@@ -1,10 +1,12 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import GalleryView from './components/GalleryView.vue';
+import ForwardMessagesModal from './ForwardMessagesModal.vue';
 import { downloadFile } from '@chatwoot/utils';
 
 const props = defineProps({
@@ -20,6 +22,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  conversationId: {
+    type: [Number, String],
+    default: null,
+  },
   isLoading: {
     type: Boolean,
     default: false,
@@ -32,7 +38,32 @@ const dialogRef = ref(null);
 const activeTab = ref('media');
 const previewAttachment = ref(null);
 const showGallery = ref(false);
+const showForwardModal = ref(false);
+const isForwardSelectionActive = ref(false);
+const selectedAttachmentIds = ref([]);
+const selectedLinkMessageIds = ref([]);
+const getAttachmentSelectionKey = attachment => {
+  const messageId =
+    attachment?.message_id ||
+    attachment?.messageId ||
+    attachment?.message?.id ||
+    null;
+  const url = getAttachmentUrl(attachment);
+  const name =
+    attachment?.file_name ||
+    attachment?.filename ||
+    attachment?.name ||
+    attachment?.title ||
+    '';
+  const rawId = attachment?.id || messageId || url || name;
+  return rawId ? String(rawId) : '';
+};
 const { t } = useI18n();
+const router = useRouter();
+
+const showDialog = computed(
+  () => props.show && !showGallery.value && !showForwardModal.value
+);
 
 const getAttachmentUrl = attachment =>
   attachment?.data_url ||
@@ -250,6 +281,13 @@ const groupByMonth = items => {
 };
 
 const attachmentList = computed(() => props.attachments || []);
+const messagesMapById = computed(() => {
+  const map = new Map();
+  (props.messages || []).forEach(message => {
+    map.set(message.id, message);
+  });
+  return map;
+});
 
 const mediaAttachments = computed(() =>
   attachmentList.value
@@ -281,6 +319,7 @@ const links = computed(() => {
       url,
       sender: message.sender,
       created_at: message.created_at,
+      message_id: message.id,
     }));
   });
 });
@@ -302,6 +341,66 @@ const mediaSummary = computed(() => {
   };
 });
 
+const getMessageIdFromAttachment = attachment =>
+  attachment?.message_id ||
+  attachment?.messageId ||
+  attachment?.message?.id ||
+  null;
+
+const selectedMessages = computed(() => {
+  const ids = new Set();
+  const selectedAttachmentByMessage = new Map();
+  const allAttachmentsByMessage = new Map();
+
+  // Build a lookup of all attachments per message for fallback
+  attachmentList.value.forEach(att => {
+    const mId = getMessageIdFromAttachment(att);
+    if (!mId) return;
+    const numericId = Number(mId);
+    const existing = allAttachmentsByMessage.get(numericId) || [];
+    existing.push(att);
+    allAttachmentsByMessage.set(numericId, existing);
+  });
+
+  attachmentList.value.forEach(att => {
+    if (selectedAttachmentIds.value.includes(getAttachmentSelectionKey(att))) {
+      const mId = getMessageIdFromAttachment(att);
+      if (mId) {
+        const numericId = Number(mId);
+        ids.add(numericId);
+        const current = selectedAttachmentByMessage.get(numericId) || [];
+        current.push(att);
+        selectedAttachmentByMessage.set(numericId, current);
+      }
+    }
+  });
+
+  (selectedLinkMessageIds.value || []).forEach(id => ids.add(Number(id)));
+
+  return Array.from(ids)
+    .map(id => {
+      const message =
+        messagesMapById.value.get(id) || messagesMapById.value.get(Number(id));
+      const selectedAttachments = selectedAttachmentByMessage.get(id) || [];
+      const attachments =
+        selectedAttachments.length > 0
+          ? selectedAttachments
+          : allAttachmentsByMessage.get(id) || message?.attachments || [];
+
+      if (message) {
+        return { ...message, attachments };
+      }
+
+      // Fallback stub when message details are not loaded
+      return {
+        id,
+        content: '',
+        attachments,
+      };
+    })
+    .filter(message => message && Array.isArray(message.attachments));
+});
+
 const formatSize = bytes => {
   if (!bytes) return '';
   if (bytes < 1024) return `${bytes} B`;
@@ -321,13 +420,115 @@ const openPreview = attachment => {
   previewAttachment.value = attachment;
   showGallery.value = true;
 };
+
+const toggleAttachmentSelection = attachment => {
+  const id = getAttachmentSelectionKey(attachment);
+  if (!id) return;
+  const index = selectedAttachmentIds.value.indexOf(id);
+  if (index === -1) {
+    selectedAttachmentIds.value.push(id);
+  } else {
+    selectedAttachmentIds.value.splice(index, 1);
+  }
+};
+
+const toggleLinkSelection = link => {
+  const id = link?.message_id || link?.messageId;
+  if (!id) return;
+  const numericId = Number(id);
+  const index = selectedLinkMessageIds.value.indexOf(numericId);
+  if (index === -1) {
+    selectedLinkMessageIds.value.push(numericId);
+  } else {
+    selectedLinkMessageIds.value.splice(index, 1);
+  }
+};
+
+const handleMediaClick = attachment => {
+  if (isForwardSelectionActive.value) {
+    toggleAttachmentSelection(attachment);
+    return;
+  }
+  openPreview(attachment);
+};
+
+const handleLinkClick = (link, event) => {
+  if (isForwardSelectionActive.value) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    toggleLinkSelection(link);
+  }
+};
+
+const startForwardSelection = () => {
+  isForwardSelectionActive.value = true;
+  selectedAttachmentIds.value = [];
+  selectedLinkMessageIds.value = [];
+};
+
+const cancelForwardSelection = () => {
+  isForwardSelectionActive.value = false;
+  selectedAttachmentIds.value = [];
+  selectedLinkMessageIds.value = [];
+  showForwardModal.value = false;
+};
+
+const openForwardModal = () => {
+  if (!props.conversationId) {
+    useAlert(t('CONVERSATION.FORWARD_MESSAGES.ERROR_API'));
+    return;
+  }
+  if (!selectedMessages.value.length) {
+    useAlert(t('CONVERSATION.FORWARD_MESSAGES.ERROR_NO_CONTENT'));
+    return;
+  }
+  showForwardModal.value = true;
+};
+
+const handleForwarded = conversation => {
+  cancelForwardSelection();
+  emit('close', conversation);
+  if (conversation && conversation.id) {
+    router.push({
+      name: 'inbox_conversation',
+      params: {
+        accountId: conversation.account_id || conversation.accountId,
+        conversation_id: conversation.id,
+      },
+    });
+  }
+};
+
+const selectedItemsCount = computed(
+  () => selectedAttachmentIds.value.length + selectedLinkMessageIds.value.length
+);
+
+watch(
+  () => props.show,
+  value => {
+    if (!value) {
+      cancelForwardSelection();
+    }
+  }
+);
+
+watch(
+  showForwardModal,
+  value => {
+    if (!value && props.show && !showGallery.value) {
+      nextTick(() => dialogRef.value?.open());
+    }
+  },
+  { flush: 'post' }
+);
 </script>
 
 <template>
   <Dialog
-    v-if="show && !showGallery"
+    v-if="showDialog"
     ref="dialogRef"
     width="3xl"
+    dialog-class="z-30"
     :overflow-y-auto="true"
     :show-cancel-button="false"
     :show-confirm-button="false"
@@ -355,6 +556,7 @@ const openPreview = attachment => {
             variant="faded"
             :color="activeTab === 'media' ? 'blue' : 'slate'"
             class="min-w-[6rem]"
+            type="button"
             @click="activeTab = 'media'"
           >
             <span class="flex items-center gap-2">
@@ -371,6 +573,7 @@ const openPreview = attachment => {
             variant="faded"
             :color="activeTab === 'docs' ? 'blue' : 'slate'"
             class="min-w-[6rem]"
+            type="button"
             @click="activeTab = 'docs'"
           >
             <span class="flex items-center gap-2">
@@ -387,6 +590,7 @@ const openPreview = attachment => {
             variant="faded"
             :color="activeTab === 'links' ? 'blue' : 'slate'"
             class="min-w-[6rem]"
+            type="button"
             @click="activeTab = 'links'"
           >
             <span class="flex items-center gap-2">
@@ -408,30 +612,67 @@ const openPreview = attachment => {
         </div>
 
         <div v-else class="flex flex-col gap-6">
+          <div class="flex flex-wrap items-center gap-4 text-sm text-n-slate-11">
+            <span class="inline-flex items-center gap-1">
+              <span class="i-lucide-image w-4 h-4" />
+              <span>
+                {{ mediaSummary.photos }}
+                {{ $t('CONVERSATION.MEDIA_LIBRARY.PHOTOS_LABEL') }}
+              </span>
+            </span>
+            <span class="inline-flex items-center gap-1">
+              <span class="i-lucide-clapperboard w-4 h-4" />
+              <span>
+                {{ mediaSummary.videos }}
+                {{ $t('CONVERSATION.MEDIA_LIBRARY.VIDEOS_LABEL') }}
+              </span>
+            </span>
+            <span class="inline-flex items-center gap-1">
+              <span class="i-lucide-waveform w-4 h-4" />
+              <span>
+                {{ mediaSummary.audios }}
+                {{ $t('CONVERSATION.MEDIA_LIBRARY.AUDIOS_LABEL') }}
+              </span>
+            </span>
+            <div class="ml-auto flex items-center gap-2">
+              <Button
+                size="xs"
+                variant="ghost"
+                color="slate"
+                :disabled="isForwardSelectionActive"
+                type="button"
+                @click="startForwardSelection"
+              >
+                {{ $t('CONVERSATION.FORWARD_MESSAGES.TITLE') }}
+              </Button>
+              <Button
+                v-if="isForwardSelectionActive"
+                size="xs"
+                color="blue"
+                :disabled="!selectedItemsCount"
+                type="button"
+                @click="openForwardModal"
+              >
+                {{
+                  $t('CONVERSATION.FORWARD_MESSAGES.SELECTED_COUNT', {
+                    count: selectedItemsCount,
+                  })
+                }}
+              </Button>
+                <Button
+                  v-if="isForwardSelectionActive"
+                  size="xs"
+                  variant="ghost"
+                  color="slate"
+                  type="button"
+                  @click="cancelForwardSelection"
+                >
+                  {{ $t('CONVERSATION.FORWARD_MESSAGES.CANCEL') }}
+                </Button>
+              </div>
+          </div>
+
           <div v-if="activeTab === 'media'" class="flex flex-col gap-4">
-            <div class="flex flex-wrap gap-4 text-sm text-n-slate-11">
-              <span class="inline-flex items-center gap-1">
-                <span class="i-lucide-image w-4 h-4" />
-                <span>
-                  {{ mediaSummary.photos }}
-                  {{ $t('CONVERSATION.MEDIA_LIBRARY.PHOTOS_LABEL') }}
-                </span>
-              </span>
-              <span class="inline-flex items-center gap-1">
-                <span class="i-lucide-clapperboard w-4 h-4" />
-                <span>
-                  {{ mediaSummary.videos }}
-                  {{ $t('CONVERSATION.MEDIA_LIBRARY.VIDEOS_LABEL') }}
-                </span>
-              </span>
-              <span class="inline-flex items-center gap-1">
-                <span class="i-lucide-waveform w-4 h-4" />
-                <span>
-                  {{ mediaSummary.audios }}
-                  {{ $t('CONVERSATION.MEDIA_LIBRARY.AUDIOS_LABEL') }}
-                </span>
-              </span>
-            </div>
             <div
               v-if="mediaAttachments.length"
               class="grid grid-cols-2 md:grid-cols-3 gap-3"
@@ -440,9 +681,23 @@ const openPreview = attachment => {
                 v-for="attachment in mediaAttachments"
                 :key="attachment.id"
                 type="button"
-                class="flex flex-col gap-2 p-2 rounded-lg bg-n-alpha-2 hover:bg-n-alpha-3 text-left"
-                @click="openPreview(attachment)"
+                class="relative flex flex-col gap-2 p-2 rounded-lg bg-n-alpha-2 hover:bg-n-alpha-3 text-left"
+                @click="handleMediaClick(attachment)"
               >
+                <div
+                  v-if="isForwardSelectionActive"
+                  class="absolute top-2 right-2 z-10 w-5 h-5 rounded-full border border-blue-500 bg-blue-500 text-white shadow-md ring-1 ring-blue-400/70 flex items-center justify-center text-xs"
+                  :class="{
+                    'opacity-40': !selectedAttachmentIds.includes(getAttachmentSelectionKey(attachment)),
+                    'ring-2 ring-white/70 shadow-lg opacity-100':
+                      selectedAttachmentIds.includes(getAttachmentSelectionKey(attachment)),
+                  }"
+                  >
+                    <span
+                    class="i-lucide-check w-3 h-3 text-n-brand"
+                    v-if="selectedAttachmentIds.includes(getAttachmentSelectionKey(attachment))"
+                  />
+                </div>
                 <div
                   class="w-full aspect-video overflow-hidden rounded-md bg-n-alpha-3 flex items-center justify-center"
                 >
@@ -504,12 +759,21 @@ const openPreview = attachment => {
                   <a
                     v-for="doc in group.items"
                     :key="doc.id"
-                    class="flex items-center gap-3 p-3 rounded-lg bg-n-alpha-2 hover:bg-n-alpha-3 text-left no-underline"
+                    class="relative flex items-center gap-3 p-3 rounded-lg bg-n-alpha-2 hover:bg-n-alpha-3 text-left no-underline"
+                    :class="{
+                      'ring-1 ring-blue-500':
+                        isForwardSelectionActive &&
+                        selectedAttachmentIds.includes(getAttachmentSelectionKey(doc)),
+                    }"
                     :href="getAttachmentUrl(doc) || undefined"
                     :download="getDisplayName(doc) || undefined"
                     target="_blank"
                     rel="noopener noreferrer"
-                    @click.prevent.stop="openDocument(doc, $event)"
+                    @click.prevent.stop="
+                      isForwardSelectionActive
+                        ? toggleAttachmentSelection(doc)
+                        : openDocument(doc, $event)
+                    "
                   >
                     <span class="i-lucide-file-text w-5 h-5 text-n-slate-11 flex-shrink-0" />
                     <div class="flex flex-col min-w-0 gap-0.5">
@@ -528,6 +792,20 @@ const openPreview = attachment => {
                       </span>
                     </div>
                     <span class="i-lucide-download w-4 h-4 text-n-slate-11 flex-shrink-0" />
+                    <span
+                      v-if="isForwardSelectionActive"
+                      class="absolute top-2 right-2 w-4 h-4 rounded-full border border-blue-500 bg-blue-500 text-white shadow-md ring-1 ring-blue-400/70 flex items-center justify-center text-[10px]"
+                      :class="{
+                        'opacity-40': !selectedAttachmentIds.includes(getAttachmentSelectionKey(doc)),
+                        'ring-2 ring-white/70 shadow-lg opacity-100':
+                          selectedAttachmentIds.includes(getAttachmentSelectionKey(doc)),
+                      }"
+                      >
+                        <span
+                        class="i-lucide-check w-3 h-3 text-n-brand"
+                        v-if="selectedAttachmentIds.includes(getAttachmentSelectionKey(doc))"
+                      />
+                    </span>
                   </a>
                 </div>
               </div>
@@ -561,10 +839,16 @@ const openPreview = attachment => {
                   <a
                     v-for="link in group.items"
                     :key="`${link.url}-${link.created_at}`"
-                    class="flex items-center justify-between gap-3 p-3 rounded-lg bg-n-alpha-2 hover:bg-n-alpha-3 text-n-slate-12"
+                    class="relative flex items-center justify-between gap-3 p-3 rounded-lg bg-n-alpha-2 hover:bg-n-alpha-3 text-n-slate-12"
+                    :class="{
+                      'ring-1 ring-blue-500':
+                        isForwardSelectionActive &&
+                        selectedLinkMessageIds.includes(Number(link.message_id)),
+                    }"
                     :href="link.url"
                     target="_blank"
                     rel="noopener noreferrer"
+                    @click="handleLinkClick(link, $event)"
                   >
                     <span class="flex items-center gap-3 truncate">
                       <span
@@ -586,6 +870,20 @@ const openPreview = attachment => {
                     </span>
                     <span class="text-xs text-n-slate-11">
                       {{ formatDateTime(link.created_at) }}
+                    </span>
+                    <span
+                      v-if="isForwardSelectionActive"
+                      class="absolute top-2 right-2 w-4 h-4 rounded-full border border-blue-500 bg-blue-500 text-white shadow-md ring-1 ring-blue-400/70 flex items-center justify-center text-[10px]"
+                      :class="{
+                        'opacity-40': !selectedLinkMessageIds.includes(Number(link.message_id)),
+                        'ring-2 ring-white/70 shadow-lg opacity-100':
+                          selectedLinkMessageIds.includes(Number(link.message_id)),
+                      }"
+                      >
+                        <span
+                        class="i-lucide-check w-3 h-3 text-n-brand"
+                        v-if="selectedLinkMessageIds.includes(Number(link.message_id))"
+                      />
                     </span>
                   </a>
                 </div>
@@ -615,5 +913,12 @@ const openPreview = attachment => {
     :attachment="previewAttachment"
     :all-attachments="mediaAttachments"
     @close="showGallery = false"
+  />
+  <ForwardMessagesModal
+    v-model:show="showForwardModal"
+    :selected-messages="selectedMessages"
+    :conversation-id="conversationId"
+    @forwarded="handleForwarded"
+    @close="cancelForwardSelection"
   />
 </template>

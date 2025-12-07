@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, useAttrs, defineOptions } from 'vue';
 import { OnClickOutside } from '@vueuse/components';
 import { useI18n } from 'vue-i18n';
 
@@ -53,7 +53,13 @@ const props = defineProps({
     default: 'lg',
     validator: value => ['3xl', '2xl', 'xl', 'lg', 'md', 'sm'].includes(value),
   },
+  dialogClass: {
+    type: [String, Array, Object],
+    default: '',
+  },
 });
+
+defineOptions({ inheritAttrs: false });
 
 const emit = defineEmits(['confirm', 'close']);
 
@@ -61,6 +67,7 @@ const { t } = useI18n();
 
 const dialogRef = ref(null);
 const dialogContentRef = ref(null);
+const attrs = useAttrs();
 
 const maxWidthClass = computed(() => {
   const classesMap = {
@@ -100,8 +107,10 @@ defineExpose({ open, close });
       class="w-full transition-all duration-300 ease-in-out shadow-xl rounded-xl"
       :class="[
         maxWidthClass,
+        dialogClass,
         overflowYAuto ? 'overflow-y-auto' : 'overflow-visible',
       ]"
+      v-bind="attrs"
       @close="close"
     >
       <OnClickOutside @trigger="close">

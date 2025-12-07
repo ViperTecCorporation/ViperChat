@@ -207,6 +207,7 @@ onUnmounted(() => {
       :show="showMediaModal"
       :attachments="currentAttachments"
       :messages="conversationMessages"
+      :conversation-id="currentChat?.id"
       :is-loading="isLoadingMedia"
       @close="showMediaModal = false"
     />

@@ -277,7 +277,7 @@
     "FORWARD_MESSAGES": {
       "TITLE": "Encaminhar mensagens",
       "DESCRIPTION": "Escolha um contato e uma caixa de entrada para encaminhar as mensagens selecionadas.",
-      "SELECTED_COUNT": "{count} mensagens selecionadas",
+      "SELECTED_COUNT": "{count} mensagens selecionadas encaminhar",
       "ACTION_LABEL": "Encaminhar",
       "CANCEL": "Cancelar",
       "ERROR_NO_CONTENT": "As mensagens selecionadas não possuem conteúdo para encaminhar.",
