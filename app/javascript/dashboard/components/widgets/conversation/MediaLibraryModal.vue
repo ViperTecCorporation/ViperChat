@@ -30,9 +30,17 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  attachmentsMeta: {
+    type: Object,
+    default: () => ({}),
+  },
+  isLoadingMore: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'load-more']);
 
 const dialogRef = ref(null);
 const activeTab = ref('media');
@@ -341,6 +349,16 @@ const mediaSummary = computed(() => {
   };
 });
 
+const totalCountFromMeta = computed(
+  () => props.attachmentsMeta?.totalCount || 0
+);
+
+const hasMoreAttachments = computed(() => {
+  const loaded = attachmentList.value.length || 0;
+  if (!totalCountFromMeta.value) return false;
+  return loaded < totalCountFromMeta.value;
+});
+
 const getMessageIdFromAttachment = attachment =>
   attachment?.message_id ||
   attachment?.messageId ||
@@ -502,6 +520,11 @@ const handleForwarded = conversation => {
 const selectedItemsCount = computed(
   () => selectedAttachmentIds.value.length + selectedLinkMessageIds.value.length
 );
+
+const requestLoadMore = () => {
+  if (!hasMoreAttachments.value || props.isLoadingMore) return;
+  emit('load-more');
+};
 
 watch(
   () => props.show,
@@ -902,6 +925,34 @@ watch(
             >
               {{ $t('CONVERSATION.MEDIA_LIBRARY.EMPTY') }}
             </div>
+          </div>
+
+          <div
+            v-if="hasMoreAttachments"
+            class="flex justify-center pt-2"
+          >
+            <Button
+              size="sm"
+              variant="ghost"
+              color="blue"
+              type="button"
+              :disabled="isLoadingMore"
+              @click="requestLoadMore"
+            >
+              <span class="flex items-center gap-2">
+                <span
+                  v-if="isLoadingMore"
+                  class="i-lucide-loader-2 animate-spin"
+                />
+                <span>{{ $t('CONVERSATION.MEDIA_LIBRARY.LOAD_MORE') }}</span>
+                <span
+                  v-if="totalCountFromMeta"
+                  class="text-xs text-n-slate-11"
+                >
+                  {{ attachmentList.length }} / {{ totalCountFromMeta }}
+                </span>
+              </span>
+            </Button>
           </div>
         </div>
       </div>

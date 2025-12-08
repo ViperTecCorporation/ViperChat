@@ -10,6 +10,7 @@ import { emitter } from 'shared/helpers/mitt';
 const state = {
   allConversations: [],
   attachments: {},
+  attachmentsMeta: {},
   listLoadingStatus: true,
   chatStatusFilter: wootConstants.STATUS_TYPE.OPEN,
   chatSortFilter: wootConstants.SORT_BY_TYPE.LATEST,
@@ -57,6 +58,8 @@ export const mutations = {
   [types.EMPTY_ALL_CONVERSATION](_state) {
     _state.allConversations = [];
     _state.selectedChatId = null;
+    _state.attachments = {};
+    _state.attachmentsMeta = {};
   },
   [types.SET_ALL_MESSAGES_LOADED](_state) {
     const [chat] = getSelectedChatConversation(_state);
@@ -79,6 +82,10 @@ export const mutations = {
   },
   [types.SET_ALL_ATTACHMENTS](_state, { id, data }) {
     _state.attachments[id] = [...data];
+  },
+  [types.SET_ATTACHMENTS_META](_state, { id, data }) {
+    const previous = _state.attachmentsMeta[id] || {};
+    _state.attachmentsMeta[id] = { ...previous, ...data };
   },
   [types.SET_MISSING_MESSAGES](_state, { id, data }) {
     const [chat] = _state.allConversations.filter(c => c.id === id);
@@ -163,6 +170,15 @@ export const mutations = {
 
     // replace the attachments in the store
     _state.attachments[id] = [...existingAttachments, ...attachmentsToAdd];
+
+    const meta = _state.attachmentsMeta[id];
+    if (meta && attachmentsToAdd.length) {
+      _state.attachmentsMeta[id] = {
+        ...meta,
+        totalCount:
+          (meta.totalCount || existingAttachments.length) + attachmentsToAdd.length,
+      };
+    }
   },
 
   [types.DELETE_CONVERSATION_ATTACHMENTS](_state, message) {
@@ -172,9 +188,22 @@ export const mutations = {
     const existingAttachments = _state.attachments[id] || [];
     if (!existingAttachments.length) return;
 
-    _state.attachments[id] = existingAttachments.filter(attachment => {
+    const filteredAttachments = existingAttachments.filter(attachment => {
       return attachment.message_id !== message.id;
     });
+
+    _state.attachments[id] = filteredAttachments;
+
+    const meta = _state.attachmentsMeta[id];
+    if (meta) {
+      const removedCount = existingAttachments.length - filteredAttachments.length;
+      const nextTotal =
+        (meta.totalCount || existingAttachments.length) - removedCount;
+      _state.attachmentsMeta[id] = {
+        ...meta,
+        totalCount: nextTotal < 0 ? 0 : nextTotal,
+      };
+    }
   },
 
   [types.ADD_MESSAGE]({ allConversations, selectedChatId }, message) {

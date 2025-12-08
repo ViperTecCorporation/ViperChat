@@ -324,6 +324,7 @@
       "EMPTY": "Nada por aqui ainda",
       "LOADING": "Carregando itens",
       "LOAD_ERROR": "Não foi possível carregar os anexos. Tente novamente.",
+      "LOAD_MORE": "Carregar mais",
       "THIS_MONTH": "Este mês"
     }
   },

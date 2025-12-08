@@ -25,11 +25,15 @@ const [showEmailActionsModal, toggleEmailModal] = useToggle(false);
 const [showActionsDropdown, toggleDropdown] = useToggle(false);
 const showMediaModal = ref(false);
 const isLoadingMedia = ref(false);
+const isLoadingMoreMedia = ref(false);
 
 const currentChat = computed(() => store.getters.getSelectedChat);
 const callInfo = computed(() => store.getters['webphone/getCallInfo']);
 const currentAttachments = computed(
   () => store.getters.getSelectedChatAttachments
+);
+const currentAttachmentsMeta = computed(
+  () => store.getters.getSelectedChatAttachmentsMeta
 );
 const conversationMessages = computed(
   () => currentChat.value?.messages || []
@@ -140,6 +144,18 @@ const openMediaModal = async () => {
   }
 };
 
+const loadMoreAttachments = async () => {
+  if (!currentChat.value?.id || isLoadingMoreMedia.value) return;
+  try {
+    isLoadingMoreMedia.value = true;
+    await store.dispatch('loadMoreAttachments', currentChat.value.id);
+  } catch (error) {
+    useAlert(t('CONVERSATION.MEDIA_LIBRARY.LOAD_ERROR'));
+  } finally {
+    isLoadingMoreMedia.value = false;
+  }
+};
+
 emitter.on(CMD_MUTE_CONVERSATION, mute);
 emitter.on(CMD_UNMUTE_CONVERSATION, unmute);
 emitter.on(CMD_SEND_TRANSCRIPT, toggleEmailModal);
@@ -209,7 +225,10 @@ onUnmounted(() => {
       :messages="conversationMessages"
       :conversation-id="currentChat?.id"
       :is-loading="isLoadingMedia"
+      :attachments-meta="currentAttachmentsMeta"
+      :is-loading-more="isLoadingMoreMedia"
       @close="showMediaModal = false"
+      @load-more="loadMoreAttachments"
     />
   </div>
 </template>

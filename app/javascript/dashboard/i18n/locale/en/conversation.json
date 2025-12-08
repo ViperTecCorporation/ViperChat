@@ -320,10 +320,11 @@
       "VIDEOS_LABEL": "videos",
       "AUDIOS_LABEL": "audios",
       "DOC_COUNT": "{count} documents",
-      "LINK_COUNT": "{count} links",
-      "EMPTY": "Nothing here yet",
-      "LOADING": "Loading items",
+        "LINK_COUNT": "{count} links",
+        "EMPTY": "Nothing here yet",
+        "LOADING": "Loading items",
       "LOAD_ERROR": "Could not load attachments. Please try again.",
+      "LOAD_MORE": "Load more",
       "THIS_MONTH": "This month"
     }
   },

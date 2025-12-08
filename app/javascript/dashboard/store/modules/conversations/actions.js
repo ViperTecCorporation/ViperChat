@@ -101,27 +101,19 @@ const actions = {
 
   fetchAllAttachments: async ({ commit }, conversationId) => {
     let attachments = [];
+    let meta = { page: 1, totalCount: 0 };
 
     try {
-      let page = 1;
-      const pageSize = 100; // matches ATTACHMENT_RESULTS_PER_PAGE on the backend
-      // Fetch paginated attachments until we exhaust results
-      // We avoid recursion to keep stack small
-      // If an error occurs mid-way we keep what we have
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        // eslint-disable-next-line no-await-in-loop
-        const { data } = await ConversationApi.getAllAttachments(
-          conversationId,
-          page
-        );
-        const batch = data.payload || [];
-        attachments = attachments.concat(batch);
-        if (batch.length < pageSize) {
-          break;
-        }
-        page += 1;
-      }
+      const { data } = await ConversationApi.getAllAttachments(
+        conversationId,
+        1
+      );
+      attachments = data.payload || [];
+      meta = {
+        page: 1,
+        totalCount: data.meta?.total_count ?? attachments.length,
+        pageSize: attachments.length,
+      };
     } catch (error) {
       // in case of error, log the error and continue
       Sentry.setContext('Conversation', {
@@ -129,12 +121,65 @@ const actions = {
       });
       Sentry.captureException(error);
     } finally {
-      // we run the commit even if the request fails
-      // this ensures that the `attachment` variable is always present on chat
       commit(types.SET_ALL_ATTACHMENTS, {
         id: conversationId,
         data: attachments,
       });
+      commit(types.SET_ATTACHMENTS_META, {
+        id: conversationId,
+        data: meta,
+      });
+    }
+  },
+
+  loadMoreAttachments: async ({ state, commit }, conversationId) => {
+    const existingAttachments = state.attachments[conversationId] || [];
+    const meta = state.attachmentsMeta[conversationId] || {};
+    const nextPage = (meta.page || 1) + 1;
+
+    if (meta.totalCount && existingAttachments.length >= meta.totalCount) {
+      return 0;
+    }
+
+    try {
+      const { data } = await ConversationApi.getAllAttachments(
+        conversationId,
+        nextPage
+      );
+      const batch = data.payload || [];
+      const combined = [
+        ...existingAttachments,
+        ...batch.filter(
+          item =>
+            !existingAttachments.some(
+              existing => existing.id === item.id && existing.id !== undefined
+            )
+        ),
+      ];
+
+      commit(types.SET_ALL_ATTACHMENTS, {
+        id: conversationId,
+        data: combined,
+      });
+      commit(types.SET_ATTACHMENTS_META, {
+        id: conversationId,
+        data: {
+          totalCount:
+            data.meta?.total_count ??
+            meta.totalCount ??
+            combined.length,
+          page: nextPage,
+          pageSize: batch.length,
+        },
+      });
+
+      return batch.length;
+    } catch (error) {
+      Sentry.setContext('Conversation', {
+        id: conversationId,
+      });
+      Sentry.captureException(error);
+      throw error;
     }
   },
 
