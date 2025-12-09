@@ -174,7 +174,16 @@ class ConversationFinder
   end
 
   def set_count_for_all_conversations
+    status_filter = params[:status]
+    status_filter = DEFAULT_STATUS if status_filter.blank?
+    status_filter = nil if status_filter == 'all'
+
     count_scope = @conversations
+    count_scope = count_scope.where(status: status_filter) if status_filter
+
+    internal_scope = @conversations.joins(:inbox).where(inboxes: { channel_type: 'Channel::Internal' })
+    internal_scope = internal_scope.where(status: status_filter) if status_filter
+
     unless params[:conversation_type] == 'internal' || @assignee_type == 'internal'
       count_scope = count_scope.joins(:inbox).where.not(inboxes: { channel_type: 'Channel::Internal' })
     end
@@ -183,7 +192,7 @@ class ConversationFinder
       count_scope.assigned_to(current_user).count,
       count_scope.unassigned.count,
       count_scope.count,
-      @conversations.joins(:inbox).where(inboxes: { channel_type: 'Channel::Internal' }).count
+      internal_scope.count
     ]
   end
 
