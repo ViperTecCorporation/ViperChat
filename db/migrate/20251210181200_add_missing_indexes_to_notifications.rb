@@ -8,8 +8,9 @@ class AddMissingIndexesToNotifications < ActiveRecord::Migration[7.0]
               name: 'idx_notifications_notification_type',
               if_not_exists: true
 
-    add_index :notifications, :seen_at,
-              name: 'idx_notifications_seen_at',
+    # A coluna de status de leitura é `read_at` (não existe `seen_at` no schema atual).
+    add_index :notifications, :read_at,
+              name: 'idx_notifications_read_at',
               if_not_exists: true
   end
 end
