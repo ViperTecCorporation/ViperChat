@@ -63,20 +63,28 @@ export const mutations = {
     };
   },
   [types.default.CLEAR_CONVERSATION_PAGE]: $state => {
+    const hasInternal = Object.prototype.hasOwnProperty.call(
+      $state.currentPage,
+      'internal'
+    );
     $state.currentPage = {
       me: 0,
       unassigned: 0,
       all: 0,
-      internal: 0,
       appliedFilters: 0,
+      ...(hasInternal ? { internal: 0 } : {}),
     };
 
+    const hasInternalEndReached = Object.prototype.hasOwnProperty.call(
+      $state.hasEndReached,
+      'internal'
+    );
     $state.hasEndReached = {
       me: false,
       unassigned: false,
       all: false,
-      internal: false,
       appliedFilters: false,
+      ...(hasInternalEndReached ? { internal: false } : {}),
     };
   },
 };

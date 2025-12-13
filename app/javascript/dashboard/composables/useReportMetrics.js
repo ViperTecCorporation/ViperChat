@@ -50,7 +50,7 @@ export function useReportMetrics(
     if (isAverageMetricType(key)) {
       return formatTime(accountSummary.value[key]);
     }
-    return Number(accountSummary.value[key] || '').toLocaleString();
+    return Number(accountSummary.value[key] || '').toLocaleString('en-US');
   };
 
   return {

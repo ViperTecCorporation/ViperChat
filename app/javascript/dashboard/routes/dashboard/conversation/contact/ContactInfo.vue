@@ -57,6 +57,22 @@ export default {
   },
   computed: {
     ...mapGetters({ uiFlags: 'contacts/getUIFlags' }),
+    currentChat() {
+      return this.$store.getters.getSelectedChat || {};
+    },
+    currentInbox() {
+      const inboxId = this.currentChat.inbox_id;
+      if (!inboxId) {
+        return {};
+      }
+      return this.$store.getters['inboxes/getInbox'](inboxId) || {};
+    },
+    wavoipToken() {
+      return this.currentInbox?.provider_config?.wavoip_token;
+    },
+    canStartWavoipCall() {
+      return Boolean(this.contact.phone_number && this.wavoipToken);
+    },
     contactProfileLink() {
       return `/app/accounts/${this.$route.params.accountId}/contacts/${this.contact.id}`;
     },
@@ -174,6 +190,58 @@ export default {
     openMergeModal() {
       this.showMergeModal = true;
     },
+    async startWavoipCall() {
+      const token = this.wavoipToken;
+      const phoneNumber = this.contact.phone_number;
+      let instances = this.$store.getters['webphone/getWavoip'] || {};
+
+      if (!token) {
+        useAlert(this.$t('INBOX_MGMT.ADD.WHATSAPP.WAVOIP_TOKEN.ERROR'));
+        return;
+      }
+
+      if (!phoneNumber) {
+        useAlert(this.$t('WEBPHONE.CONTACT_INVALID'));
+        return;
+      }
+
+      if (!instances[token]) {
+        await this.$store.dispatch('webphone/startWavoip', {
+          inboxName: this.currentInbox?.name,
+          token,
+        });
+        instances = this.$store.getters['webphone/getWavoip'] || {};
+      }
+
+      if (!instances[token]) {
+        useAlert(this.$t('WEBPHONE.CONNECTION_FAILED'));
+        return;
+      }
+
+      try {
+        await this.$store.dispatch('webphone/outcomingCall', {
+          contact_name: this.contact.name,
+          profile_picture: this.contact.thumbnail,
+          phone: phoneNumber,
+          chat_id: this.currentChat?.id,
+          token,
+        });
+      } catch (error) {
+        if (error.message === 'Numero nÇœo existe') {
+          useAlert(this.$t('WEBPHONE.CONTACT_INVALID'));
+        } else if (
+          error.message === 'Linha ocupada, tente mais tarde ou faÇõa um upgrade'
+        ) {
+          useAlert(this.$t('WEBPHONE.ALL_INSTANCE_BUSY'));
+        } else if (error.message === 'Limite de ligaÇõÇæes atingido') {
+          useAlert(this.$t('WEBPHONE.CALL_LIMIT'));
+        } else {
+          useAlert(
+            `${this.$t('WEBPHONE.ERROR_TO_MADE_CALL')}: ${error.message}`
+          );
+        }
+      }
+    },
   },
 };
 </script>
@@ -281,7 +349,17 @@ export default {
             />
           </template>
         </ComposeConversation>
+        <NextButton
+          v-if="canStartWavoipCall"
+          v-tooltip.top-end="$t('WEBPHONE.CALL')"
+          icon="i-ri-phone-fill"
+          slate
+          faded
+          sm
+          @click="startWavoipCall"
+        />
         <VoiceCallButton
+          v-else
           :phone="contact.phone_number"
           :contact-id="contact.id"
           icon="i-ri-phone-fill"

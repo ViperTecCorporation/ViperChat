@@ -157,6 +157,13 @@ export const mutations = {
       return;
     }
 
+    if (!_state.attachments) {
+      _state.attachments = {};
+    }
+    if (!_state.attachmentsMeta) {
+      _state.attachmentsMeta = {};
+    }
+
     const id = message.conversation_id;
     const existingAttachments = _state.attachments[id] || [];
 
@@ -183,6 +190,13 @@ export const mutations = {
 
   [types.DELETE_CONVERSATION_ATTACHMENTS](_state, message) {
     if (message.status !== MESSAGE_STATUS.SENT) return;
+
+    if (!_state.attachments) {
+      _state.attachments = {};
+    }
+    if (!_state.attachmentsMeta) {
+      _state.attachmentsMeta = {};
+    }
 
     const { conversation_id: id } = message;
     const existingAttachments = _state.attachments[id] || [];

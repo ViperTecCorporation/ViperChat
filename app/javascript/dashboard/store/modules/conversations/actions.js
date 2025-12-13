@@ -101,7 +101,7 @@ const actions = {
 
   fetchAllAttachments: async ({ commit }, conversationId) => {
     let attachments = [];
-    let meta = { page: 1, totalCount: 0 };
+    let meta = null;
 
     try {
       const { data } = await ConversationApi.getAllAttachments(
@@ -109,11 +109,13 @@ const actions = {
         1
       );
       attachments = data.payload || [];
-      meta = {
-        page: 1,
-        totalCount: data.meta?.total_count ?? attachments.length,
-        pageSize: attachments.length,
-      };
+      if (data.meta) {
+        meta = {
+          page: 1,
+          totalCount: data.meta?.total_count ?? attachments.length,
+          pageSize: attachments.length,
+        };
+      }
     } catch (error) {
       // in case of error, log the error and continue
       Sentry.setContext('Conversation', {
@@ -125,10 +127,12 @@ const actions = {
         id: conversationId,
         data: attachments,
       });
-      commit(types.SET_ATTACHMENTS_META, {
-        id: conversationId,
-        data: meta,
-      });
+      if (meta) {
+        commit(types.SET_ATTACHMENTS_META, {
+          id: conversationId,
+          data: meta,
+        });
+      }
     }
   },
 
