@@ -65,6 +65,9 @@ class Imap::BaseFetchEmailService
     end
 
     inbound_mail = build_mail_from_string(mail_str)
+    if inbound_mail.message_id.blank? && message_id.present?
+      inbound_mail.message_id = message_id
+    end
     mail_info_logger(inbound_mail, seq_no)
     inbound_mail
   end

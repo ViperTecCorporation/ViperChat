@@ -536,6 +536,7 @@ const requestLoadMore = () => {
 };
 
 const setMediaFilter = type => {
+  activeTab.value = 'media';
   mediaFilter.value = mediaFilter.value === type ? 'all' : type;
 };
 
@@ -651,16 +652,13 @@ watch(
           <div class="flex flex-wrap items-center gap-4 text-sm text-n-slate-11">
             <button
               type="button"
-              :disabled="activeTab !== 'media'"
-              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition"
+              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"
               :class="[
-                activeTab !== 'media'
-                  ? 'opacity-50 cursor-not-allowed'
-                  : mediaFilter === 'all'
-                    ? 'bg-n-alpha-3 text-n-slate-12'
-                    : 'hover:bg-n-alpha-2'
+                mediaFilter === 'all'
+                  ? 'bg-n-alpha-3 text-n-slate-12'
+                  : 'hover:bg-n-alpha-2'
               ]"
-              @click="activeTab === 'media' && setMediaFilter('all')"
+              @click="setMediaFilter('all')"
             >
               <span class="i-lucide-layers w-4 h-4" />
               <span>
@@ -670,16 +668,13 @@ watch(
             </button>
             <button
               type="button"
-              :disabled="activeTab !== 'media'"
-              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition"
+              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"
               :class="[
-                activeTab !== 'media'
-                  ? 'opacity-50 cursor-not-allowed'
-                  : mediaFilter === 'image'
-                    ? 'bg-n-alpha-3 text-n-slate-12'
-                    : 'hover:bg-n-alpha-2'
+                mediaFilter === 'image'
+                  ? 'bg-n-alpha-3 text-n-slate-12'
+                  : 'hover:bg-n-alpha-2'
               ]"
-              @click="activeTab === 'media' && setMediaFilter('image')"
+              @click="setMediaFilter('image')"
             >
               <span class="i-lucide-image w-4 h-4" />
               <span>
@@ -689,16 +684,13 @@ watch(
             </button>
             <button
               type="button"
-              :disabled="activeTab !== 'media'"
-              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition"
+              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"
               :class="[
-                activeTab !== 'media'
-                  ? 'opacity-50 cursor-not-allowed'
-                  : mediaFilter === 'video'
-                    ? 'bg-n-alpha-3 text-n-slate-12'
-                    : 'hover:bg-n-alpha-2'
+                mediaFilter === 'video'
+                  ? 'bg-n-alpha-3 text-n-slate-12'
+                  : 'hover:bg-n-alpha-2'
               ]"
-              @click="activeTab === 'media' && setMediaFilter('video')"
+              @click="setMediaFilter('video')"
             >
               <span class="i-lucide-clapperboard w-4 h-4" />
               <span>
@@ -708,16 +700,13 @@ watch(
             </button>
             <button
               type="button"
-              :disabled="activeTab !== 'media'"
-              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition"
+              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"
               :class="[
-                activeTab !== 'media'
-                  ? 'opacity-50 cursor-not-allowed'
-                  : mediaFilter === 'audio'
-                    ? 'bg-n-alpha-3 text-n-slate-12'
-                    : 'hover:bg-n-alpha-2'
+                mediaFilter === 'audio'
+                  ? 'bg-n-alpha-3 text-n-slate-12'
+                  : 'hover:bg-n-alpha-2'
               ]"
-              @click="activeTab === 'media' && setMediaFilter('audio')"
+              @click="setMediaFilter('audio')"
             >
               <span class="i-lucide-waveform w-4 h-4" />
               <span>
