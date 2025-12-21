@@ -316,6 +316,7 @@
       "TAB_DOCS": "Docs",
       "TAB_LINKS": "Links",
       "MEDIA_SUMMARY": "{photos} photos | {videos} videos | {audios} audios",
+      "ALL_LABEL": "all",
       "PHOTOS_LABEL": "photos",
       "VIDEOS_LABEL": "videos",
       "AUDIOS_LABEL": "audios",

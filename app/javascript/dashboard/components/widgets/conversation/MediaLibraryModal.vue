@@ -44,6 +44,7 @@ const emit = defineEmits(['close', 'load-more']);
 
 const dialogRef = ref(null);
 const activeTab = ref('media');
+const mediaFilter = ref('all');
 const previewAttachment = ref(null);
 const showGallery = ref(false);
 const showForwardModal = ref(false);
@@ -233,6 +234,7 @@ watch(
       showGallery.value = false;
       previewAttachment.value = null;
       activeTab.value = 'media';
+      mediaFilter.value = 'all';
     }
   },
   { flush: 'post', immediate: true }
@@ -306,6 +308,13 @@ const mediaAttachments = computed(() =>
         toDate(a.created_at || a.timestamp).getTime()
     )
 );
+
+const filteredMediaAttachments = computed(() => {
+  if (mediaFilter.value === 'all') return mediaAttachments.value;
+  return mediaAttachments.value.filter(
+    attachment => getNormalizedType(attachment) === mediaFilter.value
+  );
+});
 
 const documents = computed(() =>
   attachmentList.value
@@ -526,6 +535,10 @@ const requestLoadMore = () => {
   emit('load-more');
 };
 
+const setMediaFilter = type => {
+  mediaFilter.value = mediaFilter.value === type ? 'all' : type;
+};
+
 watch(
   () => props.show,
   value => {
@@ -636,27 +649,82 @@ watch(
 
         <div v-else class="flex flex-col gap-6">
           <div class="flex flex-wrap items-center gap-4 text-sm text-n-slate-11">
-            <span class="inline-flex items-center gap-1">
+            <button
+              type="button"
+              :disabled="activeTab !== 'media'"
+              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition"
+              :class="[
+                activeTab !== 'media'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : mediaFilter === 'all'
+                    ? 'bg-n-alpha-3 text-n-slate-12'
+                    : 'hover:bg-n-alpha-2'
+              ]"
+              @click="activeTab === 'media' && setMediaFilter('all')"
+            >
+              <span class="i-lucide-layers w-4 h-4" />
+              <span>
+                {{ mediaSummary.total }}
+                {{ $t('CONVERSATION.MEDIA_LIBRARY.ALL_LABEL') }}
+              </span>
+            </button>
+            <button
+              type="button"
+              :disabled="activeTab !== 'media'"
+              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition"
+              :class="[
+                activeTab !== 'media'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : mediaFilter === 'image'
+                    ? 'bg-n-alpha-3 text-n-slate-12'
+                    : 'hover:bg-n-alpha-2'
+              ]"
+              @click="activeTab === 'media' && setMediaFilter('image')"
+            >
               <span class="i-lucide-image w-4 h-4" />
               <span>
                 {{ mediaSummary.photos }}
                 {{ $t('CONVERSATION.MEDIA_LIBRARY.PHOTOS_LABEL') }}
               </span>
-            </span>
-            <span class="inline-flex items-center gap-1">
+            </button>
+            <button
+              type="button"
+              :disabled="activeTab !== 'media'"
+              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition"
+              :class="[
+                activeTab !== 'media'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : mediaFilter === 'video'
+                    ? 'bg-n-alpha-3 text-n-slate-12'
+                    : 'hover:bg-n-alpha-2'
+              ]"
+              @click="activeTab === 'media' && setMediaFilter('video')"
+            >
               <span class="i-lucide-clapperboard w-4 h-4" />
               <span>
                 {{ mediaSummary.videos }}
                 {{ $t('CONVERSATION.MEDIA_LIBRARY.VIDEOS_LABEL') }}
               </span>
-            </span>
-            <span class="inline-flex items-center gap-1">
+            </button>
+            <button
+              type="button"
+              :disabled="activeTab !== 'media'"
+              class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition"
+              :class="[
+                activeTab !== 'media'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : mediaFilter === 'audio'
+                    ? 'bg-n-alpha-3 text-n-slate-12'
+                    : 'hover:bg-n-alpha-2'
+              ]"
+              @click="activeTab === 'media' && setMediaFilter('audio')"
+            >
               <span class="i-lucide-waveform w-4 h-4" />
               <span>
                 {{ mediaSummary.audios }}
                 {{ $t('CONVERSATION.MEDIA_LIBRARY.AUDIOS_LABEL') }}
               </span>
-            </span>
+            </button>
             <div class="ml-auto flex items-center gap-2">
               <Button
                 size="xs"
@@ -697,11 +765,11 @@ watch(
 
           <div v-if="activeTab === 'media'" class="flex flex-col gap-4">
             <div
-              v-if="mediaAttachments.length"
+              v-if="filteredMediaAttachments.length"
               class="grid grid-cols-2 md:grid-cols-3 gap-3"
             >
               <button
-                v-for="attachment in mediaAttachments"
+                v-for="attachment in filteredMediaAttachments"
                 :key="attachment.id"
                 type="button"
                 class="relative flex flex-col gap-2 p-2 rounded-lg bg-n-alpha-2 hover:bg-n-alpha-3 text-left"
@@ -962,7 +1030,7 @@ watch(
     v-if="previewAttachment && showGallery"
     v-model:show="showGallery"
     :attachment="previewAttachment"
-    :all-attachments="mediaAttachments"
+    :all-attachments="filteredMediaAttachments"
     @close="showGallery = false"
   />
   <ForwardMessagesModal

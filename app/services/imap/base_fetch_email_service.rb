@@ -79,7 +79,7 @@ class Imap::BaseFetchEmailService
     message_ids_with_seq = []
     seq_nums.each_slice(10).each do |batch|
       # Fetch only message-id only without mail body or contents.
-      batch_message_ids = imap_client.fetch(batch, 'BODY.PEEK[HEADER]')
+      batch_message_ids = imap_client.fetch(batch, ['UID', 'BODY.PEEK[HEADER]'])
 
       # .fetch returns an array of Net::IMAP::FetchData or nil
       # (instead of an empty array) if there is no matching message.
@@ -91,6 +91,10 @@ class Imap::BaseFetchEmailService
 
       batch_message_ids.each do |data|
         message_id = build_mail_from_string(data.attr['BODY[HEADER]']).message_id
+        if message_id.blank? && data.attr['UID'].present?
+          message_id = "imap-uid:#{data.attr['UID']}"
+          Rails.logger.info "[IMAP::FETCH_EMAIL_SERVICE] Missing message-id for #{channel.email} with seq no. <#{data.seqno}>, using IMAP UID <#{data.attr['UID']}>."
+        end
         message_ids_with_seq.push([data.seqno, message_id])
       end
     end
