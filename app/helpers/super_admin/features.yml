@@ -12,7 +12,7 @@ captain:
 saml:
   name: 'SAML SSO'
   description: 'Configuration for controlling SAML Single Sign-On availability'
-  enabled: <%= ViperChatApp.enterprise? %>
+  enabled: <%= ChatwootApp.enterprise? %>
   icon: 'icon-lock-line'
   config_key: 'saml'
   enterprise: true
