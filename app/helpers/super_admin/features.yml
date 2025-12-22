@@ -5,7 +5,7 @@
 captain:
   name: 'Captain'
   description: 'Enable AI-powered conversations with your customers.'
-  enabled: <%= (ViperChatHub.pricing_plan != 'community') %>
+  enabled: <%= (ChatwootHub.pricing_plan != 'community') %>
   icon: 'icon-captain'
   config_key: 'captain'
   enterprise: true
