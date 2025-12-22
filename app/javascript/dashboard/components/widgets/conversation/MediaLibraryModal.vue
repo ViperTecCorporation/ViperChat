@@ -6,7 +6,6 @@ import { useStore } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import Modal from 'dashboard/components/Modal.vue';
 import GalleryView from './components/GalleryView.vue';
 import ForwardMessagesModal from './ForwardMessagesModal.vue';
 import { downloadFile } from '@chatwoot/utils';
@@ -45,6 +44,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'load-more']);
 
 const dialogRef = ref(null);
+const deleteConfirmRef = ref(null);
+const deleteInfoRef = ref(null);
 const activeTab = ref('media');
 const mediaFilter = ref('all');
 const previewAttachment = ref(null);
@@ -263,6 +264,30 @@ watch(
   value => {
     if (!value && props.show) {
       nextTick(() => dialogRef.value?.open());
+    }
+  },
+  { flush: 'post' }
+);
+
+watch(
+  showDeleteConfirm,
+  value => {
+    if (value) {
+      nextTick(() => deleteConfirmRef.value?.open());
+    } else {
+      deleteConfirmRef.value?.close();
+    }
+  },
+  { flush: 'post' }
+);
+
+watch(
+  showDeleteInfo,
+  value => {
+    if (value) {
+      nextTick(() => deleteInfoRef.value?.open());
+    } else {
+      deleteInfoRef.value?.close();
     }
   },
   { flush: 'post' }
@@ -1186,10 +1211,13 @@ watch(
     @forwarded="handleForwarded"
     @close="cancelForwardSelection"
   />
-  <Modal
-    v-model:show="showDeleteConfirm"
-    :show-close-button="false"
-    :on-close="closeDeleteConfirm"
+  <Dialog
+    ref="deleteConfirmRef"
+    width="sm"
+    :show-cancel-button="false"
+    :show-confirm-button="false"
+    dialog-class="z-40"
+    @close="closeDeleteConfirm"
   >
     <div class="flex flex-col gap-4 p-6">
       <div class="text-base font-medium text-n-slate-12">
@@ -1224,11 +1252,14 @@ watch(
         </Button>
       </div>
     </div>
-  </Modal>
-  <Modal
-    v-model:show="showDeleteInfo"
-    :show-close-button="false"
-    :on-close="closeDeleteInfo"
+  </Dialog>
+  <Dialog
+    ref="deleteInfoRef"
+    width="sm"
+    :show-cancel-button="false"
+    :show-confirm-button="false"
+    dialog-class="z-40"
+    @close="closeDeleteInfo"
   >
     <div class="flex flex-col gap-3 p-6">
       <div class="text-base font-medium text-n-slate-12">
@@ -1250,5 +1281,5 @@ watch(
         </Button>
       </div>
     </div>
-  </Modal>
+  </Dialog>
 </template>
