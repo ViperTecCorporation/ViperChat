@@ -25,6 +25,11 @@
 # Indexes
 #
 #  idx_messages_account_content_created                 (account_id,content_type,created_at)
+#  idx_messages_account_id                              (account_id)
+#  idx_messages_conversation_id                         (conversation_id)
+#  idx_messages_created_at                              (created_at)
+#  idx_messages_inbox_id                                (inbox_id)
+#  idx_messages_status                                  (status)
 #  index_messages_on_account_created_type               (account_id,created_at,message_type)
 #  index_messages_on_account_id                         (account_id)
 #  index_messages_on_account_id_and_inbox_id            (account_id,inbox_id)

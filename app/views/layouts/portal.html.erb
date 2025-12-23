@@ -14,7 +14,8 @@ By default, it renders:
 %>
 
 <!DOCTYPE html>
-<html lang="<%= I18n.locale %>">
+<% brand_palette_class = ENV['BRAND_PALETTE'] == 'default' ? nil : 'brand-viper' %>
+<html lang="<%= I18n.locale %>" class="<%= brand_palette_class %>">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1">

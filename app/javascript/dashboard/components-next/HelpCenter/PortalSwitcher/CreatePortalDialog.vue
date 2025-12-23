@@ -73,6 +73,19 @@ const resetForm = () => {
   });
   v$.value.$reset();
 };
+
+const getBrandColor = () => {
+  if (typeof window === 'undefined') return '#2781F6';
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue('--brand-color')
+    .trim();
+  const parts = raw.split(/\s+/).map(Number).filter(value => !Number.isNaN(value));
+  if (parts.length !== 3) return '#2781F6';
+  return `#${parts
+    .map(value => Math.max(0, Math.min(255, value)))
+    .map(value => value.toString(16).padStart(2, '0'))
+    .join('')}`;
+};
 const createPortal = async portal => {
   try {
     await store.dispatch('portals/create', portal);
@@ -109,7 +122,7 @@ const handleDialogConfirm = async () => {
     slug: state.slug,
     custom_domain: state.domain,
     blob_id: state.avatarBlobId || null,
-    color: '#2781F6', // The default color is set to ViperChat brand color
+    color: getBrandColor(),
   };
   await createPortal(portal);
 };

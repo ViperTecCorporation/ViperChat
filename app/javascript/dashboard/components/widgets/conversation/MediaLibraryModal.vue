@@ -328,6 +328,14 @@ watch(
 
 const close = () => emit('close');
 
+const handleDialogClose = () => {
+  if (showDeleteConfirm.value || showDeleteInfo.value) {
+    nextTick(() => dialogRef.value?.open());
+    return;
+  }
+  close();
+};
+
 const toDate = value => {
   const parsed = Number(value);
   if (!Number.isNaN(parsed)) {
@@ -667,17 +675,6 @@ const requestDeleteAll = () => {
 };
 
 const confirmDelete = async () => {
-  // Temporary debug to verify delete flow is triggered.
-  // Remove after validation.
-  console.debug('MediaLibrary delete confirm', {
-    conversationId: props.conversationId,
-    deleteTarget: deleteTarget.value,
-    selectedCount: selectedDeleteCount.value,
-    selectedIds: selectedDeleteIds.value,
-    totalCount: totalAttachmentCount.value,
-    confirmationCount: deleteConfirmationCount.value,
-  });
-
   if (!props.conversationId || deleteConfirmationCount.value <= 0) {
     useAlert(t('CONVERSATION.MEDIA_LIBRARY.DELETE_ERROR'));
     return;
@@ -769,7 +766,7 @@ watch(
     :overflow-y-auto="true"
     :show-cancel-button="false"
     :show-confirm-button="false"
-    @close="close"
+    @close="handleDialogClose"
   >
     <template #default>
       <div class="flex flex-col gap-4">

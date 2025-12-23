@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_06_120000) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_10_181600) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -104,6 +104,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_06_120000) do
     t.string "checksum"
     t.datetime "created_at", precision: nil, null: false
     t.string "service_name", null: false
+    t.index ["checksum"], name: "idx_blobs_checksum"
+    t.index ["created_at"], name: "idx_blobs_created_at"
+    t.index ["key"], name: "idx_blobs_key"
     t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
   end
 
@@ -222,6 +225,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_06_120000) do
     t.string "extension"
     t.jsonb "meta", default: {}
     t.index ["account_id"], name: "index_attachments_on_account_id"
+    t.index ["message_id", "created_at"], name: "index_attachments_on_message_id_and_created_at_desc", order: { created_at: :desc }
     t.index ["message_id"], name: "index_attachments_on_message_id"
   end
 
@@ -715,8 +719,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_06_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_conversation_participants_on_account_id"
+    t.index ["conversation_id"], name: "idx_conv_part_conversation_id"
     t.index ["conversation_id"], name: "index_conversation_participants_on_conversation_id"
     t.index ["user_id", "conversation_id"], name: "index_conversation_participants_on_user_id_and_conversation_id", unique: true
+    t.index ["user_id"], name: "idx_conv_part_user_id"
     t.index ["user_id"], name: "index_conversation_participants_on_user_id"
   end
 
@@ -1060,14 +1066,19 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_06_120000) do
     t.index ["account_id", "content_type", "created_at"], name: "idx_messages_account_content_created"
     t.index ["account_id", "created_at", "message_type"], name: "index_messages_on_account_created_type"
     t.index ["account_id", "inbox_id"], name: "index_messages_on_account_id_and_inbox_id"
+    t.index ["account_id"], name: "idx_messages_account_id"
     t.index ["account_id"], name: "index_messages_on_account_id"
     t.index ["content"], name: "index_messages_on_content", opclass: :gin_trgm_ops, using: :gin
     t.index ["conversation_id", "account_id", "message_type", "created_at"], name: "index_messages_on_conversation_account_type_created"
+    t.index ["conversation_id"], name: "idx_messages_conversation_id"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+    t.index ["created_at"], name: "idx_messages_created_at"
     t.index ["created_at"], name: "index_messages_on_created_at"
+    t.index ["inbox_id"], name: "idx_messages_inbox_id"
     t.index ["inbox_id"], name: "index_messages_on_inbox_id"
     t.index ["sender_type", "sender_id"], name: "index_messages_on_sender_type_and_sender_id"
     t.index ["source_id"], name: "index_messages_on_source_id"
+    t.index ["status"], name: "idx_messages_status"
   end
 
   create_table "notes", force: :cascade do |t|
@@ -1119,9 +1130,12 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_06_120000) do
     t.jsonb "meta", default: {}
     t.index ["account_id"], name: "index_notifications_on_account_id"
     t.index ["last_activity_at"], name: "index_notifications_on_last_activity_at"
+    t.index ["notification_type"], name: "idx_notifications_notification_type"
     t.index ["primary_actor_type", "primary_actor_id"], name: "uniq_primary_actor_per_account_notifications"
+    t.index ["read_at"], name: "idx_notifications_read_at"
     t.index ["secondary_actor_type", "secondary_actor_id"], name: "uniq_secondary_actor_per_account_notifications"
     t.index ["user_id", "account_id", "snoozed_until", "read_at"], name: "idx_notifications_performance"
+    t.index ["user_id"], name: "idx_notifications_user_id"
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 

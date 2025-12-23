@@ -21,3 +21,50 @@
 .feature-container {
   max-width: 100rem;
 }
+
+.brand-viper {
+  --admin-brand: #6f3935;
+  --admin-brand-dark: #5b2f2b;
+  --admin-brand-light: #e9e1e1;
+}
+
+.brand-viper a {
+  color: var(--admin-brand);
+}
+
+.brand-viper a:hover {
+  color: var(--admin-brand-dark);
+}
+
+.brand-viper button:not(.reset-base),
+.brand-viper input[type='button']:not(.reset-base),
+.brand-viper input[type='reset']:not(.reset-base),
+.brand-viper input[type='submit']:not(.reset-base),
+.brand-viper .button:not(.reset-base) {
+  background-color: var(--admin-brand);
+}
+
+.brand-viper button:not(.reset-base):hover,
+.brand-viper input[type='button']:not(.reset-base):hover,
+.brand-viper input[type='reset']:not(.reset-base):hover,
+.brand-viper input[type='submit']:not(.reset-base):hover,
+.brand-viper .button:not(.reset-base):hover {
+  background-color: var(--admin-brand-dark);
+}
+
+.brand-viper .button--alt {
+  border-color: var(--admin-brand);
+  color: var(--admin-brand);
+}
+
+.brand-viper .feature-cell {
+  background: var(--admin-brand-light);
+}
+
+.brand-viper .text-woot-500 {
+  color: var(--admin-brand);
+}
+
+.brand-viper .hover\\:text-woot-500:hover {
+  color: var(--admin-brand);
+}

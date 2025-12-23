@@ -6,6 +6,7 @@ class Conversations::AttachmentsBulkDeleteJob < ApplicationJob
   def perform(conversation, attachment_ids: [], delete_all: false)
     attachments = conversation.attachments
     attachments = attachments.where(id: attachment_ids) unless delete_all
+    attachments = attachments.reorder(nil)
 
     total_count = attachments.count
     return if total_count.zero?

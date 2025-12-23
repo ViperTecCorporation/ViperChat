@@ -1,6 +1,4 @@
 const {
-  blue,
-  blueDark,
   green,
   greenDark,
   yellow,
@@ -15,18 +13,18 @@ const {
 
 export const colors = {
   woot: {
-    25: blue.blue2,
-    50: blue.blue3,
-    75: blue.blue4,
-    100: blue.blue5,
-    200: blue.blue7,
-    300: blue.blue8,
-    400: blueDark.blue11,
-    500: blueDark.blue10,
-    600: blueDark.blue9,
-    700: blueDark.blue8,
-    800: blueDark.blue6,
-    900: blueDark.blue2,
+    25: 'rgb(var(--woot-25) / <alpha-value>)',
+    50: 'rgb(var(--woot-50) / <alpha-value>)',
+    75: 'rgb(var(--woot-75) / <alpha-value>)',
+    100: 'rgb(var(--woot-100) / <alpha-value>)',
+    200: 'rgb(var(--woot-200) / <alpha-value>)',
+    300: 'rgb(var(--woot-300) / <alpha-value>)',
+    400: 'rgb(var(--woot-400) / <alpha-value>)',
+    500: 'rgb(var(--woot-500) / <alpha-value>)',
+    600: 'rgb(var(--woot-600) / <alpha-value>)',
+    700: 'rgb(var(--woot-700) / <alpha-value>)',
+    800: 'rgb(var(--woot-800) / <alpha-value>)',
+    900: 'rgb(var(--woot-900) / <alpha-value>)',
   },
   green: {
     50: greenDark.green12,
@@ -211,7 +209,7 @@ export const colors = {
     },
 
     black: '#000000',
-    brand: '#6F3935',
+    brand: 'rgb(var(--brand-color) / <alpha-value>)',
     background: 'rgb(var(--background-color) / <alpha-value>)',
     solid: {
       1: 'rgb(var(--solid-1) / <alpha-value>)',

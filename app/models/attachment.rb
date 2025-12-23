@@ -17,8 +17,9 @@
 #
 # Indexes
 #
-#  index_attachments_on_account_id  (account_id)
-#  index_attachments_on_message_id  (message_id)
+#  index_attachments_on_account_id                      (account_id)
+#  index_attachments_on_message_id                      (message_id)
+#  index_attachments_on_message_id_and_created_at_desc  (message_id,created_at DESC)
 #
 
 class Attachment < ApplicationRecord

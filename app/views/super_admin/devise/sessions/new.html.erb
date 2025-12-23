@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html>
+<% brand_palette_class = ENV['BRAND_PALETTE'] == 'default' ? nil : 'brand-viper' %>
+<html class="<%= brand_palette_class %>">
   <head>
     <title>SuperAdmin | ViperChat</title>
     <%= vite_client_tag %>
