@@ -86,7 +86,7 @@
   locked: false
 - name: DIRECT_UPLOADS_ENABLED
   type: boolean
-  value: false
+  value: true
   description: 'Enable direct uploads to cloud storage'
   locked: false
 - name: MAXIMUM_FILE_UPLOAD_SIZE

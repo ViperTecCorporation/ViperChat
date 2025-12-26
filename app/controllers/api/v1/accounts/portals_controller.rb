@@ -62,7 +62,7 @@ class Api::V1::Accounts::PortalsController < Api::V1::Accounts::BaseController
 
   def process_attached_logo
     blob_id = params[:blob_id]
-    blob = ActiveStorage::Blob.find_signed(blob_id)
+    blob = find_blob(blob_id)
     @portal.logo.attach(blob)
   end
 
@@ -81,6 +81,17 @@ class Api::V1::Accounts::PortalsController < Api::V1::Accounts::BaseController
       :id, :color, :custom_domain, :header_text, :homepage_link,
       :name, :page_title, :slug, :archived, { config: [:default_locale, { allowed_locales: [] }] }
     )
+  end
+
+  def find_blob(blob_id)
+    return if blob_id.blank?
+
+    blob = ActiveStorage::Blob.find_signed(blob_id.to_s)
+    return blob if blob.present?
+
+    ActiveStorage::Blob.find_by(id: blob_id)
+  rescue ActiveSupport::MessageVerifier::InvalidSignature
+    ActiveStorage::Blob.find_by(id: blob_id)
   end
 
   def live_chat_widget_params

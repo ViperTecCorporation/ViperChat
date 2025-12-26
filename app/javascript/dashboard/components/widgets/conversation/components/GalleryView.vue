@@ -24,7 +24,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'error']);
 const show = defineModel('show', { type: Boolean, default: false });
 
 const { t } = useI18n();

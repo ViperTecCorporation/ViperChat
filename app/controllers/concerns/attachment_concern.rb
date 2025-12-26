@@ -21,7 +21,7 @@ module AttachmentConcern
 
   def process_attachment_action(action, record, blobs)
     blob_id = action[:action_params].first
-    blob = ActiveStorage::Blob.find_signed(blob_id.to_s)
+    blob = find_blob(blob_id)
 
     return action.merge(action_params: [blob.id]).tap { blobs << blob } if blob.present?
     return action if blob_already_attached?(record, blob_id)
@@ -29,7 +29,24 @@ module AttachmentConcern
     nil
   end
 
+  def find_blob(blob_id)
+    return if blob_id.blank?
+
+    blob = ActiveStorage::Blob.find_signed(blob_id.to_s)
+    return blob if blob.present?
+
+    ActiveStorage::Blob.find_by(id: blob_id)
+  rescue ActiveSupport::MessageVerifier::InvalidSignature
+    ActiveStorage::Blob.find_by(id: blob_id)
+  end
+
   def blob_already_attached?(record, blob_id)
-    record&.files&.any? { |f| f.blob_id == blob_id.to_i }
+    return false if record.blank? || blob_id.blank?
+
+    if blob_id.to_s.match?(/\A\d+\z/)
+      record.files.any? { |f| f.blob_id == blob_id.to_i }
+    else
+      record.files.any? { |f| f.blob.signed_id == blob_id.to_s }
+    end
   end
 end

@@ -11,6 +11,10 @@ module FileTypeHelper
   # Used in case of DIRECT_UPLOADS_ENABLED=true
   def file_type_by_signed_id(signed_id)
     blob = ActiveStorage::Blob.find_signed(signed_id)
+    blob ||= ActiveStorage::Blob.find_by(id: signed_id)
+    file_type(blob&.content_type)
+  rescue ActiveSupport::MessageVerifier::InvalidSignature
+    blob = ActiveStorage::Blob.find_by(id: signed_id)
     file_type(blob&.content_type)
   end
 
