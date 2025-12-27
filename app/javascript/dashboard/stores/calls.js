@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import TwilioVoiceClient from 'dashboard/api/channel/voice/twilioVoiceClient';
+import CustomVoiceClient from 'dashboard/api/channel/voice/customVoiceClient';
 import { TERMINAL_STATUSES } from 'dashboard/helper/voice';
 
 export const useCallsStore = defineStore('calls', {
@@ -16,6 +17,8 @@ export const useCallsStore = defineStore('calls', {
 
   actions: {
     handleCallStatusChanged({ callSid, status }) {
+      // eslint-disable-next-line no-console
+      console.log('[CallsStore] handleCallStatusChanged', { callSid, status });
       if (TERMINAL_STATUSES.includes(status)) {
         this.removeCall(callSid);
       }
@@ -26,6 +29,13 @@ export const useCallsStore = defineStore('calls', {
       const exists = this.calls.some(call => call.callSid === callData.callSid);
       if (exists) return;
 
+      // eslint-disable-next-line no-console
+      console.log('[CallsStore] addCall', {
+        callSid: callData.callSid,
+        conversationId: callData.conversationId,
+        inboxId: callData.inboxId,
+        callDirection: callData.callDirection,
+      });
       this.calls.push({
         ...callData,
         isActive: false,
@@ -34,13 +44,21 @@ export const useCallsStore = defineStore('calls', {
 
     removeCall(callSid) {
       const callToRemove = this.calls.find(c => c.callSid === callSid);
+      // eslint-disable-next-line no-console
+      console.log('[CallsStore] removeCall', {
+        callSid,
+        wasActive: !!callToRemove?.isActive,
+      });
       if (callToRemove?.isActive) {
         TwilioVoiceClient.endClientCall();
+        CustomVoiceClient.endClientCall();
       }
       this.calls = this.calls.filter(c => c.callSid !== callSid);
     },
 
     setCallActive(callSid) {
+      // eslint-disable-next-line no-console
+      console.log('[CallsStore] setCallActive', { callSid });
       this.calls = this.calls.map(call => ({
         ...call,
         isActive: call.callSid === callSid,
@@ -48,11 +66,16 @@ export const useCallsStore = defineStore('calls', {
     },
 
     clearActiveCall() {
+      // eslint-disable-next-line no-console
+      console.log('[CallsStore] clearActiveCall');
       TwilioVoiceClient.endClientCall();
+      CustomVoiceClient.endClientCall();
       this.calls = this.calls.filter(call => !call.isActive);
     },
 
     dismissCall(callSid) {
+      // eslint-disable-next-line no-console
+      console.log('[CallsStore] dismissCall', { callSid });
       this.calls = this.calls.filter(call => call.callSid !== callSid);
     },
   },

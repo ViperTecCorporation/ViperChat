@@ -152,7 +152,9 @@ Rails.application.routes.draw do
               get :reporting_events if ChatwootApp.enterprise?
             end
           end
-          resources :internal_conversations, only: [:index, :create]
+        resources :internal_conversations, only: [:index, :create] do
+          resource :voice_call, only: [:create], module: :internal_conversations
+        end
 
           resources :search, only: [:index] do
             collection do
@@ -215,6 +217,7 @@ Rails.application.routes.draw do
             if ChatwootApp.enterprise?
               resource :conference, only: %i[create destroy], controller: 'conference' do
                 get :token, on: :member
+                post :transfer, on: :member
               end
             end
 

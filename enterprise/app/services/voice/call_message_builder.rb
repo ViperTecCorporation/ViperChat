@@ -55,9 +55,11 @@ class Voice::CallMessageBuilder
         :call_sid,
         :status,
         :call_direction,
+        :call_type,
         :conference_sid,
         :from_number,
-        :to_number
+        :to_number,
+        :voice_inbox_id
       ).stringify_keys
       data['call_direction'] = direction
       data['meta'] = {

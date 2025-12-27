@@ -38,7 +38,7 @@ export default {
     }
     return false;
   },
-  profileUpdate({ displayName, avatar, ...profileAttributes }) {
+  profileUpdate({ displayName, avatar, custom_attributes: customAttributes, ...profileAttributes }) {
     const formData = new FormData();
     Object.keys(profileAttributes).forEach(key => {
       const hasValue = profileAttributes[key] === undefined;
@@ -46,10 +46,25 @@ export default {
         formData.append(`profile[${key}]`, profileAttributes[key]);
       }
     });
+    if (customAttributes) {
+      Object.keys(customAttributes).forEach(key => {
+        const value = customAttributes[key];
+        if (value !== undefined) {
+          formData.append(`profile[custom_attributes][${key}]`, value);
+        }
+      });
+    }
     formData.append('profile[display_name]', displayName || '');
     if (avatar) {
       formData.append('profile[avatar]', avatar);
     }
+    // eslint-disable-next-line no-console
+    console.log('[AuthAPI] profileUpdate', {
+      hasAvatar: !!avatar,
+      customAttributesKeys: Object.keys(customAttributes || {}),
+      hasWebrtcJwt: !!customAttributes?.webrtc_jwt,
+      hasWebrtcUsername: !!customAttributes?.webrtc_username,
+    });
     return axios.put(endPoints('profileUpdate').url, formData);
   },
 

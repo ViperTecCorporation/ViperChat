@@ -13,6 +13,7 @@ import { conversationListPageURL } from 'dashboard/helper/URLHelper';
 import { snoozedReopenTime } from 'dashboard/helper/snoozeHelpers';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { useI18n } from 'vue-i18n';
+import InternalVoiceCallButton from 'dashboard/components-next/InternalChat/InternalVoiceCallButton.vue';
 
 const props = defineProps({
   chat: {
@@ -90,6 +91,9 @@ const hasMultipleInboxes = computed(
 );
 
 const hasSlaPolicyId = computed(() => props.chat?.sla_policy_id);
+const isInternalChat = computed(
+  () => inbox.value?.channel_type === 'Channel::Internal'
+);
 </script>
 
 <template>
@@ -150,6 +154,10 @@ const hasSlaPolicyId = computed(() => props.chat?.sla_policy_id);
         show-extended-info
         :parent-width="width"
         class="hidden md:flex"
+      />
+      <InternalVoiceCallButton
+        v-if="isInternalChat"
+        :conversation="currentChat"
       />
       <MoreActions :conversation-id="currentChat.id" />
     </div>

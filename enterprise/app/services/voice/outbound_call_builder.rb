@@ -16,6 +16,9 @@ class Voice::OutboundCallBuilder
     raise ArgumentError, 'Contact phone number required' if contact.phone_number.blank?
     raise ArgumentError, 'Agent required' if user.blank?
 
+    Rails.logger.info(
+      "VOICE_OUTBOUND_CALL_BUILDER start account_id=#{account.id} inbox_id=#{inbox.id} contact_id=#{contact.id} user_id=#{user.id}"
+    )
     timestamp = current_timestamp
 
     ActiveRecord::Base.transaction do
@@ -24,6 +27,13 @@ class Voice::OutboundCallBuilder
       conversation.reload
       conference_sid = Voice::Conference::Name.for(conversation)
       call_sid = initiate_call!
+      Rails.logger.info(
+        "VOICE_OUTBOUND_CALL_BUILDER initiated " \
+        "account_id=#{account.id} " \
+        "conversation_id=#{conversation.display_id} " \
+        "call_sid=#{call_sid} " \
+        "conference_sid=#{conference_sid}"
+      )
       update_conversation!(conversation, call_sid, conference_sid, timestamp)
       build_voice_message!(conversation, call_sid, conference_sid, timestamp)
       { conversation: conversation, call_sid: call_sid }

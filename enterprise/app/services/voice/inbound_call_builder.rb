@@ -13,6 +13,9 @@ class Voice::InboundCallBuilder
   end
 
   def perform!
+    Rails.logger.info(
+      "VOICE_INBOUND_CALL_BUILDER start account_id=#{account.id} inbox_id=#{inbox.id} call_sid=#{call_sid} from_number=#{from_number}"
+    )
     timestamp = current_timestamp
 
     ActiveRecord::Base.transaction do
@@ -20,6 +23,9 @@ class Voice::InboundCallBuilder
       contact_inbox = ensure_contact_inbox!(contact)
       conversation = find_conversation || create_conversation!(contact, contact_inbox)
       conversation.reload
+      Rails.logger.info(
+        "VOICE_INBOUND_CALL_BUILDER conversation account_id=#{account.id} conversation_id=#{conversation.display_id} call_sid=#{call_sid}"
+      )
       update_conversation!(conversation, timestamp)
       build_voice_message!(conversation, timestamp)
       conversation

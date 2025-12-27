@@ -194,6 +194,10 @@
         "ERROR": "Please enter a valid display name",
         "PLACEHOLDER": "Please enter a display name, this would be displayed in conversations"
       },
+      "WEBRTC_JWT": {
+        "LABEL": "WebRTC JWT",
+        "PLACEHOLDER": "Paste your WebRTC JWT"
+      },
       "AVAILABILITY": {
         "LABEL": "Availability",
         "STATUS": {

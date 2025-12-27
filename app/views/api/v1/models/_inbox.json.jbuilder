@@ -138,6 +138,19 @@ end
 if resource.channel_type == 'Channel::Voice'
   json.voice_call_webhook_url resource.channel.try(:voice_call_webhook_url)
   json.voice_status_webhook_url resource.channel.try(:voice_status_webhook_url)
+  if Current.account_user&.administrator?
+    json.provider_config resource.channel.try(:provider_config_hash)
+  else
+    provider_config = resource.channel.try(:provider_config_hash) || {}
+    safe_config = provider_config.slice(
+      'webrtc_ws_url',
+      'sip_domain',
+      'sip_outbound_proxy',
+      'sip_transport',
+      'transfer_mode'
+    )
+    json.provider_config safe_config
+  end
 end
 
 ### NotificaMe Channel

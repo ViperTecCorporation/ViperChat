@@ -18,16 +18,32 @@ const isVoiceCallMessage = message => {
   return CONTENT_TYPES.VOICE_CALL === message?.content_type;
 };
 
-const shouldSkipCall = (callDirection, senderId, currentUserId) => {
+const shouldSkipCall = (callDirection, senderId, currentUserId, callType) => {
+  if (callType === 'internal') return false;
   return callDirection === 'outbound' && senderId !== currentUserId;
 };
 
-function extractCallData(message) {
+function resolveDirection(callDirection, senderId, currentUserId, callType) {
+  if (callType === 'internal' && senderId && senderId !== currentUserId) {
+    return 'inbound';
+  }
+  return callDirection;
+}
+
+function extractCallData(message, currentUserId) {
   const contentData = message?.content_attributes?.data || {};
+  const callType = contentData.call_type;
   return {
     callSid: contentData.call_sid,
     status: contentData.status,
-    callDirection: contentData.call_direction,
+    callDirection: resolveDirection(
+      contentData.call_direction,
+      message?.sender?.id,
+      currentUserId,
+      callType
+    ),
+    callType,
+    inboxId: contentData.voice_inbox_id,
     conversationId: message?.conversation_id,
     senderId: message?.sender?.id,
   };
@@ -36,26 +52,44 @@ function extractCallData(message) {
 export function handleVoiceCallCreated(message, currentUserId) {
   if (!isVoiceCallMessage(message)) return;
 
-  const { callSid, callDirection, conversationId, senderId } =
-    extractCallData(message);
+  const { callSid, callDirection, callType, conversationId, senderId, inboxId } =
+    extractCallData(message, currentUserId);
 
-  if (shouldSkipCall(callDirection, senderId, currentUserId)) return;
+  if (shouldSkipCall(callDirection, senderId, currentUserId, callType)) return;
 
+  // eslint-disable-next-line no-console
+  console.log('[VoiceHelper] handleVoiceCallCreated', {
+    callSid,
+    conversationId,
+    callDirection,
+    callType,
+    inboxId,
+  });
   const callsStore = useCallsStore();
   callsStore.addCall({
     callSid,
     conversationId,
     callDirection,
     senderId,
+    inboxId,
   });
 }
 
 export function handleVoiceCallUpdated(commit, message, currentUserId) {
   if (!isVoiceCallMessage(message)) return;
 
-  const { callSid, status, callDirection, conversationId, senderId } =
-    extractCallData(message);
+  const { callSid, status, callDirection, callType, conversationId, senderId, inboxId } =
+    extractCallData(message, currentUserId);
 
+  // eslint-disable-next-line no-console
+  console.log('[VoiceHelper] handleVoiceCallUpdated', {
+    callSid,
+    conversationId,
+    status,
+    callDirection,
+    callType,
+    inboxId,
+  });
   const callsStore = useCallsStore();
 
   callsStore.handleCallStatusChanged({ callSid, status, conversationId });
@@ -66,7 +100,7 @@ export function handleVoiceCallUpdated(commit, message, currentUserId) {
 
   const isNewCall =
     status === 'ringing' &&
-    !shouldSkipCall(callDirection, senderId, currentUserId);
+    !shouldSkipCall(callDirection, senderId, currentUserId, callType);
 
   if (isNewCall) {
     callsStore.addCall({
@@ -74,6 +108,7 @@ export function handleVoiceCallUpdated(commit, message, currentUserId) {
       conversationId,
       callDirection,
       senderId,
+      inboxId,
     });
   }
 }

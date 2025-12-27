@@ -63,6 +63,7 @@ export default {
       displayName: '',
       email: '',
       messageSignature: '',
+      webrtcJwt: '',
       hotKeys: [
         {
           key: 'enter',
@@ -114,15 +115,23 @@ export default {
       this.avatarUrl = this.currentUser.avatar_url;
       this.displayName = this.currentUser.display_name;
       this.messageSignature = this.currentUser.message_signature;
+      this.webrtcJwt = this.currentUser.custom_attributes?.webrtc_jwt || '';
     },
     async dispatchUpdate(payload, successMessage, errorMessage) {
       let alertMessage = '';
       try {
+        // eslint-disable-next-line no-console
+        console.log('[Profile] dispatchUpdate', {
+          hasAvatar: !!payload.avatar,
+          hasCustomAttributes: !!payload.custom_attributes,
+        });
         await this.$store.dispatch('updateProfile', payload);
         alertMessage = successMessage;
 
         return true; // return the value so that the status can be known
       } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[Profile] dispatchUpdate error', { error });
         alertMessage = parseAPIErrorResponse(error) || errorMessage;
 
         return false; // return the value so that the status can be known
@@ -131,17 +140,25 @@ export default {
       }
     },
     async updateProfile(userAttributes) {
-      const { name, email, displayName } = userAttributes;
+      const { name, email, displayName, customAttributes } = userAttributes;
       const hasEmailChanged = this.currentUser.email !== email;
       this.name = name || this.name;
       this.email = email || this.email;
       this.displayName = displayName || this.displayName;
+      this.webrtcJwt = customAttributes?.webrtc_jwt ?? this.webrtcJwt;
 
+      // eslint-disable-next-line no-console
+      console.log('[Profile] updateProfile', {
+        hasEmailChanged,
+        hasWebrtcJwt: !!customAttributes?.webrtc_jwt,
+        hasWebrtcUsername: !!customAttributes?.webrtc_username,
+      });
       const updatePayload = {
         name: this.name,
         email: this.email,
         displayName: this.displayName,
         avatar: this.avatarFile,
+        custom_attributes: customAttributes,
       };
 
       const success = await this.dispatchUpdate(
@@ -219,6 +236,7 @@ export default {
         :display-name="displayName"
         :email="email"
         :email-enabled="!globalConfig.disableUserProfileUpdate"
+        :webrtc-jwt="webrtcJwt"
         @update-user="updateProfile"
       />
     </div>

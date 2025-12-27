@@ -15,6 +15,8 @@ class TwilioVoiceClient extends EventTarget {
   async initializeDevice(inboxId) {
     this.destroyDevice();
 
+    // eslint-disable-next-line no-console
+    console.log('[TwilioVoiceClient] initializeDevice', { inboxId });
     const response = await VoiceAPI.getToken(inboxId);
     const { token, account_id } = response || {};
     if (!token) throw new Error('Invalid token');
@@ -28,12 +30,16 @@ class TwilioVoiceClient extends EventTarget {
     this.device.removeAllListeners();
     this.device.on('connect', conn => {
       this.activeConnection = conn;
+      // eslint-disable-next-line no-console
+      console.log('[TwilioVoiceClient] connected', { inboxId });
       conn.on('disconnect', this.onDisconnect);
     });
 
     this.device.on('disconnect', this.onDisconnect);
 
     this.device.on('tokenWillExpire', async () => {
+      // eslint-disable-next-line no-console
+      console.log('[TwilioVoiceClient] tokenWillExpire', { inboxId: this.inboxId });
       const r = await VoiceAPI.getToken(this.inboxId);
       if (r?.token) this.device.updateToken(r.token);
     });
@@ -41,6 +47,8 @@ class TwilioVoiceClient extends EventTarget {
     this.initialized = true;
     this.inboxId = inboxId;
 
+    // eslint-disable-next-line no-console
+    console.log('[TwilioVoiceClient] deviceReady', { inboxId, accountId: account_id });
     return this.device;
   }
 
@@ -49,6 +57,8 @@ class TwilioVoiceClient extends EventTarget {
   }
 
   endClientCall() {
+    // eslint-disable-next-line no-console
+    console.log('[TwilioVoiceClient] endClientCall', { inboxId: this.inboxId });
     if (this.activeConnection) {
       this.activeConnection.disconnect();
     }
@@ -59,6 +69,8 @@ class TwilioVoiceClient extends EventTarget {
   }
 
   destroyDevice() {
+    // eslint-disable-next-line no-console
+    console.log('[TwilioVoiceClient] destroyDevice', { inboxId: this.inboxId });
     if (this.device) {
       this.device.destroy();
     }
@@ -78,6 +90,12 @@ class TwilioVoiceClient extends EventTarget {
       conversation_id: conversationId,
     };
 
+    // eslint-disable-next-line no-console
+    console.log('[TwilioVoiceClient] joinClientCall', {
+      inboxId: this.inboxId,
+      conversationId,
+      to,
+    });
     const connection = await this.device.connect({ params });
     this.activeConnection = connection;
 
@@ -87,6 +105,8 @@ class TwilioVoiceClient extends EventTarget {
   }
 
   onDisconnect = () => {
+    // eslint-disable-next-line no-console
+    console.log('[TwilioVoiceClient] disconnected', { inboxId: this.inboxId });
     this.activeConnection = null;
     this.dispatchEvent(createCallDisconnectedEvent());
   };

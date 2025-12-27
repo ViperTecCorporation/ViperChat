@@ -64,6 +64,11 @@ const startCall = async inboxId => {
   if (isInitiatingCall.value) return;
 
   try {
+    // eslint-disable-next-line no-console
+    console.log('[ContactsVoiceCall] initiate', {
+      contactId: props.contactId,
+      inboxId,
+    });
     const response = await store.dispatch('contacts/initiateCall', {
       contactId: props.contactId,
       inboxId,
@@ -72,6 +77,12 @@ const startCall = async inboxId => {
 
     // Add call to store immediately so widget shows
     const callsStore = useCallsStore();
+    // eslint-disable-next-line no-console
+    console.log('[ContactsVoiceCall] initiated', {
+      callSid,
+      conversationId,
+      inboxId,
+    });
     callsStore.addCall({
       callSid,
       conversationId,
@@ -82,6 +93,8 @@ const startCall = async inboxId => {
     useAlert(t('CONTACT_PANEL.CALL_INITIATED'));
     navigateToConversation(response?.conversation_id);
   } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[ContactsVoiceCall] initiate error', { error });
     const apiError = error?.message;
     useAlert(apiError || t('CONTACT_PANEL.CALL_FAILED'));
   }
@@ -89,15 +102,29 @@ const startCall = async inboxId => {
 
 const onClick = async () => {
   if (voiceInboxes.value.length > 1) {
+    // eslint-disable-next-line no-console
+    console.log('[ContactsVoiceCall] open inbox picker', {
+      contactId: props.contactId,
+    });
     dialogRef.value?.open();
     return;
   }
   const [inbox] = voiceInboxes.value;
+  // eslint-disable-next-line no-console
+  console.log('[ContactsVoiceCall] auto select inbox', {
+    contactId: props.contactId,
+    inboxId: inbox?.id,
+  });
   await startCall(inbox.id);
 };
 
 const onPickInbox = async inbox => {
   dialogRef.value?.close();
+  // eslint-disable-next-line no-console
+  console.log('[ContactsVoiceCall] picked inbox', {
+    contactId: props.contactId,
+    inboxId: inbox?.id,
+  });
   await startCall(inbox.id);
 };
 </script>

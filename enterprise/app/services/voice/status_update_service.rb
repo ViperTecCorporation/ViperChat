@@ -17,9 +17,15 @@ class Voice::StatusUpdateService
 
   def perform
     normalized_status = normalize_status(call_status)
+    Rails.logger.info(
+      "VOICE_STATUS_UPDATE call_sid=#{call_sid} raw_status=#{call_status} normalized_status=#{normalized_status}"
+    )
     return if normalized_status.blank?
 
     conversation = account.conversations.find_by(identifier: call_sid)
+    Rails.logger.info(
+      "VOICE_STATUS_UPDATE conversation_found=#{conversation.present?} conversation_id=#{conversation&.display_id}"
+    )
     return unless conversation
 
     Voice::CallStatus::Manager.new(

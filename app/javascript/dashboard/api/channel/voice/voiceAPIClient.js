@@ -9,31 +9,149 @@ class VoiceAPI extends ApiClient {
 
   // eslint-disable-next-line class-methods-use-this
   initiateCall(contactId, inboxId) {
-    return ContactsAPI.initiateCall(contactId, inboxId).then(r => r.data);
+    // eslint-disable-next-line no-console
+    console.log('[VoiceAPI] initiateCall request', { contactId, inboxId });
+    return ContactsAPI.initiateCall(contactId, inboxId)
+      .then(r => {
+        const data = r.data;
+        // eslint-disable-next-line no-console
+        console.log('[VoiceAPI] initiateCall success', {
+          contactId,
+          inboxId,
+          hasCallSid: !!data?.call_sid,
+        });
+        return data;
+      })
+      .catch(error => {
+        // eslint-disable-next-line no-console
+        console.error('[VoiceAPI] initiateCall error', { contactId, inboxId, error });
+        throw error;
+      });
   }
 
   leaveConference(inboxId, conversationId) {
+    // eslint-disable-next-line no-console
+    console.log('[VoiceAPI] leaveConference request', { inboxId, conversationId });
     return axios
       .delete(`${this.baseUrl()}/inboxes/${inboxId}/conference`, {
         params: { conversation_id: conversationId },
       })
-      .then(r => r.data);
+      .then(r => {
+        const data = r.data;
+        // eslint-disable-next-line no-console
+        console.log('[VoiceAPI] leaveConference success', {
+          inboxId,
+          conversationId,
+          status: data?.status,
+        });
+        return data;
+      })
+      .catch(error => {
+        // eslint-disable-next-line no-console
+        console.error('[VoiceAPI] leaveConference error', { inboxId, conversationId, error });
+        throw error;
+      });
   }
 
   joinConference({ conversationId, inboxId, callSid }) {
+    // eslint-disable-next-line no-console
+    console.log('[VoiceAPI] joinConference request', {
+      inboxId,
+      conversationId,
+      callSid,
+    });
     return axios
       .post(`${this.baseUrl()}/inboxes/${inboxId}/conference`, {
         conversation_id: conversationId,
         call_sid: callSid,
       })
-      .then(r => r.data);
+      .then(r => {
+        const data = r.data;
+        // eslint-disable-next-line no-console
+        console.log('[VoiceAPI] joinConference success', {
+          inboxId,
+          conversationId,
+          callSid,
+          provider: data?.provider,
+          hasTarget: !!(data?.to || data?.conference_sid),
+        });
+        return data;
+      })
+      .catch(error => {
+        // eslint-disable-next-line no-console
+        console.error('[VoiceAPI] joinConference error', {
+          inboxId,
+          conversationId,
+          callSid,
+          error,
+        });
+        throw error;
+      });
+  }
+
+  transferCall({ conversationId, inboxId, targetAgentId, callSid }) {
+    // eslint-disable-next-line no-console
+    console.log('[VoiceAPI] transferCall request', {
+      inboxId,
+      conversationId,
+      targetAgentId,
+      callSid,
+    });
+    return axios
+      .post(`${this.baseUrl()}/inboxes/${inboxId}/conference/transfer`, {
+        conversation_id: conversationId,
+        target_agent_id: targetAgentId,
+        call_sid: callSid,
+      })
+      .then(r => {
+        const data = r.data;
+        // eslint-disable-next-line no-console
+        console.log('[VoiceAPI] transferCall success', {
+          inboxId,
+          conversationId,
+          targetAgentId,
+          callSid,
+          mode: data?.mode,
+          status: data?.status,
+          hasReferTo: !!data?.refer_to,
+        });
+        return data;
+      })
+      .catch(error => {
+        // eslint-disable-next-line no-console
+        console.error('[VoiceAPI] transferCall error', {
+          inboxId,
+          conversationId,
+          targetAgentId,
+          callSid,
+          error,
+        });
+        throw error;
+      });
   }
 
   getToken(inboxId) {
     if (!inboxId) return Promise.reject(new Error('Inbox ID is required'));
+    // eslint-disable-next-line no-console
+    console.log('[VoiceAPI] getToken request', { inboxId });
     return axios
       .get(`${this.baseUrl()}/inboxes/${inboxId}/conference/token`)
-      .then(r => r.data);
+      .then(r => {
+        const data = r.data;
+        // eslint-disable-next-line no-console
+        console.log('[VoiceAPI] getToken success', {
+          inboxId,
+          provider: data?.provider,
+          hasToken: !!data?.token,
+          hasWebrtcConfig: !!data?.webrtc,
+        });
+        return data;
+      })
+      .catch(error => {
+        // eslint-disable-next-line no-console
+        console.error('[VoiceAPI] getToken error', { inboxId, error });
+        throw error;
+      });
   }
 }
 

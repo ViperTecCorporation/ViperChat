@@ -6,6 +6,9 @@ class Api::V1::Accounts::Contacts::CallsController < Api::V1::Accounts::BaseCont
     authorize contact, :show?
     authorize voice_inbox, :show?
 
+    Rails.logger.info(
+      "VOICE_OUTBOUND_CALL_CREATE account_id=#{Current.account.id} inbox_id=#{voice_inbox.id} contact_id=#{contact.id} user_id=#{Current.user.id}"
+    )
     result = Voice::OutboundCallBuilder.perform!(
       account: Current.account,
       inbox: voice_inbox,
@@ -15,6 +18,13 @@ class Api::V1::Accounts::Contacts::CallsController < Api::V1::Accounts::BaseCont
 
     conversation = result[:conversation]
 
+    Rails.logger.info(
+      "VOICE_OUTBOUND_CALL_CREATED " \
+      "account_id=#{Current.account.id} " \
+      "inbox_id=#{voice_inbox.id} " \
+      "conversation_id=#{conversation.display_id} " \
+      "call_sid=#{result[:call_sid]}"
+    )
     render json: {
       conversation_id: conversation.display_id,
       inbox_id: voice_inbox.id,

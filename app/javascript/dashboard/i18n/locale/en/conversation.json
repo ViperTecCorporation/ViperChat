@@ -83,6 +83,24 @@
       "THEY_ANSWERED": "They answered",
       "YOU_ANSWERED": "You answered"
     },
+    "VOICE_WIDGET": {
+      "INCOMING_CALL": "Incoming call",
+      "OUTGOING_CALL": "Outgoing call",
+      "TRANSFER": "Transfer",
+      "TRANSFER_TITLE": "Transfer call",
+      "TRANSFER_SEARCH_PLACEHOLDER": "Search agents",
+      "TRANSFER_CONFIRM": "Transfer",
+      "TRANSFER_CANCEL": "Cancel",
+      "TRANSFER_SUCCESS": "Transfer requested",
+      "TRANSFER_ERROR": "Could not transfer call",
+      "INTERNAL_CALL_BUTTON": "Call agent",
+      "INTERNAL_CALL_TITLE": "Call agent",
+      "INTERNAL_CALL_PICK_AGENT": "Select an agent",
+      "INTERNAL_CALL_PICK_INBOX": "Select a voice inbox",
+      "INTERNAL_CALL_START": "Start call",
+      "INTERNAL_CALL_INITIATED": "Call initiated",
+      "INTERNAL_CALL_FAILED": "Could not start call"
+    },
     "HEADER": {
       "RESOLVE_ACTION": "Resolve",
       "REOPEN_ACTION": "Reopen",

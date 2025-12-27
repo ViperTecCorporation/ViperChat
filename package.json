@@ -1,6 +1,6 @@
 {
   "name": "@viperteccoporation/viperchat",
-  "version": "4.9.1-viper-alpha-3",
+  "version": "4.9.1-viper-alpha-4",
   "license": "UNLICENSED",
   "scripts": {
     "eslint": "eslint app/**/*.{js,vue}",
@@ -87,6 +87,7 @@
     "posthog-js": "^1.260.2",
     "qrcode": "^1.5.4",
     "semver": "7.6.3",
+    "sip.js": "^0.21.2",
     "snakecase-keys": "^8.0.1",
     "socket.io-client": "^4.7.5",
     "timezone-phone-codes": "^0.0.2",

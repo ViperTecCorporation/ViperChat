@@ -224,6 +224,105 @@
           }
         }
       },
+      "VOICE": {
+        "TITLE": "Canal de voz",
+        "DESC": "Integre o Twilio Voice ou seu provedor WebRTC para atender clientes por chamadas.",
+        "PROVIDERS": {
+          "LABEL": "Provedor",
+          "TWILIO": "Twilio",
+          "CUSTOM": "Custom"
+        },
+        "PHONE_NUMBER": {
+          "LABEL": "Numero de telefone",
+          "PLACEHOLDER": "Digite seu numero (ex.: +1234567890)",
+          "ERROR": "Informe um numero valido no formato E.164 (ex.: +1234567890)"
+        },
+        "TWILIO": {
+          "ACCOUNT_SID": {
+            "LABEL": "SID da Conta",
+            "PLACEHOLDER": "Digite seu Twilio Account SID",
+            "REQUIRED": "SID da Conta e obrigatorio"
+          },
+          "AUTH_TOKEN": {
+            "LABEL": "Auth Token",
+            "PLACEHOLDER": "Digite seu Twilio Auth Token",
+            "REQUIRED": "Auth Token e obrigatorio"
+          },
+          "API_KEY_SID": {
+            "LABEL": "API Key SID",
+            "PLACEHOLDER": "Digite seu Twilio API Key SID",
+            "REQUIRED": "API Key SID e obrigatorio"
+          },
+          "API_KEY_SECRET": {
+            "LABEL": "API Key Secret",
+            "PLACEHOLDER": "Digite seu Twilio API Key Secret",
+            "REQUIRED": "API Key Secret e obrigatorio"
+          }
+        },
+        "CUSTOM": {
+          "WEBRTC_WS_URL": {
+            "LABEL": "URL WSS do WebRTC",
+            "PLACEHOLDER": "wss://webrtc.exemplo.com/ws",
+            "REQUIRED": "URL WSS do WebRTC e obrigatoria"
+          },
+          "SIP_DOMAIN": {
+            "LABEL": "Dominio SIP",
+            "PLACEHOLDER": "sip.exemplo.com",
+            "REQUIRED": "Dominio SIP e obrigatorio"
+          },
+          "SIP_OUTBOUND_PROXY": {
+            "LABEL": "Proxy de saida SIP",
+            "PLACEHOLDER": "sip:proxy.exemplo.com"
+          },
+          "SIP_TRANSPORT": {
+            "LABEL": "Transporte SIP",
+            "WSS": "WSS",
+            "WS": "WS"
+          },
+          "TRANSFER_MODE": {
+            "LABEL": "Modo de transferencia",
+            "SIP_REFER": "SIP REFER",
+            "ARI": "ARI (API do servidor)"
+          },
+          "TRANSFER_API_URL": {
+            "LABEL": "URL da API de transferencia",
+            "PLACEHOLDER": "https://pbx.exemplo.com/api/transfer",
+            "REQUIRED": "URL da API de transferencia e obrigatoria"
+          },
+          "TRANSFER_API_TOKEN": {
+            "LABEL": "Token da API de transferencia",
+            "PLACEHOLDER": "Informe o token da API de transferencia"
+          },
+          "USE_AGENT_JWT": "Usar JWT do WebRTC no perfil do agente",
+          "JWT_ISSUER": {
+            "LABEL": "Emissor do JWT",
+            "PLACEHOLDER": "emissor"
+          },
+          "JWT_AUDIENCE": {
+            "LABEL": "Audiencia do JWT",
+            "PLACEHOLDER": "audiencia"
+          },
+          "JWT_SECRET": {
+            "LABEL": "Segredo do JWT",
+            "PLACEHOLDER": "segredo",
+            "REQUIRED": "Segredo do JWT e obrigatorio"
+          },
+          "JWT_TTL": {
+            "LABEL": "TTL do JWT (segundos)",
+            "PLACEHOLDER": "3600"
+          }
+        },
+        "CONFIGURATION": {
+          "TWILIO_VOICE_URL_TITLE": "URL de voz do Twilio",
+          "TWILIO_VOICE_URL_SUBTITLE": "Configure esta URL como Voice URL no seu numero Twilio e no TwiML App.",
+          "TWILIO_STATUS_URL_TITLE": "URL de status do Twilio",
+          "TWILIO_STATUS_URL_SUBTITLE": "Configure esta URL como Status Callback URL no seu numero Twilio."
+        },
+        "SUBMIT_BUTTON": "Criar canal de voz",
+        "API": {
+          "ERROR_MESSAGE": "Nao foi possivel criar o canal de voz"
+        }
+      },
       "WHATSAPP": {
         "TITLE": "Canal do WhatsApp",
         "DESC": "Comece a oferecer suporte a seus clientes pelo WhatsApp.",
@@ -535,7 +634,7 @@
           },
           "VOICE": {
             "TITLE": "Voz",
-            "DESCRIPTION": "Integre com o Twilio Voice"
+            "DESCRIPTION": "Integre com o canal de voz (Twilio ou WebRTC)"
           }
         }
       },
@@ -686,6 +785,16 @@
       "MESSENGER_SUB_HEAD": "Favor, insira essse código <script> dentro da tag Body de sua página html",
       "INBOX_AGENTS": "Agentes",
       "INBOX_AGENTS_SUB_TEXT": "Adicionar ou remover agentes dessa caixa de entrada",
+      "VOICE_AGENT_CREDENTIALS_TITLE": "Credenciais de voz por agente",
+      "VOICE_AGENT_CREDENTIALS_SUB_TEXT": "Configure credenciais WebRTC por agente para esta caixa de entrada",
+      "VOICE_AGENT_CREDENTIALS_USERNAME_LABEL": "Usuario WebRTC",
+      "VOICE_AGENT_CREDENTIALS_USERNAME_PLACEHOLDER": "Nome SIP (ex: 1001)",
+      "VOICE_AGENT_CREDENTIALS_JWT_LABEL": "JWT WebRTC",
+      "VOICE_AGENT_CREDENTIALS_JWT_PLACEHOLDER": "Cole um JWT para este agente",
+      "VOICE_AGENT_CREDENTIALS_TOKEN_SET": "Token ja configurado",
+      "VOICE_AGENT_CREDENTIALS_SAVE": "Salvar credenciais",
+      "VOICE_AGENT_CREDENTIALS_SUCCESS": "Credenciais de agente atualizadas",
+      "VOICE_AGENT_CREDENTIALS_ERROR": "Nao foi possivel atualizar as credenciais do agente",
       "AGENT_ASSIGNMENT": "Atribuição de conversa",
       "AGENT_ASSIGNMENT_SUB_TEXT": "Atualizar configurações de atribuição de conversa",
       "UPDATE": "Atualizar",

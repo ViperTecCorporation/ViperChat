@@ -11,6 +11,9 @@ class Voice::CallSessionSyncService
   end
 
   def perform
+    Rails.logger.info(
+      "VOICE_CALL_SESSION_SYNC start conversation_id=#{conversation.display_id} call_sid=#{call_sid} direction=#{direction}"
+    )
     ActiveRecord::Base.transaction do
       attrs = refreshed_attributes
       conversation.update!(
@@ -20,6 +23,12 @@ class Voice::CallSessionSyncService
       sync_voice_call_message!(attrs)
     end
 
+    Rails.logger.info(
+      "VOICE_CALL_SESSION_SYNC done " \
+      "conversation_id=#{conversation.display_id} " \
+      "call_sid=#{call_sid} " \
+      "status=#{conversation.additional_attributes['call_status']}"
+    )
     conversation
   end
 

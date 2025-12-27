@@ -4,8 +4,14 @@ class Voice::Provider::Twilio::Adapter
   end
 
   def initiate_call(to:, conference_sid: nil, agent_id: nil)
+    Rails.logger.info(
+      "VOICE_TWILIO_ADAPTER initiate_call channel_id=#{@channel.id} inbox_id=#{@channel.inbox_id} to=#{to} agent_id=#{agent_id}"
+    )
     call = twilio_client.calls.create(**call_params(to))
 
+    Rails.logger.info(
+      "VOICE_TWILIO_ADAPTER initiated call_sid=#{call.sid} status=#{call.status}"
+    )
     {
       provider: 'twilio',
       call_sid: call.sid,

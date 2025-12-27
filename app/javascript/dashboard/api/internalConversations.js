@@ -7,7 +7,22 @@ class InternalConversationsAPI extends ApiClient {
   }
 
   create(payload) {
+    // eslint-disable-next-line no-console
+    console.log('[InternalConversationsAPI] create', { payload });
     return axios.post(this.url, payload);
+  }
+
+  initiateVoiceCall({ conversationId, voiceInboxId, targetAgentId }) {
+    // eslint-disable-next-line no-console
+    console.log('[InternalConversationsAPI] initiateVoiceCall', {
+      conversationId,
+      voiceInboxId,
+      targetAgentId,
+    });
+    return axios.post(`${this.url}/${conversationId}/voice_call`, {
+      voice_inbox_id: voiceInboxId,
+      target_agent_id: targetAgentId,
+    });
   }
 }
 

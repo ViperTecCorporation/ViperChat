@@ -194,6 +194,10 @@
         "ERROR": "Por favor, insira um nome de exibição válido",
         "PLACEHOLDER": "Por favor, insira um nome de exibição para ser exibido em conversas"
       },
+      "WEBRTC_JWT": {
+        "LABEL": "JWT do WebRTC",
+        "PLACEHOLDER": "Cole seu JWT do WebRTC"
+      },
       "AVAILABILITY": {
         "LABEL": "Disponibilidade",
         "STATUS": {

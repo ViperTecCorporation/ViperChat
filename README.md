@@ -19,6 +19,58 @@ ___
     - da opção de alterar logo e nome da empresa
   Exemplo de stack com os dois projetos integrados: https://github.com/clairton/unoapi-cloud/tree/main/examples/unochat
 
+## Canal de Voz Custom (WebRTC/SIP) com credenciais por inbox
+
+Este fork adiciona um provedor de voz **custom** que usa WebRTC/SIP, com suporte a:
+- JWT por agente (ou gerado pela inbox).
+- Usuário WebRTC por agente (por inbox) com fallback para perfil.
+- Transferência de chamadas via **SIP REFER** ou **ARI**.
+- Chamadas internas entre agentes (estilo mensagens privadas).
+
+### Configurar a inbox de voz (provider custom)
+
+1) Crie uma caixa de entrada do tipo **Voice** e selecione **Custom** como provider.
+2) Preencha os campos do WebRTC/SIP:
+   - **WebRTC WS URL** (`webrtc_ws_url`)
+   - **SIP Domain** (`sip_domain`)
+   - **SIP Outbound Proxy** (opcional)
+   - **SIP Transport** (`wss` ou `ws`)
+3) Transferência:
+   - **Transfer Mode**: `sip_refer` (padrão) ou `ari`.
+   - Se `ari`, informe **Transfer API URL** e **Transfer API Token**.
+4) JWT:
+   - **Usar JWT do agente**: quando marcado, o token vem do agente (por inbox ou perfil).
+   - Se desmarcado, informe **JWT Secret** (opcionalmente `iss`, `aud`, `ttl`) para gerar o token na própria inbox.
+
+### Credenciais WebRTC por agente (por inbox)
+
+Em **Configurações > Inboxes > [sua inbox de voz] > Agentes**:
+- Configure **WebRTC Username** e **JWT** por agente.
+- Esses dados são salvos por inbox (ou seja, o mesmo agente pode ter credenciais diferentes em caixas distintas).
+
+**Fallback de credenciais**
+
+Ordem usada para buscar as credenciais:
+1) **Inbox Member** (credenciais salvas no agente da inbox).
+2) **Perfil do agente** (`custom_attributes` com `webrtc_username` e `webrtc_jwt`).
+3) **Token gerado pela inbox** (se `jwt_secret` estiver configurado).
+
+Se o `webrtc_username` não existir, o fallback final é o email do agente.
+
+### Chamadas internas entre agentes
+
+Em conversas internas:
+- O botão de chamada permite iniciar uma ligação com outro agente.
+- Se houver mais de uma inbox de voz ou mais de um agente, o sistema pede seleção.
+- O agente de destino precisa ser participante da conversa e membro da inbox de voz.
+
+### Transferência de chamadas
+
+Durante uma chamada:
+- **SIP REFER**: o destino é montado como `sip:USERNAME@SIP_DOMAIN`.
+  - `USERNAME` segue o mesmo fallback de credenciais.
+- **ARI**: a chamada é enviada para a API configurada na inbox.
+
 ## Campanhas WhatsApp com Unoapi
 
 Este fork adiciona um fluxo específico de campanhas para caixas de entrada WhatsApp com provider `unoapi`.

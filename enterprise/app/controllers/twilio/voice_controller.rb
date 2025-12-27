@@ -9,6 +9,9 @@ class Twilio::VoiceController < ApplicationController
   before_action :set_inbox!
 
   def status
+    Rails.logger.info(
+      "TWILIO_VOICE_STATUS account_id=#{current_account.id} call_sid=#{twilio_call_sid} status=#{params[:CallStatus]}"
+    )
     Voice::StatusUpdateService.new(
       account: current_account,
       call_sid: twilio_call_sid,
@@ -35,6 +38,13 @@ class Twilio::VoiceController < ApplicationController
     event = mapped_conference_event
     return head :no_content unless event
 
+    Rails.logger.info(
+      "TWILIO_VOICE_CONFERENCE_STATUS " \
+      "account_id=#{current_account.id} " \
+      "call_sid=#{twilio_call_sid} " \
+      "event=#{event} " \
+      "friendly_name=#{params[:FriendlyName]}"
+    )
     conversation = find_conversation_for_conference!(
       friendly_name: params[:FriendlyName],
       call_sid: twilio_call_sid
@@ -85,6 +95,9 @@ class Twilio::VoiceController < ApplicationController
 
     case twilio_direction
     when 'inbound'
+      Rails.logger.info(
+        "TWILIO_VOICE_INBOUND account_id=#{current_account.id} call_sid=#{twilio_call_sid} from=#{twilio_from}"
+      )
       Voice::InboundCallBuilder.perform!(
         account: current_account,
         inbox: inbox,
@@ -92,6 +105,9 @@ class Twilio::VoiceController < ApplicationController
         call_sid: twilio_call_sid
       )
     when 'outbound-api', 'outbound-dial'
+      Rails.logger.info(
+        "TWILIO_VOICE_OUTBOUND_LEG account_id=#{current_account.id} call_sid=#{twilio_call_sid} from=#{twilio_from} direction=#{twilio_direction}"
+      )
       sync_outbound_leg(
         call_sid: twilio_call_sid,
         from_number: twilio_from,
