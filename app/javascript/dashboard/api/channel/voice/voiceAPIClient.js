@@ -142,7 +142,9 @@ class VoiceAPI extends ApiClient {
         console.log('[VoiceAPI] getToken success', {
           inboxId,
           provider: data?.provider,
+          authType: data?.auth_type,
           hasToken: !!data?.token,
+          hasPassword: !!data?.password,
           hasWebrtcConfig: !!data?.webrtc,
         });
         return data;

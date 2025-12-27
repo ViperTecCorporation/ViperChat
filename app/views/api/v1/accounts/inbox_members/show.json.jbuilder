@@ -6,6 +6,7 @@ json.payload do
       json.id inbox_member.id
       json.webrtc_username inbox_member.webrtc_username
       json.has_webrtc_jwt inbox_member.webrtc_jwt.present?
+      json.has_webrtc_password inbox_member.webrtc_password.present?
     end
   end
 end

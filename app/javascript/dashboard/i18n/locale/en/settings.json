@@ -198,6 +198,14 @@
         "LABEL": "WebRTC JWT",
         "PLACEHOLDER": "Paste your WebRTC JWT"
       },
+      "WEBRTC_USERNAME": {
+        "LABEL": "WebRTC username",
+        "PLACEHOLDER": "SIP username (e.g. 1001)"
+      },
+      "WEBRTC_PASSWORD": {
+        "LABEL": "WebRTC password",
+        "PLACEHOLDER": "SIP password for this agent"
+      },
       "AVAILABILITY": {
         "LABEL": "Availability",
         "STATUS": {

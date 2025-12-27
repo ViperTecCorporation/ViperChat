@@ -274,16 +274,21 @@
             "LABEL": "Proxy de saida SIP",
             "PLACEHOLDER": "sip:proxy.exemplo.com"
           },
-          "SIP_TRANSPORT": {
-            "LABEL": "Transporte SIP",
-            "WSS": "WSS",
-            "WS": "WS"
-          },
-          "TRANSFER_MODE": {
-            "LABEL": "Modo de transferencia",
-            "SIP_REFER": "SIP REFER",
-            "ARI": "ARI (API do servidor)"
-          },
+            "SIP_TRANSPORT": {
+              "LABEL": "Transporte SIP",
+              "WSS": "WSS",
+              "WS": "WS"
+            },
+            "AUTH_TYPE": {
+              "LABEL": "Tipo de autenticacao",
+              "JWT": "JWT",
+              "PASSWORD": "Usuario e senha"
+            },
+            "TRANSFER_MODE": {
+              "LABEL": "Modo de transferencia",
+              "SIP_REFER": "SIP REFER",
+              "ARI": "ARI (API do servidor)"
+            },
           "TRANSFER_API_URL": {
             "LABEL": "URL da API de transferencia",
             "PLACEHOLDER": "https://pbx.exemplo.com/api/transfer",
@@ -791,7 +796,10 @@
       "VOICE_AGENT_CREDENTIALS_USERNAME_PLACEHOLDER": "Nome SIP (ex: 1001)",
       "VOICE_AGENT_CREDENTIALS_JWT_LABEL": "JWT WebRTC",
       "VOICE_AGENT_CREDENTIALS_JWT_PLACEHOLDER": "Cole um JWT para este agente",
+      "VOICE_AGENT_CREDENTIALS_PASSWORD_LABEL": "Senha WebRTC",
+      "VOICE_AGENT_CREDENTIALS_PASSWORD_PLACEHOLDER": "Cole a senha SIP deste agente",
       "VOICE_AGENT_CREDENTIALS_TOKEN_SET": "Token ja configurado",
+      "VOICE_AGENT_CREDENTIALS_PASSWORD_SET": "Senha ja configurada",
       "VOICE_AGENT_CREDENTIALS_SAVE": "Salvar credenciais",
       "VOICE_AGENT_CREDENTIALS_SUCCESS": "Credenciais de agente atualizadas",
       "VOICE_AGENT_CREDENTIALS_ERROR": "Nao foi possivel atualizar as credenciais do agente",

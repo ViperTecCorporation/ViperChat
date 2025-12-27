@@ -103,7 +103,9 @@ export default {
         credentials[agent.id] = {
           webrtcUsername,
           webrtcJwt: '',
+          webrtcPassword: '',
           hasWebrtcJwt: !!member.has_webrtc_jwt,
+          hasWebrtcPassword: !!member.has_webrtc_password,
         };
         initialCredentials[agent.id] = { webrtcUsername };
       });
@@ -116,7 +118,9 @@ export default {
           this.agentCredentials[agent.id] = {
             webrtcUsername: '',
             webrtcJwt: '',
+            webrtcPassword: '',
             hasWebrtcJwt: false,
+            hasWebrtcPassword: false,
           };
         }
         if (!this.initialAgentCredentials[agent.id]) {
@@ -167,6 +171,11 @@ export default {
             hasChanges = true;
           }
 
+          if (credentials.webrtcPassword) {
+            payload.webrtc_password = credentials.webrtcPassword;
+            hasChanges = true;
+          }
+
           return hasChanges ? payload : null;
         })
         .filter(Boolean);
@@ -187,7 +196,12 @@ export default {
           memberAttributes,
         });
         memberAttributes.forEach(
-          ({ user_id: userId, webrtc_username: username, webrtc_jwt: jwt }) => {
+          ({
+            user_id: userId,
+            webrtc_username: username,
+            webrtc_jwt: jwt,
+            webrtc_password: password,
+          }) => {
             if (username !== undefined) {
               this.initialAgentCredentials[userId] = {
                 webrtcUsername: username,
@@ -199,6 +213,14 @@ export default {
                 ...current,
                 webrtcJwt: '',
                 hasWebrtcJwt: true,
+              };
+            }
+            if (password) {
+              const current = this.agentCredentials[userId] || {};
+              this.agentCredentials[userId] = {
+                ...current,
+                webrtcPassword: '',
+                hasWebrtcPassword: true,
               };
             }
           }
@@ -320,11 +342,33 @@ export default {
               )
             "
           />
+          <Input
+            v-model="agentCredentials[agent.id].webrtcPassword"
+            type="password"
+            :label="
+              $t('INBOX_MGMT.SETTINGS_POPUP.VOICE_AGENT_CREDENTIALS_PASSWORD_LABEL')
+            "
+            :placeholder="
+              $t(
+                'INBOX_MGMT.SETTINGS_POPUP.VOICE_AGENT_CREDENTIALS_PASSWORD_PLACEHOLDER'
+              )
+            "
+          />
           <p
             v-if="agentCredentials[agent.id].hasWebrtcJwt"
             class="text-xs text-n-slate-11 mb-0"
           >
             {{ $t('INBOX_MGMT.SETTINGS_POPUP.VOICE_AGENT_CREDENTIALS_TOKEN_SET') }}
+          </p>
+          <p
+            v-if="agentCredentials[agent.id].hasWebrtcPassword"
+            class="text-xs text-n-slate-11 mb-0"
+          >
+            {{
+              $t(
+                'INBOX_MGMT.SETTINGS_POPUP.VOICE_AGENT_CREDENTIALS_PASSWORD_SET'
+              )
+            }}
           </p>
         </div>
         <div>

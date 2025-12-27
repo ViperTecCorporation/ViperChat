@@ -198,6 +198,14 @@
         "LABEL": "JWT do WebRTC",
         "PLACEHOLDER": "Cole seu JWT do WebRTC"
       },
+      "WEBRTC_USERNAME": {
+        "LABEL": "Usuario WebRTC",
+        "PLACEHOLDER": "Usuario SIP (ex: 1001)"
+      },
+      "WEBRTC_PASSWORD": {
+        "LABEL": "Senha WebRTC",
+        "PLACEHOLDER": "Senha SIP deste agente"
+      },
       "AVAILABILITY": {
         "LABEL": "Disponibilidade",
         "STATUS": {

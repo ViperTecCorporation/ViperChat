@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_12_27_012000) do
+ActiveRecord::Schema[7.1].define(version: 2025_12_27_023000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -943,6 +943,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_12_27_012000) do
     t.integer "inbox_id", null: false
     t.string "webrtc_username"
     t.text "webrtc_jwt"
+    t.text "webrtc_password"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["inbox_id", "user_id"], name: "index_inbox_members_on_inbox_id_and_user_id", unique: true

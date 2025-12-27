@@ -2,13 +2,42 @@ class Voice::Provider::Custom::TokenService
   pattr_initialize [:inbox!, :user!, :account!]
 
   def generate
+    if auth_type == 'password'
+      password = resolved_password
+      Rails.logger.info(
+        "VOICE_CUSTOM_TOKEN " \
+        "account_id=#{account.id} " \
+        "inbox_id=#{inbox.id} " \
+        "user_id=#{user.id} " \
+        "auth_type=password " \
+        "password_present=#{password.present?} " \
+        "username=#{resolved_username}"
+      )
+      return {
+        provider: 'custom',
+        account_id: account.id,
+        auth_type: 'password',
+        password: password,
+        webrtc: webrtc_config,
+        transfer: transfer_config
+      }.compact
+    end
+
     token, token_source = resolved_token_with_source
     Rails.logger.info(
-      "VOICE_CUSTOM_TOKEN account_id=#{account.id} inbox_id=#{inbox.id} user_id=#{user.id} token_source=#{token_source} username=#{resolved_username}"
+      "VOICE_CUSTOM_TOKEN " \
+      "account_id=#{account.id} " \
+      "inbox_id=#{inbox.id} " \
+      "user_id=#{user.id} " \
+      "auth_type=jwt " \
+      "token_source=#{token_source} " \
+      "token_present=#{token.present?} " \
+      "username=#{resolved_username}"
     )
     {
       provider: 'custom',
       account_id: account.id,
+      auth_type: 'jwt',
       token: token,
       webrtc: webrtc_config,
       transfer: transfer_config
@@ -44,6 +73,20 @@ class Voice::Provider::Custom::TokenService
     return [nil, 'missing_secret'] if config['jwt_secret'].blank?
 
     [JWT.encode(token_payload, config['jwt_secret'], 'HS256'), 'generated']
+  end
+
+  def resolved_password
+    member_password = inbox_member&.webrtc_password
+    return member_password if member_password.present?
+
+    user_password = user_custom_attributes['webrtc_password']
+    return user_password if user_password.present?
+
+    nil
+  end
+
+  def auth_type
+    config['auth_type'].presence || 'jwt'
   end
 
   def token_payload

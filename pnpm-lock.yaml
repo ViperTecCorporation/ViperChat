@@ -181,6 +181,9 @@ importers:
       semver:
         specifier: 7.6.3
         version: 7.6.3
+      sip.js:
+        specifier: ^0.21.2
+        version: 0.21.2
       snakecase-keys:
         specifier: ^8.0.1
         version: 8.0.1
@@ -4718,6 +4721,10 @@ packages:
 
   simple-peer@5.11.9:
     resolution: {integrity: sha512-QWqJFO07H960Due8ZMAhW2Q6wv56stDgSdXtJMKDgf1iGQz6Senk/hkydUO64YA4d9KdrUWwFo1A8Xo5k0WTng==}
+
+  sip.js@0.21.2:
+    resolution: {integrity: sha512-tSqTcIgrOd2IhP/rd70JablvAp+fSfLSxO4hGNY6LkWRY1SKygTO7OtJEV/BQb8oIxtMRx0LE7nUF2MaqGbFzA==}
+    engines: {node: '>=10.0'}
 
   sirv@2.0.4:
     resolution: {integrity: sha512-94Bdh3cC2PKrbgSOUqTiGPWVZeSiXfKOVZNJniWoqrWrRkB1CJzBU3NEbiTsPcYy1lDsANA/THzS+9WBiy5nfQ==}
@@ -10472,6 +10479,8 @@ snapshots:
       once: 1.4.0
     transitivePeerDependencies:
       - supports-color
+
+  sip.js@0.21.2: {}
 
   sirv@2.0.4:
     dependencies:

@@ -64,6 +64,8 @@ export default {
       email: '',
       messageSignature: '',
       webrtcJwt: '',
+      webrtcUsername: '',
+      webrtcPassword: '',
       hotKeys: [
         {
           key: 'enter',
@@ -116,6 +118,9 @@ export default {
       this.displayName = this.currentUser.display_name;
       this.messageSignature = this.currentUser.message_signature;
       this.webrtcJwt = this.currentUser.custom_attributes?.webrtc_jwt || '';
+      this.webrtcUsername =
+        this.currentUser.custom_attributes?.webrtc_username || '';
+      this.webrtcPassword = '';
     },
     async dispatchUpdate(payload, successMessage, errorMessage) {
       let alertMessage = '';
@@ -146,12 +151,18 @@ export default {
       this.email = email || this.email;
       this.displayName = displayName || this.displayName;
       this.webrtcJwt = customAttributes?.webrtc_jwt ?? this.webrtcJwt;
+      this.webrtcUsername =
+        customAttributes?.webrtc_username ?? this.webrtcUsername;
+      if (customAttributes?.webrtc_password) {
+        this.webrtcPassword = '';
+      }
 
       // eslint-disable-next-line no-console
       console.log('[Profile] updateProfile', {
         hasEmailChanged,
         hasWebrtcJwt: !!customAttributes?.webrtc_jwt,
         hasWebrtcUsername: !!customAttributes?.webrtc_username,
+        hasWebrtcPassword: !!customAttributes?.webrtc_password,
       });
       const updatePayload = {
         name: this.name,
@@ -237,6 +248,8 @@ export default {
         :email="email"
         :email-enabled="!globalConfig.disableUserProfileUpdate"
         :webrtc-jwt="webrtcJwt"
+        :webrtc-username="webrtcUsername"
+        :webrtc-password="webrtcPassword"
         @update-user="updateProfile"
       />
     </div>

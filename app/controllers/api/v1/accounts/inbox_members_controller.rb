@@ -96,6 +96,7 @@ class Api::V1::Accounts::InboxMembersController < Api::V1::Accounts::BaseControl
         updates[:webrtc_username] = attrs[:webrtc_username]
       end
       updates[:webrtc_jwt] = attrs[:webrtc_jwt] if attrs[:webrtc_jwt].present?
+      updates[:webrtc_password] = attrs[:webrtc_password] if attrs[:webrtc_password].present?
 
       Rails.logger.info(
         "INBOX_MEMBER_CREDENTIALS_UPDATE " \
@@ -103,14 +104,15 @@ class Api::V1::Accounts::InboxMembersController < Api::V1::Accounts::BaseControl
         "inbox_id=#{@inbox.id} " \
         "user_id=#{user_id} " \
         "username_set=#{updates.key?(:webrtc_username)} " \
-        "jwt_set=#{updates.key?(:webrtc_jwt)}"
+        "jwt_set=#{updates.key?(:webrtc_jwt)} " \
+        "password_set=#{updates.key?(:webrtc_password)}"
       )
       inbox_member.update!(updates) if updates.present?
     end
   end
 
   def member_attributes
-    @member_attributes ||= params.permit(member_attributes: [:user_id, :webrtc_jwt, :webrtc_username])
+    @member_attributes ||= params.permit(member_attributes: [:user_id, :webrtc_jwt, :webrtc_username, :webrtc_password])
                                  .fetch(:member_attributes, [])
   end
 end

@@ -64,6 +64,7 @@ export default {
       customAttributesKeys: Object.keys(customAttributes || {}),
       hasWebrtcJwt: !!customAttributes?.webrtc_jwt,
       hasWebrtcUsername: !!customAttributes?.webrtc_username,
+      hasWebrtcPassword: !!customAttributes?.webrtc_password,
     });
     return axios.put(endPoints('profileUpdate').url, formData);
   },

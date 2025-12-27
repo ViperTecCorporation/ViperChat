@@ -28,6 +28,14 @@ export default {
       type: String,
       default: '',
     },
+    webrtcUsername: {
+      type: String,
+      default: '',
+    },
+    webrtcPassword: {
+      type: String,
+      default: '',
+    },
   },
   emits: ['updateUser'],
   setup() {
@@ -38,7 +46,9 @@ export default {
       userName: this.name,
       userDisplayName: this.displayName,
       userEmail: this.email,
+      userWebrtcUsername: this.webrtcUsername,
       userWebrtcJwt: this.webrtcJwt,
+      userWebrtcPassword: this.webrtcPassword,
       inputStyles: {
         borderRadius: '0.75rem',
         padding: '0.375rem 0.75rem',
@@ -83,6 +93,18 @@ export default {
       },
       immediate: true,
     },
+    webrtcUsername: {
+      handler(value) {
+        this.userWebrtcUsername = value;
+      },
+      immediate: true,
+    },
+    webrtcPassword: {
+      handler(value) {
+        this.userWebrtcPassword = value;
+      },
+      immediate: true,
+    },
   },
   methods: {
     async updateUser() {
@@ -96,7 +118,11 @@ export default {
         displayName: this.userDisplayName,
         email: this.userEmail,
         customAttributes: {
+          webrtc_username: this.userWebrtcUsername,
           webrtc_jwt: this.userWebrtcJwt,
+          ...(this.userWebrtcPassword
+            ? { webrtc_password: this.userWebrtcPassword }
+            : {}),
         },
       });
     },
@@ -151,6 +177,19 @@ export default {
       :styles="inputStyles"
       :label="$t('PROFILE_SETTINGS.FORM.WEBRTC_JWT.LABEL')"
       :placeholder="$t('PROFILE_SETTINGS.FORM.WEBRTC_JWT.PLACEHOLDER')"
+    />
+    <woot-input
+      v-model="userWebrtcUsername"
+      :styles="inputStyles"
+      :label="$t('PROFILE_SETTINGS.FORM.WEBRTC_USERNAME.LABEL')"
+      :placeholder="$t('PROFILE_SETTINGS.FORM.WEBRTC_USERNAME.PLACEHOLDER')"
+    />
+    <woot-input
+      v-model="userWebrtcPassword"
+      type="password"
+      :styles="inputStyles"
+      :label="$t('PROFILE_SETTINGS.FORM.WEBRTC_PASSWORD.LABEL')"
+      :placeholder="$t('PROFILE_SETTINGS.FORM.WEBRTC_PASSWORD.PLACEHOLDER')"
     />
     <div>
       <NextButton type="submit" :label="$t('PROFILE_SETTINGS.BTN_TEXT')" />

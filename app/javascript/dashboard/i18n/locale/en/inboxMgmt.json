@@ -458,6 +458,11 @@
               "WSS": "WSS",
               "WS": "WS"
             },
+            "AUTH_TYPE": {
+              "LABEL": "Auth type",
+              "JWT": "JWT",
+              "PASSWORD": "Username/password"
+            },
             "TRANSFER_MODE": {
               "LABEL": "Transfer Mode",
               "SIP_REFER": "SIP REFER",
@@ -894,7 +899,10 @@
       "VOICE_AGENT_CREDENTIALS_USERNAME_PLACEHOLDER": "SIP username (e.g. 1001)",
       "VOICE_AGENT_CREDENTIALS_JWT_LABEL": "WebRTC JWT",
       "VOICE_AGENT_CREDENTIALS_JWT_PLACEHOLDER": "Paste a JWT to override this agent",
+      "VOICE_AGENT_CREDENTIALS_PASSWORD_LABEL": "WebRTC password",
+      "VOICE_AGENT_CREDENTIALS_PASSWORD_PLACEHOLDER": "Paste the SIP password for this agent",
       "VOICE_AGENT_CREDENTIALS_TOKEN_SET": "Token already configured",
+      "VOICE_AGENT_CREDENTIALS_PASSWORD_SET": "Password already configured",
       "VOICE_AGENT_CREDENTIALS_SAVE": "Save credentials",
       "VOICE_AGENT_CREDENTIALS_SUCCESS": "Agent credentials updated",
       "VOICE_AGENT_CREDENTIALS_ERROR": "Could not update agent credentials",

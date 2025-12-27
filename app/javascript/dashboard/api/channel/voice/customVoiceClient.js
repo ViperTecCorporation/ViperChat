@@ -18,6 +18,7 @@ class CustomVoiceClient extends EventTarget {
     this.inboxId = null;
     this.webrtcConfig = null;
     this.token = null;
+    this.authType = 'jwt';
   }
 
   async initializeDevice(inboxId) {
@@ -26,10 +27,23 @@ class CustomVoiceClient extends EventTarget {
     // eslint-disable-next-line no-console
     console.log('[CustomVoiceClient] initializeDevice', { inboxId });
     const response = await VoiceAPI.getToken(inboxId);
-    const { token, webrtc, provider } = response || {};
+    const { token, webrtc, provider, auth_type: authType, password } =
+      response || {};
     if (provider !== 'custom') throw new Error('Invalid provider');
     if (!webrtc?.ws_url || !webrtc?.sip_domain) {
       throw new Error('Invalid WebRTC config');
+    }
+
+    const resolvedAuthType = authType || 'jwt';
+    const credential =
+      resolvedAuthType === 'password' ? password || token : token;
+
+    if (resolvedAuthType === 'password' && !credential) {
+      throw new Error('Missing WebRTC password');
+    }
+
+    if (resolvedAuthType === 'jwt' && !credential) {
+      throw new Error('Invalid token');
     }
 
     const username = webrtc.username;
@@ -44,12 +58,13 @@ class CustomVoiceClient extends EventTarget {
       wsUrl: webrtc.ws_url,
       sipDomain: webrtc.sip_domain,
       username,
-      hasToken: !!token,
+      authType: resolvedAuthType,
+      hasCredential: !!credential,
     });
     this.userAgent = new UserAgent({
       uri,
       authorizationUsername: username,
-      authorizationPassword: token || '',
+      authorizationPassword: credential || '',
       displayName: webrtc.display_name || username,
       transportOptions: { server: webrtc.ws_url },
     });
@@ -59,7 +74,8 @@ class CustomVoiceClient extends EventTarget {
     await this.registerer.register();
 
     this.webrtcConfig = webrtc;
-    this.token = token;
+    this.token = credential;
+    this.authType = resolvedAuthType;
     this.initialized = true;
     this.inboxId = inboxId;
 
@@ -117,6 +133,7 @@ class CustomVoiceClient extends EventTarget {
     this.registerer = null;
     this.webrtcConfig = null;
     this.token = null;
+    this.authType = 'jwt';
     this.initialized = false;
     this.inboxId = null;
   }
@@ -168,7 +185,7 @@ class CustomVoiceClient extends EventTarget {
   }
 
   extraHeaders() {
-    if (!this.token) return [];
+    if (this.authType !== 'jwt' || !this.token) return [];
     return [`Authorization: Bearer ${this.token}`];
   }
 }

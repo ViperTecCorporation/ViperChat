@@ -35,25 +35,27 @@ Este fork adiciona um provedor de voz **custom** que usa WebRTC/SIP, com suporte
    - **SIP Domain** (`sip_domain`)
    - **SIP Outbound Proxy** (opcional)
    - **SIP Transport** (`wss` ou `ws`)
-3) Transferência:
-   - **Transfer Mode**: `sip_refer` (padrão) ou `ari`.
-   - Se `ari`, informe **Transfer API URL** e **Transfer API Token**.
-4) JWT:
+3) Escolha o **tipo de autenticacao**:
+   - **JWT** (padrao) ou **Usuario/Senha** (recomendado para Issabel/Magnus/Asterisk).
+4) Transferência:
+    - **Transfer Mode**: `sip_refer` (padrão) ou `ari`.
+    - Se `ari`, informe **Transfer API URL** e **Transfer API Token**.
+5) JWT:
    - **Usar JWT do agente**: quando marcado, o token vem do agente (por inbox ou perfil).
    - Se desmarcado, informe **JWT Secret** (opcionalmente `iss`, `aud`, `ttl`) para gerar o token na própria inbox.
 
 ### Credenciais WebRTC por agente (por inbox)
 
 Em **Configurações > Inboxes > [sua inbox de voz] > Agentes**:
-- Configure **WebRTC Username** e **JWT** por agente.
+- Configure **WebRTC Username** e **JWT** ou **Senha** por agente.
 - Esses dados são salvos por inbox (ou seja, o mesmo agente pode ter credenciais diferentes em caixas distintas).
 
 **Fallback de credenciais**
 
 Ordem usada para buscar as credenciais:
 1) **Inbox Member** (credenciais salvas no agente da inbox).
-2) **Perfil do agente** (`custom_attributes` com `webrtc_username` e `webrtc_jwt`).
-3) **Token gerado pela inbox** (se `jwt_secret` estiver configurado).
+2) **Perfil do agente** (`custom_attributes` com `webrtc_username`, `webrtc_jwt` ou `webrtc_password`).
+3) **Token gerado pela inbox** (se `jwt_secret` estiver configurado e auth type = JWT).
 
 Se o `webrtc_username` não existir, o fallback final é o email do agente.
 

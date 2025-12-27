@@ -8,6 +8,7 @@
 #  inbox_id   :integer          not null
 #  user_id    :integer          not null
 #  webrtc_jwt :text
+#  webrtc_password :text
 #  webrtc_username :string
 #
 # Indexes
