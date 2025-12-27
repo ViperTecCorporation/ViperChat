@@ -5,6 +5,7 @@ import TwilioVoiceClient from 'dashboard/api/channel/voice/twilioVoiceClient';
 import CustomVoiceClient from 'dashboard/api/channel/voice/customVoiceClient';
 import { useCallsStore } from 'dashboard/stores/calls';
 import Timer from 'dashboard/helper/Timer';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
 export function useCallSession() {
   const callsStore = useCallsStore();
@@ -33,6 +34,15 @@ export function useCallSession() {
   );
 
   const handleDisconnect = () => callsStore.clearActiveCall();
+  const autoRegisterAttempted = ref(false);
+
+  const voiceInboxes = computed(() => {
+    const inboxes = store.getters['inboxes/getInboxes'] || [];
+    return inboxes.filter(
+      inbox =>
+        inbox.channel_type === INBOX_TYPES.VOICE && inbox.provider === 'custom'
+    );
+  });
 
   onMounted(() => {
     TwilioVoiceClient.addEventListener('call:disconnected', handleDisconnect);
@@ -44,6 +54,34 @@ export function useCallSession() {
     TwilioVoiceClient.removeEventListener('call:disconnected', handleDisconnect);
     CustomVoiceClient.removeEventListener('call:disconnected', handleDisconnect);
   });
+
+  const autoRegisterVoice = async inboxId => {
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[CallSession] autoRegisterVoice start', { inboxId });
+      await CustomVoiceClient.initializeDevice(inboxId);
+      // eslint-disable-next-line no-console
+      console.log('[CallSession] autoRegisterVoice success', { inboxId });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('[CallSession] autoRegisterVoice error', {
+        inboxId,
+        error,
+      });
+    }
+  };
+
+  watch(
+    voiceInboxes,
+    inboxes => {
+      if (autoRegisterAttempted.value) return;
+      const inbox = inboxes?.[0];
+      if (!inbox?.id) return;
+      autoRegisterAttempted.value = true;
+      autoRegisterVoice(inbox.id);
+    },
+    { immediate: true }
+  );
 
   const resolveInboxProvider = inboxId => {
     if (!inboxId) return 'twilio';
@@ -76,7 +114,11 @@ export function useCallSession() {
 
     isJoining.value = true;
     // eslint-disable-next-line no-console
-    console.log('[CallSession] joinCall start', { conversationId, inboxId, callSid });
+    console.log('[CallSession] joinCall start', {
+      conversationId,
+      inboxId,
+      callSid,
+    });
     try {
       const voiceClient = resolveVoiceClient(inboxId);
       const device = await voiceClient.initializeDevice(inboxId);

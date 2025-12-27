@@ -22,6 +22,12 @@ class CustomVoiceClient extends EventTarget {
   }
 
   async initializeDevice(inboxId) {
+    if (this.initialized && this.inboxId === inboxId && this.userAgent) {
+      // eslint-disable-next-line no-console
+      console.log('[CustomVoiceClient] reuseDevice', { inboxId });
+      return this.userAgent;
+    }
+
     this.destroyDevice();
 
     // eslint-disable-next-line no-console
