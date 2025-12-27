@@ -101,6 +101,7 @@ const closeMobileSidebar = () => {
                 @click="toggleBlock"
               />
               <VoiceCallButton
+                v-if="contactId && selectedContact?.phoneNumber"
                 :phone="selectedContact?.phoneNumber"
                 :contact-id="contactId"
                 :label="$t('CONTACT_PANEL.CALL')"

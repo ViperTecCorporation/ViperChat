@@ -51,7 +51,7 @@ class Channel::Voice < ApplicationRecord
         agent_id: agent_id
       )
     when 'custom'
-      Voice::Provider::Custom::Adapter.new(self).initiate_call(
+      Voice::Provider::Custom::Adapter.new(channel: self).initiate_call(
         to: to,
         conference_sid: conference_sid,
         agent_id: agent_id

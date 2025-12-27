@@ -359,7 +359,7 @@ export default {
           @click="startWavoipCall"
         />
         <VoiceCallButton
-          v-else
+          v-else-if="contact?.id && contact?.phone_number"
           :phone="contact.phone_number"
           :contact-id="contact.id"
           icon="i-ri-phone-fill"

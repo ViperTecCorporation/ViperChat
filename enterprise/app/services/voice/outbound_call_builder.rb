@@ -20,6 +20,7 @@ class Voice::OutboundCallBuilder
       "VOICE_OUTBOUND_CALL_BUILDER start account_id=#{account.id} inbox_id=#{inbox.id} contact_id=#{contact.id} user_id=#{user.id}"
     )
     timestamp = current_timestamp
+    log_channel_context
 
     ActiveRecord::Base.transaction do
       contact_inbox = ensure_contact_inbox!
@@ -38,6 +39,12 @@ class Voice::OutboundCallBuilder
       build_voice_message!(conversation, call_sid, conference_sid, timestamp)
       { conversation: conversation, call_sid: call_sid }
     end
+  rescue StandardError => e
+    Rails.logger.error(
+      "VOICE_OUTBOUND_CALL_BUILDER error class=#{e.class} message=#{e.message} " \
+      "backtrace=#{e.backtrace&.first(12)}"
+    )
+    raise
   end
 
   private
@@ -104,5 +111,16 @@ class Voice::OutboundCallBuilder
 
   def current_time
     @current_time ||= Time.zone.now
+  end
+
+  def log_channel_context
+    channel = inbox&.channel
+    Rails.logger.info(
+      "VOICE_OUTBOUND_CALL_BUILDER channel " \
+      "channel_class=#{channel&.class} " \
+      "channel_id=#{channel&.id} " \
+      "provider=#{channel&.provider} " \
+      "provider_config_class=#{channel&.provider_config.class}"
+    )
   end
 end

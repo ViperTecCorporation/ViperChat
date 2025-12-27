@@ -46,6 +46,7 @@ export default {
         sipDomain: '',
         sipOutboundProxy: '',
         sipTransport: 'wss',
+        authType: 'jwt',
         transferMode: 'sip_refer',
         transferApiUrl: '',
         transferApiToken: '',
@@ -93,6 +94,7 @@ export default {
           sipDomain: config.sip_domain || '',
           sipOutboundProxy: config.sip_outbound_proxy || '',
           sipTransport: config.sip_transport || 'wss',
+          authType: config.auth_type || 'jwt',
           transferMode: config.transfer_mode || 'sip_refer',
           transferApiUrl: config.transfer_api_url || '',
           transferApiToken: '',
@@ -152,6 +154,7 @@ export default {
           sip_domain: this.customVoiceConfig.sipDomain,
           sip_outbound_proxy: this.customVoiceConfig.sipOutboundProxy,
           sip_transport: this.customVoiceConfig.sipTransport,
+          auth_type: this.customVoiceConfig.authType,
           transfer_mode: this.customVoiceConfig.transferMode,
           transfer_api_url:
             this.customVoiceConfig.transferMode === 'ari'
@@ -161,20 +164,23 @@ export default {
             this.customVoiceConfig.transferMode === 'ari'
               ? this.customVoiceConfig.transferApiToken
               : '',
-          use_agent_jwt: this.customVoiceConfig.useAgentJwt,
-          jwt_issuer: this.customVoiceConfig.useAgentJwt
-            ? ''
-            : this.customVoiceConfig.jwtIssuer,
-          jwt_audience: this.customVoiceConfig.useAgentJwt
-            ? ''
-            : this.customVoiceConfig.jwtAudience,
-          jwt_secret: this.customVoiceConfig.useAgentJwt
-            ? ''
-            : this.customVoiceConfig.jwtSecret,
-          jwt_ttl: this.customVoiceConfig.useAgentJwt
-            ? ''
-            : this.customVoiceConfig.jwtTtl,
         };
+
+        if (this.customVoiceConfig.authType === 'jwt') {
+          config.use_agent_jwt = this.customVoiceConfig.useAgentJwt;
+          config.jwt_issuer = this.customVoiceConfig.useAgentJwt
+            ? ''
+            : this.customVoiceConfig.jwtIssuer;
+          config.jwt_audience = this.customVoiceConfig.useAgentJwt
+            ? ''
+            : this.customVoiceConfig.jwtAudience;
+          config.jwt_secret = this.customVoiceConfig.useAgentJwt
+            ? ''
+            : this.customVoiceConfig.jwtSecret;
+          config.jwt_ttl = this.customVoiceConfig.useAgentJwt
+            ? ''
+            : this.customVoiceConfig.jwtTtl;
+        }
 
         const providerConfig = Object.fromEntries(
           Object.entries(config).filter(([, value]) => value !== '')
@@ -323,6 +329,20 @@ export default {
             </select>
           </label>
           <label class="flex flex-col gap-1 text-sm text-n-slate-11">
+            {{ $t('INBOX_MGMT.ADD.VOICE.CUSTOM.AUTH_TYPE.LABEL') }}
+            <select
+              v-model="customVoiceConfig.authType"
+              class="rounded-md border-n-strong"
+            >
+              <option value="jwt">
+                {{ $t('INBOX_MGMT.ADD.VOICE.CUSTOM.AUTH_TYPE.JWT') }}
+              </option>
+              <option value="password">
+                {{ $t('INBOX_MGMT.ADD.VOICE.CUSTOM.AUTH_TYPE.PASSWORD') }}
+              </option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm text-n-slate-11">
             {{ $t('INBOX_MGMT.ADD.VOICE.CUSTOM.TRANSFER_MODE.LABEL') }}
             <select
               v-model="customVoiceConfig.transferMode"
@@ -359,38 +379,42 @@ export default {
               "
             />
           </template>
-          <label class="flex items-center gap-2 text-sm text-n-slate-11">
-            <input v-model="customVoiceConfig.useAgentJwt" type="checkbox" />
-            {{ $t('INBOX_MGMT.ADD.VOICE.CUSTOM.USE_AGENT_JWT') }}
-          </label>
-          <template v-if="!customVoiceConfig.useAgentJwt">
-            <Input
-              v-model="customVoiceConfig.jwtIssuer"
-              :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_ISSUER.LABEL')"
-              :placeholder="
-                $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_ISSUER.PLACEHOLDER')
-              "
-            />
-            <Input
-              v-model="customVoiceConfig.jwtAudience"
-              :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_AUDIENCE.LABEL')"
-              :placeholder="
-                $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_AUDIENCE.PLACEHOLDER')
-              "
-            />
-            <Input
-              v-model="customVoiceConfig.jwtSecret"
-              type="password"
-              :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_SECRET.LABEL')"
-              :placeholder="
-                $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_SECRET.PLACEHOLDER')
-              "
-            />
-            <Input
-              v-model="customVoiceConfig.jwtTtl"
-              :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_TTL.LABEL')"
-              :placeholder="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_TTL.PLACEHOLDER')"
-            />
+          <template v-if="customVoiceConfig.authType === 'jwt'">
+            <label class="flex items-center gap-2 text-sm text-n-slate-11">
+              <input v-model="customVoiceConfig.useAgentJwt" type="checkbox" />
+              {{ $t('INBOX_MGMT.ADD.VOICE.CUSTOM.USE_AGENT_JWT') }}
+            </label>
+            <template v-if="!customVoiceConfig.useAgentJwt">
+              <Input
+                v-model="customVoiceConfig.jwtIssuer"
+                :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_ISSUER.LABEL')"
+                :placeholder="
+                  $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_ISSUER.PLACEHOLDER')
+                "
+              />
+              <Input
+                v-model="customVoiceConfig.jwtAudience"
+                :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_AUDIENCE.LABEL')"
+                :placeholder="
+                  $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_AUDIENCE.PLACEHOLDER')
+                "
+              />
+              <Input
+                v-model="customVoiceConfig.jwtSecret"
+                type="password"
+                :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_SECRET.LABEL')"
+                :placeholder="
+                  $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_SECRET.PLACEHOLDER')
+                "
+              />
+              <Input
+                v-model="customVoiceConfig.jwtTtl"
+                :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_TTL.LABEL')"
+                :placeholder="
+                  $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_TTL.PLACEHOLDER')
+                "
+              />
+            </template>
           </template>
           <div>
             <NextButton

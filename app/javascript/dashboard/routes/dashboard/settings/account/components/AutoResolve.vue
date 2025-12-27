@@ -139,6 +139,7 @@ const toggleAutoResolve = async () => {
 
     <form class="grid gap-5" @submit.prevent="handleSubmit">
       <WithLabel
+        name="auto-resolve-duration"
         :label="t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE.DURATION.LABEL')"
         :help-message="t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE.DURATION.HELP')"
       >
@@ -154,6 +155,7 @@ const toggleAutoResolve = async () => {
         </div>
       </WithLabel>
       <WithLabel
+        name="auto-resolve-message"
         :label="t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE.MESSAGE.LABEL')"
         :help-message="t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE.MESSAGE.HELP')"
       >
@@ -165,7 +167,10 @@ const toggleAutoResolve = async () => {
           "
         />
       </WithLabel>
-      <WithLabel :label="t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE.PREFERENCES')">
+      <WithLabel
+        name="auto-resolve-preferences"
+        :label="t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE.PREFERENCES')"
+      >
         <div
           class="rounded-xl border border-n-weak bg-n-solid-1 w-full text-sm text-n-slate-12 divide-y divide-n-weak"
         >
