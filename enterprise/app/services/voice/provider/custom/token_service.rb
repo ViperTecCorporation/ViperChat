@@ -53,7 +53,8 @@ class Voice::Provider::Custom::TokenService
       sip_outbound_proxy: config['sip_outbound_proxy'],
       sip_transport: config['sip_transport'] || 'wss',
       username: resolved_username,
-      display_name: user.display_name.presence || user.name
+      display_name: user.display_name.presence || user.name,
+      ice_servers: ice_servers_config
     }.compact
   end
 
@@ -107,6 +108,28 @@ class Voice::Provider::Custom::TokenService
     inbox_member&.webrtc_username.presence ||
       user_custom_attributes['webrtc_username'].presence ||
       user.email
+  end
+
+  def ice_servers_config
+    servers = []
+
+    stun_urls = Array.wrap(config['stun_servers']).map(&:presence).compact
+    servers.concat(stun_urls.map { |url| { urls: url } })
+
+    Array.wrap(config['turn_servers']).each do |entry|
+      next if entry.blank?
+
+      turn = entry.with_indifferent_access
+      url = turn[:urls] || turn[:url]
+      next if url.blank?
+
+      server = { urls: url }
+      server[:username] = turn[:username] if turn[:username].present?
+      server[:credential] = turn[:credential] if turn[:credential].present?
+      servers << server
+    end
+
+    servers
   end
 
   def user_custom_attributes

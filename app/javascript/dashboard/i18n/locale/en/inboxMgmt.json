@@ -458,6 +458,22 @@
               "WSS": "WSS",
               "WS": "WS"
             },
+            "STUN_SERVERS": {
+              "LABEL": "STUN servers (one per line)",
+              "PLACEHOLDER": "stun:stun.l.google.com:19302\nstun:example.com:3478"
+            },
+            "TURN_URL": {
+              "LABEL": "TURN server URL",
+              "PLACEHOLDER": "turn:turn.example.com:3478"
+            },
+            "TURN_USERNAME": {
+              "LABEL": "TURN username",
+              "PLACEHOLDER": "turn-user"
+            },
+            "TURN_PASSWORD": {
+              "LABEL": "TURN password",
+              "PLACEHOLDER": "turn-password"
+            },
             "AUTH_TYPE": {
               "LABEL": "Auth type",
               "JWT": "JWT",

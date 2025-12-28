@@ -1,8 +1,19 @@
 class Api::V1::Accounts::Contacts::CallsController < Api::V1::Accounts::BaseController
-  before_action :contact
+  before_action :contact, only: [:create]
+  before_action :contact_from_phone, only: [:create_from_phone]
   before_action :voice_inbox
 
   def create
+    create_call
+  end
+
+  def create_from_phone
+    create_call
+  end
+
+  private
+
+  def create_call
     authorize contact, :show?
     authorize voice_inbox, :show?
 
@@ -33,10 +44,18 @@ class Api::V1::Accounts::Contacts::CallsController < Api::V1::Accounts::BaseCont
     }
   end
 
-  private
-
   def contact
     @contact ||= Current.account.contacts.find(params[:id])
+  end
+
+  def contact_from_phone
+    phone_number = params.require(:phone_number)
+    @contact = Current.account.contacts.find_or_create_by!(phone_number: phone_number) do |record|
+      record.name = phone_number if record.name.blank?
+    end
+    if @contact.name.blank? && phone_number.present?
+      @contact.update!(name: phone_number)
+    end
   end
 
   def voice_inbox

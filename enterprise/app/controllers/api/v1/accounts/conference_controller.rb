@@ -55,6 +55,83 @@ class Api::V1::Accounts::ConferenceController < Api::V1::Accounts::BaseControlle
     end
   end
 
+  def incoming
+    unless provider == 'custom'
+      render json: { error: 'Inbound calls supported only for custom voice provider' }, status: :unprocessable_entity and return
+    end
+
+    call_sid = params.require(:call_sid)
+    from_number = params.require(:from_number)
+
+    Rails.logger.info(
+      "VOICE_CONFERENCE_INCOMING " \
+      "account_id=#{Current.account.id} " \
+      "inbox_id=#{@voice_inbox.id} " \
+      "call_sid=#{call_sid} " \
+      "from_number=#{from_number}"
+    )
+
+    conversation = Voice::InboundCallBuilder.perform!(
+      account: Current.account,
+      inbox: @voice_inbox,
+      from_number: from_number,
+      call_sid: call_sid
+    )
+
+    Rails.logger.info(
+      "VOICE_CONFERENCE_INCOMING created " \
+      "account_id=#{Current.account.id} " \
+      "inbox_id=#{@voice_inbox.id} " \
+      "conversation_id=#{conversation.display_id} " \
+      "call_sid=#{call_sid}"
+    )
+
+    render json: {
+      status: 'success',
+      conversation_id: conversation.display_id,
+      inbox_id: @voice_inbox.id,
+      call_sid: call_sid
+    }
+  rescue ArgumentError => e
+    Rails.logger.warn(
+      "VOICE_CONFERENCE_INCOMING error " \
+      "account_id=#{Current.account.id} " \
+      "inbox_id=#{@voice_inbox&.id} " \
+      "error=#{e.message}"
+    )
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  def status
+    conversation = fetch_conversation_by_display_id
+    call_status = params.require(:call_status)
+    call_sid = params[:call_sid].presence || conversation.identifier
+    timestamp = params[:timestamp].presence&.to_i
+
+    if call_sid.blank?
+      render json: { error: 'call_sid required' }, status: :unprocessable_entity and return
+    end
+
+    Rails.logger.info(
+      "VOICE_CONFERENCE_STATUS " \
+      "account_id=#{Current.account.id} " \
+      "inbox_id=#{@voice_inbox.id} " \
+      "conversation_id=#{conversation.display_id} " \
+      "call_sid=#{call_sid} " \
+      "call_status=#{call_status} " \
+      "reason=#{params[:reason]}"
+    )
+
+    Voice::CallStatus::Manager.new(
+      conversation: conversation,
+      call_sid: call_sid
+    ).process_status_update(call_status, timestamp: timestamp)
+
+    render json: { status: 'success', call_status: call_status }
+  rescue ActionController::ParameterMissing => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   def destroy
     conversation = fetch_conversation_by_display_id
     Rails.logger.info(

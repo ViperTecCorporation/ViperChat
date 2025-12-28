@@ -104,9 +104,17 @@ export default {
         ...(socialProfiles || {}),
       };
     },
+    displayName() {
+      return (
+        this.contact.name ||
+        this.contact.phone_number ||
+        this.contact.identifier ||
+        this.$t('CONTACT_PANEL.NOT_AVAILABLE')
+      );
+    },
     // Delete Modal
     confirmDeleteMessage() {
-      return ` ${this.contact.name}?`;
+      return ` ${this.displayName}?`;
     },
   },
   watch: {
@@ -253,7 +261,7 @@ export default {
         <Avatar
           v-if="showAvatar"
           :src="contact.thumbnail"
-          :name="contact.name"
+          :name="displayName"
           :status="contact.availability_status"
           :size="48"
           hide-offline-status
@@ -266,7 +274,7 @@ export default {
           <h3
             class="flex-shrink max-w-full min-w-0 my-0 text-base capitalize break-words text-n-slate-12"
           >
-            {{ contact.name }}
+            {{ displayName }}
           </h3>
           <div class="flex flex-row items-center gap-2">
             <span

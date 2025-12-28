@@ -19,6 +19,18 @@ const CommandBar = defineAsyncComponent(
 const FloatingCallWidget = defineAsyncComponent(
   () => import('dashboard/components/widgets/FloatingCallWidget.vue')
 );
+const VoicePermissionsModal = defineAsyncComponent(
+  () => import('dashboard/components/widgets/VoicePermissionsModal.vue')
+);
+const VoiceDialerFab = defineAsyncComponent(
+  () => import('dashboard/components/widgets/VoiceDialerFab.vue')
+);
+const VoiceAudioPlaybackModal = defineAsyncComponent(
+  () => import('dashboard/components/widgets/VoiceAudioPlaybackModal.vue')
+);
+const VoiceAutoRegister = defineAsyncComponent(
+  () => import('dashboard/components/widgets/VoiceAutoRegister.vue')
+);
 
 import CopilotLauncher from 'dashboard/components-next/copilot/CopilotLauncher.vue';
 import CopilotContainer from 'dashboard/components/copilot/CopilotContainer.vue';
@@ -36,6 +48,10 @@ export default {
     CopilotLauncher,
     CopilotContainer,
     FloatingCallWidget,
+    VoicePermissionsModal,
+    VoiceDialerFab,
+    VoiceAudioPlaybackModal,
+    VoiceAutoRegister,
     MobileSidebarLauncher,
   },
   setup() {
@@ -160,6 +176,10 @@ export default {
           @toggle="toggleMobileSidebar"
         />
         <CopilotContainer />
+        <VoiceAutoRegister />
+        <VoiceDialerFab />
+        <VoiceAudioPlaybackModal />
+        <VoicePermissionsModal />
         <FloatingCallWidget v-if="hasActiveCall || hasIncomingCall" />
       </template>
       <AddAccountModal

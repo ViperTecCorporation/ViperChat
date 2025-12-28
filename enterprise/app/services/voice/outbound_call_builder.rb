@@ -13,6 +13,9 @@ class Voice::OutboundCallBuilder
   end
 
   def perform!
+    if contact.name.blank? && contact.phone_number.present?
+      contact.update!(name: contact.phone_number)
+    end
     raise ArgumentError, 'Contact phone number required' if contact.phone_number.blank?
     raise ArgumentError, 'Agent required' if user.blank?
 
@@ -79,6 +82,7 @@ class Voice::OutboundCallBuilder
       'call_status' => 'ringing',
       'agent_id' => user.id,
       'conference_sid' => conference_sid,
+      'voice_inbox_id' => inbox.id,
       'meta' => { 'initiated_at' => timestamp }
     }
 
@@ -96,6 +100,7 @@ class Voice::OutboundCallBuilder
       payload: {
         call_sid: call_sid,
         status: 'ringing',
+        voice_inbox_id: inbox.id,
         conference_sid: conference_sid,
         from_number: inbox.channel&.phone_number,
         to_number: contact.phone_number

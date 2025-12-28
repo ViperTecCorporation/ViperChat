@@ -35,9 +35,13 @@ class Voice::InboundCallBuilder
   private
 
   def ensure_contact!
-    account.contacts.find_or_create_by!(phone_number: from_number) do |record|
+    contact = account.contacts.find_or_create_by!(phone_number: from_number) do |record|
       record.name = from_number if record.name.blank?
     end
+    if contact.name.blank? && from_number.present?
+      contact.update!(name: from_number)
+    end
+    contact
   end
 
   def ensure_contact_inbox!(contact)
@@ -70,6 +74,7 @@ class Voice::InboundCallBuilder
       'call_direction' => 'inbound',
       'call_status' => 'ringing',
       'conference_sid' => Voice::Conference::Name.for(conversation),
+      'voice_inbox_id' => inbox.id,
       'meta' => { 'initiated_at' => timestamp }
     }
 
@@ -87,6 +92,7 @@ class Voice::InboundCallBuilder
       payload: {
         call_sid: call_sid,
         status: 'ringing',
+        voice_inbox_id: inbox.id,
         conference_sid: conversation.additional_attributes['conference_sid'],
         from_number: from_number,
         to_number: inbox.channel&.phone_number

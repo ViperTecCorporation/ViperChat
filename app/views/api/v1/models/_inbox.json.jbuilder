@@ -147,7 +147,9 @@ if resource.channel_type == 'Channel::Voice'
       'sip_domain',
       'sip_outbound_proxy',
       'sip_transport',
-      'transfer_mode'
+      'transfer_mode',
+      'stun_servers',
+      'turn_servers'
     )
     json.provider_config safe_config
   end

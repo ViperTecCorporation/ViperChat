@@ -189,6 +189,7 @@ Rails.application.routes.draw do
               resources :labels, only: [:create, :index]
               resources :notes
               post :call, on: :member, to: 'calls#create' if ChatwootApp.enterprise?
+              post :call, on: :collection, to: 'calls#create_from_phone' if ChatwootApp.enterprise?
             end
           end
           resources :csat_survey_responses, only: [:index] do
@@ -214,12 +215,14 @@ Rails.application.routes.draw do
             delete :avatar, on: :member
             post :sync_templates, on: :member
             get :health, on: :member
-            if ChatwootApp.enterprise?
-              resource :conference, only: %i[create destroy], controller: 'conference' do
-                get :token, on: :member
-                post :transfer, on: :member
+              if ChatwootApp.enterprise?
+                resource :conference, only: %i[create destroy], controller: 'conference' do
+                  get :token, on: :member
+                  post :transfer, on: :member
+                  post :incoming, on: :member
+                  post :status, on: :member
+                end
               end
-            end
 
             resource :csat_template, only: [:show, :create], controller: 'inbox_csat_templates'
           end

@@ -53,6 +53,13 @@ class ContactAPI extends ApiClient {
     });
   }
 
+  initiateCallByPhone(phoneNumber, inboxId) {
+    return axios.post(`${this.url}/call`, {
+      phone_number: phoneNumber,
+      inbox_id: inboxId,
+    });
+  }
+
   updateContactLabels(contactId, labels) {
     return axios.post(`${this.url}/${contactId}/labels`, { labels });
   }

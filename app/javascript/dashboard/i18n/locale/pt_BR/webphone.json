@@ -19,6 +19,21 @@
     "ALL_INSTANCE_BUSY": "Todas as linhas estão ocupadas",
     "CONTACT_INVALID": "Contato não existe no Whatsapp",
     "CALL_LIMIT": "Limite de ligações diários atingido",
-    "ERROR_TO_MADE_CALL": "Ocorreu um erro ao tentar ligar"
+    "ERROR_TO_MADE_CALL": "Ocorreu um erro ao tentar ligar",
+    "PERMISSIONS": {
+      "TITLE": "Ativar microfone e camera",
+      "DESCRIPTION": "Permita o acesso para receber e realizar chamadas de voz.",
+      "ALLOW": "Permitir acesso",
+      "NOT_NOW": "Agora nao",
+      "ERROR": "Nao foi possivel acessar o microfone. Libere a permissao no navegador."
+    },
+    "AUDIO_PLAYBACK": {
+      "TITLE": "Ativar audio do navegador",
+      "DESCRIPTION": "Clique em permitir para liberar o audio das chamadas.",
+      "ALLOW": "Ativar audio",
+      "NOT_NOW": "Agora nao",
+      "ERROR": "Nao foi possivel reproduzir o audio. Libere a permissao do navegador."
+    }
   }
 }
+

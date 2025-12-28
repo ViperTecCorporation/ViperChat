@@ -29,6 +29,34 @@ class VoiceAPI extends ApiClient {
       });
   }
 
+  initiateCallByPhone(phoneNumber, inboxId) {
+    // eslint-disable-next-line no-console
+    console.log('[VoiceAPI] initiateCallByPhone request', {
+      phoneNumber,
+      inboxId,
+    });
+    return ContactsAPI.initiateCallByPhone(phoneNumber, inboxId)
+      .then(r => {
+        const data = r.data;
+        // eslint-disable-next-line no-console
+        console.log('[VoiceAPI] initiateCallByPhone success', {
+          phoneNumber,
+          inboxId,
+          hasCallSid: !!data?.call_sid,
+        });
+        return data;
+      })
+      .catch(error => {
+        // eslint-disable-next-line no-console
+        console.error('[VoiceAPI] initiateCallByPhone error', {
+          phoneNumber,
+          inboxId,
+          error,
+        });
+        throw error;
+      });
+  }
+
   leaveConference(inboxId, conversationId) {
     // eslint-disable-next-line no-console
     console.log('[VoiceAPI] leaveConference request', { inboxId, conversationId });
@@ -83,6 +111,87 @@ class VoiceAPI extends ApiClient {
           inboxId,
           conversationId,
           callSid,
+          error,
+        });
+        throw error;
+      });
+  }
+
+  notifyIncomingCall({ inboxId, callSid, fromNumber }) {
+    // eslint-disable-next-line no-console
+    console.log('[VoiceAPI] notifyIncomingCall request', {
+      inboxId,
+      callSid,
+      fromNumber,
+    });
+    return axios
+      .post(`${this.baseUrl()}/inboxes/${inboxId}/conference/incoming`, {
+        call_sid: callSid,
+        from_number: fromNumber,
+      })
+      .then(r => {
+        const data = r.data;
+        // eslint-disable-next-line no-console
+        console.log('[VoiceAPI] notifyIncomingCall success', {
+          inboxId,
+          conversationId: data?.conversation_id,
+          callSid: data?.call_sid,
+        });
+        return data;
+      })
+      .catch(error => {
+        // eslint-disable-next-line no-console
+        console.error('[VoiceAPI] notifyIncomingCall error', {
+          inboxId,
+          callSid,
+          error,
+        });
+        throw error;
+      });
+  }
+
+  updateCallStatus({
+    conversationId,
+    inboxId,
+    callSid,
+    callStatus,
+    reason,
+    timestamp,
+  }) {
+    // eslint-disable-next-line no-console
+    console.log('[VoiceAPI] updateCallStatus request', {
+      inboxId,
+      conversationId,
+      callSid,
+      callStatus,
+      reason,
+    });
+    return axios
+      .post(`${this.baseUrl()}/inboxes/${inboxId}/conference/status`, {
+        conversation_id: conversationId,
+        call_sid: callSid,
+        call_status: callStatus,
+        reason,
+        timestamp,
+      })
+      .then(r => {
+        const data = r.data;
+        // eslint-disable-next-line no-console
+        console.log('[VoiceAPI] updateCallStatus success', {
+          inboxId,
+          conversationId,
+          callSid,
+          callStatus: data?.call_status,
+        });
+        return data;
+      })
+      .catch(error => {
+        // eslint-disable-next-line no-console
+        console.error('[VoiceAPI] updateCallStatus error', {
+          inboxId,
+          conversationId,
+          callSid,
+          callStatus,
           error,
         });
         throw error;

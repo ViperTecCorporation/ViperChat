@@ -5,7 +5,6 @@ import TwilioVoiceClient from 'dashboard/api/channel/voice/twilioVoiceClient';
 import CustomVoiceClient from 'dashboard/api/channel/voice/customVoiceClient';
 import { useCallsStore } from 'dashboard/stores/calls';
 import Timer from 'dashboard/helper/Timer';
-import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
 export function useCallSession() {
   const callsStore = useCallsStore();
@@ -15,6 +14,7 @@ export function useCallSession() {
   const durationTimer = new Timer(elapsed => {
     callDuration.value = elapsed;
   });
+  const joinTimeoutMs = 60000;
 
   const activeCall = computed(() => callsStore.activeCall);
   const incomingCalls = computed(() => callsStore.incomingCalls);
@@ -34,54 +34,72 @@ export function useCallSession() {
   );
 
   const handleDisconnect = () => callsStore.clearActiveCall();
-  const autoRegisterAttempted = ref(false);
+  const handleIncoming = event => {
+    const detail = event?.detail || {};
+    const { callSid, conversationId, inboxId } = detail;
+    if (!callSid || !conversationId) return;
 
-  const voiceInboxes = computed(() => {
-    const inboxes = store.getters['inboxes/getInboxes'] || [];
-    return inboxes.filter(
-      inbox =>
-        inbox.channel_type === INBOX_TYPES.VOICE && inbox.provider === 'custom'
-    );
-  });
+    callsStore.addCall({
+      callSid,
+      conversationId,
+      inboxId,
+      callDirection: 'inbound',
+    });
+  };
+  const handleInviteFailed = async event => {
+    const detail = event?.detail || {};
+    const { callSid, conversationId, inboxId, error } = detail;
+    if (!callSid || !conversationId || !inboxId) return;
+
+    // eslint-disable-next-line no-console
+    console.error('[CallSession] invite failed', {
+      callSid,
+      conversationId,
+      inboxId,
+      error,
+    });
+
+    try {
+      await VoiceAPI.updateCallStatus({
+        conversationId,
+        inboxId,
+        callSid,
+        callStatus: 'failed',
+        reason: error?.message || 'invite_failed',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+    } catch (statusError) {
+      // eslint-disable-next-line no-console
+      console.error('[CallSession] updateCallStatus failed', {
+        conversationId,
+        inboxId,
+        callSid,
+        error: statusError,
+      });
+    }
+
+    resolveVoiceClient(inboxId)?.endClientCall?.();
+    callsStore.removeCall(callSid);
+    durationTimer.stop();
+  };
 
   onMounted(() => {
     TwilioVoiceClient.addEventListener('call:disconnected', handleDisconnect);
     CustomVoiceClient.addEventListener('call:disconnected', handleDisconnect);
+    CustomVoiceClient.addEventListener('call:incoming', handleIncoming);
+    CustomVoiceClient.addEventListener('call:invite_failed', handleInviteFailed);
   });
 
   onUnmounted(() => {
     durationTimer.stop();
     TwilioVoiceClient.removeEventListener('call:disconnected', handleDisconnect);
     CustomVoiceClient.removeEventListener('call:disconnected', handleDisconnect);
+    CustomVoiceClient.removeEventListener('call:incoming', handleIncoming);
+    CustomVoiceClient.removeEventListener(
+      'call:invite_failed',
+      handleInviteFailed
+    );
   });
-
-  const autoRegisterVoice = async inboxId => {
-    try {
-      // eslint-disable-next-line no-console
-      console.log('[CallSession] autoRegisterVoice start', { inboxId });
-      await CustomVoiceClient.initializeDevice(inboxId);
-      // eslint-disable-next-line no-console
-      console.log('[CallSession] autoRegisterVoice success', { inboxId });
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn('[CallSession] autoRegisterVoice error', {
-        inboxId,
-        error,
-      });
-    }
-  };
-
-  watch(
-    voiceInboxes,
-    inboxes => {
-      if (autoRegisterAttempted.value) return;
-      const inbox = inboxes?.[0];
-      if (!inbox?.id) return;
-      autoRegisterAttempted.value = true;
-      autoRegisterVoice(inbox.id);
-    },
-    { immediate: true }
-  );
 
   const resolveInboxProvider = inboxId => {
     if (!inboxId) return 'twilio';
@@ -114,11 +132,7 @@ export function useCallSession() {
 
     isJoining.value = true;
     // eslint-disable-next-line no-console
-    console.log('[CallSession] joinCall start', {
-      conversationId,
-      inboxId,
-      callSid,
-    });
+    console.log('[CallSession] joinCall start', { conversationId, inboxId, callSid });
     try {
       const voiceClient = resolveVoiceClient(inboxId);
       const device = await voiceClient.initializeDevice(inboxId);
@@ -130,12 +144,59 @@ export function useCallSession() {
         callSid,
       });
 
+      const acceptedIncoming = await voiceClient.acceptIncomingCall?.({
+        callSid,
+        conversationId,
+        inboxId,
+      });
+
+      if (acceptedIncoming) {
+        callsStore.setCallActive(callSid);
+        durationTimer.start();
+        return { conferenceSid: joinResponse?.conference_sid };
+      }
+
       const target = joinResponse?.to || joinResponse?.conference_sid;
       if (!target) return null;
 
-      await voiceClient.joinClientCall({
+      const provider = resolveInboxProvider(inboxId);
+      if (provider === 'custom') {
+        voiceClient.joinClientCall({
+          to: target,
+          conversationId,
+          callSid,
+        });
+        callsStore.setCallActive(callSid);
+        durationTimer.start();
+        // eslint-disable-next-line no-console
+        console.log('[CallSession] joinCall initiated', {
+          conversationId,
+          inboxId,
+          callSid,
+          provider,
+          conferenceSid: joinResponse?.conference_sid,
+        });
+        return { conferenceSid: joinResponse?.conference_sid };
+      }
+
+      const joinPromise = voiceClient.joinClientCall({
         to: target,
         conversationId,
+        callSid,
+      });
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error('joinClientCall timeout'));
+        }, joinTimeoutMs);
+        joinPromise
+          .then(result => {
+            clearTimeout(timer);
+            resolve(result);
+          })
+          .catch(error => {
+            clearTimeout(timer);
+            reject(error);
+          });
       });
 
       callsStore.setCallActive(callSid);
@@ -152,6 +213,35 @@ export function useCallSession() {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to join call:', error);
+      const failureReason = error?.message || 'join_failed';
+      if (conversationId && inboxId && callSid) {
+        try {
+          await VoiceAPI.updateCallStatus({
+            conversationId,
+            inboxId,
+            callSid,
+            callStatus: 'failed',
+            reason: failureReason,
+            timestamp: Math.floor(Date.now() / 1000),
+          });
+        } catch (statusError) {
+          // eslint-disable-next-line no-console
+          console.error('[CallSession] updateCallStatus failed', {
+            conversationId,
+            inboxId,
+            callSid,
+            error: statusError,
+          });
+        }
+      }
+      const voiceClient = resolveVoiceClient(inboxId);
+      voiceClient?.endClientCall?.();
+      if (callSid) {
+        callsStore.removeCall(callSid);
+      } else {
+        callsStore.clearActiveCall();
+      }
+      durationTimer.stop();
       return null;
     } finally {
       isJoining.value = false;
@@ -168,7 +258,12 @@ export function useCallSession() {
       conversationId: call?.conversationId,
       inboxId,
     });
-    resolveVoiceClient(inboxId).endClientCall();
+    const voiceClient = resolveVoiceClient(inboxId);
+    if (typeof voiceClient.rejectIncomingCall === 'function') {
+      voiceClient.rejectIncomingCall({ callSid });
+    } else {
+      voiceClient.endClientCall();
+    }
     callsStore.dismissCall(callSid);
   };
 
@@ -206,6 +301,16 @@ export function useCallSession() {
     return response;
   };
 
+  const sendDtmf = ({ inboxId, digits }) => {
+    const voiceClient = resolveVoiceClient(inboxId);
+    const success = voiceClient?.sendDtmf?.(digits);
+    if (!success) {
+      // eslint-disable-next-line no-console
+      console.warn('[CallSession] sendDtmf failed', { inboxId, digits });
+    }
+    return success;
+  };
+
   const dismissCall = callSid => {
     // eslint-disable-next-line no-console
     console.log('[CallSession] dismissCall', { callSid });
@@ -229,5 +334,6 @@ export function useCallSession() {
     rejectIncomingCall,
     dismissCall,
     transferCall,
+    sendDtmf,
   };
 }

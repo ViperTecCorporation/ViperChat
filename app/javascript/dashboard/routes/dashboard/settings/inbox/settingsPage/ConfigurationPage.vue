@@ -46,6 +46,10 @@ export default {
         sipDomain: '',
         sipOutboundProxy: '',
         sipTransport: 'wss',
+        stunServers: '',
+        turnUrl: '',
+        turnUsername: '',
+        turnPassword: '',
         authType: 'jwt',
         transferMode: 'sip_refer',
         transferApiUrl: '',
@@ -94,6 +98,10 @@ export default {
           sipDomain: config.sip_domain || '',
           sipOutboundProxy: config.sip_outbound_proxy || '',
           sipTransport: config.sip_transport || 'wss',
+          stunServers: (config.stun_servers || []).join('\n'),
+          turnUrl: (config.turn_servers || [])[0]?.urls || '',
+          turnUsername: (config.turn_servers || [])[0]?.username || '',
+          turnPassword: (config.turn_servers || [])[0]?.credential || '',
           authType: config.auth_type || 'jwt',
           transferMode: config.transfer_mode || 'sip_refer',
           transferApiUrl: config.transfer_api_url || '',
@@ -154,6 +162,10 @@ export default {
           sip_domain: this.customVoiceConfig.sipDomain,
           sip_outbound_proxy: this.customVoiceConfig.sipOutboundProxy,
           sip_transport: this.customVoiceConfig.sipTransport,
+          stun_servers: this.customVoiceConfig.stunServers
+            .split('\n')
+            .map(item => item.trim())
+            .filter(item => item),
           auth_type: this.customVoiceConfig.authType,
           transfer_mode: this.customVoiceConfig.transferMode,
           transfer_api_url:
@@ -165,6 +177,21 @@ export default {
               ? this.customVoiceConfig.transferApiToken
               : '',
         };
+        if (this.customVoiceConfig.turnUrl) {
+          config.turn_servers = [
+            {
+              urls: this.customVoiceConfig.turnUrl.trim(),
+              username: this.customVoiceConfig.turnUsername || undefined,
+              credential: this.customVoiceConfig.turnPassword || undefined,
+            },
+          ].filter(server => server.urls);
+        }
+        if (Array.isArray(config.stun_servers) && !config.stun_servers.length) {
+          delete config.stun_servers;
+        }
+        if (Array.isArray(config.turn_servers) && !config.turn_servers.length) {
+          delete config.turn_servers;
+        }
 
         if (this.customVoiceConfig.authType === 'jwt') {
           config.use_agent_jwt = this.customVoiceConfig.useAgentJwt;
@@ -328,6 +355,34 @@ export default {
               </option>
             </select>
           </label>
+          <TextArea
+            v-model="customVoiceConfig.stunServers"
+            auto-height
+            :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.STUN_SERVERS.LABEL')"
+            :placeholder="
+              $t('INBOX_MGMT.ADD.VOICE.CUSTOM.STUN_SERVERS.PLACEHOLDER')
+            "
+          />
+          <Input
+            v-model="customVoiceConfig.turnUrl"
+            :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_URL.LABEL')"
+            :placeholder="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_URL.PLACEHOLDER')"
+          />
+          <Input
+            v-model="customVoiceConfig.turnUsername"
+            :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_USERNAME.LABEL')"
+            :placeholder="
+              $t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_USERNAME.PLACEHOLDER')
+            "
+          />
+          <Input
+            v-model="customVoiceConfig.turnPassword"
+            type="password"
+            :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_PASSWORD.LABEL')"
+            :placeholder="
+              $t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_PASSWORD.PLACEHOLDER')
+            "
+          />
           <label class="flex flex-col gap-1 text-sm text-n-slate-11">
             {{ $t('INBOX_MGMT.ADD.VOICE.CUSTOM.AUTH_TYPE.LABEL') }}
             <select

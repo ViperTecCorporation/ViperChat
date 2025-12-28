@@ -104,6 +104,19 @@ class TwilioVoiceClient extends EventTarget {
     return connection;
   }
 
+  sendDtmf(digits) {
+    if (!digits || !this.activeConnection) return false;
+    if (typeof this.activeConnection.sendDigits !== 'function') return false;
+
+    // eslint-disable-next-line no-console
+    console.log('[TwilioVoiceClient] sendDtmf', {
+      inboxId: this.inboxId,
+      digits,
+    });
+    this.activeConnection.sendDigits(digits.toString());
+    return true;
+  }
+
   onDisconnect = () => {
     // eslint-disable-next-line no-console
     console.log('[TwilioVoiceClient] disconnected', { inboxId: this.inboxId });

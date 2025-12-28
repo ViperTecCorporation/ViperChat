@@ -274,16 +274,32 @@
             "LABEL": "Proxy de saida SIP",
             "PLACEHOLDER": "sip:proxy.exemplo.com"
           },
-            "SIP_TRANSPORT": {
-              "LABEL": "Transporte SIP",
-              "WSS": "WSS",
-              "WS": "WS"
-            },
-            "AUTH_TYPE": {
-              "LABEL": "Tipo de autenticacao",
-              "JWT": "JWT",
-              "PASSWORD": "Usuario e senha"
-            },
+          "SIP_TRANSPORT": {
+            "LABEL": "Transporte SIP",
+            "WSS": "WSS",
+            "WS": "WS"
+          },
+          "STUN_SERVERS": {
+            "LABEL": "Servidores STUN (um por linha)",
+            "PLACEHOLDER": "stun:stun.l.google.com:19302\nstun:example.com:3478"
+          },
+          "TURN_URL": {
+            "LABEL": "URL do servidor TURN",
+            "PLACEHOLDER": "turn:turn.exemplo.com:3478"
+          },
+          "TURN_USERNAME": {
+            "LABEL": "Usuario do TURN",
+            "PLACEHOLDER": "usuario-turn"
+          },
+          "TURN_PASSWORD": {
+            "LABEL": "Senha do TURN",
+            "PLACEHOLDER": "senha-turn"
+          },
+          "AUTH_TYPE": {
+            "LABEL": "Tipo de autenticacao",
+            "JWT": "JWT",
+            "PASSWORD": "Usuario e senha"
+          },
             "TRANSFER_MODE": {
               "LABEL": "Modo de transferencia",
               "SIP_REFER": "SIP REFER",

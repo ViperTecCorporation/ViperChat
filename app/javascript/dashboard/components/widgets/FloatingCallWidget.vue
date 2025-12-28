@@ -1,11 +1,14 @@
 <script setup>
-import { watch, ref, computed } from 'vue';
+import { watch, ref, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useCallSession } from 'dashboard/composables/useCallSession';
 import WindowVisibilityHelper from 'dashboard/helper/AudioAlerts/WindowVisibilityHelper';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import InternalConversationsAPI from 'dashboard/api/internalConversations';
+import { useCallsStore } from 'dashboard/stores/calls';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
@@ -24,12 +27,21 @@ const {
   dismissCall,
   formattedCallDuration,
   transferCall,
+  sendDtmf,
 } = useCallSession();
 
+const callsStore = useCallsStore();
 const showTransferModal = ref(false);
 const transferQuery = ref('');
 const selectedAgent = ref(null);
 const isTransferring = ref(false);
+const showKeypadModal = ref(false);
+const keypadDisplay = ref('');
+const showInternalCallModal = ref(false);
+const isInternalCalling = ref(false);
+const selectedInternalAgentId = ref('');
+const selectedInternalVoiceInboxId = ref('');
+const selectedInternalInboxId = ref('');
 
 const getCallInfo = call => {
   const conversation = store.getters.getConversationById(call?.conversationId);
@@ -70,6 +82,34 @@ const assignableAgents = computed(() => {
   return store.getters['inboxAssignableAgents/getAssignableAgents'](`${inboxId}`);
 });
 
+const inboxes = computed(() => store.getters['inboxes/getInboxes'] || []);
+const internalInboxes = computed(() =>
+  inboxes.value.filter(inbox => inbox.channel_type === INBOX_TYPES.INTERNAL)
+);
+const voiceInboxes = computed(() =>
+  inboxes.value.filter(
+    inbox => inbox.channel_type === INBOX_TYPES.VOICE && inbox.provider === 'custom'
+  )
+);
+const allAgents = computed(() => store.getters['agents/getAgents'] || []);
+const currentUserId = computed(() => store.getters.getCurrentUserID);
+const internalCallAgents = computed(() =>
+  (allAgents.value || []).filter(agent => agent.id !== currentUserId.value)
+);
+const canInternalCall = computed(
+  () =>
+    internalCallAgents.value.length > 0 &&
+    voiceInboxes.value.length > 0 &&
+    internalInboxes.value.length > 0
+);
+
+const ringAudio = ref(null);
+const shouldRing = computed(
+  () =>
+    incomingCalls.value.some(call => call.callDirection === 'inbound') &&
+    !hasActiveCall.value
+);
+
 const filteredAgents = computed(() => {
   const query = transferQuery.value.toLowerCase();
   const currentUserId = store.getters.getCurrentUserID;
@@ -93,6 +133,119 @@ const openTransferModal = async () => {
 const closeTransferModal = () => {
   showTransferModal.value = false;
   selectedAgent.value = null;
+};
+
+const keypadButtons = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['*', '0', '#'],
+];
+const keypadDigits = computed(() => keypadButtons.flat());
+
+const openKeypadModal = () => {
+  keypadDisplay.value = '';
+  showKeypadModal.value = true;
+};
+
+const closeKeypadModal = () => {
+  showKeypadModal.value = false;
+};
+
+const handleKeypadInput = digit => {
+  const ctx = activeCallContext.value;
+  if (!ctx?.inboxId || !digit) return;
+  keypadDisplay.value += digit;
+  sendDtmf({ inboxId: ctx.inboxId, digits: digit });
+};
+
+const clearKeypad = () => {
+  keypadDisplay.value = '';
+};
+
+const setInternalCallDefaults = () => {
+  if (internalCallAgents.value.length === 1) {
+    selectedInternalAgentId.value = internalCallAgents.value[0].id;
+  }
+  if (voiceInboxes.value.length === 1) {
+    selectedInternalVoiceInboxId.value = voiceInboxes.value[0].id;
+  }
+  if (internalInboxes.value.length === 1) {
+    selectedInternalInboxId.value = internalInboxes.value[0].id;
+  }
+};
+
+const openInternalCallModal = () => {
+  if (!canInternalCall.value) return;
+  selectedInternalAgentId.value = '';
+  selectedInternalVoiceInboxId.value = '';
+  selectedInternalInboxId.value = '';
+  setInternalCallDefaults();
+  showInternalCallModal.value = true;
+};
+
+const closeInternalCallModal = () => {
+  showInternalCallModal.value = false;
+};
+
+const startInternalCall = async () => {
+  const internalInboxId =
+    selectedInternalInboxId.value ||
+    (internalInboxes.value.length === 1 ? internalInboxes.value[0]?.id : null);
+  const voiceInboxId =
+    selectedInternalVoiceInboxId.value ||
+    (voiceInboxes.value.length === 1 ? voiceInboxes.value[0]?.id : null);
+
+  if (
+    !selectedInternalAgentId.value ||
+    !voiceInboxId ||
+    !internalInboxId ||
+    isInternalCalling.value
+  ) {
+    return;
+  }
+
+  isInternalCalling.value = true;
+  try {
+    const internalConversation = await InternalConversationsAPI.create({
+      inbox_id: internalInboxId,
+      participant_ids: [selectedInternalAgentId.value],
+    });
+    if (internalConversation?.data) {
+      store.dispatch('addConversation', internalConversation.data);
+    }
+
+    const conversationId = internalConversation?.data?.id;
+    const voiceResponse = await InternalConversationsAPI.initiateVoiceCall({
+      conversationId,
+      voiceInboxId,
+      targetAgentId: selectedInternalAgentId.value,
+    });
+
+    const {
+      call_sid: callSid,
+      conversation_id: createdConversationId,
+      inbox_id: voiceInboxId,
+    } = voiceResponse?.data || {};
+
+    if (callSid && createdConversationId) {
+      callsStore.addCall({
+        callSid,
+        conversationId: createdConversationId,
+        inboxId: voiceInboxId,
+        callDirection: 'outbound',
+      });
+    }
+
+    useAlert(t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_INITIATED'));
+    closeInternalCallModal();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[VoiceWidget] internal call error', { error });
+    useAlert(t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_FAILED'));
+  } finally {
+    isInternalCalling.value = false;
+  }
 };
 
 const handleTransfer = async () => {
@@ -170,6 +323,36 @@ watch(
   },
   { immediate: true }
 );
+
+watch(
+  shouldRing,
+  async ring => {
+    if (!ringAudio.value) {
+      ringAudio.value = new Audio('/audio/dashboard/bell.mp3');
+      ringAudio.value.loop = true;
+    }
+
+    if (ring) {
+      try {
+        await ringAudio.value.play();
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.warn('[VoiceWidget] ringtone blocked', { error });
+      }
+    } else if (ringAudio.value) {
+      ringAudio.value.pause();
+      ringAudio.value.currentTime = 0;
+    }
+  },
+  { immediate: true }
+);
+
+onUnmounted(() => {
+  if (ringAudio.value) {
+    ringAudio.value.pause();
+    ringAudio.value.currentTime = 0;
+  }
+});
 </script>
 
 <template>
@@ -255,6 +438,22 @@ watch(
           <i class="text-lg text-white i-lucide-phone-forwarded" />
         </button>
         <button
+          v-if="hasActiveCall"
+          class="flex justify-center items-center w-10 h-10 bg-n-slate-9 hover:bg-n-slate-10 rounded-full transition-colors"
+          :title="$t('CONVERSATION.VOICE_WIDGET.DIALPAD_TITLE')"
+          @click="openKeypadModal"
+        >
+          <i class="text-lg text-white i-ph-keyboard-bold" />
+        </button>
+        <button
+          v-if="hasActiveCall && canInternalCall"
+          class="flex justify-center items-center w-10 h-10 bg-n-slate-9 hover:bg-n-slate-10 rounded-full transition-colors"
+          :title="$t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_BUTTON')"
+          @click="openInternalCallModal"
+        >
+          <i class="text-lg text-white i-ph-users-three-bold" />
+        </button>
+        <button
           class="flex justify-center items-center w-10 h-10 bg-n-ruby-9 hover:bg-n-ruby-10 rounded-full transition-colors"
           @click="
             hasActiveCall
@@ -315,6 +514,121 @@ watch(
             :disabled="!selectedAgent"
             :is-loading="isTransferring"
             @click="handleTransfer"
+          />
+        </div>
+      </div>
+    </woot-modal>
+
+    <woot-modal v-model:show="showKeypadModal" :on-close="closeKeypadModal">
+      <div class="flex flex-col gap-4 p-6 w-full max-w-xs">
+        <h3 class="text-base font-medium text-n-slate-12">
+          {{ $t('CONVERSATION.VOICE_WIDGET.DIALPAD_TITLE') }}
+        </h3>
+        <div class="text-center text-lg font-mono text-n-slate-12 min-h-[28px]">
+          {{ keypadDisplay || ' ' }}
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <button
+          v-for="digit in keypadDigits"
+          :key="digit"
+          class="h-12 rounded-lg bg-n-slate-3 text-n-slate-12 text-lg font-semibold hover:bg-n-slate-4 transition-colors"
+          @click="handleKeypadInput(digit)"
+        >
+          {{ digit }}
+          </button>
+        </div>
+        <div class="flex justify-end gap-2">
+          <NextButton
+            faded
+            slate
+            :label="$t('CONVERSATION.VOICE_WIDGET.DIALPAD_CLEAR')"
+            @click="clearKeypad"
+          />
+          <NextButton
+            :label="$t('CONVERSATION.VOICE_WIDGET.DIALPAD_CLOSE')"
+            @click="closeKeypadModal"
+          />
+        </div>
+      </div>
+    </woot-modal>
+
+    <woot-modal
+      v-model:show="showInternalCallModal"
+      :on-close="closeInternalCallModal"
+    >
+      <div class="flex flex-col gap-4 p-6 w-full max-w-md">
+        <h3 class="text-base font-medium text-n-slate-12">
+          {{ $t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_TITLE') }}
+        </h3>
+        <label class="flex flex-col gap-2">
+          <span class="text-sm text-n-slate-11">
+            {{ $t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_PICK_AGENT') }}
+          </span>
+          <select
+            v-model="selectedInternalAgentId"
+            class="rounded-md border border-n-strong bg-transparent px-3 py-2 text-sm"
+          >
+            <option disabled value="">--</option>
+            <option
+              v-for="agent in internalCallAgents"
+              :key="agent.id"
+              :value="agent.id"
+            >
+              {{ agent.name }}
+            </option>
+          </select>
+        </label>
+
+        <label v-if="voiceInboxes.length > 1" class="flex flex-col gap-2">
+          <span class="text-sm text-n-slate-11">
+            {{ $t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_PICK_INBOX') }}
+          </span>
+          <select
+            v-model="selectedInternalVoiceInboxId"
+            class="rounded-md border border-n-strong bg-transparent px-3 py-2 text-sm"
+          >
+            <option disabled value="">--</option>
+            <option
+              v-for="inbox in voiceInboxes"
+              :key="inbox.id"
+              :value="inbox.id"
+            >
+              {{ inbox.name }}
+            </option>
+          </select>
+        </label>
+
+        <label v-if="internalInboxes.length > 1" class="flex flex-col gap-2">
+          <span class="text-sm text-n-slate-11">
+            {{ $t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_PICK_INTERNAL_INBOX') }}
+          </span>
+          <select
+            v-model="selectedInternalInboxId"
+            class="rounded-md border border-n-strong bg-transparent px-3 py-2 text-sm"
+          >
+            <option disabled value="">--</option>
+            <option
+              v-for="inbox in internalInboxes"
+              :key="inbox.id"
+              :value="inbox.id"
+            >
+              {{ inbox.name }}
+            </option>
+          </select>
+        </label>
+
+        <div class="flex justify-end gap-2">
+          <NextButton
+            faded
+            slate
+            :label="$t('CONVERSATION.VOICE_WIDGET.TRANSFER_CANCEL')"
+            @click="closeInternalCallModal"
+          />
+          <NextButton
+            :label="$t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_START')"
+            :disabled="!selectedInternalAgentId || !selectedInternalVoiceInboxId"
+            :is-loading="isInternalCalling"
+            @click="startInternalCall"
           />
         </div>
       </div>
