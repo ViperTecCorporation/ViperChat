@@ -4,4 +4,5 @@
 Rails.application.config.permissions_policy do |f|
   # Allow WebRTC voice to request microphone access from same origin.
   f.microphone :self
+  f.camera :self
 end

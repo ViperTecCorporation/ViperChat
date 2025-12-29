@@ -98,6 +98,7 @@
       "DIALER_BACKSPACE": "Backspace",
       "DIALER_CLEAR": "Clear",
       "DIALER_EMPTY_NUMBER": "Enter a number to call",
+      "DIALER_INVALID_NUMBER": "Enter a valid phone number",
       "DIALER_FAILED": "Could not start the call",
       "DIALER_MOVE": "Reset position",
       "DIALER_HIDE": "Hide",

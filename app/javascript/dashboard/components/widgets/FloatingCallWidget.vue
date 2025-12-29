@@ -104,11 +104,21 @@ const canInternalCall = computed(
 );
 
 const ringAudio = ref(null);
-const shouldRing = computed(
-  () =>
-    incomingCalls.value.some(call => call.callDirection === 'inbound') &&
-    !hasActiveCall.value
-);
+const ringSource = ref('');
+const ringTone = computed(() => {
+  for (const call of callsStore.calls) {
+    const conversation = getCallInfo(call).conversation;
+    const status = conversation?.additional_attributes?.call_status;
+    if (status === 'ringing') {
+      if (call.callDirection === 'outbound') return 'outbound';
+      if (call.callDirection === 'inbound' && !hasActiveCall.value) return 'inbound';
+    }
+    if (!status && call.callDirection === 'inbound' && !hasActiveCall.value) {
+      return 'inbound';
+    }
+  }
+  return null;
+});
 
 const filteredAgents = computed(() => {
   const query = transferQuery.value.toLowerCase();
@@ -325,23 +335,35 @@ watch(
 );
 
 watch(
-  shouldRing,
-  async ring => {
+  ringTone,
+  async tone => {
     if (!ringAudio.value) {
-      ringAudio.value = new Audio('/audio/dashboard/bell.mp3');
+      ringAudio.value = new Audio();
       ringAudio.value.loop = true;
     }
 
-    if (ring) {
-      try {
-        await ringAudio.value.play();
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.warn('[VoiceWidget] ringtone blocked', { error });
-      }
-    } else if (ringAudio.value) {
+    if (!tone) {
       ringAudio.value.pause();
       ringAudio.value.currentTime = 0;
+      return;
+    }
+
+    const nextSource =
+      tone === 'outbound'
+        ? '/audio/dashboard/ringing.wav'
+        : '/audio/dashboard/ringtone.wav';
+
+    if (ringSource.value !== nextSource) {
+      ringSource.value = nextSource;
+      ringAudio.value.src = nextSource;
+      ringAudio.value.load();
+    }
+
+    try {
+      await ringAudio.value.play();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('[VoiceWidget] ringtone blocked', { error });
     }
   },
   { immediate: true }
@@ -520,7 +542,7 @@ onUnmounted(() => {
     </woot-modal>
 
     <woot-modal v-model:show="showKeypadModal" :on-close="closeKeypadModal">
-      <div class="flex flex-col gap-4 p-6 w-full max-w-xs">
+      <div class="flex flex-col gap-4 p-6 w-[14rem] max-w-full">
         <h3 class="text-base font-medium text-n-slate-12">
           {{ $t('CONVERSATION.VOICE_WIDGET.DIALPAD_TITLE') }}
         </h3>

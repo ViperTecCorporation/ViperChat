@@ -33,7 +33,15 @@ export function useCallSession() {
     { immediate: true }
   );
 
-  const handleDisconnect = () => callsStore.clearActiveCall();
+    const handleDisconnect = event => {
+      const detail = event?.detail || {};
+      const { callSid } = detail;
+      if (callSid) {
+        callsStore.removeCall(callSid);
+        return;
+      }
+      callsStore.clearActiveCall();
+    };
   const handleIncoming = event => {
     const detail = event?.detail || {};
     const { callSid, conversationId, inboxId } = detail;

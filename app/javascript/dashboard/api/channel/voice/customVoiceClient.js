@@ -6,7 +6,8 @@ import {
 } from 'sip.js';
 import VoiceAPI from './voiceAPIClient';
 
-const createCallDisconnectedEvent = () => new CustomEvent('call:disconnected');
+const createCallDisconnectedEvent = detail =>
+  new CustomEvent('call:disconnected', { detail });
 const createIncomingCallEvent = detail =>
   new CustomEvent('call:incoming', { detail });
 const createAudioBlockedEvent = detail =>
@@ -167,6 +168,11 @@ class CustomVoiceClient extends EventTarget {
       extraHeaders: this.extraHeaders(),
     });
 
+    this.setSessionContext(inviter, {
+      callSid,
+      conversationId,
+      inboxId: this.inboxId,
+    });
     this.activeSession = inviter;
     this.bindSession(inviter);
 
@@ -281,15 +287,108 @@ class CustomVoiceClient extends EventTarget {
         inboxId: this.inboxId,
         state,
       });
+      session.__cwLastState = state;
+      if (state === SessionState.Established) {
+        session.__cwWasEstablished = true;
+      }
       if (state === SessionState.Terminated) {
         this.activeSession = null;
-        this.dispatchEvent(createCallDisconnectedEvent());
+        this.handleSessionTerminated(session);
+        this.dispatchEvent(
+          createCallDisconnectedEvent({
+            inboxId: session.__cwInboxId,
+            callSid: session.__cwCallSid,
+            conversationId: session.__cwConversationId,
+            status: session.__cwWasEstablished ? 'completed' : 'failed',
+          })
+        );
       }
       if (state === SessionState.Established) {
+        const handler = session.sessionDescriptionHandler;
+        const peerConnection = handler?.peerConnection;
+        this.handleSessionEstablished(session);
+        if (peerConnection && this.remoteAudio) {
+          peerConnection.getReceivers().forEach(receiver => {
+            const track =
+              receiver.track?.readyState === 'live' ? receiver.track : null;
+            if (track && track.kind === 'audio') {
+              this.remoteAudio.srcObject = new MediaStream([track]);
+              this.requestRemoteAudioPlayback('remote-track-established').catch(
+                () => {}
+              );
+              // eslint-disable-next-line no-console
+              console.log('[CustomVoiceClient] remoteStream attached', {
+                inboxId: this.inboxId,
+                hasStream: true,
+                tracks: [{ kind: track.kind, id: track.id }],
+                source: 'receiver',
+              });
+            }
+          });
+        }
         this.requestRemoteAudioPlayback('established').catch(() => {});
       }
     });
     this.attachRemoteStream(session);
+  }
+
+  async handleSessionEstablished(session) {
+    if (session.__cwInProgressReported) return;
+    const callSid = session.__cwCallSid;
+    const conversationId = session.__cwConversationId;
+    const inboxId = session.__cwInboxId || this.inboxId;
+    if (!callSid || !conversationId || !inboxId) return;
+
+    session.__cwInProgressReported = true;
+    try {
+      await VoiceAPI.updateCallStatus({
+        conversationId,
+        inboxId,
+        callSid,
+        callStatus: 'in-progress',
+        reason: 'sip_session_established',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[CustomVoiceClient] updateCallStatus failed', {
+        inboxId,
+        callSid,
+        conversationId,
+        callStatus: 'in-progress',
+        error,
+      });
+    }
+  }
+
+  async handleSessionTerminated(session) {
+    if (session.__cwStatusReported) return;
+    const callSid = session.__cwCallSid;
+    const conversationId = session.__cwConversationId;
+    const inboxId = session.__cwInboxId || this.inboxId;
+    if (!callSid || !conversationId || !inboxId) return;
+
+    const callStatus = session.__cwWasEstablished ? 'completed' : 'failed';
+    session.__cwStatusReported = true;
+    try {
+      await VoiceAPI.updateCallStatus({
+        conversationId,
+        inboxId,
+        callSid,
+        callStatus,
+        reason: 'sip_session_terminated',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[CustomVoiceClient] updateCallStatus failed', {
+        inboxId,
+        callSid,
+        conversationId,
+        callStatus,
+        error,
+      });
+    }
   }
 
   attachRemoteStream(session) {
@@ -298,10 +397,35 @@ class CustomVoiceClient extends EventTarget {
     const peerConnection = handler.peerConnection;
     if (!peerConnection) return;
 
+    peerConnection.addEventListener('iceconnectionstatechange', () => {
+      // eslint-disable-next-line no-console
+      console.log('[CustomVoiceClient] iceConnectionState', {
+        inboxId: this.inboxId,
+        state: peerConnection.iceConnectionState,
+      });
+    });
+
+    peerConnection.addEventListener('connectionstatechange', () => {
+      // eslint-disable-next-line no-console
+      console.log('[CustomVoiceClient] connectionState', {
+        inboxId: this.inboxId,
+        state: peerConnection.connectionState,
+      });
+    });
+
+    peerConnection.addEventListener('signalingstatechange', () => {
+      // eslint-disable-next-line no-console
+      console.log('[CustomVoiceClient] signalingState', {
+        inboxId: this.inboxId,
+        state: peerConnection.signalingState,
+      });
+    });
+
     const handleStream = event => {
       const stream =
         event.streams?.[0] || (event.track ? new MediaStream([event.track]) : null);
       if (!stream) return;
+      if (event.track && event.track.kind !== 'audio') return;
       this.remoteAudio.srcObject = stream;
       this.requestRemoteAudioPlayback('remote-track').catch(() => {});
       // eslint-disable-next-line no-console
@@ -309,17 +433,11 @@ class CustomVoiceClient extends EventTarget {
         inboxId: this.inboxId,
         hasStream: true,
         tracks: stream.getTracks().map(t => ({ kind: t.kind, id: t.id })),
+        source: 'track',
       });
     };
 
     peerConnection.addEventListener('track', handleStream);
-    peerConnection.getReceivers().forEach(receiver => {
-      const track = receiver.track?.readyState === 'live' ? receiver.track : null;
-      if (track) {
-        this.remoteAudio.srcObject = new MediaStream([track]);
-        this.requestRemoteAudioPlayback('remote-track-initial').catch(() => {});
-      }
-    });
   }
 
   ensureRemoteAudioElement() {
@@ -469,9 +587,14 @@ class CustomVoiceClient extends EventTarget {
   async handleIncomingInvite(invitation) {
     const request = invitation?.request;
     const callSid = request?.callId;
-    const fromNumber = request?.from?.uri?.user || request?.from?.displayName;
+    const fromNumber =
+      request?.from?.uri?.user ||
+      request?.from?.displayName ||
+      request?.from?.uri?.toString?.() ||
+      request?.from?.toString?.() ||
+      callSid;
 
-    if (!callSid || !fromNumber || !this.inboxId) {
+    if (!callSid || !this.inboxId) {
       // eslint-disable-next-line no-console
       console.error('[CustomVoiceClient] incomingInvite invalid', {
         inboxId: this.inboxId,
@@ -495,7 +618,7 @@ class CustomVoiceClient extends EventTarget {
     this.pendingInvites.set(callSid, { invitation });
     invitation.stateChange.addListener(state => {
       if (state === SessionState.Terminated) {
-        this.pendingInvites.delete(callSid);
+        this.handlePendingInviteTerminated(callSid);
       }
     });
 
@@ -521,6 +644,11 @@ class CustomVoiceClient extends EventTarget {
       } else {
         this.pendingInvites.set(callSid, { invitation, conversationId });
       }
+      this.setSessionContext(invitation, {
+        callSid: resolvedCallSid,
+        conversationId,
+        inboxId: this.inboxId,
+      });
 
       if (conversationId) {
         this.dispatchEvent(
@@ -557,6 +685,12 @@ class CustomVoiceClient extends EventTarget {
 
     this.pendingInvites.delete(callSid);
     this.activeSession = entry.invitation;
+    this.setSessionContext(entry.invitation, {
+      callSid,
+      conversationId: entry.conversationId,
+      inboxId: this.inboxId,
+    });
+    entry.invitation.__cwAccepted = true;
     this.bindSession(entry.invitation);
 
     try {
@@ -573,6 +707,58 @@ class CustomVoiceClient extends EventTarget {
       this.activeSession = null;
       return false;
     }
+  }
+
+  async handlePendingInviteTerminated(callSid) {
+    const entry = this.pendingInvites.get(callSid);
+    if (!entry) return;
+    const invitation = entry.invitation;
+    this.pendingInvites.delete(callSid);
+    if (invitation?.__cwAccepted) return;
+    if (invitation?.__cwStatusReported) return;
+
+    const conversationId =
+      invitation?.__cwConversationId || entry.conversationId;
+    const inboxId = invitation?.__cwInboxId || this.inboxId;
+    const resolvedCallSid = invitation?.__cwCallSid || callSid;
+    if (!conversationId || !inboxId || !resolvedCallSid) return;
+
+    invitation.__cwStatusReported = true;
+    try {
+      await VoiceAPI.updateCallStatus({
+        conversationId,
+        inboxId,
+        callSid: resolvedCallSid,
+        callStatus: 'no-answer',
+        reason: 'incoming_invite_terminated',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[CustomVoiceClient] updateCallStatus failed', {
+        inboxId,
+        callSid: resolvedCallSid,
+        conversationId,
+        callStatus: 'no-answer',
+        error,
+      });
+    }
+
+    this.dispatchEvent(
+      createCallDisconnectedEvent({
+        inboxId,
+        callSid: resolvedCallSid,
+        conversationId,
+        status: 'no-answer',
+      })
+    );
+  }
+
+  setSessionContext(session, { callSid, conversationId, inboxId }) {
+    session.__cwCallSid = callSid;
+    session.__cwConversationId = conversationId;
+    session.__cwInboxId = inboxId;
+    session.__cwWasEstablished = false;
   }
 
   rejectIncomingCall({ callSid }) {

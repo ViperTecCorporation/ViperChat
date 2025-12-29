@@ -2,6 +2,7 @@
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
+import { parsePhoneNumber } from 'libphonenumber-js';
 import { useAlert } from 'dashboard/composables';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import VoiceAPI from 'dashboard/api/channel/voice/voiceAPIClient';
@@ -20,6 +21,54 @@ const dialNumber = ref('');
 const selectedInboxId = ref('');
 const showMenu = ref(false);
 const isHidden = ref(false);
+
+const resolveRegionFromLocale = locale => {
+  if (!locale) return null;
+  const parts = locale.split(/[-_]/);
+  if (parts.length < 2) return null;
+  return parts[1].toUpperCase();
+};
+
+const normalizeDialNumber = value => {
+  const trimmed = value.trim();
+  if (!trimmed) return { number: '', isValid: false };
+
+  let cleaned = trimmed.replace(/[^+\d]/g, '');
+  if (cleaned.startsWith('+')) {
+    cleaned = `+${cleaned.slice(1).replace(/\+/g, '')}`;
+  } else {
+    cleaned = cleaned.replace(/\+/g, '');
+  }
+
+  if (cleaned.startsWith('+')) {
+    try {
+      const parsed = parsePhoneNumber(cleaned);
+      if (parsed?.isValid()) {
+        return { number: parsed.number, isValid: true };
+      }
+    } catch (error) {
+      // Keep raw cleaned value if parsing fails.
+    }
+    return { number: cleaned, isValid: false };
+  }
+
+  const locale =
+    store.getters.getUISettings?.locale ||
+    store.getters.getCurrentAccount?.locale;
+  const region = resolveRegionFromLocale(locale);
+  if (region) {
+    try {
+      const parsed = parsePhoneNumber(cleaned, region);
+      if (parsed?.isValid()) {
+        return { number: parsed.number, isValid: true };
+      }
+    } catch (error) {
+      // Fall through to naive normalization.
+    }
+  }
+
+  return { number: cleaned ? `+${cleaned}` : '', isValid: false };
+};
 
 const getStoredPosition = () => {
   try {
@@ -189,8 +238,20 @@ const startCall = async () => {
 
   isCalling.value = true;
   try {
+    const { number: normalizedNumber, isValid } = normalizeDialNumber(
+      dialNumber.value
+    );
+    if (!normalizedNumber) {
+      useAlert(t('CONVERSATION.VOICE_WIDGET.DIALER_EMPTY_NUMBER'));
+      return;
+    }
+    if (!isValid) {
+      useAlert(t('CONVERSATION.VOICE_WIDGET.DIALER_INVALID_NUMBER'));
+      return;
+    }
+    dialNumber.value = normalizedNumber;
     const response = await VoiceAPI.initiateCallByPhone(
-      dialNumber.value.trim(),
+      normalizedNumber,
       selectedInboxId.value
     );
     const {
@@ -294,8 +355,8 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <woot-modal v-model:show="showDialer" :on-close="closeDialer">
-    <div class="flex flex-col gap-4 p-6 w-full max-w-sm">
+    <woot-modal v-model:show="showDialer" :on-close="closeDialer">
+      <div class="flex flex-col gap-4 p-6 w-[16rem] max-w-[16rem]">
       <h3 class="text-base font-medium text-n-slate-12">
         {{ t('CONVERSATION.VOICE_WIDGET.DIALER_TITLE') }}
       </h3>

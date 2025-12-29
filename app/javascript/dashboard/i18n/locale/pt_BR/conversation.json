@@ -98,6 +98,7 @@
       "DIALER_BACKSPACE": "Apagar",
       "DIALER_CLEAR": "Limpar",
       "DIALER_EMPTY_NUMBER": "Informe um numero para ligar",
+      "DIALER_INVALID_NUMBER": "Informe um numero valido",
       "DIALER_FAILED": "Nao foi possivel iniciar a chamada",
       "DIALER_MOVE": "Redefinir posicao",
       "DIALER_HIDE": "Ocultar",

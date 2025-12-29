@@ -62,6 +62,11 @@ class Voice::OutboundCallBuilder
   end
 
   def create_conversation!(contact_inbox)
+    if inbox.lock_to_single_conversation?
+      existing = contact_inbox.conversations.last
+      return existing if existing.present?
+    end
+
     account.conversations.create!(
       contact_inbox_id: contact_inbox.id,
       inbox_id: inbox.id,

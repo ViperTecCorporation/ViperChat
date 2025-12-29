@@ -21,7 +21,7 @@ class Voice::InboundCallBuilder
     ActiveRecord::Base.transaction do
       contact = ensure_contact!
       contact_inbox = ensure_contact_inbox!(contact)
-      conversation = find_conversation || create_conversation!(contact, contact_inbox)
+      conversation = find_conversation(contact_inbox) || create_conversation!(contact, contact_inbox)
       conversation.reload
       Rails.logger.info(
         "VOICE_INBOUND_CALL_BUILDER conversation account_id=#{account.id} conversation_id=#{conversation.display_id} call_sid=#{call_sid}"
@@ -53,10 +53,15 @@ class Voice::InboundCallBuilder
     end
   end
 
-  def find_conversation
-    return if call_sid.blank?
+  def find_conversation(contact_inbox)
+    if call_sid.present?
+      existing = account.conversations.includes(:contact).find_by(identifier: call_sid)
+      return existing if existing.present?
+    end
 
-    account.conversations.includes(:contact).find_by(identifier: call_sid)
+    return unless inbox.lock_to_single_conversation?
+
+    contact_inbox.conversations.last
   end
 
   def create_conversation!(contact, contact_inbox)
