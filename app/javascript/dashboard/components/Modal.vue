@@ -122,6 +122,10 @@ useEventListener(document, 'keydown', onKeydown);
   @apply w-full;
 }
 
+.modal-voice-dialer {
+  @apply !w-[24rem] !max-w-[24rem];
+}
+
 .modal-mask.right-aligned {
   @apply justify-end;
 

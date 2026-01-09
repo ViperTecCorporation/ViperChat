@@ -26,12 +26,110 @@ module Whatsapp::IncomingMessageServiceHelpers
 
   def message_content(message)
     # TODO: map interactive messages back to button messages in chatwoot
+    interactive_content = build_interactive_content(message)
     message.dig(:text, :body) ||
       message.dig(:button, :text) ||
       message.dig(:interactive, :button_reply, :title) ||
       message.dig(:interactive, :list_reply, :title) ||
+      interactive_content ||
       message.dig(:name, :formatted_name) ||
       message.dig(message_type.to_sym, :caption)
+  end
+
+  def build_interactive_content(message)
+    interactive = message[:interactive]
+    return if interactive.blank?
+    interactive_type = interactive[:type].to_s
+    return if interactive_type.blank?
+
+    parts = []
+    header_text = interactive.dig(:header, :text)
+    body_text = interactive.dig(:body, :text)
+    footer_text = interactive.dig(:footer, :text)
+
+    parts << header_text if header_text.present?
+    parts << body_text if body_text.present?
+    parts << footer_text if footer_text.present?
+
+    case interactive_type
+    when 'button'
+      buttons = interactive.dig(:action, :buttons) || []
+      button_lines = buttons.filter_map do |button|
+        case button[:type].to_s
+        when 'reply'
+          title = button.dig(:reply, :title) || button[:title]
+          build_option_line(title, nil)
+        when 'cta_url'
+          title = button.dig(:url, :title) || button[:title]
+          link = button.dig(:url, :link) || button[:link]
+          build_cta_line(title, link)
+        when 'cta_call'
+          title = button.dig(:call, :title) || button[:title]
+          phone = button.dig(:call, :phone_number) || button[:phone_number]
+          build_cta_line(title, phone)
+        when 'cta_copy'
+          title = button.dig(:copy_code, :title) || button[:title]
+          code = button.dig(:copy_code, :code) || button[:code]
+          build_cta_line(title, code)
+        end
+      end
+      parts << "Options:\n#{button_lines.join("\n")}" if button_lines.any?
+    when 'list'
+      action = interactive[:action] || {}
+      button_text = action[:button]
+      parts << "Button: #{button_text}" if button_text.present?
+
+      sections = action[:sections] || []
+      rows = sections.flat_map { |section| section[:rows] || [] }
+      if rows.any?
+        row_lines = rows.map do |row|
+          title = row[:title].to_s
+          title = "#{title} - #{row[:description]}" if row[:description].present?
+          title = "#{title} (#{row[:id]})" if row[:id].present?
+          title
+        end
+        parts << "Options:\n#{row_lines.join("\n")}"
+      end
+    when 'cta_url'
+      cta = interactive.dig(:action, :cta_url) || interactive[:cta_url] || {}
+      display_text = cta[:display_text] || interactive.dig(:action, :display_text)
+      url = cta[:url] || interactive.dig(:action, :url)
+      parts << "Button: #{display_text}" if display_text.present?
+      parts << "URL: #{url}" if url.present?
+    when 'flow'
+      action = interactive[:action] || {}
+      flow_cta = action[:flow_cta] || action[:button]
+      flow_id = action[:flow_id] || action[:id]
+      flow_name = action[:flow_name]
+      flow_token = action[:flow_token]
+      flow_screen = action.dig(:flow_action_payload, :screen)
+      parts << "Button: #{flow_cta}" if flow_cta.present?
+      parts << "Flow: #{flow_name}" if flow_name.present?
+      parts << "Flow ID: #{flow_id}" if flow_id.present?
+      parts << "Screen: #{flow_screen}" if flow_screen.present?
+      parts << "Token: #{flow_token}" if flow_token.present?
+    end
+
+    parts.reject(&:blank?).join("\n")
+  end
+
+  def build_option_line(title, option_id)
+    return if title.blank? && option_id.blank?
+
+    line = title.to_s
+    line = option_id.to_s if line.blank?
+    line = "#{line} (#{option_id})" if option_id.present? && line != option_id
+    line
+  end
+
+  def build_cta_line(title, value)
+    return if title.blank? && value.blank?
+
+    label = title.to_s
+    return value.to_s if label.blank?
+    return label if value.blank?
+
+    "#{label} - #{value}"
   end
 
   def file_content_type(file_type)
