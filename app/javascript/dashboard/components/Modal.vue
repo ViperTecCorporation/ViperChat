@@ -123,7 +123,7 @@ useEventListener(document, 'keydown', onKeydown);
 }
 
 .modal-voice-dialer {
-  @apply !w-[24rem] !max-w-[24rem];
+  @apply w-[24rem] max-w-[24rem];
 }
 
 .modal-mask.right-aligned {
