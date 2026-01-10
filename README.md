@@ -66,6 +66,10 @@ Em conversas internas:
 - Se houver mais de uma inbox de voz ou mais de um agente, o sistema pede seleção.
 - O agente de destino precisa ser participante da conversa e membro da inbox de voz.
 
+### API do chat interno (backend)
+
+Documentacao completa com exemplos em `docs/internal-chat-api.md`.
+
 ### Transferência de chamadas
 
 Durante uma chamada:
