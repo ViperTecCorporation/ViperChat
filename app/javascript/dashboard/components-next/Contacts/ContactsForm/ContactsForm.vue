@@ -75,9 +75,20 @@ const defaultState = {
 
 const state = reactive({ ...defaultState });
 
+const isValidEmailOrLid = value => {
+  if (!value) return true;
+  const normalized = value.toString().trim().toLowerCase();
+  if (!normalized) return true;
+  return (
+    email.$validator(normalized) ||
+    normalized.endsWith('@lid') ||
+    normalized.endsWith('@g.us')
+  );
+};
+
 const validationRules = {
   firstName: { required },
-  email: { email },
+  email: { email: isValidEmailOrLid },
 };
 
 const v$ = useVuelidate(validationRules, state);

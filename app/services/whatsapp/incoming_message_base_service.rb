@@ -15,8 +15,12 @@ class Whatsapp::IncomingMessageBaseService
 
     if processed_params.try(:[], :statuses).present?
       process_statuses
+    elsif contact_sync_payload?
+      sync_contacts
     elsif processed_params.try(:[], :messages).present?
       process_messages
+    elsif processed_params.try(:[], :contacts).present?
+      sync_contacts
     end
   end
 
@@ -54,6 +58,74 @@ class Whatsapp::IncomingMessageBaseService
     update_message_with_status(@message, @processed_params[:statuses].first)
   rescue ArgumentError => e
     Rails.logger.error "Error while processing whatsapp status update #{e.message}"
+  end
+
+  def contact_sync_payload?
+    return false if processed_params.blank?
+    return false if processed_params.try(:[], :contacts).blank?
+
+    message = processed_params[:messages]&.first
+    return false if message.blank?
+    return false unless message[:type].to_s == 'text'
+
+    message.dig(:text, :body).to_s.strip.casecmp('contacts.update').zero?
+  end
+
+  def sync_contacts
+    processed_params[:contacts].each do |contact|
+      sync_contact(contact)
+    end
+  end
+
+  def sync_contact(contact_params)
+    return if contact_params.blank?
+
+    contact_attributes = {
+      name: contact_params.dig(:profile, :name),
+      avatar_url: contact_params.dig(:profile, :picture)
+    }
+
+    waid = contact_params[:wa_id].to_s
+    profile_phone = contact_params.dig(:profile, :phone).to_s
+    if waid.include?('@lid')
+      contact_attributes[:email] = waid
+      waid = nil
+    else
+      raw_phone = waid.presence || profile_phone
+      raw_phone = raw_phone.gsub(/\D/, '')
+      if raw_phone.present?
+        raw_phone = normalised_brazil_mobile_number(raw_phone) if brazil_phone_number?(raw_phone)
+        waid = processed_waid(raw_phone) || raw_phone
+        contact_attributes[:phone_number] = "+#{waid}" if waid.present?
+      end
+    end
+
+    contact_inbox = ::ContactInboxWithContactBuilder.new(
+      source_id: waid,
+      inbox: inbox,
+      contact_attributes: contact_attributes
+    ).perform
+
+    @contact_inbox = contact_inbox
+    @contact = contact_inbox.contact
+
+    raw_from = waid.presence || profile_phone
+    update_contact_with_profile_name(contact_params, raw_from: raw_from)
+    sync_group_contact(contact_params)
+  end
+
+  def sync_group_contact(contact_params)
+    return if contact_params[:group_id].blank?
+
+    ::ContactInboxWithContactBuilder.new(
+      source_id: contact_params[:group_id],
+      inbox: inbox,
+      contact_attributes: {
+        email: contact_params[:group_id],
+        name: contact_params[:group_subject] || contact_params[:group_id],
+        avatar_url: contact_params[:group_picture]
+      }
+    ).perform
   end
 
   def update_message_with_status(message, status)
@@ -115,7 +187,7 @@ class Whatsapp::IncomingMessageBaseService
     @contact = contact_inbox.contact
     @sender = outgoing_message_type? ? nil : contact_inbox.contact
 
-    # Update existing contact name if ProfileName is available and current name is just phone number
+    # Update existing contact name for LID-suffix placeholders or low-quality names
     update_contact_with_profile_name(contact_params)
   end
 
@@ -220,20 +292,44 @@ class Whatsapp::IncomingMessageBaseService
     contact_params.present? && contact_params[:wa_id]&.include?('@lid')
   end
 
-  def update_contact_with_profile_name(contact_params)
+  def update_contact_with_profile_name(contact_params, raw_from: nil)
     profile_name = contact_params.dig(:profile, :name)
     return if profile_name.blank?
     return if @contact.name == profile_name
 
-    # Only update if current name exactly matches the phone number or formatted phone number
-    return unless contact_name_matches_phone_number?
+    return unless contact_name_has_lid_suffix? || contact_name_matches_phone_number?(raw_from) || contact_name_low_quality?
 
     @contact.update!(name: profile_name)
   end
 
-  def contact_name_matches_phone_number?
-    phone_number = "+#{@processed_params[:messages].first[:from]}"
+  def contact_name_matches_phone_number?(raw_from = nil)
+    raw_from = raw_from.presence || @processed_params[:messages]&.first&.[](:from).to_s
+    raw_from = contact_params[:wa_id].to_s if raw_from.blank? && contact_params.present?
+    return false if raw_from.blank? || raw_from.include?('@lid')
+
+    raw_digits = raw_from.gsub(/\D/, '')
+    return false if raw_digits.blank?
+
+    phone_number = "+#{raw_digits}"
     formatted_phone_number = TelephoneNumber.parse(phone_number).international_number
-    @contact.name == phone_number || @contact.name == formatted_phone_number
+    contact_name = @contact.name.to_s
+    contact_digits = contact_name.gsub(/\D/, '')
+    from_digits = raw_digits
+
+    contact_name == phone_number ||
+      contact_name == formatted_phone_number ||
+      (contact_digits.present? && contact_digits == from_digits)
+  end
+
+  def contact_name_has_lid_suffix?
+    @contact.name.to_s.downcase.end_with?('@lid')
+  end
+
+  def contact_name_low_quality?
+    contact_name = @contact.name.to_s.strip
+    return false if contact_name.blank?
+    return true if contact_name.length <= 3
+
+    contact_name.match?(/\A[^\p{L}\p{N}]+\z/)
   end
 end
