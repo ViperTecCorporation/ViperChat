@@ -403,6 +403,12 @@ const actions = {
     }
   },
 
+  sendMessageReaction: async ({ commit }, { conversationId, messageId, emoji }) => {
+    const { data } = await MessageApi.react(conversationId, messageId, emoji);
+    commit(types.ADD_MESSAGE, data);
+    return data;
+  },
+
   addMessage({ commit, rootGetters }, message) {
     commit(types.ADD_MESSAGE, message);
     if (message.message_type === MESSAGE_TYPE.INCOMING) {

@@ -261,6 +261,7 @@
     "CONTEXT_MENU": {
       "COPY": "Copiar",
       "REPLY_TO": "Responder a esta mensagem",
+      "REACTION": "Reação",
       "DELETE": "Excluir",
       "CREATE_A_CANNED_RESPONSE": "Adicionar às respostas prontas",
       "TRANSLATE": "Traduzir",
@@ -272,6 +273,10 @@
         "DELETE": "Excluir",
         "CANCEL": "Cancelar"
       }
+    },
+    "REACTION": {
+      "TITLE": "Reagir à mensagem",
+      "ERROR": "Não foi possível enviar a reação. Tente novamente."
     },
     "SIDEBAR": {
       "CONTACT": "Contacto",

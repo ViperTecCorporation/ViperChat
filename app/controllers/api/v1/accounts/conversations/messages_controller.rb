@@ -54,6 +54,27 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
     render json: { content: translated_content }
   end
 
+  def reaction
+    emoji = permitted_params[:emoji].to_s.strip
+    if emoji.blank?
+      return render json: { error: 'Emoji is required' }, status: :unprocessable_entity
+    end
+    unless @conversation.inbox.whatsapp?
+      return render json: { error: 'Reactions are only supported for WhatsApp inboxes' },
+                    status: :unprocessable_entity
+    end
+    if message.source_id.blank?
+      return render json: { error: 'Message source id is missing' }, status: :unprocessable_entity
+    end
+
+    reaction_sent = Whatsapp::SendReactionService.new(message: message, emoji: emoji).perform
+    return render json: { error: 'Could not send reaction' }, status: :unprocessable_entity unless reaction_sent
+
+    updated_attributes = (message.content_attributes || {}).merge(reaction: { emoji: emoji })
+    message.update!(content_attributes: updated_attributes)
+    @message = message
+  end
+
   private
 
   def message
@@ -65,7 +86,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def permitted_params
-    params.permit(:id, :target_language, :status, :external_error)
+    params.permit(:id, :target_language, :status, :external_error, :emoji)
   end
 
   def already_translated_content_available?

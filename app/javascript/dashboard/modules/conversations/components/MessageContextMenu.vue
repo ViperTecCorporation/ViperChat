@@ -14,6 +14,7 @@ import {
 import MenuItem from '../../../components/widgets/conversation/contextMenu/menuItem.vue';
 import { useTrack } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import EmojiInput from 'shared/components/emoji/EmojiInput.vue';
 
 export default {
   components: {
@@ -21,6 +22,7 @@ export default {
     MenuItem,
     ContextMenu,
     NextButton,
+    EmojiInput,
   },
   props: {
     message: {
@@ -56,6 +58,8 @@ export default {
     return {
       isCannedResponseModalOpen: false,
       showDeleteModal: false,
+      isReactionModalOpen: false,
+      isSendingReaction: false,
     };
   },
   computed: {
@@ -153,6 +157,30 @@ export default {
     closeDeleteModal() {
       this.showDeleteModal = false;
     },
+    openReactionModal() {
+      this.isReactionModalOpen = true;
+      this.handleClose();
+    },
+    closeReactionModal() {
+      this.isReactionModalOpen = false;
+    },
+    async handleReactionSelect(emoji) {
+      if (!emoji || this.isSendingReaction) return;
+
+      this.isSendingReaction = true;
+      try {
+        await this.$store.dispatch('sendMessageReaction', {
+          conversationId: this.conversationId,
+          messageId: this.messageId,
+          emoji,
+        });
+        this.isReactionModalOpen = false;
+      } catch (error) {
+        useAlert(this.$t('CONVERSATION.REACTION.ERROR'));
+      } finally {
+        this.isSendingReaction = false;
+      }
+    },
   },
 };
 </script>
@@ -169,6 +197,22 @@ export default {
         :response-content="plainTextContent"
         :on-close="hideCannedResponseModal"
       />
+    </woot-modal>
+    <!-- Reaction Picker -->
+    <woot-modal
+      v-if="isReactionModalOpen && enabledOptions['reaction']"
+      v-model:show="isReactionModalOpen"
+      :on-close="closeReactionModal"
+    >
+      <div class="p-4">
+        <h4 class="text-base font-medium text-n-slate-12 mb-4">
+          {{ $t('CONVERSATION.REACTION.TITLE') }}
+        </h4>
+        <EmojiInput
+          class="!relative !top-0 !left-0 !right-auto !w-full max-w-sm mx-auto"
+          :on-click="handleReactionSelect"
+        />
+      </div>
     </woot-modal>
     <!-- Confirm Deletion -->
     <woot-delete-modal
@@ -206,6 +250,15 @@ export default {
           }"
           variant="icon"
           @click.stop="handleReplyTo"
+        />
+        <MenuItem
+          v-if="enabledOptions['reaction']"
+          :option="{
+            icon: 'emoji',
+            label: $t('CONVERSATION.CONTEXT_MENU.REACTION'),
+          }"
+          variant="icon"
+          @click.stop="openReactionModal"
         />
         <MenuItem
           v-if="enabledOptions['forward']"

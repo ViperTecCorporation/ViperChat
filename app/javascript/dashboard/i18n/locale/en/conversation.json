@@ -296,6 +296,7 @@
     "CONTEXT_MENU": {
       "COPY": "Copy",
       "REPLY_TO": "Reply to this message",
+      "REACTION": "React",
       "FORWARD_MESSAGES": "Forward messages",
       "DELETE": "Delete",
       "CREATE_A_CANNED_RESPONSE": "Add to canned responses",
@@ -308,6 +309,10 @@
         "DELETE": "Delete",
         "CANCEL": "Cancel"
       }
+    },
+    "REACTION": {
+      "TITLE": "React to message",
+      "ERROR": "Could not send reaction. Please try again."
     },
     "FORWARD_MESSAGES": {
       "TITLE": "Forward messages",

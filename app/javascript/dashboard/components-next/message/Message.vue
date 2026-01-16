@@ -143,7 +143,8 @@ const showBackgroundHighlight = ref(false);
 const showContextMenu = ref(false);
 const { t } = useI18n();
 const route = useRoute();
-const { isAnInternalChannel } = useInbox(props.inboxId);
+const { isAnInternalChannel, isAWhatsAppChannel, isATwilioWhatsAppChannel } =
+  useInbox(props.inboxId);
 
 /**
  * Computes the message variant based on props
@@ -411,7 +412,10 @@ const contextMenuEnabledOptions = computed(() => {
 
   return {
     copy: hasText,
-    forward: (hasText || hasAttachments) && !isFailedOrProcessing && !isMessageDeleted.value,
+    forward:
+      (hasText || hasAttachments) &&
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
     delete:
       !hideDeleteMessageForAgents &&
       (hasText || hasAttachments) &&
@@ -424,6 +428,12 @@ const contextMenuEnabledOptions = computed(() => {
       !props.private &&
       props.inboxSupportsReplyTo.outgoing &&
       !isFailedOrProcessing,
+    reaction:
+      isAWhatsAppChannel.value &&
+      !isATwilioWhatsAppChannel.value &&
+      !!props.sourceId &&
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
   };
 });
 
@@ -442,6 +452,15 @@ const shouldRenderMessage = computed(() => {
     isAnIntegrationMessage
   );
 });
+
+const reactionEmoji = computed(() => {
+  const reaction = props.contentAttributes?.reaction;
+  if (!reaction) return '';
+  if (typeof reaction === 'string') return reaction;
+  return reaction.emoji || '';
+});
+
+const hasReaction = computed(() => !!reactionEmoji.value);
 
 function openContextMenu(e) {
   const shouldSkipContextMenu =
@@ -549,13 +568,15 @@ provideMessageContext({
   <div
     v-if="shouldRenderMessage"
     :id="`message${props.id}`"
-    class="flex mb-2 w-full message-bubble-container"
+    class="flex w-full message-bubble-container"
     :data-message-id="props.id"
     :class="[
       flexOrientationClass,
       {
         'group-with-next': shouldGroupWithNext,
         'bg-n-alpha-1': showBackgroundHighlight,
+        'mb-6': hasReaction,
+        'mb-2': !hasReaction,
       },
     ]"
   >
@@ -603,7 +624,20 @@ provideMessageContext({
             @change="emit('toggle-forward-selection', props.id)"
           />
         </div>
-        <Component :is="componentToRender" />
+        <div
+          class="relative inline-flex flex-col max-w-full"
+          :class="{
+            'w-full': variant === MESSAGE_VARIANTS.EMAIL,
+          }"
+        >
+          <Component :is="componentToRender" />
+          <div
+            v-if="hasReaction"
+            class="absolute -bottom-3 left-3 inline-flex items-center rounded-full border border-n-weak bg-n-background px-2 py-0.5 text-xs text-n-slate-12 shadow-sm"
+          >
+            <span class="leading-none">{{ reactionEmoji }}</span>
+          </div>
+        </div>
       </div>
       <MessageError
         v-if="contentAttributes.externalError"

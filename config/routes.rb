@@ -127,6 +127,7 @@ Rails.application.routes.draw do
                 member do
                   post :translate
                   post :retry
+                  post :reaction
                 end
               end
               resources :forwards, only: [:create]

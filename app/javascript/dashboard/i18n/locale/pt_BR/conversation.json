@@ -296,6 +296,7 @@
     "CONTEXT_MENU": {
       "COPY": "Copiar",
       "REPLY_TO": "Responder mensagem",
+      "REACTION": "Reação",
       "FORWARD_MESSAGES": "Encaminhar mensagens",
       "DELETE": "Excluir",
       "CREATE_A_CANNED_RESPONSE": "Adicionar às respostas prontas",
@@ -308,6 +309,10 @@
         "DELETE": "Excluir",
         "CANCEL": "Cancelar"
       }
+    },
+    "REACTION": {
+      "TITLE": "Reagir à mensagem",
+      "ERROR": "Não foi possível enviar a reação. Tente novamente."
     },
     "FORWARD_MESSAGES": {
       "TITLE": "Encaminhar mensagens",

@@ -31,6 +31,24 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     process_response(response, message)
   end
 
+  def send_reaction(phone_number, message_id, emoji)
+    response = HTTParty.post(
+      messages_path,
+      headers: api_headers,
+      body: {
+        messaging_product: 'whatsapp',
+        to: phone_number,
+        type: 'reaction',
+        reaction: {
+          message_id: message_id,
+          emoji: emoji
+        }
+      }.to_json
+    )
+
+    response.success? && response.parsed_response['error'].blank?
+  end
+
   def sync_templates
     # ensuring that channels with wrong provider config wouldn't keep trying to sync templates
     whatsapp_channel.mark_message_templates_updated
