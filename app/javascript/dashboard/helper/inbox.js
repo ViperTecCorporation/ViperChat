@@ -10,6 +10,7 @@ export const INBOX_TYPES = {
   LINE: 'Channel::Line',
   SMS: 'Channel::Sms',
   INSTAGRAM: 'Channel::Instagram',
+  TIKTOK: 'Channel::Tiktok',
   NOTIFICA_ME: 'Channel::NotificaMe',
   VOICE: 'Channel::Voice',
   INTERNAL: 'Channel::Internal',
@@ -30,6 +31,7 @@ const INBOX_ICON_MAP_FILL = {
   [INBOX_TYPES.TELEGRAM]: 'i-ri-telegram-fill',
   [INBOX_TYPES.LINE]: 'i-ri-line-fill',
   [INBOX_TYPES.INSTAGRAM]: 'i-ri-instagram-fill',
+  [INBOX_TYPES.TIKTOK]: 'i-ri-tiktok-fill',
   [INBOX_TYPES.NOTIFICA_ME]: 'i-ri-instagram-fill',
   [INBOX_TYPES.VOICE]: 'i-ri-phone-fill',
   [INBOX_TYPES.INTERNAL]: 'i-ri-chat-1-fill',
@@ -48,6 +50,7 @@ const INBOX_ICON_MAP_LINE = {
   [INBOX_TYPES.TELEGRAM]: 'i-ri-telegram-line',
   [INBOX_TYPES.LINE]: 'i-ri-line-line',
   [INBOX_TYPES.INSTAGRAM]: 'i-ri-instagram-line',
+  [INBOX_TYPES.TIKTOK]: 'i-ri-tiktok-line',
   [INBOX_TYPES.NOTIFICA_ME]: 'i-ri-instagram-fill',
   [INBOX_TYPES.VOICE]: 'i-ri-phone-line',
   [INBOX_TYPES.INTERNAL]: 'i-ri-chat-1-line',
@@ -104,6 +107,9 @@ export const getReadableInboxByType = (type, phoneNumber) => {
 
     case INBOX_TYPES.LINE:
       return 'line';
+
+    case INBOX_TYPES.TIKTOK:
+      return 'tiktok';
 
     case INBOX_TYPES.VOICE:
       return 'voice';

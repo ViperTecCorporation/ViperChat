@@ -6,7 +6,7 @@ import {
 } from 'widget/helpers/campaignHelper';
 import { getFromCache, setCache } from 'shared/helpers/cache';
 
-const CACHE_KEY_PREFIX = 'chatwoot_campaigns_';
+const CACHE_KEY_PREFIX = 'viperchat_campaigns_';
 
 const state = {
   records: [],

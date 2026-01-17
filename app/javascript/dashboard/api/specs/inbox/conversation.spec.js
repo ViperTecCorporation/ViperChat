@@ -225,7 +225,8 @@ describe('#ConversationAPI', () => {
     it('#getAllAttachments', () => {
       conversationAPI.getAllAttachments(1);
       expect(axiosMock.get).toHaveBeenCalledWith(
-        '/api/v1/conversations/1/attachments'
+        '/api/v1/conversations/1/attachments',
+        { params: { page: 1 } }
       );
     });
   });

@@ -138,6 +138,10 @@ export const useInbox = (inboxId = null) => {
     return channelType.value === INBOX_TYPES.VOICE;
   });
 
+  const isATiktokChannel = computed(() => {
+    return channelType.value === INBOX_TYPES.TIKTOK;
+  });
+
   return {
     inbox,
     isAFacebookInbox,
@@ -156,6 +160,7 @@ export const useInbox = (inboxId = null) => {
     isAnEmailChannel,
     isAnInstagramChannel,
     isAnInternalChannel,
+    isATiktokChannel,
     isAVoiceChannel,
   };
 };
