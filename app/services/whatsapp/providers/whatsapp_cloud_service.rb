@@ -175,9 +175,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   def format_content(message)
     feature = whatsapp_channel.inbox.account.feature_enabled?('send_agent_name_in_whatsapp_message')
     config = whatsapp_channel.provider_config['send_agent_name']
-    return message.content if !feature && !config
+    normalized_content = message.outgoing_content&.rstrip
+    return normalized_content if !feature && !config
 
-    message.sender_name&.present? ? "*#{message&.sender_name}*: #{message.outgoing_content}" : message.outgoing_content
+    message.sender_name&.present? ? "*#{message&.sender_name}*: #{normalized_content}" : normalized_content
   end
 
   def send_attachment_message(phone_number, message, attachment, include_caption: true)
@@ -246,6 +247,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
   def whatsapp_reply_context(message)
     reply_to = message.content_attributes[:in_reply_to_external_id]
+    if reply_to.blank?
+      in_reply_to_id = message.content_attributes[:in_reply_to]
+      reply_to = message.conversation.messages.find_by(id: in_reply_to_id)&.source_id if in_reply_to_id.present?
+    end
     return nil if reply_to.blank?
 
     {
