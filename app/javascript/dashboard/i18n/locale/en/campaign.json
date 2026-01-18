@@ -198,7 +198,8 @@
           "MEDIA": {
             "LABEL": "Media (image or video)",
             "BUTTON": "Attach media",
-            "ERROR": "Only image or video files are supported"
+            "ERROR": "Only image or video files are supported",
+            "UPLOAD_ERROR": "Could not upload the media file"
           },
           "SCHEDULED_AT": {
             "LABEL": "Scheduled time",

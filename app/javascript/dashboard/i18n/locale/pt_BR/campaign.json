@@ -195,11 +195,12 @@
             "PLACEHOLDER": "Um contato por linha: phone_number;name;identifier;email;value;due_at;scheduled_at;wait_for_seconds",
             "ERROR": "Selecione etiquetas ou informe a lista de Publico"
           },
-          "MEDIA": {
-            "LABEL": "Midia (imagem ou video)",
-            "BUTTON": "Anexar midia",
-            "ERROR": "Apenas arquivos de imagem ou video sao suportados"
-          },
+      "MEDIA": {
+        "LABEL": "Midia (imagem ou video)",
+        "BUTTON": "Anexar midia",
+        "ERROR": "Apenas arquivos de imagem ou video sao suportados",
+        "UPLOAD_ERROR": "Nao foi possivel enviar a midia"
+      },
           "SCHEDULED_AT": {
             "LABEL": "Horário agendado",
             "PLACEHOLDER": "Por favor insira a hora",

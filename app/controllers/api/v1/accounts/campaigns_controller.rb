@@ -9,7 +9,9 @@ class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
   def show; end
 
   def create
+    media_blob_signed_id = params.dig(:campaign, :media_blob_signed_id)
     @campaign = Current.account.campaigns.create!(campaign_params)
+    attach_media_blob(@campaign, media_blob_signed_id)
   end
 
   def update
@@ -89,5 +91,11 @@ class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
     return if @campaign.media.attached?
 
     @campaign.media.attach(original_campaign.media.blob)
+  end
+
+  def attach_media_blob(campaign, signed_id)
+    return if signed_id.blank?
+
+    campaign.media.attach(signed_id)
   end
 end

@@ -9,6 +9,13 @@ import WhatsAppCampaignForm from 'dashboard/components-next/Campaigns/Pages/Camp
 
 const emit = defineEmits(['close']);
 
+defineProps({
+  initialData: {
+    type: Object,
+    default: null,
+  },
+});
+
 const store = useStore();
 const { t } = useI18n();
 
@@ -44,7 +51,11 @@ const handleClose = () => emit('close');
       <h3 class="text-base font-medium text-n-slate-12 flex-shrink-0">
         {{ t(`CAMPAIGN.WHATSAPP.CREATE.TITLE`) }}
       </h3>
-      <WhatsAppCampaignForm @submit="handleSubmit" @cancel="handleClose" />
+      <WhatsAppCampaignForm
+        :initial-data="initialData"
+        @submit="handleSubmit"
+        @cancel="handleClose"
+      />
     </div>
   </div>
 </template>

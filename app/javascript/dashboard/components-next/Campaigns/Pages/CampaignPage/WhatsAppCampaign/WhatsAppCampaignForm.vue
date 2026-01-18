@@ -7,6 +7,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { MAXIMUM_FILE_UPLOAD_SIZE } from 'shared/constants/messages';
+import { uploadFile } from 'dashboard/helper/uploadHelper';
 
 import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
@@ -16,6 +17,13 @@ import TagMultiSelectComboBox from 'dashboard/components-next/combobox/TagMultiS
 import WhatsAppTemplateParser from 'dashboard/components-next/whatsapp/WhatsAppTemplateParser.vue';
 
 const emit = defineEmits(['submit', 'cancel']);
+
+const props = defineProps({
+  initialData: {
+    type: Object,
+    default: null,
+  },
+});
 
 const { t } = useI18n();
 
@@ -37,12 +45,15 @@ const initialState = {
   selectedAudience: [],
   message: '',
   audienceText: '',
-  mediaFile: null,
+  mediaBlobSignedId: null,
+  mediaFileName: '',
 };
 
 const state = reactive({ ...initialState });
 const templateParserRef = ref(null);
 const mediaInputRef = ref(null);
+const pendingTemplateSelection = ref(null);
+const isUploadingMedia = ref(false);
 
 const selectedInbox = computed(() => {
   if (!state.inboxId) return null;
@@ -87,7 +98,9 @@ const v$ = useVuelidate(rules, state);
 
 const isCreating = computed(() => formState.uiFlags.value.isCreating);
 const maxUploadSize = computed(
-  () => Number(formState.globalConfig.value?.maxFileUploadSizeInMb) || MAXIMUM_FILE_UPLOAD_SIZE
+  () =>
+    Number(formState.globalConfig.value?.maxFileUploadSizeInMb) ||
+    MAXIMUM_FILE_UPLOAD_SIZE
 );
 
 const currentDateTime = computed(() => {
@@ -160,7 +173,10 @@ const hasRequiredTemplateParams = computed(() => {
 });
 
 const isSubmitDisabled = computed(
-  () => v$.value.$invalid || !hasRequiredTemplateParams.value
+  () =>
+    v$.value.$invalid ||
+    !hasRequiredTemplateParams.value ||
+    isUploadingMedia.value
 );
 
 const formatToUTCString = localDateTime =>
@@ -208,6 +224,56 @@ const parseUnoapiAudience = () => {
   });
 };
 
+const formatUnoapiAudienceText = audience => {
+  const rows = (audience || []).filter(entry => entry.type !== 'Label');
+  if (!rows.length) return '';
+
+  return rows
+    .map(entry => {
+      const parts = [
+        entry.phone_number || '',
+        entry.name || '',
+        entry.identifier || '',
+        entry.email || '',
+        entry.value || '',
+        entry.due_at || '',
+        entry.scheduled_at || '',
+        entry.wait_for_seconds || '',
+      ];
+      return parts.join(';').replace(/;+$/, '');
+    })
+    .join('\n');
+};
+
+const applyInitialData = data => {
+  if (!data) return;
+
+  state.title = data.title || '';
+  state.inboxId = data.inboxId || null;
+  state.templateId = null;
+  state.scheduledAt = null;
+  state.message = data.message || '';
+  state.mediaBlobSignedId = null;
+  state.mediaFileName = '';
+
+  const labelIds = (data.audience || [])
+    .filter(entry => entry.type === 'Label')
+    .map(entry => entry.id)
+    .filter(Boolean);
+  state.selectedAudience = labelIds;
+  state.audienceText = formatUnoapiAudienceText(data.audience);
+
+  const templateParams = data.templateParams || {};
+  if (templateParams.name) {
+    pendingTemplateSelection.value = {
+      name: templateParams.name,
+      language: templateParams.language,
+    };
+  } else {
+    pendingTemplateSelection.value = null;
+  }
+};
+
 const prepareCampaignDetails = () => {
   if (isUnoapiInbox.value) {
     return {
@@ -219,7 +285,7 @@ const prepareCampaignDetails = () => {
         ...state.selectedAudience.map(id => ({ id, type: 'Label' })),
         ...parseUnoapiAudience(),
       ],
-      mediaFile: state.mediaFile,
+      media_blob_signed_id: state.mediaBlobSignedId,
     };
   }
 
@@ -264,7 +330,7 @@ const handleMediaPick = () => {
   mediaInputRef.value?.click();
 };
 
-const handleMediaSelected = event => {
+const handleMediaSelected = async event => {
   const file = event.target.files?.[0];
   if (!file) return;
 
@@ -286,11 +352,23 @@ const handleMediaSelected = event => {
     return;
   }
 
-  state.mediaFile = file;
+  isUploadingMedia.value = true;
+  try {
+    const { blobSignedId } = await uploadFile(file);
+    state.mediaBlobSignedId = blobSignedId;
+    state.mediaFileName = file.name;
+  } catch (error) {
+    useAlert(t('CAMPAIGN.WHATSAPP.CREATE.FORM.MEDIA.UPLOAD_ERROR'));
+    state.mediaBlobSignedId = null;
+    state.mediaFileName = '';
+  } finally {
+    isUploadingMedia.value = false;
+  }
 };
 
 const removeMedia = () => {
-  state.mediaFile = null;
+  state.mediaBlobSignedId = null;
+  state.mediaFileName = '';
   if (mediaInputRef.value) mediaInputRef.value.value = '';
 };
 
@@ -310,7 +388,35 @@ watch(
     state.selectedAudience = [];
     state.message = '';
     state.audienceText = '';
-    state.mediaFile = null;
+    state.mediaBlobSignedId = null;
+    state.mediaFileName = '';
+  }
+);
+
+watch(
+  () => props.initialData,
+  data => {
+    applyInitialData(data);
+  },
+  { immediate: true }
+);
+
+watch(
+  () => templateOptions.value,
+  options => {
+    if (!pendingTemplateSelection.value || !options.length) return;
+    const { name, language } = pendingTemplateSelection.value;
+    const match = options.find(option => {
+      const template = option.template;
+      return (
+        template?.name === name &&
+        (!language || template?.language === language)
+      );
+    });
+    if (match) {
+      state.templateId = match.value;
+      pendingTemplateSelection.value = null;
+    }
   }
 );
 </script>
@@ -453,13 +559,13 @@ watch(
             @click="handleMediaPick"
           />
           <span
-            v-if="state.mediaFile"
+            v-if="state.mediaFileName"
             class="text-xs text-n-slate-11 truncate max-w-[12rem]"
           >
-            {{ state.mediaFile.name }}
+            {{ state.mediaFileName }}
           </span>
           <Button
-            v-if="state.mediaFile"
+            v-if="state.mediaFileName"
             variant="faded"
             color="ruby"
             type="button"

@@ -2,8 +2,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
-import { useStoreGetters, useMapGetter, useStore } from 'dashboard/composables/store';
-import { useAlert } from 'dashboard/composables';
+import { useStoreGetters, useMapGetter } from 'dashboard/composables/store';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CampaignLayout from 'dashboard/components-next/Campaigns/CampaignLayout.vue';
@@ -14,10 +13,10 @@ import WhatsAppCampaignEmptyState from 'dashboard/components-next/Campaigns/Empt
 
 const { t } = useI18n();
 const getters = useStoreGetters();
-const store = useStore();
 
 const selectedCampaign = ref(null);
 const [showWhatsAppCampaignDialog, toggleWhatsAppCampaignDialog] = useToggle();
+const prefillCampaign = ref(null);
 
 const uiFlags = useMapGetter('campaigns/getUIFlags');
 const isFetchingCampaigns = computed(() => uiFlags.value.isFetching);
@@ -37,13 +36,25 @@ const handleDelete = campaign => {
   confirmDeleteCampaignDialogRef.value.dialogRef.open();
 };
 
-const handleDuplicate = async campaign => {
-  try {
-    await store.dispatch('campaigns/duplicate', campaign.id);
-    useAlert(t('CAMPAIGN.WHATSAPP.DUPLICATE.SUCCESS_MESSAGE'));
-  } catch (error) {
-    useAlert(t('CAMPAIGN.WHATSAPP.DUPLICATE.ERROR_MESSAGE'));
-  }
+const handleNewCampaign = () => {
+  prefillCampaign.value = null;
+  toggleWhatsAppCampaignDialog(true);
+};
+
+const handleDuplicate = campaign => {
+  prefillCampaign.value = {
+    title: campaign.title,
+    inboxId: campaign.inbox?.id,
+    message: campaign.message,
+    audience: campaign.audience || [],
+    templateParams: campaign.template_params || {},
+  };
+  toggleWhatsAppCampaignDialog(true);
+};
+
+const handleDialogClose = () => {
+  prefillCampaign.value = null;
+  toggleWhatsAppCampaignDialog(false);
 };
 </script>
 
@@ -51,13 +62,14 @@ const handleDuplicate = async campaign => {
   <CampaignLayout
     :header-title="t('CAMPAIGN.WHATSAPP.HEADER_TITLE')"
     :button-label="t('CAMPAIGN.WHATSAPP.NEW_CAMPAIGN')"
-    @click="toggleWhatsAppCampaignDialog()"
+    @click="handleNewCampaign"
     @close="toggleWhatsAppCampaignDialog(false)"
   >
     <template #action>
       <WhatsAppCampaignDialog
         v-if="showWhatsAppCampaignDialog"
-        @close="toggleWhatsAppCampaignDialog(false)"
+        :initial-data="prefillCampaign"
+        @close="handleDialogClose"
       />
     </template>
     <div
