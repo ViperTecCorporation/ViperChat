@@ -237,7 +237,7 @@
   deprecated: true
 - name: advanced_search
   display_name: Advanced Search
-  enabled: false
+  enabled: true
   premium: true
   chatwoot_internal: true
 - name: saml
@@ -246,7 +246,7 @@
   premium: true
 - name: advanced_search_indexing
   display_name: Advanced Search Indexing
-  enabled: false
+  enabled: true
   premium: true
   chatwoot_internal: true
 - name: reply_mailer_migration
