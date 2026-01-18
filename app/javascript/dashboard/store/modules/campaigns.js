@@ -11,6 +11,7 @@ export const state = {
   uiFlags: {
     isFetching: false,
     isCreating: false,
+    isDuplicating: false,
   },
 };
 
@@ -98,6 +99,17 @@ export const actions = {
       throw new Error(error);
     } finally {
       commit(types.SET_CAMPAIGN_UI_FLAG, { isDeleting: false });
+    }
+  },
+  duplicate: async ({ commit }, id) => {
+    commit(types.SET_CAMPAIGN_UI_FLAG, { isDuplicating: true });
+    try {
+      const response = await CampaignsAPI.duplicate(id);
+      commit(types.ADD_CAMPAIGN, response.data);
+    } catch (error) {
+      throw new Error(error);
+    } finally {
+      commit(types.SET_CAMPAIGN_UI_FLAG, { isDuplicating: false });
     }
   },
 };

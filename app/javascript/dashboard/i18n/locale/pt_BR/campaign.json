@@ -169,6 +169,11 @@
             "PLACEHOLDER": "Selecione uma caixa de entrada",
             "ERROR": "Caixa de entrada obrigatória"
           },
+          "MESSAGE": {
+            "LABEL": "Mensagem",
+            "PLACEHOLDER": "Insira o conteudo da mensagem do WhatsApp",
+            "ERROR": "Mensagem obrigatoria"
+          },
           "TEMPLATE": {
             "LABEL": "Modelo do WhatsApp",
             "PLACEHOLDER": "Selecione um modelo",
@@ -185,6 +190,16 @@
             "PLACEHOLDER": "Selecionar etiquetas dos clientes",
             "ERROR": "Público é necessário"
           },
+          "UNOAPI_AUDIENCE": {
+            "LABEL": "Lista de Publico (Unoapi)",
+            "PLACEHOLDER": "Um contato por linha: phone_number;name;identifier;email;value;due_at;scheduled_at;wait_for_seconds",
+            "ERROR": "Selecione etiquetas ou informe a lista de Publico"
+          },
+          "MEDIA": {
+            "LABEL": "Midia (imagem ou video)",
+            "BUTTON": "Anexar midia",
+            "ERROR": "Apenas arquivos de imagem ou video sao suportados"
+          },
           "SCHEDULED_AT": {
             "LABEL": "Horário agendado",
             "PLACEHOLDER": "Por favor insira a hora",
@@ -198,6 +213,10 @@
             "SUCCESS_MESSAGE": "Campanha do WhatsApp criada com sucesso",
             "ERROR_MESSAGE": "Houve um erro. Por favor, tente novamente."
           }
+        },
+        "DUPLICATE": {
+          "SUCCESS_MESSAGE": "Campanha duplicada com sucesso",
+          "ERROR_MESSAGE": "Nao foi possivel duplicar a campanha"
         }
       }
     },

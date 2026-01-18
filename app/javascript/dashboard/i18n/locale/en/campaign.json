@@ -193,7 +193,12 @@
           "UNOAPI_AUDIENCE": {
             "LABEL": "Audience list (Unoapi)",
             "PLACEHOLDER": "One contact per line: phone_number;name;identifier;email;value;due_at;scheduled_at;wait_for_seconds",
-            "ERROR": "Audience list is required"
+            "ERROR": "Select labels or provide an audience list"
+          },
+          "MEDIA": {
+            "LABEL": "Media (image or video)",
+            "BUTTON": "Attach media",
+            "ERROR": "Only image or video files are supported"
           },
           "SCHEDULED_AT": {
             "LABEL": "Scheduled time",
@@ -208,6 +213,10 @@
             "SUCCESS_MESSAGE": "WhatsApp campaign created successfully",
             "ERROR_MESSAGE": "There was an error. Please try again."
           }
+        },
+        "DUPLICATE": {
+          "SUCCESS_MESSAGE": "Campaign duplicated successfully",
+          "ERROR_MESSAGE": "Could not duplicate the campaign"
         }
       }
     },

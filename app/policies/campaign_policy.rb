@@ -18,4 +18,8 @@ class CampaignPolicy < ApplicationPolicy
   def destroy?
     @account_user.administrator?
   end
+
+  def duplicate?
+    @account_user.administrator?
+  end
 end

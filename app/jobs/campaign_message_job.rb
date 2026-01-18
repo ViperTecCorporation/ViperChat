@@ -1,9 +1,11 @@
 class CampaignMessageJob < ApplicationJob
   include Whatsapp::IncomingMessageServiceHelpers
+  include FileTypeHelper
   queue_as :low
   retry_on ActiveRecord::RecordNotFound, wait: 30.seconds, attempts: 5
 
   def perform(account_id, inbox_id, campaign_id, content, audience)
+    campaign = Campaign.find(campaign_id)
     inbox = Inbox.find(inbox_id)
     contact_inbox = create_contact_inbox(inbox_id, audience)
     conversation = create_conversation(contact_inbox)
@@ -15,7 +17,7 @@ class CampaignMessageJob < ApplicationJob
       message_content = Groq::TextVariationService.new(text: message_content).perform
     end
 
-    conversation.messages.create!(
+    message = conversation.messages.new(
       content: message_content,
       account_id: account_id,
       content_type: :text,
@@ -27,6 +29,8 @@ class CampaignMessageJob < ApplicationJob
         audience_id: audience[:audience_id]
       }
     )
+    attach_campaign_media(message, campaign)
+    message.save!
   end
 
   private
@@ -72,5 +76,15 @@ class CampaignMessageJob < ApplicationJob
     raise ActiveRecord::RecordNotFound if conversation.nil?
 
     conversation
+  end
+
+  def attach_campaign_media(message, campaign)
+    return unless campaign.media&.attached?
+
+    attachment = message.attachments.build(
+      account_id: message.account_id,
+      file_type: file_type(campaign.media.blob.content_type)
+    )
+    attachment.file.attach(campaign.media.blob)
   end
 end

@@ -17,9 +17,12 @@ class Whatsapp::OneoffUnoapiCampaignService
   delegate :channel, to: :inbox
 
   def process_audience(audience)
-    Rails.logger.debug { "Process campaign #{campaign.id} and #{audience.length} audience record(s)" }
+    audience ||= []
+    expanded_audience = expand_label_audience(audience)
+    full_audience = merge_audiences(audience, expanded_audience)
+    Rails.logger.debug { "Process campaign #{campaign.id} and #{full_audience.length} audience record(s)" }
     interval = 0
-    new_audience = audience.map do |a|
+    new_audience = full_audience.map do |a|
       aa = update_audience(a.symbolize_keys)
       interval = schedule_job(campaign, aa, interval) if aa[:status] == :scheduled
       aa
@@ -33,6 +36,35 @@ class Whatsapp::OneoffUnoapiCampaignService
     audience[:status] = audience[:phone_number].present? ? :scheduled : :error
     audience[:audience_id] = audience[:audience_id] || SecureRandom.uuid
     audience.symbolize_keys
+  end
+
+  def expand_label_audience(audience)
+    label_ids = audience.select { |entry| entry['type'] == 'Label' }.map { |entry| entry['id'] }
+    return [] if label_ids.blank?
+
+    label_titles = campaign.account.labels.where(id: label_ids).pluck(:title)
+    contacts = campaign.account.contacts.tagged_with(label_titles, any: true)
+    contacts.map { |contact| contact_to_audience(contact) }
+  end
+
+  def merge_audiences(audience, expanded_audience)
+    manual = audience.reject { |entry| entry['type'] == 'Label' }
+    combined = manual + expanded_audience
+    combined.uniq do |entry|
+      (entry[:phone_number] || entry['phone_number']).to_s.presence ||
+        (entry[:email] || entry['email']).to_s.presence ||
+        (entry[:identifier] || entry['identifier']).to_s.presence ||
+        (entry[:audience_id] || entry['audience_id']).to_s
+    end
+  end
+
+  def contact_to_audience(contact)
+    {
+      name: contact.name,
+      phone_number: contact.phone_number,
+      identifier: contact.identifier,
+      email: contact.email
+    }.compact
   end
 
   def schedule_job(campaign, audience, interval)

@@ -2,7 +2,8 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
-import { useStoreGetters, useMapGetter } from 'dashboard/composables/store';
+import { useStoreGetters, useMapGetter, useStore } from 'dashboard/composables/store';
+import { useAlert } from 'dashboard/composables';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CampaignLayout from 'dashboard/components-next/Campaigns/CampaignLayout.vue';
@@ -13,6 +14,7 @@ import WhatsAppCampaignEmptyState from 'dashboard/components-next/Campaigns/Empt
 
 const { t } = useI18n();
 const getters = useStoreGetters();
+const store = useStore();
 
 const selectedCampaign = ref(null);
 const [showWhatsAppCampaignDialog, toggleWhatsAppCampaignDialog] = useToggle();
@@ -33,6 +35,15 @@ const hasNoWhatsAppCampaigns = computed(
 const handleDelete = campaign => {
   selectedCampaign.value = campaign;
   confirmDeleteCampaignDialogRef.value.dialogRef.open();
+};
+
+const handleDuplicate = async campaign => {
+  try {
+    await store.dispatch('campaigns/duplicate', campaign.id);
+    useAlert(t('CAMPAIGN.WHATSAPP.DUPLICATE.SUCCESS_MESSAGE'));
+  } catch (error) {
+    useAlert(t('CAMPAIGN.WHATSAPP.DUPLICATE.ERROR_MESSAGE'));
+  }
 };
 </script>
 
@@ -58,7 +69,9 @@ const handleDelete = campaign => {
     <CampaignList
       v-else-if="!hasNoWhatsAppCampaigns"
       :campaigns="WhatsAppCampaigns"
+      :show-duplicate="true"
       @delete="handleDelete"
+      @duplicate="handleDuplicate"
     />
     <WhatsAppCampaignEmptyState
       v-else

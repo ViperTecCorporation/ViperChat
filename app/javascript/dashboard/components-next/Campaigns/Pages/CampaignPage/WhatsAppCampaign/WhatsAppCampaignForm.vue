@@ -2,8 +2,11 @@
 import { reactive, computed, watch, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useVuelidate } from '@vuelidate/core';
-import { required, minLength } from '@vuelidate/validators';
+import { required, minLength, helpers } from '@vuelidate/validators';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useAlert } from 'dashboard/composables';
+import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
+import { MAXIMUM_FILE_UPLOAD_SIZE } from 'shared/constants/messages';
 
 import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
@@ -20,6 +23,7 @@ const formState = {
   uiFlags: useMapGetter('campaigns/getUIFlags'),
   labels: useMapGetter('labels/getLabels'),
   inboxes: useMapGetter('inboxes/getWhatsAppInboxes'),
+  globalConfig: useMapGetter('globalConfig/get'),
   getFilteredWhatsAppTemplates: useMapGetter(
     'inboxes/getFilteredWhatsAppTemplates'
   ),
@@ -33,10 +37,12 @@ const initialState = {
   selectedAudience: [],
   message: '',
   audienceText: '',
+  mediaFile: null,
 };
 
 const state = reactive({ ...initialState });
 const templateParserRef = ref(null);
+const mediaInputRef = ref(null);
 
 const selectedInbox = computed(() => {
   if (!state.inboxId) return null;
@@ -57,10 +63,16 @@ const rules = computed(() => {
   };
 
   if (isUnoapiInbox.value) {
+    const hasUnoapiAudience = helpers.withMessage(
+      t('CAMPAIGN.WHATSAPP.CREATE.FORM.UNOAPI_AUDIENCE.ERROR'),
+      () =>
+        state.audienceText.trim().length > 0 ||
+        state.selectedAudience.length > 0
+    );
     return {
       ...baseRules,
       message: { required, minLength: minLength(1) },
-      audienceText: { required, minLength: minLength(1) },
+      audienceText: { hasUnoapiAudience },
     };
   }
 
@@ -74,6 +86,9 @@ const rules = computed(() => {
 const v$ = useVuelidate(rules, state);
 
 const isCreating = computed(() => formState.uiFlags.value.isCreating);
+const maxUploadSize = computed(
+  () => Number(formState.globalConfig.value?.maxFileUploadSizeInMb) || MAXIMUM_FILE_UPLOAD_SIZE
+);
 
 const currentDateTime = computed(() => {
   const now = new Date();
@@ -200,7 +215,11 @@ const prepareCampaignDetails = () => {
       message: state.message,
       inbox_id: state.inboxId,
       scheduled_at: formatToUTCString(state.scheduledAt),
-      audience: parseUnoapiAudience(),
+      audience: [
+        ...state.selectedAudience.map(id => ({ id, type: 'Label' })),
+        ...parseUnoapiAudience(),
+      ],
+      mediaFile: state.mediaFile,
     };
   }
 
@@ -241,6 +260,40 @@ const prepareCampaignDetails = () => {
   };
 };
 
+const handleMediaPick = () => {
+  mediaInputRef.value?.click();
+};
+
+const handleMediaSelected = event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const isMediaFile =
+    file.type?.startsWith('image/') || file.type?.startsWith('video/');
+  if (!isMediaFile) {
+    useAlert(t('CAMPAIGN.WHATSAPP.CREATE.FORM.MEDIA.ERROR'));
+    event.target.value = '';
+    return;
+  }
+
+  if (!checkFileSizeLimit(file, maxUploadSize.value)) {
+    useAlert(
+      t('CONVERSATION.FILE_SIZE_LIMIT', {
+        MAXIMUM_SUPPORTED_FILE_UPLOAD_SIZE: maxUploadSize.value,
+      })
+    );
+    event.target.value = '';
+    return;
+  }
+
+  state.mediaFile = file;
+};
+
+const removeMedia = () => {
+  state.mediaFile = null;
+  if (mediaInputRef.value) mediaInputRef.value.value = '';
+};
+
 const handleSubmit = async () => {
   const isFormValid = await v$.value.$validate();
   if (!isFormValid) return;
@@ -257,6 +310,7 @@ watch(
     state.selectedAudience = [];
     state.message = '';
     state.audienceText = '';
+    state.mediaFile = null;
   }
 );
 </script>
@@ -347,6 +401,26 @@ watch(
         :message-type="formErrors.message ? 'error' : 'info'"
       />
 
+      <div class="flex flex-col gap-1">
+        <label
+          for="audience"
+          class="mb-0.5 text-sm font-medium text-n-slate-12"
+        >
+          {{ t('CAMPAIGN.WHATSAPP.CREATE.FORM.AUDIENCE.LABEL') }}
+        </label>
+        <TagMultiSelectComboBox
+          v-model="state.selectedAudience"
+          :options="audienceList"
+          :label="t('CAMPAIGN.WHATSAPP.CREATE.FORM.AUDIENCE.LABEL')"
+          :placeholder="
+            t('CAMPAIGN.WHATSAPP.CREATE.FORM.AUDIENCE.PLACEHOLDER')
+          "
+          :has-error="!!formErrors.audience"
+          :message="formErrors.audience"
+          class="[&>div>button]:bg-n-alpha-black2"
+        />
+      </div>
+
       <TextArea
         v-model="state.audienceText"
         :label="t('CAMPAIGN.WHATSAPP.CREATE.FORM.UNOAPI_AUDIENCE.LABEL')"
@@ -357,6 +431,43 @@ watch(
         :message="formErrors.audience"
         :message-type="formErrors.audience ? 'error' : 'info'"
       />
+
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium text-n-slate-12">
+          {{ t('CAMPAIGN.WHATSAPP.CREATE.FORM.MEDIA.LABEL') }}
+        </label>
+        <input
+          ref="mediaInputRef"
+          type="file"
+          accept="image/*,video/*"
+          class="hidden"
+          @change="handleMediaSelected"
+        />
+        <div class="flex items-center gap-2">
+          <Button
+            variant="faded"
+            color="slate"
+            type="button"
+            :label="t('CAMPAIGN.WHATSAPP.CREATE.FORM.MEDIA.BUTTON')"
+            class="bg-n-alpha-2 text-n-blue-text hover:bg-n-alpha-3"
+            @click="handleMediaPick"
+          />
+          <span
+            v-if="state.mediaFile"
+            class="text-xs text-n-slate-11 truncate max-w-[12rem]"
+          >
+            {{ state.mediaFile.name }}
+          </span>
+          <Button
+            v-if="state.mediaFile"
+            variant="faded"
+            color="ruby"
+            type="button"
+            icon="i-lucide-x"
+            @click="removeMedia"
+          />
+        </div>
+      </div>
     </template>
 
     <Input

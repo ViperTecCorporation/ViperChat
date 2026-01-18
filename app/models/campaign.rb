@@ -31,12 +31,15 @@
 #
 class Campaign < ApplicationRecord
   include UrlHelper
+  has_one_attached :media
+
   validates :account_id, presence: true
   validates :inbox_id, presence: true
   validates :title, presence: true
   validates :message, presence: true
   validate :validate_campaign_inbox
   validate :validate_url
+  validate :validate_media_type
   validate :prevent_completed_campaign_from_update, on: :update
   validate :sender_must_belong_to_account
   validate :inbox_must_belong_to_account
@@ -131,6 +134,14 @@ class Campaign < ApplicationRecord
 
   def prevent_completed_campaign_from_update
     errors.add :status, 'The campaign is already completed' if !campaign_status_changed? && completed?
+  end
+
+  def validate_media_type
+    return unless media.attached?
+
+    content_type = media.blob&.content_type.to_s
+    is_media = content_type.start_with?('image/', 'video/')
+    errors.add(:media, 'must be an image or video') unless is_media
   end
 
   # creating db triggers

@@ -42,9 +42,13 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  showDuplicate: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['edit', 'delete']);
+const emit = defineEmits(['edit', 'delete', 'duplicate']);
 
 const { t } = useI18n();
 
@@ -124,6 +128,14 @@ const inboxIcon = computed(() => {
         color="slate"
         icon="i-lucide-sliders-vertical"
         @click="emit('edit')"
+      />
+      <Button
+        v-if="showDuplicate"
+        variant="faded"
+        color="slate"
+        size="sm"
+        icon="i-lucide-copy"
+        @click="emit('duplicate')"
       />
       <Button
         variant="faded"
