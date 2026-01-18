@@ -9,7 +9,7 @@ class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
   def show; end
 
   def create
-    media_blob_signed_id = params.dig(:campaign, :media_blob_signed_id)
+    media_blob_signed_id = params.dig(:campaign, :media_blob_signed_id) || params[:media_blob_signed_id]
     @campaign = Current.account.campaigns.create!(campaign_params)
     attach_media_blob(@campaign, media_blob_signed_id)
   end
