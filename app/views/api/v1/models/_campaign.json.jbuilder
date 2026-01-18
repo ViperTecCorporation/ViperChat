@@ -10,6 +10,10 @@ json.sender do
 end
 json.message resource.message
 json.template_params resource.template_params
+if resource.media&.attached?
+  json.media_blob_signed_id resource.media.blob.signed_id
+  json.media_file_name resource.media.filename.to_s
+end
 json.campaign_status resource.campaign_status
 json.enabled resource.enabled
 json.campaign_type resource.campaign_type

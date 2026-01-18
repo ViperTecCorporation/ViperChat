@@ -48,6 +48,8 @@ const handleDuplicate = campaign => {
     message: campaign.message,
     audience: campaign.audience || [],
     templateParams: campaign.template_params || {},
+    mediaBlobSignedId: campaign.media_blob_signed_id,
+    mediaFileName: campaign.media_file_name,
   };
   toggleWhatsAppCampaignDialog(true);
 };

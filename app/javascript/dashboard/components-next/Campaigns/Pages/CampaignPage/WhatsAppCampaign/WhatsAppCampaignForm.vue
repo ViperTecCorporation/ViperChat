@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, computed, watch, ref } from 'vue';
+import { reactive, computed, watch, ref, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength, helpers } from '@vuelidate/validators';
@@ -54,6 +54,7 @@ const templateParserRef = ref(null);
 const mediaInputRef = ref(null);
 const pendingTemplateSelection = ref(null);
 const isUploadingMedia = ref(false);
+const isApplyingInitialData = ref(false);
 
 const selectedInbox = computed(() => {
   if (!state.inboxId) return null;
@@ -245,16 +246,17 @@ const formatUnoapiAudienceText = audience => {
     .join('\n');
 };
 
-const applyInitialData = data => {
+const applyInitialData = async data => {
   if (!data) return;
 
+  isApplyingInitialData.value = true;
   state.title = data.title || '';
   state.inboxId = data.inboxId || null;
   state.templateId = null;
   state.scheduledAt = null;
   state.message = data.message || '';
-  state.mediaBlobSignedId = null;
-  state.mediaFileName = '';
+  state.mediaBlobSignedId = data.mediaBlobSignedId || null;
+  state.mediaFileName = data.mediaFileName || '';
 
   const labelIds = (data.audience || [])
     .filter(entry => entry.type === 'Label')
@@ -272,6 +274,9 @@ const applyInitialData = data => {
   } else {
     pendingTemplateSelection.value = null;
   }
+
+  await nextTick();
+  isApplyingInitialData.value = false;
 };
 
 const prepareCampaignDetails = () => {
@@ -384,6 +389,7 @@ const handleSubmit = async () => {
 watch(
   () => state.inboxId,
   () => {
+    if (isApplyingInitialData.value) return;
     state.templateId = null;
     state.selectedAudience = [];
     state.message = '';

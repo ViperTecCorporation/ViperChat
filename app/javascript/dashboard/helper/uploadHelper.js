@@ -41,6 +41,7 @@ export async function uploadFile(file, accountId) {
     fileUrl: data.file_url,
     blobKey: data.blob_key,
     blobId: data.blob_id,
+    blobSignedId: data.blob_signed_id,
   };
 }
 
