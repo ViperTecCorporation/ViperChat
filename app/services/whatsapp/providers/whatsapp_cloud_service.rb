@@ -2,7 +2,9 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   def send_message(phone_number, message)
     @message = message
 
-    if message.attachments.present?
+    if message.content_type == 'sticker'
+      send_sticker_message(phone_number, message)
+    elsif message.attachments.present?
       send_attachments(phone_number, message)
     elsif message.content_type == 'input_select'
       send_interactive_text_message(phone_number, message)
@@ -197,6 +199,31 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
         'to' => phone_number,
         'type' => type,
         type.to_s => type_content
+      }.to_json
+    )
+
+    process_response(response, message)
+  end
+
+  def send_sticker_message(phone_number, message)
+    sticker_url = message.content_attributes&.[]('sticker_url')
+    if sticker_url.blank?
+      Rails.logger.warn("[WHATSAPP] Sticker url missing message_id=#{message.id}")
+      return
+    end
+
+    Rails.logger.info("[WHATSAPP] Sending sticker message_id=#{message.id} to=#{phone_number}")
+    response = HTTParty.post(
+      "#{phone_id_path}/messages",
+      headers: api_headers,
+      body: {
+        messaging_product: 'whatsapp',
+        context: whatsapp_reply_context(message),
+        to: phone_number,
+        type: 'sticker',
+        sticker: {
+          link: sticker_url
+        }
       }.to_json
     )
 

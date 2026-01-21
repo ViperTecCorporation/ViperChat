@@ -16,6 +16,7 @@ import ArticleSearchPopover from 'dashboard/routes/dashboard/helpcenter/componen
 import MessageSignatureMissingAlert from './MessageSignatureMissingAlert.vue';
 import ReplyBoxBanner from './ReplyBoxBanner.vue';
 import QuotedEmailPreview from './QuotedEmailPreview.vue';
+import StickerPickerDialog from 'dashboard/components-next/whatsapp/StickerPickerDialog.vue';
 import { REPLY_EDITOR_MODES } from 'dashboard/components/widgets/WootWriter/constants';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import AudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder.vue';
@@ -71,6 +72,7 @@ export default {
     WhatsappTemplates,
     WootMessageEditor,
     QuotedEmailPreview,
+    StickerPickerDialog,
   },
   mixins: [inboxMixin, fileUploadMixin, keyboardEventListenerMixins],
   props: {
@@ -117,6 +119,7 @@ export default {
       doAutoSaveDraft: () => {},
       showWhatsAppTemplatesModal: false,
       showContentTemplatesModal: false,
+      showStickerPicker: false,
       updateEditorSelectionWith: '',
       undefinedVariableMessage: '',
       showMentions: false,
@@ -684,6 +687,27 @@ export default {
     hideContentTemplatesModal() {
       this.showContentTemplatesModal = false;
     },
+    showStickerPickerModal() {
+      this.showStickerPicker = true;
+    },
+    hideStickerPickerModal() {
+      this.showStickerPicker = false;
+    },
+    sendStickerMessage(sticker) {
+      // eslint-disable-next-line no-console
+      console.info('[StickerPicker] send message', {
+        conversationId: this.currentChat.id,
+        stickerId: sticker.id,
+      });
+      this.sendMessage({
+        conversationId: this.currentChat.id,
+        content_type: 'sticker',
+        content_attributes: {
+          sticker_id: sticker.id,
+          sticker_url: sticker.file_url,
+        },
+      });
+    },
     confirmOnSendReply() {
       if (this.isReplyButtonDisabled) {
         return;
@@ -1222,6 +1246,7 @@ export default {
       :message="message"
       :portal-slug="connectedPortalSlug"
       :new-conversation-modal-active="newConversationModalActive"
+      @toggle-sticker-picker="showStickerPickerModal"
       @select-whatsapp-template="openWhatsappTemplateModal"
       @select-content-template="openContentTemplateModal"
       @replace-text="replaceText"
@@ -1234,6 +1259,14 @@ export default {
       @close="hideWhatsappTemplatesModal"
       @on-send="onSendWhatsAppReply"
       @cancel="hideWhatsappTemplatesModal"
+    />
+
+    <StickerPickerDialog
+      v-if="showStickerPicker"
+      :show="showStickerPicker"
+      :inbox-id="inboxId"
+      @close="hideStickerPickerModal"
+      @send="sendStickerMessage"
     />
 
     <ContentTemplates

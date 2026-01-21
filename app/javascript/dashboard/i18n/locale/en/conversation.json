@@ -233,6 +233,7 @@
       "DISMISS_REPLY": "Dismiss reply",
       "REPLYING_TO": "Replying to:",
       "TIP_EMOJI_ICON": "Show emoji selector",
+      "TIP_STICKER_ICON": "Open stickers",
       "TIP_ATTACH_ICON": "Attach files",
       "TIP_ATTACH_SINGLE": "You cannot attach more files to this message",
       "TIP_AUDIORECORDER_ICON": "Record audio",
@@ -270,6 +271,22 @@
         "REMOVE_PREVIEW": "Remove quoted email thread",
         "COLLAPSE": "Collapse preview",
         "EXPAND": "Expand preview"
+      },
+      "STICKERS": {
+        "TITLE": "Stickers",
+        "SUBTITLE": "Pick a sticker to send",
+        "RECENT": "Recent",
+        "ALL": "All",
+        "EMPTY": "No stickers available yet",
+        "ADD": "Add sticker",
+        "SELECT": "Select",
+        "CANCEL_SELECTION": "Cancel selection",
+        "DELETE": "Delete",
+        "ALT": "Sticker",
+        "LOADING": "Loading stickers...",
+        "LOAD_ERROR": "Could not load stickers. Please try again.",
+        "UPLOAD_ERROR": "Could not upload the sticker. Please try again.",
+        "DELETE_ERROR": "Could not delete the stickers. Please try again."
       }
     },
     "VISIBLE_TO_AGENTS": "Private Note: Only visible to you and your team",

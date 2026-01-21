@@ -126,6 +126,16 @@ export function useCallSession() {
       : TwilioVoiceClient;
   };
 
+  const requestMicrophonePermission = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) return;
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: false,
+    });
+    stream.getTracks().forEach(track => track.stop());
+  };
+
   const endCall = async ({ conversationId, inboxId }) => {
     // eslint-disable-next-line no-console
     console.log('[CallSession] endCall', { conversationId, inboxId });
@@ -142,6 +152,7 @@ export function useCallSession() {
     // eslint-disable-next-line no-console
     console.log('[CallSession] joinCall start', { conversationId, inboxId, callSid });
     try {
+      await requestMicrophonePermission();
       const voiceClient = resolveVoiceClient(inboxId);
       const device = await voiceClient.initializeDevice(inboxId);
       if (!device) return null;

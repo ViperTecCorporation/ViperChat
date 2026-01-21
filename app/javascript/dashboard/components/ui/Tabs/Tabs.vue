@@ -78,9 +78,9 @@ watch(
     </button>
     <ul
       ref="tabsList"
-      class="border-r-0 border-l-0 border-t-0 flex min-w-[6.25rem] py-0 px-4 list-none mb-0"
+      class="border-r-0 border-l-0 border-t-0 flex flex-nowrap min-w-[6.25rem] py-0 px-4 list-none mb-0 overflow-x-auto overflow-y-hidden"
       :class="
-        hasScroll ? 'overflow-hidden py-0 px-1 max-w-[calc(100%-64px)]' : ''
+        hasScroll ? 'py-0 px-1 max-w-[calc(100%-64px)]' : ''
       "
     >
       <slot />

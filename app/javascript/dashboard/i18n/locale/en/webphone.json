@@ -23,8 +23,8 @@
     "CONNECTION_FAILED": "Connection failed",
     "REJECTED": "Rejected",
     "PERMISSIONS": {
-      "TITLE": "Enable microphone and camera",
-      "DESCRIPTION": "Allow access so you can receive and place voice calls.",
+      "TITLE": "Enable microphone",
+      "DESCRIPTION": "Allow access to your microphone so you can receive and place voice calls.",
       "ALLOW": "Allow access",
       "NOT_NOW": "Not now",
       "ERROR": "We could not access your microphone. Please allow it in your browser settings."

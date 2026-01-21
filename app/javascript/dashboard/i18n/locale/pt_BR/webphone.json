@@ -21,8 +21,8 @@
     "CALL_LIMIT": "Limite de ligações diários atingido",
     "ERROR_TO_MADE_CALL": "Ocorreu um erro ao tentar ligar",
     "PERMISSIONS": {
-      "TITLE": "Ativar microfone e camera",
-      "DESCRIPTION": "Permita o acesso para receber e realizar chamadas de voz.",
+      "TITLE": "Ativar microfone",
+      "DESCRIPTION": "Permita o acesso ao microfone para receber e realizar chamadas de voz.",
       "ALLOW": "Permitir acesso",
       "NOT_NOW": "Agora nao",
       "ERROR": "Nao foi possivel acessar o microfone. Libere a permissao no navegador."

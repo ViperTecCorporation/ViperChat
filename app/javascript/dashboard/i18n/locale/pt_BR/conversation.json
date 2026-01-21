@@ -233,6 +233,7 @@
       "DISMISS_REPLY": "Dispensar resposta",
       "REPLYING_TO": "Respondendo a:",
       "TIP_EMOJI_ICON": "Mostrar seletor de emoji",
+      "TIP_STICKER_ICON": "Abrir figurinhas",
       "TIP_ATTACH_ICON": "Anexar arquivos",
       "TIP_ATTACH_SINGLE": "Você não pode adicionar mais de um arquivo para essa mensagem",
       "TIP_AUDIORECORDER_ICON": "Gravar áudio",
@@ -270,6 +271,22 @@
         "REMOVE_PREVIEW": "Remover o encadeamento de e-mails citado",
         "COLLAPSE": "Recolher a prévia",
         "EXPAND": "Expandir a prévia"
+      },
+      "STICKERS": {
+        "TITLE": "Figurinhas",
+        "SUBTITLE": "Escolha uma figurinha para enviar",
+        "RECENT": "Recentes",
+        "ALL": "Todas",
+        "EMPTY": "Nenhuma figurinha disponível",
+        "ADD": "Adicionar figurinha",
+        "SELECT": "Selecionar",
+        "CANCEL_SELECTION": "Cancelar seleção",
+        "DELETE": "Excluir",
+        "ALT": "Figurinha",
+        "LOADING": "Carregando figurinhas...",
+        "LOAD_ERROR": "Não foi possível carregar as figurinhas. Tente novamente.",
+        "UPLOAD_ERROR": "Não foi possível enviar a figurinha. Tente novamente.",
+        "DELETE_ERROR": "Não foi possível excluir as figurinhas. Tente novamente."
       }
     },
     "VISIBLE_TO_AGENTS": "Mensagem Privada: Apenas visível para você e seu time",

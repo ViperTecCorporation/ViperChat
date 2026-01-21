@@ -4,7 +4,6 @@ import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { DirectUpload } from 'activestorage';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
-import { getMaxUploadSizeByChannel } from '@chatwoot/utils';
 
 vi.mock('dashboard/composables/store');
 vi.mock('dashboard/composables', () => ({
@@ -17,7 +16,6 @@ vi.mock('shared/helpers/FileHelper', () => ({
   resolveMaximumFileUploadSize: vi.fn(value => Number(value) || 40),
   DEFAULT_MAXIMUM_FILE_UPLOAD_SIZE: 40,
 }));
-vi.mock('@chatwoot/utils');
 
 describe('useFileUpload', () => {
   const mockAttachFile = vi.fn();
@@ -41,7 +39,11 @@ describe('useFileUpload', () => {
         getCurrentUser: { value: { access_token: 'test-token' } },
         getSelectedChat: { value: { id: '456' } },
         'globalConfig/get': {
-          value: { directUploadsEnabled: true, maximumFileUploadSize: 40 },
+          value: {
+            directUploadsEnabled: true,
+            maximumFileUploadSize: 40,
+            maxFileUploadSizeInMb: 25,
+          },
         },
       };
       return getterMap[getter];
@@ -49,7 +51,6 @@ describe('useFileUpload', () => {
 
     useI18n.mockReturnValue({ t: mockTranslate });
     checkFileSizeLimit.mockReturnValue(true);
-    getMaxUploadSizeByChannel.mockReturnValue(25); // default max size MB for tests
   });
 
   it('handles direct file upload when direct uploads enabled', () => {
@@ -64,13 +65,6 @@ describe('useFileUpload', () => {
     }));
 
     onFileUpload(mockFile);
-
-    // size rules called with inbox + mime
-    expect(getMaxUploadSizeByChannel).toHaveBeenCalledWith({
-      channelType: inbox.channel_type,
-      medium: inbox.medium,
-      mime: 'image/jpeg',
-    });
 
     // size check called with max from helper
     expect(checkFileSizeLimit).toHaveBeenCalledWith(mockFile, 25);
@@ -93,7 +87,11 @@ describe('useFileUpload', () => {
         getCurrentUser: { value: { access_token: 'test-token' } },
         getSelectedChat: { value: { id: '456' } },
         'globalConfig/get': {
-          value: { directUploadsEnabled: false, maximumFileUploadSize: 40 },
+          value: {
+            directUploadsEnabled: false,
+            maximumFileUploadSize: 40,
+            maxFileUploadSizeInMb: 25,
+          },
         },
       };
       return getterMap[getter];
@@ -107,7 +105,6 @@ describe('useFileUpload', () => {
     onFileUpload(mockFile);
 
     expect(DirectUpload).not.toHaveBeenCalled();
-    expect(getMaxUploadSizeByChannel).toHaveBeenCalled();
     expect(checkFileSizeLimit).toHaveBeenCalledWith(mockFile, 25);
     expect(mockAttachFile).toHaveBeenCalledWith({ file: mockFile });
   });
@@ -127,10 +124,7 @@ describe('useFileUpload', () => {
     expect(mockAttachFile).not.toHaveBeenCalled();
   });
 
-  it('uses per-mime limits from helper', () => {
-    getMaxUploadSizeByChannel.mockImplementation(({ mime }) =>
-      mime.startsWith('image/') ? 10 : 50
-    );
+  it('uses configured max size from global config', () => {
     const { onFileUpload } = useFileUpload({
       inbox,
       attachFile: mockAttachFile,
@@ -142,12 +136,7 @@ describe('useFileUpload', () => {
 
     onFileUpload(mockFile);
 
-    expect(getMaxUploadSizeByChannel).toHaveBeenCalledWith({
-      channelType: inbox.channel_type,
-      medium: inbox.medium,
-      mime: 'image/jpeg',
-    });
-    expect(checkFileSizeLimit).toHaveBeenCalledWith(mockFile, 10);
+    expect(checkFileSizeLimit).toHaveBeenCalledWith(mockFile, 25);
   });
 
   it('handles direct upload errors', () => {
@@ -176,7 +165,6 @@ describe('useFileUpload', () => {
     onFileUpload(null);
 
     expect(checkFileSizeLimit).not.toHaveBeenCalled();
-    expect(getMaxUploadSizeByChannel).not.toHaveBeenCalled();
     expect(mockAttachFile).not.toHaveBeenCalled();
     expect(useAlert).not.toHaveBeenCalled();
   });

@@ -31,6 +31,7 @@ class Messages::MessageBuilder
       # The frontend is equipped to handle this case
       process_email_content if @account.feature_enabled?(:quoted_email_reply)
       @message.save!
+      update_sticker_last_used
       @message
     end
   end
@@ -96,6 +97,7 @@ class Messages::MessageBuilder
       process_email_content if @account.feature_enabled?(:quoted_email_reply)
 
       @message.save!
+      update_sticker_last_used
       created_messages << @message
 
       # Restore full attachments list for next iteration
@@ -105,6 +107,18 @@ class Messages::MessageBuilder
     # Return the first created message as the primary response
     @message = created_messages.first
     @message
+  end
+
+  def update_sticker_last_used
+    sticker_id = content_attributes&.[]('sticker_id')
+    return if sticker_id.blank?
+
+    Rails.logger.info("[WhatsappStickers] update_last_used sticker_id=#{sticker_id} inbox_id=#{@conversation.inbox_id}")
+    WhatsappSticker.where(
+      account_id: @conversation.account_id,
+      inbox_id: @conversation.inbox_id,
+      id: sticker_id
+    ).update_all(last_used_at: Time.current)
   end
 
   def process_emails

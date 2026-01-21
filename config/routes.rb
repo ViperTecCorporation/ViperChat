@@ -113,6 +113,9 @@ Rails.application.routes.draw do
             post :duplicate, on: :member
           end
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
+          resources :whatsapp_stickers, only: [:index, :create, :destroy] do
+            delete :bulk_destroy, on: :collection
+          end
           namespace :channels do
             resource :twilio_channel, only: [:create]
             resource :notifica_me_channel, only: [:index, :create] do

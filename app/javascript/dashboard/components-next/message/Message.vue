@@ -39,6 +39,7 @@ import LocationBubble from './bubbles/Location.vue';
 import CSATBubble from './bubbles/CSAT.vue';
 import FormBubble from './bubbles/Form.vue';
 import VoiceCallBubble from './bubbles/VoiceCall.vue';
+import StickerBubble from './bubbles/Sticker.vue';
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
@@ -326,6 +327,10 @@ const componentToRender = computed(() => {
     return VoiceCallBubble;
   }
 
+  if (props.contentType === CONTENT_TYPES.STICKER) {
+    return StickerBubble;
+  }
+
   if (props.contentType === CONTENT_TYPES.INCOMING_EMAIL) {
     return EmailBubble;
   }
@@ -441,6 +446,7 @@ const shouldRenderMessage = computed(() => {
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
   const isEmailContentType = props.contentType === CONTENT_TYPES.INCOMING_EMAIL;
   const isUnsupported = props.contentAttributes?.isUnsupported;
+  const isStickerContentType = props.contentType === CONTENT_TYPES.STICKER;
   const isAnIntegrationMessage =
     props.contentType === CONTENT_TYPES.INTEGRATIONS;
 
@@ -449,6 +455,7 @@ const shouldRenderMessage = computed(() => {
     props.content ||
     isEmailContentType ||
     isUnsupported ||
+    isStickerContentType ||
     isAnIntegrationMessage
   );
 });

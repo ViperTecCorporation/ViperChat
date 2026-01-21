@@ -129,6 +129,7 @@ class Account < ApplicationRecord
   has_many :web_widgets, dependent: :destroy_async, class_name: '::Channel::WebWidget'
   has_many :webhooks, dependent: :destroy_async
   has_many :whatsapp_channels, dependent: :destroy_async, class_name: '::Channel::Whatsapp'
+  has_many :whatsapp_stickers, dependent: :destroy
   has_many :notifica_me_channels, dependent: :destroy_async, class_name: '::Channel::NotificaMe'
   has_many :internal_channels, dependent: :destroy_async, class_name: '::Channel::Internal'
   has_many :working_hours, dependent: :destroy_async

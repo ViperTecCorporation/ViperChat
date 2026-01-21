@@ -11,6 +11,7 @@ import InternalConversationsAPI from 'dashboard/api/internalConversations';
 import { useCallsStore } from 'dashboard/stores/calls';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import VoicePermissionsModal from 'dashboard/components/widgets/VoicePermissionsModal.vue';
 
 const router = useRouter();
 const store = useStore();
@@ -42,6 +43,8 @@ const isInternalCalling = ref(false);
 const selectedInternalAgentId = ref('');
 const selectedInternalVoiceInboxId = ref('');
 const selectedInternalInboxId = ref('');
+const showVoicePermissionModal = ref(false);
+const pendingCallToJoin = ref(null);
 
 const getCallInfo = call => {
   const conversation = store.getters.getConversationById(call?.conversationId);
@@ -305,6 +308,38 @@ const handleEndCall = async () => {
   });
 };
 
+const hasMicrophonePermission = async () => {
+  if (!navigator.permissions?.query) return false;
+
+  try {
+    const status = await navigator.permissions.query({ name: 'microphone' });
+    return status.state === 'granted';
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn('[VoiceWidget] microphone permission check failed', { error });
+    return false;
+  }
+};
+
+const openVoicePermissionModal = call => {
+  pendingCallToJoin.value = call;
+  showVoicePermissionModal.value = true;
+};
+
+const closeVoicePermissionModal = () => {
+  showVoicePermissionModal.value = false;
+  pendingCallToJoin.value = null;
+};
+
+const confirmVoicePermissionModal = async () => {
+  showVoicePermissionModal.value = false;
+  const call = pendingCallToJoin.value;
+  pendingCallToJoin.value = null;
+  if (call) {
+    await handleJoinCall(call);
+  }
+};
+
 const handleJoinCall = async call => {
   const { conversation } = getCallInfo(call);
   if (!call || !conversation || isJoining.value) return;
@@ -328,6 +363,16 @@ const handleJoinCall = async call => {
   }
 };
 
+const requestJoinCall = async call => {
+  if (!call || isJoining.value) return;
+  const hasPermission = await hasMicrophonePermission();
+  if (hasPermission) {
+    await handleJoinCall(call);
+    return;
+  }
+  openVoicePermissionModal(call);
+};
+
 // Auto-join outbound calls when window is visible
 watch(
   () => incomingCalls.value[0],
@@ -337,7 +382,7 @@ watch(
       !hasActiveCall.value &&
       WindowVisibilityHelper.isWindowVisible()
     ) {
-      handleJoinCall(call);
+      requestJoinCall(call);
     }
   },
   { immediate: true }
@@ -422,7 +467,7 @@ onUnmounted(() => {
         </button>
         <button
           class="flex justify-center items-center w-10 h-10 bg-n-teal-9 hover:bg-n-teal-10 rounded-full transition-colors"
-          @click="handleJoinCall(call)"
+          @click="requestJoinCall(call)"
         >
           <i class="text-lg text-white i-ph-phone-bold" />
         </button>
@@ -497,7 +542,7 @@ onUnmounted(() => {
         <button
           v-if="!hasActiveCall"
           class="flex justify-center items-center w-10 h-10 bg-n-teal-9 hover:bg-n-teal-10 rounded-full transition-colors"
-          @click="handleJoinCall(incomingCalls[0])"
+          @click="requestJoinCall(incomingCalls[0])"
         >
           <i class="text-lg text-white i-ph-phone-bold" />
         </button>
@@ -665,4 +710,10 @@ onUnmounted(() => {
       </div>
     </woot-modal>
   </div>
+
+  <VoicePermissionsModal
+    :show="showVoicePermissionModal"
+    @close="closeVoicePermissionModal"
+    @confirm="confirmVoicePermissionModal"
+  />
 </template>

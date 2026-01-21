@@ -8,7 +8,7 @@ import {
 
 describe('#getUserCookieName', () => {
   it('returns correct cookie name', () => {
-    global.$viperchat = { websiteToken: '123456' };
+    window.$chatwoot = { websiteToken: '123456' };
     expect(getUserCookieName()).toBe('cw_user_123456');
   });
 });

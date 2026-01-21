@@ -19,9 +19,6 @@ const CommandBar = defineAsyncComponent(
 const FloatingCallWidget = defineAsyncComponent(
   () => import('dashboard/components/widgets/FloatingCallWidget.vue')
 );
-const VoicePermissionsModal = defineAsyncComponent(
-  () => import('dashboard/components/widgets/VoicePermissionsModal.vue')
-);
 const VoiceDialerFab = defineAsyncComponent(
   () => import('dashboard/components/widgets/VoiceDialerFab.vue')
 );
@@ -48,7 +45,6 @@ export default {
     CopilotLauncher,
     CopilotContainer,
     FloatingCallWidget,
-    VoicePermissionsModal,
     VoiceDialerFab,
     VoiceAudioPlaybackModal,
     VoiceAutoRegister,
@@ -179,7 +175,6 @@ export default {
         <VoiceAutoRegister />
         <VoiceDialerFab />
         <VoiceAudioPlaybackModal />
-        <VoicePermissionsModal />
         <FloatingCallWidget v-if="hasActiveCall || hasIncomingCall" />
       </template>
       <AddAccountModal

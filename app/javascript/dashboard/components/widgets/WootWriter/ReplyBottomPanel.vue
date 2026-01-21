@@ -126,6 +126,7 @@ export default {
   emits: [
     'replaceText',
     'toggleInsertArticle',
+    'toggleStickerPicker',
     'selectWhatsappTemplate',
     'selectContentTemplate',
     'toggleQuotedReply',
@@ -238,6 +239,12 @@ export default {
     showMessageSignatureButton() {
       return !this.isOnPrivateNote;
     },
+    showStickerButton() {
+      return (
+        !this.isOnPrivateNote &&
+        (this.isAWhatsAppCloudChannel || this.isAUnoapiChannel)
+      );
+    },
     sendWithSignature() {
       // channelType is sourced from inboxMixin
       return this.fetchSignatureFlagFromUISettings(this.channelType);
@@ -286,6 +293,15 @@ export default {
         faded
         sm
         @click="toggleEmojiPicker"
+      />
+      <NextButton
+        v-if="showStickerButton"
+        v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_STICKER_ICON')"
+        icon="i-ph-sticker"
+        slate
+        faded
+        sm
+        @click="$emit('toggleStickerPicker')"
       />
       <FileUpload
         ref="uploadRef"
