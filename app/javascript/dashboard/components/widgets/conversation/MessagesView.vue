@@ -5,7 +5,7 @@ import MessageApi from '../../../api/inbox/message';
 
 // composable
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
-import { useCaptain } from 'dashboard/composables/useCaptain';
+import { useLabelSuggestions } from 'dashboard/composables/useLabelSuggestions';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 
 // components
@@ -66,7 +66,11 @@ export default {
 
     useKeyboardEvents(keyboardEvents);
 
-    const { captainTasksEnabled, getLabelSuggestions } = useCaptain();
+    const {
+      captainTasksEnabled,
+      isLabelSuggestionFeatureEnabled,
+      getLabelSuggestions,
+    } = useLabelSuggestions();
 
     provide('contextMenuElementTarget', conversationPanelRef);
 
@@ -74,6 +78,7 @@ export default {
       isPopOutReplyBox,
       captainTasksEnabled,
       getLabelSuggestions,
+      isLabelSuggestionFeatureEnabled,
       conversationPanelRef,
     };
   },
@@ -107,7 +112,10 @@ export default {
     },
     shouldShowLabelSuggestions() {
       return (
-        this.isOpen && this.captainTasksEnabled && !this.messageSentSinceOpened
+        this.isOpen &&
+        this.captainTasksEnabled &&
+        this.isLabelSuggestionFeatureEnabled &&
+        !this.messageSentSinceOpened
       );
     },
     inboxId() {
@@ -314,7 +322,7 @@ export default {
       const existingLabels = this.currentChat?.labels || [];
       if (existingLabels.length > 0) return;
 
-      if (!this.captainTasksEnabled) {
+      if (!this.captainTasksEnabled || !this.isLabelSuggestionFeatureEnabled) {
         return;
       }
 
