@@ -157,7 +157,8 @@ watch(
     } else {
       resetSelectionState();
     }
-  }
+  },
+  { immediate: true }
 );
 </script>
 
