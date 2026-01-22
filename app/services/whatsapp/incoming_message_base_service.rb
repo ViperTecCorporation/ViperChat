@@ -241,11 +241,13 @@ class Whatsapp::IncomingMessageBaseService
 
   def create_message(message)
     timestamp = message[:timestamp] ? Time.at(message[:timestamp].to_i, microsecond, :microsecond, in: 'UTC') : Time.current.utc
+    Rails.logger.info("[WHATSAPP] Incoming message type=#{message_type} content_type=#{message_type == 'sticker' ? 'sticker' : 'nil'} source_id=#{message[:id]}")
     @message = @conversation.messages.build(
       content: message_content(message),
       account_id: @inbox.account_id,
       inbox_id: @inbox.id,
       message_type: @message_type,
+      content_type: message_type == 'sticker' ? 'sticker' : nil,
       sender: @sender,
       source_id: message[:id].to_s,
       created_at: timestamp,
