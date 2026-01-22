@@ -233,7 +233,7 @@ export default {
         attachment?.thumb_url ||
         attachment?.thumbUrl ||
         null;
-      if (this.contentType === 'sticker') {
+      if (this.isStickerMessage) {
         // eslint-disable-next-line no-console
         console.log('[StickerBubble] url', {
           messageId: this.data?.id,
@@ -245,7 +245,9 @@ export default {
       return url;
     },
     isStickerMessage() {
-      return this.contentType === 'sticker' && !!this.stickerUrl;
+      const rawType = this.data?.content_type;
+      const isStickerType = rawType === 'sticker' || rawType === 11;
+      return isStickerType && !!this.stickerUrl;
     },
     externalError() {
       return this.contentAttributes.external_error || '';
