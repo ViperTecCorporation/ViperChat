@@ -4,15 +4,22 @@ import { useI18n } from 'vue-i18n';
 import BaseBubble from './Base.vue';
 import { useMessageContext } from '../provider.js';
 
-const { contentAttributes } = useMessageContext();
+const { contentAttributes, attachments } = useMessageContext();
 const { t } = useI18n();
 
 const stickerUrl = computed(() => {
-  return (
+  const attachment = attachments.value?.[0];
+  const url =
     contentAttributes.value?.stickerUrl ||
     contentAttributes.value?.sticker_url ||
-    ''
-  );
+    attachment?.dataUrl ||
+    attachment?.data_url ||
+    attachment?.downloadUrl ||
+    attachment?.download_url ||
+    attachment?.thumbUrl ||
+    attachment?.thumb_url ||
+    '';
+  return url;
 });
 </script>
 

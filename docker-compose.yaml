@@ -87,7 +87,7 @@ services:
       - RAILS_ENV=development
       - BUNDLER_VERSION=2.7.2
     entrypoint: ["sh", "docker/entrypoints/vite.sh"]
-    command: bin/vite dev
+    command: ["bin/vite", "dev", "--host", "0.0.0.0", "--port", "3036", "--strictPort"]
 
   postgres:
     image: pgvector/pgvector:pg16

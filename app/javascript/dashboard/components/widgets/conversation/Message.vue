@@ -223,6 +223,8 @@ export default {
     },
     stickerUrl() {
       const attachment = this.data?.attachments?.[0];
+      const rawType = this.data?.content_type;
+      const isStickerType = rawType === 'sticker' || rawType === 11;
       const url =
         this.contentAttributes.sticker_url ||
         this.contentAttributes.stickerUrl ||
@@ -233,15 +235,6 @@ export default {
         attachment?.thumb_url ||
         attachment?.thumbUrl ||
         null;
-      if (this.isStickerMessage) {
-        // eslint-disable-next-line no-console
-        console.log('[StickerBubble] url', {
-          messageId: this.data?.id,
-          url,
-          contentAttributes: this.contentAttributes,
-          attachment,
-        });
-      }
       return url;
     },
     isStickerMessage() {
