@@ -235,7 +235,7 @@ export default {
       slate
       sm
       icon="i-lucide-ellipsis-vertical"
-      class="invisible group-hover/context-menu:visible"
+      class="visible md:invisible md:group-hover/context-menu:visible"
       @click="handleOpen"
     />
     <ContextMenu

@@ -469,6 +469,20 @@ const reactionEmoji = computed(() => {
 
 const hasReaction = computed(() => !!reactionEmoji.value);
 
+const longPressStartPoint = ref(null);
+const longPressPoint = ref(null);
+const longPressTarget = ref(null);
+const { start: startLongPressTimer, stop: stopLongPressTimer } = useTimeoutFn(
+  () => {
+    const touchEvent = createTouchContextEvent();
+    if (touchEvent) {
+      openContextMenu(touchEvent);
+    }
+  },
+  450,
+  { immediate: false }
+);
+
 function openContextMenu(e) {
   const shouldSkipContextMenu =
     e.target?.classList.contains('skip-context-menu') ||
@@ -486,6 +500,69 @@ function openContextMenu(e) {
     y: e.pageY || e.clientY,
   };
   showContextMenu.value = true;
+}
+
+function getTouchPoint(e) {
+  const touch = e.touches?.[0] || e.changedTouches?.[0];
+  if (!touch) return null;
+  return {
+    pageX: touch.pageX,
+    pageY: touch.pageY,
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+  };
+}
+
+function createTouchContextEvent() {
+  if (!longPressPoint.value || !longPressTarget.value) return null;
+  return {
+    type: 'contextmenu',
+    target: longPressTarget.value,
+    pageX: longPressPoint.value.pageX,
+    pageY: longPressPoint.value.pageY,
+    clientX: longPressPoint.value.clientX,
+    clientY: longPressPoint.value.clientY,
+    preventDefault: () => {},
+  };
+}
+
+function cancelLongPress() {
+  stopLongPressTimer();
+  longPressStartPoint.value = null;
+  longPressPoint.value = null;
+  longPressTarget.value = null;
+}
+
+function handleTouchStart(e) {
+  if (e.touches?.length !== 1) return;
+  const point = getTouchPoint(e);
+  if (!point) return;
+  longPressStartPoint.value = { x: point.pageX, y: point.pageY };
+  longPressPoint.value = point;
+  longPressTarget.value = e.target;
+  stopLongPressTimer();
+  startLongPressTimer();
+}
+
+function handleTouchMove(e) {
+  if (!longPressStartPoint.value) return;
+  const point = getTouchPoint(e);
+  if (!point) return;
+  const deltaX = Math.abs(point.pageX - longPressStartPoint.value.x);
+  const deltaY = Math.abs(point.pageY - longPressStartPoint.value.y);
+  if (deltaX > 10 || deltaY > 10) {
+    cancelLongPress();
+    return;
+  }
+  longPressPoint.value = point;
+}
+
+function handleTouchEnd() {
+  cancelLongPress();
+}
+
+function handleTouchCancel() {
+  cancelLongPress();
 }
 
 function closeContextMenu() {
@@ -575,7 +652,7 @@ provideMessageContext({
   <div
     v-if="shouldRenderMessage"
     :id="`message${props.id}`"
-    class="flex w-full message-bubble-container"
+    class="flex w-full message-bubble-container group/context-menu"
     :data-message-id="props.id"
     :class="[
       flexOrientationClass,
@@ -618,7 +695,11 @@ provideMessageContext({
           'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT && !hasAvatarColumnOnLeft,
           'min-w-0': variant === MESSAGE_VARIANTS.EMAIL,
         }"
-        @contextmenu="openContextMenu($event)"
+      @contextmenu="openContextMenu($event)"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+      @touchcancel="handleTouchCancel"
       >
         <div
           v-if="props.isForwardSelectionActive"
@@ -661,7 +742,6 @@ provideMessageContext({
         :is-open="showContextMenu"
         :enabled-options="contextMenuEnabledOptions"
         :message="payloadForContextMenu"
-        hide-button
         @open="openContextMenu"
         @close="closeContextMenu"
         @reply-to="handleReplyTo"

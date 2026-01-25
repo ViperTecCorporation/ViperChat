@@ -226,7 +226,8 @@ watch(
     </div>
 
     <template v-else>
-      <div v-if="stickers.recent?.length" class="flex flex-col gap-3">
+      <div class="max-h-[60vh] overflow-y-auto pr-1 flex flex-col gap-4">
+        <div v-if="stickers.recent?.length" class="flex flex-col gap-3">
         <div class="text-xs font-medium text-n-slate-11 uppercase">
           {{ t('CONVERSATION.REPLYBOX.STICKERS.RECENT') }}
         </div>
@@ -277,6 +278,7 @@ watch(
             />
           </button>
         </div>
+      </div>
       </div>
     </template>
   </Dialog>

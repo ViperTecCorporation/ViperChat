@@ -93,6 +93,9 @@ export default {
       contextMenuPosition: {},
       showBackgroundHighlight: false,
       inReplyToMessage: {},
+      longPressTimer: null,
+      longPressTriggered: false,
+      longPressStartPoint: null,
     };
   },
   computed: {
@@ -466,6 +469,55 @@ export default {
       };
       this.showContextMenu = true;
     },
+    createTouchContextEvent(e) {
+      const touch = e.touches?.[0] || e.changedTouches?.[0];
+      if (!touch) return null;
+      return {
+        type: 'contextmenu',
+        target: e.target,
+        pageX: touch.pageX,
+        pageY: touch.pageY,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: () => {},
+      };
+    },
+    startTouchContextMenu(e) {
+      if (e.touches?.length !== 1) return;
+      const touch = e.touches[0];
+      this.longPressTriggered = false;
+      this.longPressStartPoint = { x: touch.pageX, y: touch.pageY };
+      this.longPressTimer = setTimeout(() => {
+        this.longPressTriggered = true;
+        const touchEvent = this.createTouchContextEvent(e);
+        if (touchEvent) {
+          this.openContextMenu(touchEvent);
+        }
+      }, 450);
+    },
+    moveTouchContextMenu(e) {
+      if (!this.longPressStartPoint) return;
+      const touch = e.touches?.[0];
+      if (!touch) return;
+      const deltaX = Math.abs(touch.pageX - this.longPressStartPoint.x);
+      const deltaY = Math.abs(touch.pageY - this.longPressStartPoint.y);
+      if (deltaX > 10 || deltaY > 10) {
+        this.cancelTouchContextMenu();
+      }
+    },
+    endTouchContextMenu() {
+      if (this.longPressTriggered) {
+        this.longPressTriggered = false;
+      }
+      this.cancelTouchContextMenu();
+    },
+    cancelTouchContextMenu() {
+      if (this.longPressTimer) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      this.longPressStartPoint = null;
+    },
     closeContextMenu() {
       this.showContextMenu = false;
       this.contextMenuPosition = { x: null, y: null };
@@ -516,7 +568,14 @@ export default {
           @click="retrySendMessage"
         />
       </div>
-      <div :class="bubbleClass" @contextmenu="openContextMenu($event)">
+      <div
+        :class="[bubbleClass, 'relative']"
+        @contextmenu="openContextMenu($event)"
+        @touchstart="startTouchContextMenu"
+        @touchmove="moveTouchContextMenu"
+        @touchend="endTouchContextMenu"
+        @touchcancel="cancelTouchContextMenu"
+      >
         <BubbleMailHead
           :email-attributes="contentAttributes.email"
           :cc="emailHeadAttributes.cc"
