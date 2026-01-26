@@ -48,6 +48,20 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3036,
     strictPort: true,
+    allowedHosts: true,
+  },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler',
+        quietDeps: true,
+        silenceDeprecations: ['legacy-js-api', 'import'],
+        logger: {
+          warn: () => {},
+          debug: () => {},
+        },
+      },
+    },
   },
   build: {
     rollupOptions: {

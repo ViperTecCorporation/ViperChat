@@ -832,7 +832,7 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, insertContentIntoEditor);
 </template>
 
 <style lang="scss">
-@import '@chatwoot/prosemirror-schema/src/styles/base.scss';
+@use '@chatwoot/prosemirror-schema/src/styles/base.scss' as *;
 
 .ProseMirror-menubar-wrapper {
   @apply flex flex-col gap-3;

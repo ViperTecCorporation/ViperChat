@@ -40,6 +40,8 @@ services:
     env_file: .env
     environment:
       - VITE_DEV_SERVER_HOST=vite
+      - VITE_RUBY_HOST=vite
+      - VITE_RUBY_PORT=3036
       - NODE_ENV=development
       - RAILS_ENV=development
       - BUNDLER_VERSION=2.7.2
