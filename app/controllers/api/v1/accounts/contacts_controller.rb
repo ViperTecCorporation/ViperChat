@@ -86,11 +86,20 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   def create
     ActiveRecord::Base.transaction do
-      @contact = Current.account.contacts.new(permitted_params.except(:avatar_url))
+      @contact = Current.account.contacts.new(normalized_contact_params)
       @contact.save!
       @contact_inbox = build_contact_inbox
       process_avatar_from_url
     end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+    existing_contact = find_existing_contact_from_params
+    raise e unless existing_contact
+
+    @contact = existing_contact
+    update_existing_contact_from_params
+    @contact_inbox = build_contact_inbox
+    process_avatar_from_url
+    render :show, status: :ok
   end
 
   def update
@@ -200,5 +209,38 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   def render_error(error, error_status)
     render json: error, status: error_status
+  end
+
+  def find_existing_contact_from_params
+    identifier = permitted_params[:identifier]
+    email = permitted_params[:email]
+    phone_number = normalized_contact_params[:phone_number]
+
+    return Current.account.contacts.find_by(identifier: identifier) if identifier.present?
+    return Current.account.contacts.from_email(email) if email.present?
+    return Current.account.contacts.find_by(phone_number: phone_number) if phone_number.present?
+
+    nil
+  end
+
+  def update_existing_contact_from_params
+    updatable_params = permitted_params.except(:identifier, :email, :phone_number, :avatar_url)
+    return if updatable_params.blank?
+
+    @contact.assign_attributes(updatable_params)
+    @contact.save!
+  end
+
+  def normalized_contact_params
+    params_hash = permitted_params.except(:avatar_url)
+    identifier = params_hash[:identifier]
+    phone_number = params_hash[:phone_number]
+
+    if phone_number.blank? && identifier.present?
+      match = identifier.match(/\A(\d+)@s\.whatsapp\.net\z/)
+      params_hash = params_hash.merge(phone_number: "+#{match[1]}") if match
+    end
+
+    params_hash
   end
 end
