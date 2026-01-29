@@ -236,11 +236,50 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     identifier = params_hash[:identifier]
     phone_number = params_hash[:phone_number]
 
+    if phone_number.present?
+      params_hash = params_hash.merge(phone_number: normalize_phone_number(phone_number))
+    end
+
     if phone_number.blank? && identifier.present?
       match = identifier.match(/\A(\d+)@s\.whatsapp\.net\z/)
       params_hash = params_hash.merge(phone_number: "+#{match[1]}") if match
     end
 
     params_hash
+  end
+
+  def normalize_phone_number(phone_number)
+    phone = Phonelib.parse(phone_number)
+    return phone.e164 if phone.valid?
+
+    digits = phone_number.gsub(/\D/, '')
+    normalized = normalize_brazil_digits(digits)
+    return normalized if normalized.present? && Phonelib.parse(normalized).valid?
+
+    nil
+  end
+
+  def normalize_brazil_digits(digits)
+    return if digits.blank?
+
+    if digits.start_with?('55')
+      if digits.length == 12
+        # +55 + DDD(2) + 8 digits -> insert 9 for mobile
+        return "+#{digits[0, 4]}9#{digits[4, 8]}"
+      end
+      return "+#{digits}" if digits.length.between?(12, 13)
+    end
+
+    if digits.length == 10
+      # DDD(2) + 8 digits -> add country and mobile 9
+      return "+55#{digits[0, 2]}9#{digits[2, 8]}"
+    end
+
+    if digits.length == 11
+      # DDD(2) + 9 digits -> add country
+      return "+55#{digits}"
+    end
+
+    nil
   end
 end
