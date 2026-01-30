@@ -39,6 +39,13 @@ class Public::Api::V1::Inboxes::ConversationsController < Public::Api::V1::Inbox
   def update_last_seen
     @conversation.contact_last_seen_at = DateTime.now.utc
     @conversation.save!
+    Rails.logger.info(
+      "[Public::Api::V1::Inboxes::ConversationsController] update_last_seen " \
+      "inbox_id=#{@conversation.inbox_id} conversation_id=#{@conversation.id} " \
+      "display_id=#{@conversation.display_id} contact_id=#{@conversation.contact_id} " \
+      "contact_inbox_id=#{@contact_inbox&.id} source_id=#{@contact_inbox&.source_id} " \
+      "contact_identifier=#{@conversation.contact&.identifier} contact_phone=#{@conversation.contact&.phone_number}"
+    )
     ::Conversations::UpdateMessageStatusJob.perform_later(@conversation.id, @conversation.contact_last_seen_at)
     head :ok
   end
@@ -46,11 +53,13 @@ class Public::Api::V1::Inboxes::ConversationsController < Public::Api::V1::Inbox
   private
 
   def set_conversation
-    @conversation = if @contact_inbox.hmac_verified?
-                      @contact_inbox.contact.conversations.find_by!(display_id: params[:id])
-                    else
-                      @contact_inbox.conversations.find_by!(display_id: params[:id])
-                    end
+    scope = @contact_inbox.hmac_verified? ? @contact_inbox.contact.conversations : @contact_inbox.conversations
+
+    @conversation =
+      scope.find_by(display_id: params[:id]) ||
+      scope.find_by(id: params[:id])
+
+    raise ActiveRecord::RecordNotFound unless @conversation
   end
 
   def create_conversation
