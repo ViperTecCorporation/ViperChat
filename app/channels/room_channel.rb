@@ -4,6 +4,11 @@ class RoomChannel < ApplicationCable::Channel
     # for now going ahead with guard clauses in update_subscription and broadcast_presence
     current_user
     current_account
+    Rails.logger.info(
+      "[ActionCable] RoomChannel subscribed " \
+      "pubsub_token=#{pubsub_token} account_id=#{@current_account&.id} " \
+      "user_id=#{@current_user&.id} user_type=#{@current_user&.class&.name}"
+    )
     ensure_stream
     update_subscription
     broadcast_presence
@@ -27,6 +32,10 @@ class RoomChannel < ApplicationCable::Channel
   def ensure_stream
     stream_from pubsub_token
     stream_from "account_#{@current_account.id}" if @current_account.present? && @current_user.is_a?(User)
+    Rails.logger.info(
+      "[ActionCable] RoomChannel streams " \
+      "pubsub_token=#{pubsub_token} account_stream=#{@current_account&.id}"
+    )
   end
 
   def update_subscription

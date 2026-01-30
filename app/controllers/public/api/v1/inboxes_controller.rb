@@ -19,12 +19,27 @@ class Public::Api::V1::InboxesController < PublicController
     return if params[:contact_id].blank?
 
     @contact_inbox = @inbox_channel.inbox.contact_inboxes.find_by(source_id: params[:contact_id])
+    Rails.logger.info(
+      "[Public::Api::V1::InboxesController] set_contact_inbox " \
+      "inbox_identifier=#{@inbox_channel.identifier} contact_id_param=#{params[:contact_id]} " \
+      "found_by_source_id=#{@contact_inbox.present?}"
+    )
     return if @contact_inbox
 
     contact = find_contact_by_identifier_or_phone
+    Rails.logger.info(
+      "[Public::Api::V1::InboxesController] set_contact_inbox fallback " \
+      "contact_found=#{contact.present?} contact_id=#{contact&.id} " \
+      "identifier=#{contact&.identifier} phone=#{contact&.phone_number}"
+    )
     return unless contact
 
     @contact_inbox = @inbox_channel.inbox.contact_inboxes.find_by(contact_id: contact.id)
+    Rails.logger.info(
+      "[Public::Api::V1::InboxesController] set_contact_inbox fallback " \
+      "contact_inbox_found=#{@contact_inbox.present?} contact_inbox_id=#{@contact_inbox&.id} " \
+      "source_id=#{@contact_inbox&.source_id}"
+    )
     raise ActiveRecord::RecordNotFound unless @contact_inbox
   end
 
@@ -32,6 +47,11 @@ class Public::Api::V1::InboxesController < PublicController
     return if params[:conversation_id].blank?
 
     @conversation = @contact_inbox.contact.conversations.find_by!(display_id: params[:conversation_id])
+    Rails.logger.info(
+      "[Public::Api::V1::InboxesController] set_conversation " \
+      "conversation_id_param=#{params[:conversation_id]} found_id=#{@conversation&.id} " \
+      "display_id=#{@conversation&.display_id}"
+    )
   end
 
   def find_contact_by_identifier_or_phone

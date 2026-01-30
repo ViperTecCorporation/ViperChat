@@ -21,6 +21,7 @@ const {
   isAnEmailChannel,
   isAnInstagramChannel,
   isAnInternalChannel,
+  isATiktokChannel,
 } = useInbox();
 
 const {
