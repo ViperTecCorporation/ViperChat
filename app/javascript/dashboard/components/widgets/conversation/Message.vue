@@ -571,10 +571,10 @@ export default {
       <div
         :class="[bubbleClass, 'relative']"
         @contextmenu="openContextMenu($event)"
-        @touchstart="startTouchContextMenu"
-        @touchmove="moveTouchContextMenu"
-        @touchend="endTouchContextMenu"
-        @touchcancel="cancelTouchContextMenu"
+        @touchstart.passive="startTouchContextMenu"
+        @touchmove.passive="moveTouchContextMenu"
+        @touchend.passive="endTouchContextMenu"
+        @touchcancel.passive="cancelTouchContextMenu"
       >
         <BubbleMailHead
           :email-attributes="contentAttributes.email"

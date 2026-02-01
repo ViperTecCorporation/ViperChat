@@ -66,6 +66,9 @@ module Featurable
   end
 
   def feature_enabled?(name)
+    # Force-enable advanced search flags across all accounts.
+    return true if %w[advanced_search advanced_search_indexing].include?(name.to_s)
+
     send("feature_#{name}?")
   end
 

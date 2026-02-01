@@ -155,7 +155,9 @@ export default {
 
 <template>
   <div class="bulk-action__container">
-    <div class="flex items-center justify-between">
+    <div
+      class="flex flex-col gap-2 items-start sm:flex-row sm:items-center sm:justify-between"
+    >
       <label class="flex items-center justify-between bulk-action__panel">
         <input
           type="checkbox"
@@ -172,7 +174,9 @@ export default {
           }}
         </span>
       </label>
-      <div class="flex items-center gap-1 bulk-action__actions">
+      <div
+        class="flex items-center gap-1 bulk-action__actions max-w-full flex-wrap sm:flex-nowrap"
+      >
         <NextButton
           v-tooltip="$t('BULK_ACTION.LABELS.ASSIGN_LABELS')"
           icon="i-lucide-tags"
@@ -280,6 +284,10 @@ export default {
 
 .bulk-action__alert {
   @apply bg-n-amber-3 text-n-amber-12 rounded text-xs mt-2 py-1 px-2 border border-solid border-n-amber-5;
+}
+
+.bulk-action__actions {
+  @apply w-full justify-start sm:w-auto;
 }
 
 .popover-animation-enter-active,

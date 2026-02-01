@@ -200,6 +200,9 @@ export default {
     showAudioPlayStopButton() {
       return this.showAudioRecorder && this.isRecordingAudio;
     },
+    hideEmojiAndStickerButtons() {
+      return this.isRecordingAudio || this.recordingAudioState === 'playing';
+    },
     isInstagramDM() {
       return this.conversationType === 'instagram_direct_message';
     },
@@ -244,6 +247,12 @@ export default {
         !this.isOnPrivateNote &&
         (this.isAWhatsAppCloudChannel || this.isAUnoapiChannel)
       );
+    },
+    showEmojiButton() {
+      return !this.hideEmojiAndStickerButtons;
+    },
+    showStickerPickerButton() {
+      return this.showStickerButton && !this.hideEmojiAndStickerButtons;
     },
     sendWithSignature() {
       // channelType is sourced from inboxMixin
@@ -292,6 +301,7 @@ export default {
   <div class="flex justify-between p-3" :class="wrapClass">
     <div class="left-wrap">
       <NextButton
+        v-if="showEmojiButton"
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_EMOJI_ICON')"
         icon="i-ph-smiley-sticker"
         slate
@@ -300,7 +310,7 @@ export default {
         @click="toggleEmojiPicker"
       />
       <NextButton
-        v-if="showStickerButton"
+        v-if="showStickerPickerButton"
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_STICKER_ICON')"
         icon="i-ph-sticker"
         slate

@@ -696,10 +696,10 @@ provideMessageContext({
           'min-w-0': variant === MESSAGE_VARIANTS.EMAIL,
         }"
       @contextmenu="openContextMenu($event)"
-      @touchstart="handleTouchStart"
-      @touchmove="handleTouchMove"
-      @touchend="handleTouchEnd"
-      @touchcancel="handleTouchCancel"
+      @touchstart.passive="handleTouchStart"
+      @touchmove.passive="handleTouchMove"
+      @touchend.passive="handleTouchEnd"
+      @touchcancel.passive="handleTouchCancel"
       >
         <div
           v-if="props.isForwardSelectionActive"
