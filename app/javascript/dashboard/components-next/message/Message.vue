@@ -3,6 +3,7 @@ import { onMounted, computed, ref, toRefs } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { provideMessageContext } from './provider.js';
 import { useTrack } from 'dashboard/composables';
+import { useMapGetter } from 'dashboard/composables/store';
 import { emitter } from 'shared/helpers/mitt';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
@@ -10,6 +11,7 @@ import { useStore } from 'vuex';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { ACCOUNT_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
+import { getInboxIconByType } from 'dashboard/helper/inbox';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import {
   MESSAGE_TYPES,
@@ -146,6 +148,8 @@ const { t } = useI18n();
 const route = useRoute();
 const { isAnInternalChannel, isAWhatsAppChannel, isATwilioWhatsAppChannel } =
   useInbox(props.inboxId);
+const inboxGetter = useMapGetter('inboxes/getInbox');
+const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
 
 /**
  * Computes the message variant based on props
@@ -168,6 +172,10 @@ const variant = computed(() => {
   if (props.status === MESSAGE_STATUS.FAILED) return MESSAGE_VARIANTS.ERROR;
   if (props.contentAttributes?.isUnsupported)
     return MESSAGE_VARIANTS.UNSUPPORTED;
+
+  if (props.contentAttributes?.externalEcho) {
+    return MESSAGE_VARIANTS.AGENT;
+  }
 
   const isBot = !props.sender || props.sender.type === SENDER_TYPES.AGENT_BOT;
   if (isBot && props.messageType === MESSAGE_TYPES.OUTGOING) {
@@ -587,6 +595,18 @@ function handleForwardMessages() {
 }
 
 const avatarInfo = computed(() => {
+  if (props.contentAttributes?.externalEcho) {
+    const { name, avatar_url, channel_type, medium } = inbox.value;
+    const iconName = avatar_url
+      ? null
+      : getInboxIconByType(channel_type, medium);
+    return {
+      name: iconName ? '' : name || t('CONVERSATION.NATIVE_APP'),
+      src: avatar_url || '',
+      iconName,
+    };
+  }
+
   // If no sender, return bot info
   if (!props.sender) {
     return {
@@ -614,6 +634,9 @@ const avatarInfo = computed(() => {
 });
 
 const avatarTooltip = computed(() => {
+  if (props.contentAttributes?.externalEcho) {
+    return t('CONVERSATION.NATIVE_APP_ADVISORY');
+  }
   if (avatarInfo.value.name === '') return '';
   return `${t('CONVERSATION.SENT_BY')} ${avatarInfo.value.name}`;
 });

@@ -8,7 +8,7 @@ class Whatsapp::IncomingMessageBaseService
   @@microsecond = 0
   # rubocop:enable Style/ClassVars
 
-  pattr_initialize [:inbox!, :params!]
+  pattr_initialize [:inbox!, :params!, :outgoing_echo]
 
   def perform
     processed_params
@@ -17,11 +17,16 @@ class Whatsapp::IncomingMessageBaseService
       process_statuses
     elsif contact_sync_payload?
       sync_contacts
-    elsif processed_params.try(:[], :messages).present?
+    elsif messages_data.present?
       process_messages
     elsif processed_params.try(:[], :contacts).present?
       sync_contacts
     end
+  end
+
+  # Returns messages array for both regular messages and echo events
+  def messages_data
+    @processed_params&.dig(:messages) || @processed_params&.dig(:message_echoes)
   end
 
   private
@@ -34,7 +39,7 @@ class Whatsapp::IncomingMessageBaseService
     # Multiple webhook event can be received against the same message due to misconfigurations in the Meta
     # business manager account. While we have not found the core reason yet, the following line ensure that
     # there are no duplicate messages created.
-    return if find_message_by_source_id(@processed_params[:messages].first[:id]) || message_under_process?
+    return if find_message_by_source_id(messages_data.first[:id]) || message_under_process?
 
     cache_message_source_id_in_redis
 
@@ -145,7 +150,7 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def create_messages
-    message = @processed_params[:messages].first
+    message = messages_data.first
     log_error(message) && return if error_webhook_event?(message)
 
     process_in_reply_to(message)
@@ -155,22 +160,51 @@ class Whatsapp::IncomingMessageBaseService
 
   def create_contact_messages(message)
     message['contacts'].each do |contact|
-      create_message(contact)
+      # Pass source_id from parent message since contact objects don't have :id
+      create_message(contact, source_id: message[:id])
       attach_contact(contact)
       @message.save!
     end
   end
 
   def create_regular_message(message)
-    create_message(message)
+    create_message(message, source_id: message[:id])
     attach_files
     attach_location if message_type == 'location'
     @message.save!
   end
 
   def set_contact
+    if outgoing_echo
+      set_contact_from_echo
+    else
+      set_contact_from_message
+    end
+  end
+
+  def set_contact_from_echo
+    # For echo messages, contact phone is in the 'to' field
+    phone_number = messages_data.first[:to].to_s
+    return if phone_number.blank?
+
+    waid = processed_waid(phone_number) || phone_number
+
+    contact_inbox = ::ContactInboxWithContactBuilder.new(
+      source_id: waid,
+      inbox: inbox,
+      contact_attributes: { name: "+#{phone_number}", phone_number: "+#{phone_number}" }
+    ).perform
+
+    @contact_inbox = contact_inbox
+    @contact = contact_inbox.contact
+    @sender = nil
+  end
+
+  def set_contact_from_message
+    contact_params = @processed_params[:contacts]&.first
     return if contact_params.blank?
 
+    waid = nil
     contact_attributes = { name: contact_params.dig(:profile, :name), avatar_url: contact_params.dig(:profile, :picture) }
     if lid_message?
       contact_attributes = contact_attributes.merge({ email: contact_params[:wa_id] })
@@ -209,7 +243,7 @@ class Whatsapp::IncomingMessageBaseService
   def attach_files
     return if %w[text button interactive location contacts].include?(message_type)
 
-    attachment_payload = @processed_params[:messages].first[message_type.to_sym]
+    attachment_payload = messages_data.first[message_type.to_sym]
     @message.content ||= attachment_payload[:caption]
 
     attachment_file = download_attachment_file(attachment_payload)
@@ -227,7 +261,7 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def attach_location
-    location = @processed_params[:messages].first['location']
+    location = messages_data.first['location']
     location_name = location['name'] ? "#{location['name']}, #{location['address']}" : ''
     @message.attachments.new(
       account_id: @message.account_id,
@@ -239,17 +273,21 @@ class Whatsapp::IncomingMessageBaseService
     )
   end
 
-  def create_message(message)
+  def create_message(message, source_id: nil)
     timestamp = message[:timestamp] ? Time.at(message[:timestamp].to_i, microsecond, :microsecond, in: 'UTC') : Time.current.utc
     Rails.logger.info("[WHATSAPP] Incoming message type=#{message_type} content_type=#{message_type == 'sticker' ? 'sticker' : 'nil'} source_id=#{message[:id]}")
+
     @message = @conversation.messages.build(
       content: message_content(message),
       account_id: @inbox.account_id,
       inbox_id: @inbox.id,
-      message_type: @message_type,
+      message_type: outgoing_echo ? :outgoing : @message_type,
+      # Set status to :delivered for echo messages to prevent SendReplyJob from trying to send them
+      status: outgoing_echo ? :delivered : :sent,
       content_type: message_type == 'sticker' ? 'sticker' : nil,
-      sender: @sender,
-      source_id: message[:id].to_s,
+      sender: outgoing_echo ? nil : @sender,
+      source_id: (source_id || message[:id]).to_s,
+      content_attributes: outgoing_echo ? { external_echo: true } : {},
       created_at: timestamp,
       in_reply_to_external_id: @in_reply_to_external_id
     )
@@ -307,7 +345,7 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def contact_name_matches_phone_number?(raw_from = nil)
-    raw_from = raw_from.presence || @processed_params[:messages]&.first&.[](:from).to_s
+    raw_from = raw_from.presence || messages_data&.first&.[](:from).to_s
     raw_from = contact_params[:wa_id].to_s if raw_from.blank? && contact_params.present?
     return false if raw_from.blank? || raw_from.include?('@lid')
 
@@ -318,11 +356,10 @@ class Whatsapp::IncomingMessageBaseService
     formatted_phone_number = TelephoneNumber.parse(phone_number).international_number
     contact_name = @contact.name.to_s
     contact_digits = contact_name.gsub(/\D/, '')
-    from_digits = raw_digits
 
     contact_name == phone_number ||
       contact_name == formatted_phone_number ||
-      (contact_digits.present? && contact_digits == from_digits)
+      (contact_digits.present? && contact_digits == raw_digits)
   end
 
   def contact_name_has_lid_suffix?
