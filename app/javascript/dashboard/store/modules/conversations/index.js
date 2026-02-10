@@ -66,14 +66,18 @@ export const mutations = {
     _state.attachments = {};
     _state.attachmentsMeta = {};
   },
-  [types.SET_ALL_MESSAGES_LOADED](_state) {
-    const [chat] = getSelectedChatConversation(_state);
-    chat.allMessagesLoaded = true;
+  [types.SET_ALL_MESSAGES_LOADED](_state, conversationId) {
+    const chat = getConversationById(_state)(conversationId);
+    if (chat) {
+      chat.allMessagesLoaded = true;
+    }
   },
 
-  [types.CLEAR_ALL_MESSAGES_LOADED](_state) {
-    const [chat] = getSelectedChatConversation(_state);
-    chat.allMessagesLoaded = false;
+  [types.CLEAR_ALL_MESSAGES_LOADED](_state, conversationId) {
+    const chat = getConversationById(_state)(conversationId);
+    if (chat) {
+      chat.allMessagesLoaded = false;
+    }
   },
   [types.CLEAR_CURRENT_CHAT_WINDOW](_state) {
     _state.selectedChatId = null;
@@ -96,6 +100,13 @@ export const mutations = {
     const [chat] = _state.allConversations.filter(c => c.id === id);
     if (!chat) return;
     chat.messages = data;
+  },
+
+  [types.SET_CHAT_DATA_FETCHED](_state, conversationId) {
+    const chat = getConversationById(_state)(conversationId);
+    if (chat) {
+      chat.dataFetched = true;
+    }
   },
 
   [types.SET_CURRENT_CHAT_WINDOW](_state, activeChat) {

@@ -96,7 +96,7 @@ const actions = {
         data: payload,
       });
       if (!payload.length) {
-        commit(types.SET_ALL_MESSAGES_LOADED);
+        commit(types.SET_ALL_MESSAGES_LOADED, data.conversationId);
       }
     } catch (error) {
       // Handle error
@@ -291,7 +291,7 @@ const actions = {
 
   async setActiveChat({ commit, dispatch }, { data, after }) {
     commit(types.SET_CURRENT_CHAT_WINDOW, data);
-    commit(types.CLEAR_ALL_MESSAGES_LOADED);
+    commit(types.CLEAR_ALL_MESSAGES_LOADED, data.id);
     if (data.dataFetched === undefined) {
       try {
         await dispatch('fetchPreviousMessages', {
@@ -299,7 +299,7 @@ const actions = {
           before: data.messages[0].id,
           conversationId: data.id,
         });
-        data.dataFetched = true;
+        commit(types.SET_CHAT_DATA_FETCHED, data.id);
       } catch (error) {
         // Ignore error
       }
