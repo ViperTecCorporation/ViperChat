@@ -46,6 +46,7 @@ import StickerBubble from './bubbles/Sticker.vue';
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
 import { useInbox } from 'dashboard/composables/useInbox';
+import { useBranding } from 'shared/composables/useBranding';
 
 /**
  * @typedef {Object} Attachment
@@ -150,6 +151,7 @@ const { isAnInternalChannel, isAWhatsAppChannel, isATwilioWhatsAppChannel } =
   useInbox(props.inboxId);
 const inboxGetter = useMapGetter('inboxes/getInbox');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
+const { replaceInstallationName } = useBranding();
 
 /**
  * Computes the message variant based on props
@@ -635,7 +637,7 @@ const avatarInfo = computed(() => {
 
 const avatarTooltip = computed(() => {
   if (props.contentAttributes?.externalEcho) {
-    return t('CONVERSATION.NATIVE_APP_ADVISORY');
+    return replaceInstallationName(t('CONVERSATION.NATIVE_APP_ADVISORY'));
   }
   if (avatarInfo.value.name === '') return '';
   return `${t('CONVERSATION.SENT_BY')} ${avatarInfo.value.name}`;
