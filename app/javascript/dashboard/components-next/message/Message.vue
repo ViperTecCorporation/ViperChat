@@ -460,6 +460,8 @@ const shouldRenderMessage = computed(() => {
   const isStickerContentType = props.contentType === CONTENT_TYPES.STICKER;
   const isAnIntegrationMessage =
     props.contentType === CONTENT_TYPES.INTEGRATIONS;
+  const isFailedMessage = props.status === MESSAGE_STATUS.FAILED;
+  const hasExternalError = !!props.contentAttributes?.externalError;
 
   return (
     hasAttachments ||
@@ -467,7 +469,9 @@ const shouldRenderMessage = computed(() => {
     isEmailContentType ||
     isUnsupported ||
     isStickerContentType ||
-    isAnIntegrationMessage
+    isAnIntegrationMessage ||
+    isFailedMessage ||
+    hasExternalError
   );
 });
 
