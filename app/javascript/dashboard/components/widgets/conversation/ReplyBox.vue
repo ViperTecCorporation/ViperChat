@@ -43,7 +43,10 @@ import {
   truncatePreviewText,
   appendQuotedTextToMessage,
 } from 'dashboard/helper/quotedEmailHelper';
-import { CONVERSATION_EVENTS } from '../../../helper/AnalyticsHelper/events';
+import {
+  CONVERSATION_EVENTS,
+  CAPTAIN_EVENTS,
+} from '../../../helper/AnalyticsHelper/events';
 import fileUploadMixin from 'dashboard/mixins/fileUploadMixin';
 import {
   appendSignature,
@@ -140,6 +143,7 @@ export default {
       newConversationModalActive: false,
       showArticleSearchPopover: false,
       hasRecordedAudio: false,
+      copilotAcceptedMessages: {},
     };
   },
   computed: {
@@ -512,6 +516,24 @@ export default {
     emitter.off(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   methods: {
+    getDraftKey(
+      conversationId = this.conversationIdByRoute,
+      replyType = this.replyType
+    ) {
+      return `draft-${conversationId}-${replyType}`;
+    },
+    getCopilotAcceptedMessage(replyType = this.replyType) {
+      const key = this.getDraftKey(this.conversationIdByRoute, replyType);
+      return this.copilotAcceptedMessages[key] || '';
+    },
+    setCopilotAcceptedMessage(message, replyType = this.replyType) {
+      const key = this.getDraftKey(this.conversationIdByRoute, replyType);
+      this.copilotAcceptedMessages[key] = trimContent(message || '');
+    },
+    clearCopilotAcceptedMessage(replyType = this.replyType) {
+      const key = this.getDraftKey(this.conversationIdByRoute, replyType);
+      delete this.copilotAcceptedMessages[key];
+    },
     handleInsert(article) {
       const { url, title } = article;
       // Removing empty lines from the title
@@ -563,7 +585,7 @@ export default {
     },
     saveDraft(conversationId, replyType) {
       if (this.message || this.message === '') {
-        const key = `draft-${conversationId}-${replyType}`;
+        const key = this.getDraftKey(conversationId, replyType);
         const draftToSave = trimContent(this.message || '');
 
         this.$store.dispatch('draftMessages/set', {
@@ -578,7 +600,7 @@ export default {
     },
     getFromDraft() {
       if (this.conversationIdByRoute) {
-        const key = `draft-${this.conversationIdByRoute}-${this.replyType}`;
+        const key = this.getDraftKey();
         const messageFromStore =
           this.$store.getters['draftMessages/get'](key) || '';
 
@@ -601,7 +623,7 @@ export default {
     },
     removeFromDraft() {
       if (this.conversationIdByRoute) {
-        const key = `draft-${this.conversationIdByRoute}-${this.replyType}`;
+        const key = this.getDraftKey();
         this.$store.dispatch('draftMessages/delete', { key });
       }
     },
@@ -740,6 +762,7 @@ export default {
         return;
       }
       if (!this.showMentions) {
+        const copilotAcceptedMessage = this.getCopilotAcceptedMessage();
         const isOnWhatsApp =
           this.isATwilioWhatsAppChannel ||
           this.isAWhatsAppCloudChannel ||
@@ -749,10 +772,17 @@ export default {
         // This can create duplicate messages in ViperChat. To prevent this issue, we'll handle text and attachments as separate messages.
         const isOnInstagram = this.isAnInstagramChannel;
         if ((isOnWhatsApp || isOnInstagram) && !this.isPrivate) {
-          this.sendMessageAsMultipleMessages(this.message);
+          this.sendMessageAsMultipleMessages(
+            this.message,
+            copilotAcceptedMessage
+          );
         } else {
           const messagePayload = this.getMessagePayload(this.message);
-          this.sendMessage(messagePayload);
+          this.sendMessage(
+            messagePayload,
+            this.message,
+            copilotAcceptedMessage
+          );
         }
 
         if (!this.isPrivate) {
@@ -764,13 +794,53 @@ export default {
         this.$emit('update:popOutReplyBox', false);
       }
     },
-    sendMessageAsMultipleMessages(message) {
+    sendMessageAsMultipleMessages(message, copilotAcceptedMessage = '') {
       const messages = this.getMultipleMessagesPayload(message);
       messages.forEach(messagePayload => {
-        this.sendMessage(messagePayload);
+        this.sendMessage(
+          messagePayload,
+          messagePayload.message || '',
+          copilotAcceptedMessage
+        );
       });
     },
-    sendMessageAnalyticsData(isPrivate) {
+    sendMessageAnalyticsData(
+      isPrivate,
+      { editorMessage = '', copilotAcceptedMessage = '' } = {}
+    ) {
+      const normalizeForComparison = message => {
+        let normalizedMessage = message || '';
+
+        if (this.sendWithSignature && this.messageSignature && !isPrivate) {
+          const effectiveChannelType = getEffectiveChannelType(
+            this.channelType,
+            this.inbox?.medium || ''
+          );
+          normalizedMessage = removeSignature(
+            normalizedMessage,
+            this.messageSignature,
+            effectiveChannelType
+          );
+        }
+
+        return trimContent(normalizedMessage);
+      };
+
+      const normalizedAcceptedMessage = normalizeForComparison(
+        copilotAcceptedMessage
+      );
+      const normalizedEditorMessage = normalizeForComparison(editorMessage);
+
+      if (normalizedAcceptedMessage && normalizedEditorMessage) {
+        useTrack(CAPTAIN_EVENTS.AI_ASSISTED_MESSAGE_SENT, {
+          conversationId: this.conversationIdByRoute,
+          channelType: this.channelType,
+          editedBeforeSend:
+            normalizedAcceptedMessage !== normalizedEditorMessage,
+          isPrivate,
+        });
+      }
+
       // Analytics data for message signature is enabled or not in channels
       return isPrivate
         ? useTrack(CONVERSATION_EVENTS.SENT_PRIVATE_NOTE)
@@ -804,7 +874,11 @@ export default {
         this.confirmOnSendReply();
       }
     },
-    async sendMessage(messagePayload) {
+    async sendMessage(
+      messagePayload,
+      editorMessage = '',
+      copilotAcceptedMessage = ''
+    ) {
       try {
         await this.$store.dispatch(
           'createPendingMessageAndSend',
@@ -813,7 +887,10 @@ export default {
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
         emitter.emit(BUS_EVENTS.MESSAGE_SENT);
         this.removeFromDraft();
-        this.sendMessageAnalyticsData(messagePayload.private);
+        this.sendMessageAnalyticsData(messagePayload.private, {
+          editorMessage,
+          copilotAcceptedMessage,
+        });
       } catch (error) {
         const errorMessage =
           error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR');
@@ -887,6 +964,7 @@ export default {
     },
     clearMessage() {
       this.message = '';
+      this.clearCopilotAcceptedMessage();
       if (this.sendWithSignature && !this.isPrivate) {
         // if signature is enabled, append it to the message
         const effectiveChannelType = getEffectiveChannelType(
@@ -1155,7 +1233,9 @@ export default {
       this.$emit('update:popOutReplyBox', !this.popOutReplyBox);
     },
     onSubmitCopilotReply() {
-      this.message = this.copilot.accept();
+      const acceptedMessage = this.copilot.accept();
+      this.message = acceptedMessage;
+      this.setCopilotAcceptedMessage(acceptedMessage);
     },
   },
 };
@@ -1166,6 +1246,7 @@ export default {
   <div ref="replyEditor" class="reply-box" :class="replyBoxClass">
     <ReplyTopPanel
       :mode="replyType"
+      :conversation-id="conversationId"
       :is-reply-restricted="isReplyRestricted"
       :disabled="
         (copilot.isActive.value && copilot.isButtonDisabled.value) ||
@@ -1240,6 +1321,7 @@ export default {
         <WootMessageEditor
           v-else-if="!showAudioRecorderEditor"
           v-model="message"
+          :conversation-id="conversationId"
           :editor-id="editorStateId"
           class="input popover-prosemirror-menu"
           :is-private="isOnPrivateNote"
