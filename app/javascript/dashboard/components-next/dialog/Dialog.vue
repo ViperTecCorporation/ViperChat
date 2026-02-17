@@ -82,7 +82,12 @@ const maxWidthClass = computed(() => {
   return classesMap[props.width] ?? 'max-w-md';
 });
 
+const positionClass = computed(() =>
+  props.position === 'top' ? 'dialog-position-top' : ''
+);
+
 const open = () => {
+  isOpen.value = true;
   dialogRef.value?.showModal();
 };
 
@@ -119,7 +124,7 @@ defineExpose({ open, close });
       <OnClickOutside @trigger="close">
         <form
           ref="dialogContentRef"
-          class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-left align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
+          class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-start align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
           @submit.prevent="confirm"
           @click.stop
         >
@@ -133,7 +138,7 @@ defineExpose({ open, close });
               </p>
             </slot>
           </div>
-          <slot />
+          <slot v-if="isOpen" />
           <!-- Dialog content will be injected here -->
           <slot name="footer">
             <div
@@ -169,5 +174,10 @@ defineExpose({ open, close });
 <style scoped>
 dialog::backdrop {
   @apply bg-n-alpha-black1 backdrop-blur-[4px];
+}
+
+.dialog-position-top {
+  margin-top: clamp(2rem, 5vh, 5rem);
+  margin-bottom: auto;
 }
 </style>
