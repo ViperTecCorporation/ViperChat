@@ -677,6 +677,14 @@ RSpec.describe 'Conversations API', type: :request do
         expect(conversation.reload.agent_last_seen_at).not_to be_nil
       end
 
+      it 'enqueues update last seen job when last seen is updated' do
+        expect do
+          post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/update_last_seen",
+               headers: agent.create_new_auth_token,
+               as: :json
+        end.to have_enqueued_job(UpdateLastSeenJob).with(conversation.id, agent, anything)
+      end
+
       it 'updates assignee last seen' do
         conversation.update!(assignee_id: agent.id, agent_last_seen_at: nil)
 
@@ -704,6 +712,20 @@ RSpec.describe 'Conversations API', type: :request do
 
         expect(response).to have_http_status(:success)
         expect(conversation.reload.agent_last_seen_at).to be_within(1.second).of(initial_last_seen)
+      end
+
+      it 'does not enqueue update last seen job when throttled' do
+        conversation.update!(agent_last_seen_at: 30.minutes.ago)
+        # Ensure all messages are older than agent_last_seen_at (no unread messages)
+        # rubocop:disable Rails/SkipsModelValidations
+        conversation.messages.update_all(created_at: 1.hour.ago)
+        # rubocop:enable Rails/SkipsModelValidations
+
+        expect do
+          post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/update_last_seen",
+               headers: agent.create_new_auth_token,
+               as: :json
+        end.not_to have_enqueued_job(UpdateLastSeenJob)
       end
 
       it 'updates even within an hour when there are unread messages' do
