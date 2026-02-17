@@ -37,6 +37,7 @@ const props = defineProps({
   contactsUiFlags: { type: Object, default: null },
   messageSignature: { type: String, default: '' },
   sendWithSignature: { type: Boolean, default: false },
+  formState: { type: Object, required: true },
 });
 
 const emit = defineEmits([
@@ -57,13 +58,13 @@ const showBccEmailsDropdown = ref(false);
 
 const isCreating = computed(() => props.contactConversationsUiFlags.isCreating);
 
-const state = reactive({
+const state = props.formState || {
   message: '',
   subject: '',
   ccEmails: '',
   bccEmails: '',
   attachedFiles: [],
-});
+};
 
 const inboxChannelType = computed(
   () => props.targetInbox?.channelType || props.targetInbox?.channel_type || ''
