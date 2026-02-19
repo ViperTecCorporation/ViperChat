@@ -155,6 +155,7 @@ export default {
       <SectionLayout
         :title="$t('GENERAL_SETTINGS.FORM.GENERAL_SECTION.TITLE')"
         :description="$t('GENERAL_SETTINGS.FORM.GENERAL_SECTION.NOTE')"
+        class="!pt-0"
       >
         <form
           v-if="!uiFlags.isFetchingItem"
