@@ -1,7 +1,7 @@
 name: Build Minha Imagem Pessoal
 on:
   push:
-    branches: [ "master" ] # Ele vai rodar sempre que você salvar algo na master
+    branches: [ "4.10.0" ] # Ele vai rodar sempre que você salvar algo na master
 
 jobs:
   build:
