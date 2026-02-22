@@ -1,7 +1,8 @@
 name: Build Minha Imagem Pessoal
 on:
   push:
-    branches: [ "4.10.0" ] # Ele vai rodar sempre que você salvar algo na master
+    branches: [ "4.10.0" ] # Mudamos de master para 4.10.0
+  workflow_dispatch:      # Isso cria o botão manual
 
 jobs:
   build:
