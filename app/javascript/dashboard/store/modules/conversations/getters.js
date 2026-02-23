@@ -14,6 +14,48 @@ export const getSelectedChatConversation = ({
 }) =>
   allConversations.filter(conversation => conversation.id === selectedChatId);
 
+const getLastRealMessage = messages => {
+  if (!Array.isArray(messages) || !messages.length) {
+    return null;
+  }
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+
+    if (!message || message.private) {
+      continue;
+    }
+
+    const messageType = message.message_type;
+
+    if (
+      messageType !== MESSAGE_TYPE.INCOMING &&
+      messageType !== MESSAGE_TYPE.OUTGOING
+    ) {
+      continue;
+    }
+
+    const senderType = message.sender_type;
+    const contentAttributes = message.content_attributes || {};
+    const additionalAttributes = message.additional_attributes || {};
+
+    const isBotSender =
+      senderType === 'AgentBot' || senderType === 'Captain::Assistant';
+    const hasAutomationRuleId = Boolean(
+      contentAttributes.automation_rule_id
+    );
+    const hasCampaignId = Boolean(additionalAttributes.campaign_id);
+
+    if (isBotSender || hasAutomationRuleId || hasCampaignId) {
+      continue;
+    }
+
+    return message;
+  }
+
+  return null;
+};
+
 const getters = {
   getAllConversations: ({ allConversations, chatSortFilter: sortKey }) => {
     return allConversations.sort((a, b) => sortComparator(a, b, sortKey));
@@ -40,7 +82,7 @@ const getters = {
       }
 
       const messages = conversation.messages || [];
-      const lastMessage = messages[messages.length - 1];
+      const lastMessage = getLastRealMessage(messages);
 
       if (!lastMessage) {
         return false;
@@ -71,75 +113,13 @@ const getters = {
       }
 
       const messages = conversation.messages || [];
-      const lastMessage = messages[messages.length - 1];
+      const lastMessage = getLastRealMessage(messages);
 
       if (!lastMessage) {
         return false;
       }
 
-      return lastMessage.message_type !== MESSAGE_TYPE.INCOMING;
-    });
-  },
-  getWaitingConversations: (_state, _, __, rootGetters) => activeFilters => {
-    const currentUser = rootGetters.getCurrentUser;
-    const currentUserId = rootGetters.getCurrentUser.id;
-    const currentAccountId = rootGetters.getCurrentAccountId;
-
-    const permissions = getUserPermissions(currentUser, currentAccountId);
-    const userRole = getUserRole(currentUser, currentAccountId);
-
-    return _state.allConversations.filter(conversation => {
-      const shouldFilter = applyPageFilters(conversation, activeFilters);
-      const allowedForRole = applyRoleFilter(
-        conversation,
-        userRole,
-        permissions,
-        currentUserId
-      );
-
-      if (!shouldFilter || !allowedForRole) {
-        return false;
-      }
-
-      const messages = conversation.messages || [];
-      const lastMessage = messages[messages.length - 1];
-
-      if (!lastMessage) {
-        return false;
-      }
-
-      return lastMessage.message_type === MESSAGE_TYPE.INCOMING;
-    });
-  },
-  getRepliedConversations: (_state, _, __, rootGetters) => activeFilters => {
-    const currentUser = rootGetters.getCurrentUser;
-    const currentUserId = rootGetters.getCurrentUser.id;
-    const currentAccountId = rootGetters.getCurrentAccountId;
-
-    const permissions = getUserPermissions(currentUser, currentAccountId);
-    const userRole = getUserRole(currentUser, currentAccountId);
-
-    return _state.allConversations.filter(conversation => {
-      const shouldFilter = applyPageFilters(conversation, activeFilters);
-      const allowedForRole = applyRoleFilter(
-        conversation,
-        userRole,
-        permissions,
-        currentUserId
-      );
-
-      if (!shouldFilter || !allowedForRole) {
-        return false;
-      }
-
-      const messages = conversation.messages || [];
-      const lastMessage = messages[messages.length - 1];
-
-      if (!lastMessage) {
-        return false;
-      }
-
-      return lastMessage.message_type !== MESSAGE_TYPE.INCOMING;
+      return lastMessage.message_type === MESSAGE_TYPE.OUTGOING;
     });
   },
   getFilteredConversations: (
