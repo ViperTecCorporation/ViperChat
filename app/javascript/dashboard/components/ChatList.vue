@@ -415,22 +415,22 @@ const conversationList = computed(() => {
   if (!hasAppliedFiltersOrActiveFolders.value) {
     const filters = conversationFilters.value;
     if (activeAssigneeTab.value === 'me') {
-      localConversationList = [...mineChatsList.value(filters)];
+      localConversationList = mineChatsList.value(filters);
     } else if (activeAssigneeTab.value === 'waiting') {
-      localConversationList = [...waitingChatsList.value(filters)];
+      localConversationList = waitingChatsList.value(filters);
     } else if (activeAssigneeTab.value === 'unassigned') {
-      localConversationList = [...unAssignedChatsList.value(filters)];
+      localConversationList = unAssignedChatsList.value(filters);
     } else if (activeAssigneeTab.value === 'replied') {
-      localConversationList = [...repliedChatsList.value(filters)];
+      localConversationList = repliedChatsList.value(filters);
     } else if (
       activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.INTERNAL
     ) {
-      localConversationList = [...allChatList.value(filters)];
+      localConversationList = allChatList.value(filters);
     } else {
-      localConversationList = [...allChatList.value(filters)];
+      localConversationList = allChatList.value(filters);
     }
   } else {
-    localConversationList = [...chatLists.value];
+    localConversationList = chatLists.value;
   }
 
   if (activeFolder.value) {
