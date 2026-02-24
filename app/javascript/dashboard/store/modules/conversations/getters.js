@@ -81,14 +81,19 @@ const getters = {
         return false;
       }
 
-      const messages = conversation.messages || [];
-      const lastMessage = getLastRealMessage(messages);
+      const assignee = conversation.meta?.assignee;
+      const assignedToMe = assignee && assignee.id === currentUserId;
+      const isUnassigned = !assignee;
 
-      if (!lastMessage) {
-        return false;
-      }
+      if (!(assignedToMe || isUnassigned)) return false;
 
-      return lastMessage.message_type === MESSAGE_TYPE.INCOMING;
+      const {
+        first_reply_created_at: firstReplyOn,
+        waiting_since: waitingSince,
+      } = conversation;
+      const isUnattended = !firstReplyOn || !!waitingSince;
+
+      return isUnattended;
     });
   },
   getRepliedConversations: (_state, _, __, rootGetters) => activeFilters => {
@@ -112,14 +117,19 @@ const getters = {
         return false;
       }
 
-      const messages = conversation.messages || [];
-      const lastMessage = getLastRealMessage(messages);
+      const assignee = conversation.meta?.assignee;
+      const assignedToMe = assignee && assignee.id === currentUserId;
+      const isUnassigned = !assignee;
 
-      if (!lastMessage) {
-        return false;
-      }
+      if (!(assignedToMe || isUnassigned)) return false;
 
-      return lastMessage.message_type === MESSAGE_TYPE.OUTGOING;
+      const {
+        first_reply_created_at: firstReplyOn,
+        waiting_since: waitingSince,
+      } = conversation;
+      const isNotUnattended = !!firstReplyOn && !waitingSince;
+
+      return isNotUnattended;
     });
   },
   getFilteredConversations: (

@@ -379,6 +379,8 @@ const conversationFilters = computed(() => {
     inboxChannelType: selectedInbox.channel_type || undefined,
     conversationType: isInternalTab
       ? 'internal'
+      : activeAssigneeTab.value === 'waiting'
+      ? 'unattended'
       : props.conversationType || undefined,
   };
 });
