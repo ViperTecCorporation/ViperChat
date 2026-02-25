@@ -1026,7 +1026,6 @@ watch(conversationFilters, (newVal, oldVal) => {
         class="overflow-y-auto overflow-x-hidden w-full h-full max-w-full pr-2 sm:pr-0"
       >
         <ConversationItem
-          :key="item.id"
           :source="item"
           :label="label"
           :team-id="teamId"
