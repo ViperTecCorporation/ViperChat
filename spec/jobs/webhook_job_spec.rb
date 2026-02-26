@@ -25,7 +25,7 @@ RSpec.describe WebhookJob do
     let(:webhook_type) { :api_inbox_webhook }
 
     it 'executes perform with inbox webhook type' do
-      expect(Webhooks::Trigger).to receive(:execute).with(url, payload, webhook_type)
+      expect(Webhooks::Trigger).to receive(:execute).with(url, payload, webhook_type, secret: nil, delivery_id: nil)
       perform_enqueued_jobs { job }
     end
   end

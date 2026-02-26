@@ -33,6 +33,17 @@ class Webhooks::Trigger
     )
   end
 
+  def request_headers(body)
+    headers = { content_type: :json, accept: :json }
+    headers['X-Chatwoot-Delivery'] = @delivery_id if @delivery_id.present?
+    if @secret.present?
+      ts = Time.now.to_i.to_s
+      headers['X-Chatwoot-Timestamp'] = ts
+      headers['X-Chatwoot-Signature'] = "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', @secret, "#{ts}.#{body}")}"
+    end
+    headers
+  end
+
   def handle_error(error)
     return unless SUPPORTED_ERROR_HANDLE_EVENTS.include?(@payload[:event])
     return unless message
@@ -75,7 +86,11 @@ class Webhooks::Trigger
   def message
     return if message_id.blank?
 
-    @message ||= Message.find_by(id: message_id)
+    if defined?(@message)
+      @message
+    else
+      @message = Message.find_by(id: message_id)
+    end
   end
 
   def message_id
