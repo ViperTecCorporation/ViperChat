@@ -410,7 +410,11 @@ export default {
         @click="$emit('selectContentTemplate')"
       />
       <VideoCallButton
-        v-if="(isAWebWidgetInbox || isAPIInbox) && !isOnPrivateNote"
+        v-if="
+          (isAWebWidgetInbox || isAPIInbox) &&
+          !isOnPrivateNote &&
+          !isEditorDisabled
+        "
         :conversation-id="conversationId"
       />
       <transition name="modal-fade">
