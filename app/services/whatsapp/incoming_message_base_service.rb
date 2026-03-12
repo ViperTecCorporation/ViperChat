@@ -42,20 +42,13 @@ class Whatsapp::IncomingMessageBaseService
     # processing the same message simultaneously.
     return if find_message_by_source_id(messages_data.first[:id])
     return unless lock_message_source_id!
+    set_message_type
+    set_contact
+    return unless @contact
 
-    cache_message_source_id_in_redis
-
-    begin
-      set_message_type
-      set_contact
-      return clear_message_source_id_from_redis unless @contact
-
-      ActiveRecord::Base.transaction do
-        set_conversation
-        create_messages
-      end
-    ensure
-      clear_message_source_id_from_redis
+    ActiveRecord::Base.transaction do
+      set_conversation
+      create_messages
     end
   end
 
