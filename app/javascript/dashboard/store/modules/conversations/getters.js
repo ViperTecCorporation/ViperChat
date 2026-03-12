@@ -14,48 +14,6 @@ export const getSelectedChatConversation = ({
 }) =>
   allConversations.filter(conversation => conversation.id === selectedChatId);
 
-const getLastRealMessage = messages => {
-  if (!Array.isArray(messages) || !messages.length) {
-    return null;
-  }
-
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-
-    if (!message || message.private) {
-      continue;
-    }
-
-    const messageType = message.message_type;
-
-    if (
-      messageType !== MESSAGE_TYPE.INCOMING &&
-      messageType !== MESSAGE_TYPE.OUTGOING
-    ) {
-      continue;
-    }
-
-    const senderType = message.sender_type;
-    const contentAttributes = message.content_attributes || {};
-    const additionalAttributes = message.additional_attributes || {};
-
-    const isBotSender =
-      senderType === 'AgentBot' || senderType === 'Captain::Assistant';
-    const hasAutomationRuleId = Boolean(
-      contentAttributes.automation_rule_id
-    );
-    const hasCampaignId = Boolean(additionalAttributes.campaign_id);
-
-    if (isBotSender || hasAutomationRuleId || hasCampaignId) {
-      continue;
-    }
-
-    return message;
-  }
-
-  return null;
-};
-
 const getters = {
   getAllConversations: ({ allConversations, chatSortFilter: sortKey }) => {
     return allConversations.sort((a, b) => sortComparator(a, b, sortKey));

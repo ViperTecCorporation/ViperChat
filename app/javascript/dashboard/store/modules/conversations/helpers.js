@@ -16,40 +16,31 @@ const getLastRealMessageTimestamp = conversation => {
   if (!Array.isArray(messages) || !messages.length) {
     return null;
   }
-
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-
+  const lastRealMessage = [...messages].reverse().find(message => {
     if (!message || message.private) {
-      continue;
+      return false;
     }
 
     const messageType = message.message_type;
-
     if (
       messageType !== MESSAGE_TYPE.INCOMING &&
       messageType !== MESSAGE_TYPE.OUTGOING
     ) {
-      continue;
+      return false;
     }
 
     const senderType = message.sender_type;
     const contentAttributes = message.content_attributes || {};
     const additionalAttributes = message.additional_attributes || {};
-
     const isBotSender =
       senderType === 'AgentBot' || senderType === 'Captain::Assistant';
     const hasAutomationRuleId = Boolean(contentAttributes.automation_rule_id);
     const hasCampaignId = Boolean(additionalAttributes.campaign_id);
 
-    if (isBotSender || hasAutomationRuleId || hasCampaignId) {
-      continue;
-    }
+    return !(isBotSender || hasAutomationRuleId || hasCampaignId);
+  });
 
-    return message.created_at;
-  }
-
-  return null;
+  return lastRealMessage?.created_at || null;
 };
 
 const STATUS_ENUM = {
@@ -98,7 +89,11 @@ export const filterByUnattended = (
     : shouldFilter;
 };
 
-const filterByInternal = (shouldFilter, conversationType, conversation = {}) => {
+const filterByInternal = (
+  shouldFilter,
+  conversationType,
+  conversation = {}
+) => {
   if (conversationType !== 'internal') {
     return shouldFilter;
   }

@@ -251,7 +251,14 @@ const assigneeTabItems = computed(() => {
       count: conversationStats.value[countKey] || 0,
     }));
 
-  const orderedKeys = ['me', 'waiting', 'unassigned', 'replied', 'all', 'internal'];
+  const orderedKeys = [
+    'me',
+    'waiting',
+    'unassigned',
+    'replied',
+    'all',
+    'internal',
+  ];
 
   const findBaseItem = key => baseItems.find(item => item.key === key);
 
@@ -377,11 +384,15 @@ const conversationFilters = computed(() => {
     labels: props.label ? [props.label] : undefined,
     teamId: props.teamId || undefined,
     inboxChannelType: selectedInbox.channel_type || undefined,
-    conversationType: isInternalTab
-      ? 'internal'
-      : activeAssigneeTab.value === 'waiting'
-      ? 'unattended'
-      : props.conversationType || undefined,
+    conversationType: (() => {
+      if (isInternalTab) {
+        return 'internal';
+      }
+      if (activeAssigneeTab.value === 'waiting') {
+        return 'unattended';
+      }
+      return props.conversationType || undefined;
+    })(),
   };
 });
 
@@ -702,7 +713,7 @@ function loadMoreConversations() {
 }
 
 // Use IntersectionObserver instead of @scroll since Virtualizer only emits on user scroll.
-// If the list doesn’t fill the viewport, loading can stall.
+// If the list doesnâ€™t fill the viewport, loading can stall.
 // IntersectionObserver triggers as soon as the sentinel is visible.
 const intersectionObserverOptions = computed(() => ({
   root: conversationListRef.value,
@@ -1067,14 +1078,13 @@ watch(conversationFilters, (newVal, oldVal) => {
     />
     <div
       ref="conversationListRef"
-      class="flex-1 conversations-list overflow-y-auto overflow-x-hidden w-full max-w-full pr-2 sm:pr-0"
-      :class="{ 'overflow-hidden': isContextMenuOpen }"
+      class="flex-1 min-h-0 overflow-y-auto conversations-list"
+      :class="{ '!overflow-hidden': isContextMenuOpen }"
     >
-      <DynamicScroller
-        ref="conversationDynamicScroller"
-        :items="conversationList"
-        :min-item-size="24"
-        class="overflow-y-auto overflow-x-hidden w-full h-full max-w-full pr-2 sm:pr-0"
+      <Virtualizer
+        ref="virtualListRef"
+        v-slot="{ item, index }"
+        :data="conversationList"
       >
         <ConversationItem
           :source="item"
