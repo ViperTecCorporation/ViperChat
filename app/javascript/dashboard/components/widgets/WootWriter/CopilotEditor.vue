@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, useTemplateRef } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import {
   buildMessageSchema,
@@ -32,6 +33,8 @@ const props = defineProps({
     default: false,
   },
 });
+
+const { t } = useI18n();
 
 const emit = defineEmits([
   'blur',
@@ -142,7 +145,7 @@ const enabledMenuOptions = computed(() => {
 function reloadState() {
   state = createState(
     props.modelValue,
-    props.placeholder,
+    props.placeholder || t('CONVERSATION.FOOTER.COPILOT_MSG_INPUT'),
     plugins.value,
     enabledMenuOptions.value
   );
@@ -191,7 +194,7 @@ watch(
 onMounted(() => {
   state = createState(
     props.modelValue,
-    props.placeholder,
+    props.placeholder || t('CONVERSATION.FOOTER.COPILOT_MSG_INPUT'),
     plugins.value,
     enabledMenuOptions.value
   );

@@ -12,6 +12,7 @@ import Icon from 'next/icon/Icon.vue';
 import { downloadFile } from '@chatwoot/utils';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { emitter } from 'shared/helpers/mitt';
+import { useMessageContext } from '../provider.js';
 
 const { attachment } = defineProps({
   attachment: {
@@ -29,6 +30,7 @@ defineOptions({
 });
 
 const audioPlayer = useTemplateRef('audioPlayer');
+const { orientation } = useMessageContext();
 
 const shouldLog =
   (import.meta.env?.VITE_CONSOLE_LOG ?? 'true').toString().toLowerCase() ===
@@ -187,6 +189,26 @@ const playbackSpeedLabel = computed(() => {
   return `${playbackSpeed.value}x`;
 });
 
+const isOutgoing = computed(() => orientation.value === 'right');
+
+const containerClass = computed(() =>
+  isOutgoing.value
+    ? 'bg-n-solid-blue border-n-blue-5 text-n-slate-12'
+    : 'bg-n-blue-2 border-n-blue-4 text-n-blue-12'
+);
+
+const speedButtonClass = computed(() =>
+  isOutgoing.value
+    ? 'bg-n-blue-10/20 hover:bg-n-blue-10/30'
+    : 'bg-n-blue-3 hover:bg-n-blue-4'
+);
+
+const transcriptionClass = computed(() =>
+  isOutgoing.value
+    ? 'text-n-slate-12 bg-n-blue-10/20'
+    : 'text-n-blue-12 bg-n-blue-3'
+);
+
 // There maybe a chance that the audioPlayer ref is not available
 // When the onLoadMetadata is called, so we need to set the duration
 // value when the component is mounted
@@ -327,7 +349,8 @@ onBeforeUnmount(() => {
   </audio>
   <div
     v-bind="$attrs"
-    class="rounded-xl w-full gap-2 p-1.5 bg-n-alpha-white flex flex-col items-center border border-n-container shadow-[0px_2px_8px_0px_rgba(94,94,94,0.06)]"
+    class="rounded-xl w-full gap-2 p-1.5 flex flex-col items-center border shadow-[0px_2px_8px_0px_rgba(94,94,94,0.06)]"
+    :class="containerClass"
   >
     <div class="flex gap-1 w-full flex-1 items-center justify-start">
       <button class="p-0 border-0 size-8" @click="playOrPause">
@@ -357,10 +380,11 @@ onBeforeUnmount(() => {
         />
       </div>
       <button
-        class="border-0 w-10 h-6 grid place-content-center bg-n-alpha-2 hover:bg-alpha-3 rounded-2xl"
+        class="border-0 w-10 h-6 grid place-content-center rounded-2xl"
+        :class="speedButtonClass"
         @click="changePlaybackSpeed"
       >
-        <span class="text-xs text-n-slate-11 font-medium">
+        <span class="text-xs font-medium">
           {{ playbackSpeedLabel }}
         </span>
       </button>
@@ -381,7 +405,8 @@ onBeforeUnmount(() => {
 
     <div
       v-if="attachment.transcribedText && showTranscribedText"
-      class="text-n-slate-12 p-3 text-sm bg-n-alpha-1 rounded-lg w-full break-words"
+      class="p-3 text-sm rounded-lg w-full break-words"
+      :class="transcriptionClass"
     >
       {{ attachment.transcribedText }}
     </div>
