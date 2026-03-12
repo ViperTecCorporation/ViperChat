@@ -40,7 +40,7 @@ const getters = {
       }
 
       const messages = conversation.messages || [];
-      const lastMessage = getLastRealMessage(messages);
+      const lastMessage = messages[messages.length - 1];
 
       if (!lastMessage) {
         return false;
@@ -71,13 +71,75 @@ const getters = {
       }
 
       const messages = conversation.messages || [];
-      const lastMessage = getLastRealMessage(messages);
+      const lastMessage = messages[messages.length - 1];
 
       if (!lastMessage) {
         return false;
       }
 
-      return lastMessage.message_type === MESSAGE_TYPE.OUTGOING;
+      return lastMessage.message_type !== MESSAGE_TYPE.INCOMING;
+    });
+  },
+  getWaitingConversations: (_state, _, __, rootGetters) => activeFilters => {
+    const currentUser = rootGetters.getCurrentUser;
+    const currentUserId = rootGetters.getCurrentUser.id;
+    const currentAccountId = rootGetters.getCurrentAccountId;
+
+    const permissions = getUserPermissions(currentUser, currentAccountId);
+    const userRole = getUserRole(currentUser, currentAccountId);
+
+    return _state.allConversations.filter(conversation => {
+      const shouldFilter = applyPageFilters(conversation, activeFilters);
+      const allowedForRole = applyRoleFilter(
+        conversation,
+        userRole,
+        permissions,
+        currentUserId
+      );
+
+      if (!shouldFilter || !allowedForRole) {
+        return false;
+      }
+
+      const messages = conversation.messages || [];
+      const lastMessage = messages[messages.length - 1];
+
+      if (!lastMessage) {
+        return false;
+      }
+
+      return lastMessage.message_type === MESSAGE_TYPE.INCOMING;
+    });
+  },
+  getRepliedConversations: (_state, _, __, rootGetters) => activeFilters => {
+    const currentUser = rootGetters.getCurrentUser;
+    const currentUserId = rootGetters.getCurrentUser.id;
+    const currentAccountId = rootGetters.getCurrentAccountId;
+
+    const permissions = getUserPermissions(currentUser, currentAccountId);
+    const userRole = getUserRole(currentUser, currentAccountId);
+
+    return _state.allConversations.filter(conversation => {
+      const shouldFilter = applyPageFilters(conversation, activeFilters);
+      const allowedForRole = applyRoleFilter(
+        conversation,
+        userRole,
+        permissions,
+        currentUserId
+      );
+
+      if (!shouldFilter || !allowedForRole) {
+        return false;
+      }
+
+      const messages = conversation.messages || [];
+      const lastMessage = messages[messages.length - 1];
+
+      if (!lastMessage) {
+        return false;
+      }
+
+      return lastMessage.message_type !== MESSAGE_TYPE.INCOMING;
     });
   },
   getFilteredConversations: (
