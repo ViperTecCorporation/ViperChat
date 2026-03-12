@@ -294,24 +294,15 @@ const showAssigneeInConversationCard = computed(() => {
 });
 
 const currentPageFilterKey = computed(() => {
-  if (hasAppliedFiltersOrActiveFolders.value) {
-    return 'appliedFilters';
-  }
-
-  if (
-    activeAssigneeTab.value === 'waiting' ||
-    activeAssigneeTab.value === 'replied'
-  ) {
-    return wootConstants.ASSIGNEE_TYPE.ALL;
-  }
-
-  return activeAssigneeTab.value;
+  return hasAppliedFiltersOrActiveFolders.value
+    ? 'appliedFilters'
+    : activeAssigneeTab.value;
 });
 
 const inbox = useFunctionGetter('inboxes/getInbox', activeInbox);
 const currentPage = useFunctionGetter(
   'conversationPage/getCurrentPageFilter',
-  currentPageFilterKey
+  activeAssigneeTab
 );
 const currentFiltersPage = useFunctionGetter(
   'conversationPage/getCurrentPageFilter',
