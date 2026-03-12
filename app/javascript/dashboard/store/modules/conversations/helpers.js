@@ -1,46 +1,10 @@
-import {
-  CONVERSATION_PRIORITY_ORDER,
-  MESSAGE_TYPE,
-} from 'shared/constants/messages';
+import { CONVERSATION_PRIORITY_ORDER } from 'shared/constants/messages';
 
 export const findPendingMessageIndex = (chat, message) => {
   const { echo_id: tempMessageId } = message;
   return chat.messages.findIndex(
     m => m.id === message.id || m.id === tempMessageId
   );
-};
-
-const getLastRealMessageTimestamp = conversation => {
-  const messages = conversation.messages;
-
-  if (!Array.isArray(messages) || !messages.length) {
-    return null;
-  }
-  const lastRealMessage = [...messages].reverse().find(message => {
-    if (!message || message.private) {
-      return false;
-    }
-
-    const messageType = message.message_type;
-    if (
-      messageType !== MESSAGE_TYPE.INCOMING &&
-      messageType !== MESSAGE_TYPE.OUTGOING
-    ) {
-      return false;
-    }
-
-    const senderType = message.sender_type;
-    const contentAttributes = message.content_attributes || {};
-    const additionalAttributes = message.additional_attributes || {};
-    const isBotSender =
-      senderType === 'AgentBot' || senderType === 'Captain::Assistant';
-    const hasAutomationRuleId = Boolean(contentAttributes.automation_rule_id);
-    const hasCampaignId = Boolean(additionalAttributes.campaign_id);
-
-    return !(isBotSender || hasAutomationRuleId || hasCampaignId);
-  });
-
-  return lastRealMessage?.created_at || null;
 };
 
 const STATUS_ENUM = {
@@ -205,15 +169,8 @@ const getSortOrderFunction = sortOrder =>
   sortOrder === 'asc' ? sortAscending : sortDescending;
 
 const sortConfig = {
-  sortOnLastActivityAt: (a, b, sortDirection) => {
-    const sortFunc = getSortOrderFunction(sortDirection);
-    const aTimestamp =
-      getLastRealMessageTimestamp(a) ?? a.last_activity_at ?? a.created_at;
-    const bTimestamp =
-      getLastRealMessageTimestamp(b) ?? b.last_activity_at ?? b.created_at;
-
-    return sortFunc(aTimestamp, bTimestamp);
-  },
+  sortOnLastActivityAt: (a, b, sortDirection) =>
+    getSortOrderFunction(sortDirection)(a.last_activity_at, b.last_activity_at),
 
   sortOnCreatedAt: (a, b, sortDirection) =>
     getSortOrderFunction(sortDirection)(a.created_at, b.created_at),

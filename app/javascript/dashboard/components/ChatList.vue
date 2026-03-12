@@ -384,15 +384,9 @@ const conversationFilters = computed(() => {
     labels: props.label ? [props.label] : undefined,
     teamId: props.teamId || undefined,
     inboxChannelType: selectedInbox.channel_type || undefined,
-    conversationType: (() => {
-      if (isInternalTab) {
-        return 'internal';
-      }
-      if (activeAssigneeTab.value === 'waiting') {
-        return 'unattended';
-      }
-      return props.conversationType || undefined;
-    })(),
+    conversationType: isInternalTab
+      ? 'internal'
+      : props.conversationType || undefined,
   };
 });
 
