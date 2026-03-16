@@ -1,6 +1,7 @@
 {
   "INTEGRATION_SETTINGS": {
     "SHOPIFY": {
+      "HEADER": "Shopify",
       "DELETE": {
         "TITLE": "מחק אינטגרציה של Shopify",
         "MESSAGE": "האם אתה בטוח שברצונך למחוק את האינטגרציה של Shopify?"
@@ -16,9 +17,11 @@
       "ERROR": "אירעה שגיאה בחיבור ל-Shopify. אנא נסה שוב או פנה לתמיכה אם הבעיה נמשכת."
     },
     "HEADER": "אינטגרציות",
-    "DESCRIPTION": "ViperChat integrates with multiple tools and services to improve your team's efficiency. Explore the list below to configure your favorite apps.",
-    "LEARN_MORE": "Learn more about integrations",
-    "LOADING": "Fetching integrations",
+    "DESCRIPTION": "Chatwoot משתלב עם כלים ושירותים מרובים כדי לשפר את יעילות הצוות שלך. חקור את הרשימה למטה כדי להגדיר את האפליקציות המועדפות עליך.",
+    "LEARN_MORE": "למד עוד על אינטגרציות",
+    "LOADING": "מאחזר אינטגרציות",
+    "SEARCH_PLACEHOLDER": "Search integrations...",
+    "NO_RESULTS": "No integrations found matching your search",
     "CAPTAIN": {
       "DISABLED": "Captain אינו מופעל בחשבונך.",
       "CLICK_HERE_TO_CONFIGURE": "לחץ כאן כדי להגדיר",
@@ -28,9 +31,20 @@
     "WEBHOOK": {
       "SUBSCRIBED_EVENTS": "אירועים מנויים",
       "LEARN_MORE": "למד עוד על Webhooks",
+      "SECRET": {
+        "LABEL": "Secret",
+        "COPY": "Copy secret to clipboard",
+        "COPY_SUCCESS": "Secret copied to clipboard",
+        "TOGGLE": "Toggle secret visibility",
+        "CREATED_DESC": "Your webhook has been created. Use the secret below to verify webhook signatures. Please copy it now — you can also find it later in the webhook edit form.",
+        "DONE": "Done"
+      },
+      "COUNT": "{n} webhook | {n} webhooks",
+      "SEARCH_PLACEHOLDER": "Search webhooks...",
+      "NO_RESULTS": "No webhooks found matching your search",
       "FORM": {
         "CANCEL": "ביטול",
-        "DESC": "אירועי Webhook מספקים לך מידע בזמן אמת על מה שקורה בחשבון ViperChat שלך. אנא הזן כתובת אתר חוקית כדי להגדיר התקשרות חוזרת.",
+        "DESC": "אירועי Webhook מספקים לך מידע בזמן אמת על מה שקורה בחשבון Chatwoot שלך. אנא הזן כתובת אתר חוקית כדי להגדיר התקשרות חוזרת.",
         "SUBSCRIPTIONS": {
           "LABEL": "אירועים",
           "EVENTS": {
@@ -64,7 +78,7 @@
       "HEADER_BTN_TXT": "הוסף Webhook חדש",
       "LOADING": "מביאים ל-webhooks מחוברים",
       "SEARCH_404": "אין פריטים התואמים לשאילתה זו",
-      "SIDEBAR_TXT": "<p><b>Webhooks</b> </p> <p>Webhooks הם התקשרות חוזרת של HTTP שניתן להגדיר עבור כל חשבון. הם מופעלים על ידי אירועים כמו יצירת הודעות ב-ViperChat. אתה יכול ליצור יותר מ-webhook אחד עבור חשבון זה. <br /><br /> ליצירת <b>הוסף אינטרנט</b>, לחץ על הלחצן <b>הוסף אינטרנט חדש</b>. אתה יכול גם להסיר כל webhook קיים על ידי לחיצה על הלחצן Delete.</p>",
+      "SIDEBAR_TXT": "<p><b>Webhooks</b> </p> <p>Webhooks הם התקשרות חוזרת של HTTP שניתן להגדיר עבור כל חשבון. הם מופעלים על ידי אירועים כמו יצירת הודעות ב-Chatwoot. אתה יכול ליצור יותר מ-webhook אחד עבור חשבון זה. <br /><br /> ליצירת <b>הוסף אינטרנט</b>, לחץ על הלחצן <b>הוסף אינטרנט חדש</b>. אתה יכול גם להסיר כל webhook קיים על ידי לחיצה על הלחצן Delete.</p>",
       "LIST": {
         "404": "לא הוגדרו webhooks עבור חשבון זה.",
         "TITLE": "נהל webhooks",
@@ -104,6 +118,7 @@
       }
     },
     "SLACK": {
+      "HEADER": "Slack",
       "DELETE": "מחק",
       "DELETE_CONFIRMATION": {
         "TITLE": "מחק את האינטגרציה",
@@ -111,20 +126,20 @@
       },
       "HELP_TEXT": {
         "TITLE": "שימוש ב-Slack Integration",
-        "BODY": "With this integration, all of your incoming conversations will be synced to the ***{selectedChannelName}*** channel in your Slack workspace. You can manage all your customer conversations right within the channel and never miss a message.\n\nHere are the main features of the integration:\n\n**Respond to conversations from within Slack:** To respond to a conversation in the ***{selectedChannelName}*** Slack channel, simply type out your message and send it as a thread. This will create a response back to the customer through ViperChat. It's that simple!\n\n **Create private notes:** If you want to create private notes instead of replies, start your message with ***`note:`***. This ensures that your message is kept private and won't be visible to the customer.\n\n**Associate an agent profile:** If the person who replied on Slack has an agent profile in ViperChat under the same email, the replies will be associated with that agent profile automatically. This means you can easily track who said what and when. On the other hand, when the replier doesn't have an associated agent profile, the replies will appear from the bot profile to the customer.",
-        "SELECTED": "selected"
+        "BODY": "באמצעות אינטגרציה זו, כל השיחות הנכנסות שלך יסונכרנו לערוץ ***{selectedChannelName}*** במרחב העבודה שלך ב-Slack. תוכל לנהל את כל שיחות הלקוחות שלך ישירות בתוך הערוץ ולעולם לא להחמיץ הודעה.\n\nלהלן התכונות העיקריות של האינטגרציה:\n\n**השב לשיחות מתוך Slack:** כדי להשיב לשיחה בערוץ Slack ***{selectedChannelName}***, פשוט הקלד את ההודעה שלך ושלח אותה כשרשור. זה ייצור תגובה חזרה ללקוח דרך Chatwoot. זה כזה פשוט!\n\n **צור הערות פרטיות:** אם ברצונך ליצור הערות פרטיות במקום תגובות, התחל את ההודעה שלך עם ***`note:`***. זה מבטיח שההודעה שלך תישאר פרטית ולא תהיה גלויה ללקוח.\n\n**שייך פרופיל סוכן:** אם לאדם שהשיב ב-Slack יש פרופיל סוכן ב-Chatwoot תחת אותו דוא\"ל, התגובות ישויכו לפרופיל הסוכן הזה באופן אוטומטי. משמעות הדבר היא שתוכל לעקוב בקלות מי אמר מה ומתי. מצד שני, כאשר למשיב אין פרופיל סוכן משויך, התגובות יופיעו מפרופיל הבוט ללקוח.",
+        "SELECTED": "נבחר"
       },
       "SELECT_CHANNEL": {
         "OPTION_LABEL": "בחר ערוץ",
         "UPDATE": "עדכן",
-        "BUTTON_TEXT": "Connect channel",
-        "DESCRIPTION": "Your Slack workspace is now linked with ViperChat. However, the integration is currently inactive. To activate the integration and connect a channel to ViperChat, please click the button below.\n\n**Note:** If you are attempting to connect a private channel, add the ViperChat app to the Slack channel before proceeding with this step.",
-        "ATTENTION_REQUIRED": "Attention required",
-        "EXPIRED": "Your Slack integration has expired. To continue receiving messages on Slack, please delete the integration and connect your workspace again."
+        "BUTTON_TEXT": "חבר ערוץ",
+        "DESCRIPTION": "מרחב העבודה שלך ב-Slack מקושר כעת ל-Chatwoot. עם זאת, האינטגרציה אינה פעילה כרגע. כדי להפעיל את האינטגרציה ולחבר ערוץ ל-Chatwoot, אנא לחץ על הכפתור למטה.\n\n**הערה:** אם אתה מנסה לחבר ערוץ פרטי, הוסף את אפליקציית Chatwoot לערוץ Slack לפני שתמשיך בשלב זה.",
+        "ATTENTION_REQUIRED": "נדרשת תשומת לב",
+        "EXPIRED": "האינטגרציה שלך ב-Slack פגה. כדי להמשיך לקבל הודעות ב-Slack, אנא מחק את האינטגרציה וחבר מחדש את מרחב העבודה שלך."
       },
-      "UPDATE_ERROR": "There was an error updating the integration, please try again",
-      "UPDATE_SUCCESS": "The channel is connected successfully",
-      "FAILED_TO_FETCH_CHANNELS": "There was an error fetching the channels from Slack, please try again"
+      "UPDATE_ERROR": "אירעה שגיאה בעדכון האינטגרציה, אנא נסה שוב",
+      "UPDATE_SUCCESS": "הערוץ מחובר בהצלחה",
+      "FAILED_TO_FETCH_CHANNELS": "אירעה שגיאה באחזור הערוצים מ-Slack, אנא נסה שוב"
     },
     "DYTE": {
       "CLICK_HERE_TO_JOIN": "לחץ כאן בשביל להצטרף",
@@ -145,7 +160,29 @@
         "EXPAND": "הרחב",
         "MAKE_FRIENDLY": "שנה את טון ההודעה לידידותי",
         "MAKE_FORMAL": "השתמש בטון רשמי",
-        "SIMPLIFY": "פשט"
+        "SIMPLIFY": "פשט",
+        "CONFIDENT": "Use confident tone",
+        "PROFESSIONAL": "Use professional tone",
+        "CASUAL": "Use casual tone",
+        "STRAIGHTFORWARD": "Use straightforward tone"
+      },
+      "REPLY_OPTIONS": {
+        "IMPROVE_REPLY": "Improve reply",
+        "IMPROVE_REPLY_SELECTION": "Improve the selection",
+        "CHANGE_TONE": {
+          "TITLE": "Change tone",
+          "OPTIONS": {
+            "PROFESSIONAL": "מקצועי",
+            "CASUAL": "Casual",
+            "STRAIGHTFORWARD": "Straightforward",
+            "CONFIDENT": "Confident",
+            "FRIENDLY": "ידידותי"
+          }
+        },
+        "GRAMMAR": "Fix grammar & spelling",
+        "SUGGESTION": "Suggest a reply",
+        "SUMMARIZE": "Summarize the conversation",
+        "ASK_COPILOT": "Ask Copilot"
       },
       "ASSISTANCE_MODAL": {
         "DRAFT_TITLE": "טיוטת תוכן",
@@ -198,15 +235,19 @@
     "DASHBOARD_APPS": {
       "TITLE": "אפליקציות לוח מחוונים",
       "HEADER_BTN_TXT": "הוסף אפליקציית לוח מחוונים חדשה",
-      "SIDEBAR_TXT": "<p><b>אפליקציות לוח מחוונים</b></p><p>אפליקציות לוח מחוונים מאפשרות לארגונים להטמיע אפליקציה בתוך לוח המחוונים של ViperChat כדי לספק את ההקשר לסוכני תמיכת לקוחות. תכונה זו מאפשרת לך ליצור אפליקציה באופן עצמאי ולהטמיע אותה בתוך לוח המחוונים כדי לספק מידע על המשתמש, ההזמנות שלו או היסטוריית התשלומים הקודמת שלו.</p><p>כאשר תטמיע את האפליקציה שלך באמצעות לוח המחוונים ב-ViperChat, האפליקציה שלך תהיה קבל את ההקשר של השיחה והקשר כאירוע חלון. הטמיע מאזין לאירוע ההודעה בדף שלך כדי לקבל את ההקשר.</p><p>כדי להוסיף אפליקציית לוח מחוונים חדשה, לחץ על הלחצן 'הוסף אפליקציית לוח מחוונים חדשה'.</p>",
+      "SIDEBAR_TXT": "<p><b>אפליקציות לוח מחוונים</b></p><p>אפליקציות לוח מחוונים מאפשרות לארגונים להטמיע אפליקציה בתוך לוח המחוונים של Chatwoot כדי לספק את ההקשר לסוכני תמיכת לקוחות. תכונה זו מאפשרת לך ליצור אפליקציה באופן עצמאי ולהטמיע אותה בתוך לוח המחוונים כדי לספק מידע על המשתמש, ההזמנות שלו או היסטוריית התשלומים הקודמת שלו.</p><p>כאשר תטמיע את האפליקציה שלך באמצעות לוח המחוונים ב-Chatwoot, האפליקציה שלך תהיה קבל את ההקשר של השיחה והקשר כאירוע חלון. הטמיע מאזין לאירוע ההודעה בדף שלך כדי לקבל את ההקשר.</p><p>כדי להוסיף אפליקציית לוח מחוונים חדשה, לחץ על הלחצן 'הוסף אפליקציית לוח מחוונים חדשה'.</p>",
       "DESCRIPTION": "אפליקציות לוח מחוונים מאפשרות לארגונים להטמיע אפליקציה בתוך לוח המחוונים כדי לספק את ההקשר לסוכני תמיכת לקוחות. תכונה זו מאפשרת לך ליצור אפליקציה באופן עצמאי ולהטמיע אותה כדי לספק מידע על המשתמש, ההזמנות שלהם או היסטוריית התשלומים הקודמת שלהם.",
       "LEARN_MORE": "למד עוד על אפליקציות לוח מחוונים",
+      "COUNT": "{n} dashboard app | {n} dashboard apps",
+      "SEARCH_PLACEHOLDER": "Search dashboard apps...",
+      "NO_RESULTS": "No dashboard apps found matching your search",
       "LIST": {
         "404": "אין עדיין אפליקציות לוח מחוונים מוגדרות בחשבון זה",
         "LOADING": "מביא אפליקציות לוח מחוונים...",
         "TABLE_HEADER": {
           "NAME": "שם",
-          "ENDPOINT": "נקודת קצה"
+          "ENDPOINT": "נקודת קצה",
+          "ACTIONS": "פעולות"
         },
         "EDIT_TOOLTIP": "ערוך אפליקציה",
         "DELETE_TOOLTIP": "מחק אפליקציה"
@@ -243,6 +284,7 @@
       }
     },
     "LINEAR": {
+      "HEADER": "Linear",
       "ADD_OR_LINK_BUTTON": "Create/Link Linear Issue",
       "LOADING": "מאחזר בעיות Linear...",
       "LOADING_ERROR": "אירעה שגיאה באחזור בעיות Linear, אנא נסה שוב",
@@ -337,6 +379,7 @@
       }
     },
     "NOTION": {
+      "HEADER": "Notion",
       "DELETE": {
         "TITLE": "האם אתה בטוח שברצונך למחוק את האינטגרציה של Notion?",
         "MESSAGE": "מחיקת אינטגרציה זו תסיר את הגישה למרחב העבודה שלך ב-Notion ותפסיק את כל הפונקציונליות הקשורה.",
@@ -406,6 +449,7 @@
       "CANCEL_ANYTIME": "תוכל לשנות או לבטל את התוכנית שלך בכל עת"
     },
     "ENTERPRISE_PAYWALL": {
+      "AVAILABLE_ON": "Captain AI is only available in the Enterprise plans.",
       "UPGRADE_PROMPT": "שדרג את התוכנית שלך כדי לקבל גישה לעוזרים שלנו, ל-Copilot ועוד.",
       "ASK_ADMIN": "אנא פנה למנהל המערכת שלך לצורך השדרוג."
     },

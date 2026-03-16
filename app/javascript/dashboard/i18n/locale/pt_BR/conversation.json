@@ -32,7 +32,7 @@
     "LOADING_CONVERSATIONS": "Carregando conversas",
     "CANNOT_REPLY": "Você não pode responder porque",
     "24_HOURS_WINDOW": "Restrições de janela de mensagem de 24 horas",
-    "48_HOURS_WINDOW": "Restrição de janela de mensagem de 48 horas",
+    "48_HOURS_WINDOW": "Restrição da janela de mensagens de 48 horas",
     "API_HOURS_WINDOW": "Você só pode responder a esta conversa em {hours} horas",
     "NOT_ASSIGNED_TO_YOU": "Esta conversa não está atribuída a você. Gostaria de atribuir esta conversa a você mesmo?",
     "ASSIGN_TO_ME": "Atribuir a mim",
@@ -58,9 +58,10 @@
     },
     "UPLOADING_ATTACHMENTS": "Enviando anexos...",
     "REPLIED_TO_STORY": "Respondido ao seu story",
-    "UNSUPPORTED_MESSAGE": "Esta mensagem não é suportada. Você pode ver esta mensagem no aplicativo Facebook Messenger.",
+    "UNSUPPORTED_MESSAGE": "Esta mensagem não é suportada. Para visualizá-la, por favor, abra-a na plataforma original.",
     "UNSUPPORTED_MESSAGE_FACEBOOK": "Esta mensagem não é suportada. Você pode ver esta mensagem no aplicativo Facebook Messenger.",
     "UNSUPPORTED_MESSAGE_INSTAGRAM": "Esta mensagem não é suportada. Você pode ver esta mensagem no aplicativo do Instagram.",
+    "UNSUPPORTED_MESSAGE_TIKTOK": "Esta mensagem não é compatível. Você pode visualizá-la no aplicativo do TikTok.",
     "SUCCESS_DELETE_MESSAGE": "Mensagem excluída com sucesso",
     "FAIL_DELETE_MESSSAGE": "Não foi possível excluir a mensagem! Tente novamente",
     "NO_RESPONSE": "Sem resposta",
@@ -82,41 +83,6 @@
       "NOT_ANSWERED_YET": "Ainda não respondido",
       "THEY_ANSWERED": "Eles responderam",
       "YOU_ANSWERED": "Você respondeu"
-    },
-    "VOICE_WIDGET": {
-      "INCOMING_CALL": "Chamada recebida",
-      "OUTGOING_CALL": "Chamada realizada",
-      "DIALPAD_TITLE": "Teclado",
-      "DIALPAD_CLEAR": "Limpar",
-      "DIALPAD_CLOSE": "Fechar",
-      "DIALER_TITLE": "Nova chamada",
-      "DIALER_NUMBER_LABEL": "Numero de telefone",
-      "DIALER_NUMBER_PLACEHOLDER": "Digite um numero",
-      "DIALER_PICK_INBOX": "Selecione uma caixa de voz",
-      "DIALER_CALL": "Ligar",
-      "DIALER_CANCEL": "Cancelar",
-      "DIALER_BACKSPACE": "Apagar",
-      "DIALER_CLEAR": "Limpar",
-      "DIALER_EMPTY_NUMBER": "Informe um numero para ligar",
-      "DIALER_INVALID_NUMBER": "Informe um numero valido",
-      "DIALER_FAILED": "Nao foi possivel iniciar a chamada",
-      "DIALER_MOVE": "Redefinir posicao",
-      "DIALER_HIDE": "Ocultar",
-      "TRANSFER": "Transferir",
-      "TRANSFER_TITLE": "Transferir chamada",
-      "TRANSFER_SEARCH_PLACEHOLDER": "Buscar agentes",
-      "TRANSFER_CONFIRM": "Transferir",
-      "TRANSFER_CANCEL": "Cancelar",
-      "TRANSFER_SUCCESS": "Transferencia solicitada",
-      "TRANSFER_ERROR": "Nao foi possivel transferir a chamada",
-      "INTERNAL_CALL_BUTTON": "Ligar para agente",
-      "INTERNAL_CALL_TITLE": "Ligar para agente",
-      "INTERNAL_CALL_PICK_AGENT": "Selecione um agente",
-      "INTERNAL_CALL_PICK_INBOX": "Selecione uma caixa de voz",
-      "INTERNAL_CALL_PICK_INTERNAL_INBOX": "Selecione uma caixa interna",
-      "INTERNAL_CALL_START": "Iniciar chamada",
-      "INTERNAL_CALL_INITIATED": "Chamada iniciada",
-      "INTERNAL_CALL_FAILED": "Nao foi possivel iniciar a chamada"
     },
     "HEADER": {
       "RESOLVE_ACTION": "Resolver",
@@ -208,6 +174,10 @@
           "SUCCESFUL": "Etiqueta #{labelName} atribuída para a conversa {conversationId}",
           "FAILED": "Não foi possível atribuir etiqueta. Por favor, tente novamente."
         },
+        "LABEL_REMOVAL": {
+          "SUCCESFUL": "Etiqueta #{labelName} removida da conversa com id {conversationId}",
+          "FAILED": "Não foi possível remover a etiqueta. Por favor, tente novamente."
+        },
         "TEAM_ASSIGNMENT": {
           "SUCCESFUL": "Time {team} atribuído para o id de conversa {conversationId}",
           "FAILED": "Não foi possível atribuir time. Por favor, tente novamente."
@@ -220,10 +190,13 @@
       "DISABLE_SIGN_TOOLTIP": "Desativar assinatura",
       "MSG_INPUT": "Shift + enter para nova linha. Digite '/' para selecionar uma Resposta Pronta.",
       "PRIVATE_MSG_INPUT": "A mensagem será visível apenas para agentes",
+      "MESSAGING_RESTRICTED": "Você não pode responder esta conversa",
+      "MESSAGING_RESTRICTED_WHATSAPP": "Você só pode responder usando uma mensagem de modelo devido à restrição da janela de 24 horas",
+      "MESSAGING_RESTRICTED_API": "Você só pode responder usando uma mensagem de template devido à restrição da janela de mensagens",
       "MESSAGE_SIGNATURE_NOT_CONFIGURED": "A assinatura da mensagem não está configurada. Por favor, configure-a nas configurações do perfil.",
-      "COPILOT_MSG_INPUT": "De instrucoes adicionais ao Copiloto, ou pergunte qualquer coisa... Pressione enter para enviar o complemento",
+      "COPILOT_MSG_INPUT": "Forneça instruções adicionais ao Copiloto ou pergunte algo mais... Pressione Enter para enviar",
       "CLICK_HERE": "Clique aqui para atualizar",
-      "WHATSAPP_TEMPLATES": "Templates do Whatsapp"
+      "WHATSAPP_TEMPLATES": "Modelos do Whatsapp"
     },
     "REPLYBOX": {
       "REPLY": "Responder",
@@ -234,18 +207,14 @@
       "DISMISS_REPLY": "Dispensar resposta",
       "REPLYING_TO": "Respondendo a:",
       "TIP_EMOJI_ICON": "Mostrar seletor de emoji",
-      "TIP_STICKER_ICON": "Abrir figurinhas",
-      "TIP_ATTACH_CONTACT_ICON": "Anexar contatos",
       "TIP_ATTACH_ICON": "Anexar arquivos",
-      "TIP_ATTACH_SINGLE": "Você não pode adicionar mais de um arquivo para essa mensagem",
       "TIP_AUDIORECORDER_ICON": "Gravar áudio",
       "TIP_AUDIORECORDER_PERMISSION": "Permitir acesso ao áudio",
       "TIP_AUDIORECORDER_ERROR": "Não foi possível abrir o áudio",
       "DRAG_DROP": "Arraste e solte aqui para anexar",
       "START_AUDIO_RECORDING": "Iniciar gravação de áudio",
       "STOP_AUDIO_RECORDING": "Parar gravação de áudio",
-      "COPILOT_THINKING": "Copiloto esta pensando",
-      "": "",
+      "COPILOT_THINKING": "O Copiloto está pensando",
       "EMAIL_HEAD": {
         "TO": "Para",
         "ADD_BCC": "Adicionar cco",
@@ -274,31 +243,6 @@
         "REMOVE_PREVIEW": "Remover o encadeamento de e-mails citado",
         "COLLAPSE": "Recolher a prévia",
         "EXPAND": "Expandir a prévia"
-      },
-      "STICKERS": {
-        "TITLE": "Figurinhas",
-        "SUBTITLE": "Escolha uma figurinha para enviar",
-        "RECENT": "Recentes",
-        "ALL": "Todas",
-        "EMPTY": "Nenhuma figurinha disponível",
-        "ADD": "Adicionar figurinha",
-        "SELECT": "Selecionar",
-        "CANCEL_SELECTION": "Cancelar seleção",
-        "DELETE": "Excluir",
-        "ALT": "Figurinha",
-        "LOADING": "Carregando figurinhas...",
-        "LOAD_ERROR": "Não foi possível carregar as figurinhas. Tente novamente.",
-        "UPLOAD_ERROR": "Não foi possível enviar a figurinha. Tente novamente.",
-        "DELETE_ERROR": "Não foi possível excluir as figurinhas. Tente novamente."
-      },
-      "CONTACT_ATTACHER": {
-        "TITLE": "Anexar contatos",
-        "SUBTITLE": "Pesquise e selecione um ou mais contatos para enviar no WhatsApp.",
-        "SEARCH_PLACEHOLDER": "Pesquisar contatos por nome, e-mail ou número de telefone",
-        "EMPTY": "Nenhum contato encontrado",
-        "SELECTED_COUNT": "{count} contatos selecionados",
-        "CANCEL": "Cancelar",
-        "ATTACH": "Anexar contatos"
       }
     },
     "VISIBLE_TO_AGENTS": "Mensagem Privada: Apenas visível para você e seu time",
@@ -312,9 +256,12 @@
     "SUCCESS_DELETE_CONVERSATION": "Conversa excluída com sucesso",
     "FAIL_DELETE_CONVERSATION": "Não foi possível excluir a conversa! Tente novamente",
     "FILE_SIZE_LIMIT": "O arquivo excede os {MAXIMUM_SUPPORTED_FILE_UPLOAD_SIZE} MB do limite para anexos",
+    "FILE_TYPE_NOT_SUPPORTED": "O tipo de arquivo {fileName} não é suportado nesta conversa",
     "MESSAGE_ERROR": "Não foi possível enviar esta mensagem, por favor, tente novamente mais tarde",
     "SENT_BY": "Enviado por:",
     "BOT": "Robôs",
+    "NATIVE_APP": "Aplicativo nativo",
+    "NATIVE_APP_ADVISORY": "Esta mensagem foi enviada a partir do aplicativo nativo. Responda pelo Chatwoot para manter a janela de mensagens ativa.",
     "SEND_FAILED": "Não foi possível enviar a mensagem! Tente novamente",
     "TRY_AGAIN": "tentar novamente",
     "ASSIGNMENT": {
@@ -325,8 +272,6 @@
     "CONTEXT_MENU": {
       "COPY": "Copiar",
       "REPLY_TO": "Responder mensagem",
-      "REACTION": "Reação",
-      "FORWARD_MESSAGES": "Encaminhar mensagens",
       "DELETE": "Excluir",
       "CREATE_A_CANNED_RESPONSE": "Adicionar às respostas prontas",
       "TRANSLATE": "Traduzir",
@@ -339,87 +284,143 @@
         "CANCEL": "Cancelar"
       }
     },
-    "REACTION": {
-      "TITLE": "Reagir à mensagem",
-      "ERROR": "Não foi possível enviar a reação. Tente novamente."
-    },
-    "FORWARD_MESSAGES": {
-      "TITLE": "Encaminhar mensagens",
-      "DESCRIPTION": "Escolha um contato e uma caixa de entrada para encaminhar as mensagens selecionadas.",
-      "SELECTED_COUNT": "{count} mensagens selecionadas encaminhar",
-      "ACTION_LABEL": "Encaminhar",
-      "CANCEL": "Cancelar",
-      "ERROR_NO_CONTENT": "As mensagens selecionadas não possuem conteúdo para encaminhar.",
-      "ERROR_API": "Não foi possível encaminhar as mensagens. Tente novamente."
-    },
-    "INTERNAL_CHAT": {
-      "TITLE": "Nova conversa interna",
-      "DESCRIPTION": "Inicie um chat entre agentes usando uma caixa de entrada interna.",
-      "NO_INBOX": "Crie uma caixa de entrada do tipo chat interno, em Configurações -> Caixas de entrada para iniciar um chat.",
-      "INBOX_LABEL": "Caixa de entrada interna",
-      "INBOX_PLACEHOLDER": "Selecione uma caixa de entrada interna",
-      "TITLE_LABEL": "Título",
-      "TITLE_PLACEHOLDER": "Assunto opcional para esta conversa",
-      "OPTIONAL": "opcional",
-      "PARTICIPANTS_LABEL": "Participantes",
-      "ADD_PARTICIPANTS": "Adicionar participantes",
-      "ADD_ME": "Adicionar eu",
-      "NO_PARTICIPANT_SELECTED": "Nenhum participante selecionado ainda",
-      "SEARCH_PARTICIPANTS": "Buscar agentes",
-      "MESSAGE_LABEL": "Mensagem",
-      "MESSAGE_PLACEHOLDER": "Digite sua mensagem",
-      "CANCEL": "Cancelar",
-      "SUBMIT": "Iniciar conversa",
-      "SUCCESS": "Conversa interna criada",
-      "GO_TO_CONVERSATION": "Abrir conversa",
-      "ERROR": "Não foi possível criar a conversa interna"
-    },
     "SIDEBAR": {
       "CONTACT": "Contatos",
       "COPILOT": "Copiloto"
     },
-    "MEDIA_LIBRARY": {
-      "BUTTON": "Mídia",
-      "TITLE": "Mídias, documentos e links",
-      "TAB_MEDIA": "Mídias",
-      "TAB_DOCS": "Documentos",
-      "TAB_LINKS": "Links",
-      "MEDIA_SUMMARY": "{photos} fotos | {videos} vídeos | {audios} áudios",
-      "ALL_LABEL": "todos",
-      "DELETE_ACTION": "Excluir",
-      "DELETE_ALL_ACTION": "Excluir tudo",
-      "DELETE_SELECTED_ACTION": "Excluir selecionados",
-      "DELETE_CONFIRM_TITLE": "Excluir anexos",
-      "DELETE_CONFIRM_MESSAGE": "Você está prestes a excluir {count} arquivos da conversa. Deseja continuar?",
-      "DELETE_BACKGROUND_TITLE": "Exclusão em segundo plano",
-      "DELETE_BACKGROUND_MESSAGE": "{count} arquivos estão sendo excluídos em segundo plano.",
-      "DELETE_BACKGROUND_HINT": "Você verá uma nota do sistema quando terminar.",
-      "DELETE_ERROR": "Não foi possível excluir os anexos. Tente novamente.",
-      "PHOTOS_LABEL": "fotos",
-      "VIDEOS_LABEL": "vídeos",
-      "AUDIOS_LABEL": "áudios",
-      "DOC_COUNT": "{count} documentos",
-      "LINK_COUNT": "{count} links",
-      "EMPTY": "Nada por aqui ainda",
-      "LOADING": "Carregando itens",
-      "LOAD_ERROR": "Não foi possível carregar os anexos. Tente novamente.",
-      "LOAD_MORE": "Carregar mais",
-      "THIS_MONTH": "Este mês"
+    "VOICE_WIDGET": {
+      "INCOMING_CALL": "Chamada recebida",
+      "OUTGOING_CALL": "Chamada realizada",
+      "CALL_IN_PROGRESS": "Chamada em andamento",
+      "NOT_ANSWERED_YET": "Ainda não respondido",
+      "HANDLED_IN_ANOTHER_TAB": "Sendo atendida em outra aba",
+      "REJECT_CALL": "Recusar",
+      "JOIN_CALL": "Entrar na chamada",
+      "END_CALL": "Encerrar chamada"
     }
   },
-  "COPILOT": {
-    "TRY_THESE_PROMPTS": "Experimente estes comandos"
+  "EMAIL_TRANSCRIPT": {
+    "TITLE": "Enviar transcrição de conversa",
+    "DESC": "Enviar uma cópia da transcrição da conversa para o endereço de e-mail especificado",
+    "SUBMIT": "Enviar",
+    "CANCEL": "Cancelar",
+    "SEND_EMAIL_SUCCESS": "A transcrição do chat foi enviada com sucesso",
+    "SEND_EMAIL_ERROR": "Ocorreu um erro, por favor tente novamente",
+    "SEND_EMAIL_PAYMENT_REQUIRED": "A transcrição de e-mail não está disponível no seu plano atual. Por favor, atualize para usar este recurso.",
+    "FORM": {
+      "SEND_TO_CONTACT": "Envie a transcrição para o cliente",
+      "SEND_TO_AGENT": "Envie a transcrição para o agente designado",
+      "SEND_TO_OTHER_EMAIL_ADDRESS": "Enviar a transcrição para outro endereço de e-mail",
+      "EMAIL": {
+        "PLACEHOLDER": "Digite um endereço de e-mail",
+        "ERROR": "Por favor, insira um endereço de e-mail válido"
+      }
+    }
   },
-  "GALLERY_VIEW": {
-    "ERROR_DOWNLOADING": "Não foi possível baixar o anexo. Por favor, tente novamente"
+  "ONBOARDING": {
+    "TITLE": "Olá, 👋. Bem-vindo ao {installationName}!",
+    "DESCRIPTION": "Obrigado por se inscrever. Queremos que você aproveite o máximo de {installationName}. Aqui estão algumas coisas que você consegue fazer em {installationName} para que tenha uma experiência agradável.",
+    "GREETING_MORNING": "👋 Bom dia, {name}. Bem-vindo a {installationName}.",
+    "GREETING_AFTERNOON": "👋 Boa tarde, {name}. Bem-vindo a {installationName}.",
+    "GREETING_EVENING": "👋 Boa noite, {name}. Bem-vindo a {installationName}.",
+    "READ_LATEST_UPDATES": "Leia as últimas atualizações",
+    "ALL_CONVERSATION": {
+      "TITLE": "Todas as suas conversas em um só lugar",
+      "DESCRIPTION": "Veja todas as conversas dos seus clientes em um único painel. Você pode filtrar as conversas pelo canal de entrada, rótulo e status.",
+      "NEW_LINK": "Clique aqui para criar uma caixa de entrada"
+    },
+    "TEAM_MEMBERS": {
+      "TITLE": "Convidar membros de seu time",
+      "DESCRIPTION": "Já que você está se preparando para conversar com seu cliente, traga seus colegas para ajudá-lo. Você pode convidar seus colegas adicionando os endereços de e-mail deles na lista de agentes.",
+      "NEW_LINK": "Clique aqui para convidar um membro do time"
+    },
+    "LABELS": {
+      "TITLE": "Organizar conversas com etiquetas",
+      "DESCRIPTION": "Etiquetas fornecem uma forma mais fácil de organizar a sua conversa. Criar algumas etiquetas como #solicitação-suporte, #fatura-assunto etc., assim você poderá futuramente utiliza-las em uma conversa posteriormente.",
+      "NEW_LINK": "Clique aqui para criar etiquetas"
+    },
+    "CANNED_RESPONSES": {
+      "TITLE": "Criar respostas prontas",
+      "DESCRIPTION": "Os modelos de respostas prontas ajudam você a responder rapidamente a uma conversa. Os agentes podem digitar o caractere '/' seguido pelo atalho para inserir uma resposta.",
+      "NEW_LINK": "Clique aqui para criar uma resposta pronta"
+    }
+  },
+  "CONVERSATION_SIDEBAR": {
+    "ASSIGNEE_LABEL": "Agente atribuído",
+    "SELF_ASSIGN": "Atribuir a mim",
+    "TEAM_LABEL": "Time atribuído",
+    "SELECT": {
+      "PLACEHOLDER": "Nenhuma"
+    },
+    "ACCORDION": {
+      "CONTACT_DETAILS": "Detalhes do contato",
+      "CONVERSATION_ACTIONS": "Ações da conversa",
+      "CONVERSATION_LABELS": "Etiquetas da conversa",
+      "CONVERSATION_INFO": "Informação da conversa",
+      "CONTACT_NOTES": "Notas do contato",
+      "CONTACT_ATTRIBUTES": "Atributos do contato",
+      "PREVIOUS_CONVERSATION": "Conversas anteriores",
+      "MACROS": "Macros",
+      "LINEAR_ISSUES": "Problemas do Linear vinculados",
+      "SHOPIFY_ORDERS": "Pedidos do Shopify"
+    },
+    "SHOPIFY": {
+      "ORDER_ID": "Pedido #{id}",
+      "ERROR": "Erro ao carregar pedidos",
+      "NO_SHOPIFY_ORDERS": "Nenhum pedido encontrado",
+      "FINANCIAL_STATUS": {
+        "PENDING": "Pendentes",
+        "AUTHORIZED": "Autorizado",
+        "PARTIALLY_PAID": "Parcialmente pago",
+        "PAID": "Pago",
+        "PARTIALLY_REFUNDED": "Parcialmente Reembolsado",
+        "REFUNDED": "Reembolsado",
+        "VOIDED": "Anulado"
+      },
+      "FULFILLMENT_STATUS": {
+        "FULFILLED": "Concluído",
+        "PARTIALLY_FULFILLED": "Parcialmente Concluído",
+        "UNFULFILLED": "Não concluído"
+      }
+    }
+  },
+  "CONVERSATION_CUSTOM_ATTRIBUTES": {
+    "ADD_BUTTON_TEXT": "Criar atributo",
+    "NO_RECORDS_FOUND": "Nenhum atributo encontrado",
+    "UPDATE": {
+      "SUCCESS": "Atributo atualizado com sucesso",
+      "ERROR": "Não foi possível atualizar o atributo. Por favor, tente mais tarde"
+    },
+    "ADD": {
+      "TITLE": "Adicionar",
+      "SUCCESS": "Atributo adicionado com sucesso",
+      "ERROR": "Não foi possível adicionar o atributo. Por favor, tente mais tarde"
+    },
+    "DELETE": {
+      "SUCCESS": "Atributo excluído com sucesso",
+      "ERROR": "Não foi possível excluir o atributo. Por favor, tente mais tarde"
+    },
+    "ATTRIBUTE_SELECT": {
+      "TITLE": "Adicionar atributos",
+      "PLACEHOLDER": "Procurar atributos",
+      "NO_RESULT": "Nenhum atributo encontrado"
+    }
+  },
+  "EMAIL_HEADER": {
+    "FROM": "De",
+    "TO": "Para",
+    "BCC": "CCO",
+    "CC": "Cc",
+    "SUBJECT": "Assunto",
+    "EXPAND": "Expandir e-mail"
   },
   "CONVERSATION_PARTICIPANTS": {
     "SIDEBAR_MENU_TITLE": "Participantes",
     "SIDEBAR_TITLE": "Participantes da conversa",
     "NO_RECORDS_FOUND": "Nenhum resultado encontrado",
     "ADD_PARTICIPANTS": "Selecionar participantes",
-    "REMANING_PARTICIPANTS_TEXT": "+{count} outros",
-    "REMANING_PARTICIPANT_TEXT": "+{count} outro",
+    "REMANING_PARTICIPANTS_TEXT": "+{count} participantes",
+    "REMANING_PARTICIPANT_TEXT": "+{count} participante",
     "TOTAL_PARTICIPANTS_TEXT": "{count} pessoas estão participando.",
     "TOTAL_PARTICIPANT_TEXT": "{count} pessoa está participando.",
     "NO_PARTICIPANTS_TEXT": "Ninguém está participando!",
@@ -430,130 +431,22 @@
       "SUCCESS_MESSAGE": "Participantes atualizados!"
     }
   },
-  "CONVERSATION_SIDEBAR": {
-    "ASSIGNEE_LABEL": "Agente atribuído",
-    "SELF_ASSIGN": "Atribuir para mim",
-    "TEAM_LABEL": "Time atribuído",
-    "SELECT": {
-      "PLACEHOLDER": "Nenhum"
-    },
-    "ACCORDION": {
-      "CONTACT_DETAILS": "Detalhes do contato",
-      "CONVERSATION_ACTIONS": "Ações da conversa",
-      "CONVERSATION_LABELS": "Etiquetas da conversa",
-      "CONVERSATION_INFO": "Informações da conversa",
-      "CONTACT_NOTES": "Notas do contato",
-      "CONTACT_ATTRIBUTES": "Atributos do contato",
-      "PREVIOUS_CONVERSATION": "Conversas anteriores",
-      "MACROS": "Macros",
-      "LINEAR_ISSUES": "Issues do Linear vinculadas",
-      "SHOPIFY_ORDERS": "Pedidos Shopify"
-    },
-    "SHOPIFY": {
-      "ORDER_ID": "Pedido #{id}",
-      "ERROR": "Erro ao carregar pedidos",
-      "NO_SHOPIFY_ORDERS": "Nenhum pedido encontrado",
-      "FINANCIAL_STATUS": {
-        "PENDING": "Pendente",
-        "AUTHORIZED": "Autorizado",
-        "PARTIALLY_PAID": "Parcialmente pago",
-        "PAID": "Pago",
-        "PARTIALLY_REFUNDED": "Parcialmente reembolsado",
-        "REFUNDED": "Reembolsado",
-        "VOIDED": "Anulado"
-      },
-      "FULFILLMENT_STATUS": {
-        "FULFILLED": "Atendido",
-        "PARTIALLY_FULFILLED": "Parcialmente atendido",
-        "UNFULFILLED": "Não atendido"
-      }
-    }
-  },
-  "CONVERSATION_CUSTOM_ATTRIBUTES": {
-    "ADD_BUTTON_TEXT": "Criar atributo",
-    "NO_RECORDS_FOUND": "Nenhum atributo encontrado",
-    "UPDATE": {
-      "SUCCESS": "Atributo atualizado com sucesso",
-      "ERROR": "Não foi possível atualizar o atributo. Tente novamente mais tarde"
-    },
-    "ADD": {
-      "TITLE": "Adicionar",
-      "SUCCESS": "Atributo adicionado com sucesso",
-      "ERROR": "Não foi possível adicionar o atributo. Tente novamente mais tarde"
-    },
-    "DELETE": {
-      "SUCCESS": "Atributo excluído com sucesso",
-      "ERROR": "Não foi possível excluir o atributo. Tente novamente mais tarde"
-    },
-    "ATTRIBUTE_SELECT": {
-      "TITLE": "Adicionar atributos",
-      "PLACEHOLDER": "Buscar atributos",
-      "NO_RESULT": "Nenhum atributo encontrado"
-    }
-  },
-  "EMAIL_TRANSCRIPT": {
-    "TITLE": "Send conversation transcript",
-    "DESC": "Send a copy of the conversation transcript to the specified email address",
-    "SUBMIT": "Submit",
-    "CANCEL": "Cancel",
-    "SEND_EMAIL_SUCCESS": "The chat transcript was sent successfully",
-    "SEND_EMAIL_ERROR": "There was an error, please try again",
-    "FORM": {
-      "SEND_TO_CONTACT": "Send the transcript to the customer",
-      "SEND_TO_AGENT": "Send the transcript to the assigned agent",
-      "SEND_TO_OTHER_EMAIL_ADDRESS": "Send the transcript to another email address",
-      "EMAIL": {
-        "PLACEHOLDER": "Enter an email address",
-        "ERROR": "Please enter a valid email address"
-      }
-    }
-  },
-  "ONBOARDING": {
-    "TITLE": "Hey 👋, Welcome to {installationName}!",
-    "DESCRIPTION": "Thanks for signing up. We want you to get the most out of {installationName}. Here are a few things you can do in {installationName} to make the experience delightful.",
-    "GREETING_MORNING": "👋 Good morning, {name}. Welcome to {installationName}.",
-    "GREETING_AFTERNOON": "👋 Good afternoon, {name}. Welcome to {installationName}.",
-    "GREETING_EVENING": "👋 Good evening, {name}. Welcome to {installationName}.",
-    "READ_LATEST_UPDATES": "Read our latest updates",
-    "ALL_CONVERSATION": {
-      "TITLE": "All your conversations in one place",
-      "DESCRIPTION": "View all the conversations from your customers in one single dashboard. You can filter the conversations by the incoming channel, label and status.",
-      "NEW_LINK": "Click here to create an inbox"
-    },
-    "TEAM_MEMBERS": {
-      "TITLE": "Invite your team members",
-      "DESCRIPTION": "Since you are getting ready to talk to your customer, bring in your teammates to assist you. You can invite your teammates by adding their email addresses to the agent list.",
-      "NEW_LINK": "Click here to invite a team member"
-    },
-    "LABELS": {
-      "TITLE": "Organize conversations with labels",
-      "DESCRIPTION": "Labels provide an easier way to categorize your conversation. Create some labels like #support-enquiry, #billing-question etc., so that you can use them in a conversation later.",
-      "NEW_LINK": "Click here to create tags"
-    },
-    "CANNED_RESPONSES": {
-      "TITLE": "Create canned responses",
-      "DESCRIPTION": "Pre-written quick reply templates help you quickly respond to a conversation. Agents can type the '/' character followed by the shortcode to insert a response.",
-      "NEW_LINK": "Click here to create a canned response"
-    }
-  },
-  "EMAIL_HEADER": {
-    "FROM": "From",
-    "TO": "To",
-    "BCC": "Bcc",
-    "CC": "Cc",
-    "SUBJECT": "Subject",
-    "EXPAND": "Expand email"
-  },
   "TRANSLATE_MODAL": {
-    "TITLE": "View translated content",
-    "DESC": "You can view the translated content in each langauge.",
-    "ORIGINAL_CONTENT": "Original Content",
-    "TRANSLATED_CONTENT": "Translated Content",
-    "NO_TRANSLATIONS_AVAILABLE": "No translations are available for this content"
+    "TITLE": "Ver conteúdo traduzido",
+    "DESC": "Você pode visualizar o conteúdo traduzido em cada idioma.",
+    "ORIGINAL_CONTENT": "Conteúdo original",
+    "TRANSLATED_CONTENT": "Conteúdo traduzido",
+    "NO_TRANSLATIONS_AVAILABLE": "Nenhuma tradução está disponível para este conteúdo"
   },
   "TYPING": {
-    "ONE": "{user} is typing",
-    "TWO": "{user} and {secondUser} are typing",
-    "MULTIPLE": "{user} and {count} others are typing"
+    "ONE": "{user} está digitando",
+    "TWO": "{user} e {secondUser} estão digitando",
+    "MULTIPLE": "{user} e {count} outros estão digitando"
+  },
+  "COPILOT": {
+    "TRY_THESE_PROMPTS": "Experimente estes comandos"
+  },
+  "GALLERY_VIEW": {
+    "ERROR_DOWNLOADING": "Não foi possível baixar o anexo. Por favor, tente novamente"
   }
 }
