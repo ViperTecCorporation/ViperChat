@@ -16,66 +16,16 @@ ___
     - opção no superadmin de esconder para a aba de todas as conversas
     - opção no superadmin de esconder para o filtro de conversas
     - opção no superadmin de esconder a parte de contatos
+    
     - da opção de alterar logo e nome da empresa
   Exemplo de stack com os dois projetos integrados: https://github.com/clairton/unoapi-cloud/tree/main/examples/unochat
+## Anexar Contatos nas Conversas
+<img width="627" height="391" alt="image" src="https://github.com/user-attachments/assets/7a684d71-fc1b-491f-816b-818e6fb7af17" />
+<img width="611" height="632" alt="image" src="https://github.com/user-attachments/assets/61992136-70c3-4c09-9b8c-651e05640db3" />
+<img width="385" height="272" alt="image" src="https://github.com/user-attachments/assets/66ef7297-3abd-4bbb-8621-b89ee97a0c8d" />
 
-## Canal de Voz Custom (WebRTC/SIP) com credenciais por inbox
+    - novo recurso exclusivo ViperChat para anexar contatos na conversa e enviar
 
-Este fork adiciona um provedor de voz **custom** que usa WebRTC/SIP, com suporte a:
-- JWT por agente (ou gerado pela inbox).
-- Usuário WebRTC por agente (por inbox) com fallback para perfil.
-- Transferência de chamadas via **SIP REFER** ou **ARI**.
-- Chamadas internas entre agentes (estilo mensagens privadas).
-
-### Configurar a inbox de voz (provider custom)
-
-1) Crie uma caixa de entrada do tipo **Voice** e selecione **Custom** como provider.
-2) Preencha os campos do WebRTC/SIP:
-   - **WebRTC WS URL** (`webrtc_ws_url`)
-   - **SIP Domain** (`sip_domain`)
-   - **SIP Outbound Proxy** (opcional)
-   - **SIP Transport** (`wss` ou `ws`)
-3) Escolha o **tipo de autenticacao**:
-   - **JWT** (padrao) ou **Usuario/Senha** (recomendado para Issabel/Magnus/Asterisk).
-4) Transferência:
-    - **Transfer Mode**: `sip_refer` (padrão) ou `ari`.
-    - Se `ari`, informe **Transfer API URL** e **Transfer API Token**.
-5) JWT:
-   - **Usar JWT do agente**: quando marcado, o token vem do agente (por inbox ou perfil).
-   - Se desmarcado, informe **JWT Secret** (opcionalmente `iss`, `aud`, `ttl`) para gerar o token na própria inbox.
-
-### Credenciais WebRTC por agente (por inbox)
-
-Em **Configurações > Inboxes > [sua inbox de voz] > Agentes**:
-- Configure **WebRTC Username** e **JWT** ou **Senha** por agente.
-- Esses dados são salvos por inbox (ou seja, o mesmo agente pode ter credenciais diferentes em caixas distintas).
-
-**Fallback de credenciais**
-
-Ordem usada para buscar as credenciais:
-1) **Inbox Member** (credenciais salvas no agente da inbox).
-2) **Perfil do agente** (`custom_attributes` com `webrtc_username`, `webrtc_jwt` ou `webrtc_password`).
-3) **Token gerado pela inbox** (se `jwt_secret` estiver configurado e auth type = JWT).
-
-Se o `webrtc_username` não existir, o fallback final é o email do agente.
-
-### Chamadas internas entre agentes
-
-Em conversas internas:
-- O botão de chamada permite iniciar uma ligação com outro agente.
-- Se houver mais de uma inbox de voz ou mais de um agente, o sistema pede seleção.
-- O agente de destino precisa ser participante da conversa e membro da inbox de voz.
-
-### API do chat interno (backend)
-
-Documentacao completa com exemplos em `docs/internal-chat-api.md`.
-
-### Transferência de chamadas
-
-Durante uma chamada:
-- **SIP REFER**: o destino é montado como `sip:USERNAME@SIP_DOMAIN`.
-  - `USERNAME` segue o mesmo fallback de credenciais.
-- **ARI**: a chamada é enviada para a API configurada na inbox.
 
 ## Campanhas WhatsApp com Unoapi
 
@@ -208,6 +158,63 @@ Este fork permite configurar o tamanho máximo de anexos (tanto no dashboard qua
 MAXIMUM_FILE_UPLOAD_SIZE=150
 
 
+## Canal de Voz Custom (WebRTC/SIP) com credenciais por inbox (Não funcional ainda feature em dev)
+
+Este fork adiciona um provedor de voz **custom** que usa WebRTC/SIP, com suporte a:
+- JWT por agente (ou gerado pela inbox).
+- Usuário WebRTC por agente (por inbox) com fallback para perfil.
+- Transferência de chamadas via **SIP REFER** ou **ARI**.
+- Chamadas internas entre agentes (estilo mensagens privadas).
+
+### Configurar a inbox de voz (provider custom) Não funcional ainda feature em dev
+
+1) Crie uma caixa de entrada do tipo **Voice** e selecione **Custom** como provider.
+2) Preencha os campos do WebRTC/SIP:
+   - **WebRTC WS URL** (`webrtc_ws_url`)
+   - **SIP Domain** (`sip_domain`)
+   - **SIP Outbound Proxy** (opcional)
+   - **SIP Transport** (`wss` ou `ws`)
+3) Escolha o **tipo de autenticacao**:
+   - **JWT** (padrao) ou **Usuario/Senha** (recomendado para Issabel/Magnus/Asterisk).
+4) Transferência:
+    - **Transfer Mode**: `sip_refer` (padrão) ou `ari`.
+    - Se `ari`, informe **Transfer API URL** e **Transfer API Token**.
+5) JWT:
+   - **Usar JWT do agente**: quando marcado, o token vem do agente (por inbox ou perfil).
+   - Se desmarcado, informe **JWT Secret** (opcionalmente `iss`, `aud`, `ttl`) para gerar o token na própria inbox.
+
+### Credenciais WebRTC por agente (por inbox)
+
+Em **Configurações > Inboxes > [sua inbox de voz] > Agentes**:
+- Configure **WebRTC Username** e **JWT** ou **Senha** por agente.
+- Esses dados são salvos por inbox (ou seja, o mesmo agente pode ter credenciais diferentes em caixas distintas).
+
+**Fallback de credenciais**
+
+Ordem usada para buscar as credenciais:
+1) **Inbox Member** (credenciais salvas no agente da inbox).
+2) **Perfil do agente** (`custom_attributes` com `webrtc_username`, `webrtc_jwt` ou `webrtc_password`).
+3) **Token gerado pela inbox** (se `jwt_secret` estiver configurado e auth type = JWT).
+
+Se o `webrtc_username` não existir, o fallback final é o email do agente.
+
+### Chamadas internas entre agentes
+
+Em conversas internas:
+- O botão de chamada permite iniciar uma ligação com outro agente.
+- Se houver mais de uma inbox de voz ou mais de um agente, o sistema pede seleção.
+- O agente de destino precisa ser participante da conversa e membro da inbox de voz.
+
+### API do chat interno (backend)
+
+Documentacao completa com exemplos em `docs/internal-chat-api.md`.
+
+### Transferência de chamadas
+
+Durante uma chamada:
+- **SIP REFER**: o destino é montado como `sip:USERNAME@SIP_DOMAIN`.
+  - `USERNAME` segue o mesmo fallback de credenciais.
+- **ARI**: a chamada é enviada para a API configurada na inbox.
 # Chatwoot
 
 The modern customer support platform, an open-source alternative to Intercom, Zendesk, Salesforce Service Cloud etc.
