@@ -224,6 +224,18 @@
         "LABEL": "Confirme a nova senha",
         "ERROR": "A confirmação da senha é diferente. Favor digitar novamente",
         "PLACEHOLDER": "Por favor, digite sua nova senha "
+      },
+      "WEBRTC_JWT": {
+        "LABEL": "WebRTC JWT",
+        "PLACEHOLDER": "Paste your WebRTC JWT"
+      },
+      "WEBRTC_USERNAME": {
+        "LABEL": "WebRTC username",
+        "PLACEHOLDER": "SIP username (e.g. 1001)"
+      },
+      "WEBRTC_PASSWORD": {
+        "LABEL": "WebRTC password",
+        "PLACEHOLDER": "SIP password for this agent"
       }
     }
   },

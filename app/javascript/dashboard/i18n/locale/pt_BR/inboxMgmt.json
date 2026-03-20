@@ -314,6 +314,96 @@
         },
         "API": {
           "ERROR_MESSAGE": "Não foi possível salvar o canal do WhatsApp"
+        },
+        "SEND_AGENT_NAME": {
+          "LABEL": "Send agent name",
+          "PLACEHOLDER": "Check to send agent name.",
+          "ERROR": "Check to send agent name."
+        },
+        "IGNORE_HISTORY": {
+          "LABEL": "Ignore history on connect",
+          "PLACEHOLDER": "Check to ignore history on connect.",
+          "ERROR": "Check to ignore history on connect."
+        },
+        "WEBWOOK_SEND_NEW_MESSAGES": {
+          "LABEL": "Webhook send new messages",
+          "PLACEHOLDER": "Check to ignore history on connect.",
+          "ERROR": "Check to webhook send new messages."
+        },
+        "IGNORE_GROUPS": {
+          "LABEL": "Ignore groups messages",
+          "PLACEHOLDER": "Check to ignore groups messages.",
+          "ERROR": "Check to ignore groups messages."
+        },
+        "GENERATE_API_KEY": {
+          "LABEL": "Generate API Key",
+          "PLACEHOLDER": "Generate API Key",
+          "ERROR": "Generate API Key"
+        },
+        "REJECT_CALLS": {
+          "LABEL": "Reject call",
+          "PLACEHOLDER": "Reject call.",
+          "ERROR": "Reject call."
+        },
+        "WAVOIP_TOKEN": {
+          "LABEL": "Wavoip Token",
+          "PLACEHOLDER": "Put the Wavoip token.",
+          "ERROR": "To make/receive whatsapp calls put the wavoip token"
+        },
+        "MESSAGE_CALLS_WEBHOOK": {
+          "LABEL": "Message on reject call",
+          "PLACEHOLDER": "Message on reject call.",
+          "ERROR": "Message on reject call."
+        },
+        "IGNORE_BROADCAST_STATUSES": {
+          "LABEL": "Ignore broadcast statuses",
+          "PLACEHOLDER": "Select to ignore broadcast statuses.",
+          "ERROR": "Select to ignore broadcast statuses."
+        },
+        "IGNORE_BROADCAST_MESSAGES": {
+          "LABEL": "Ignore broadcast messages",
+          "PLACEHOLDER": "Select to ignore broadcast messages.",
+          "ERROR": "Select to ignore broadcast messages."
+        },
+        "IGNORE_OWN_MESSAGES": {
+          "LABEL": "Ignore own messages",
+          "PLACEHOLDER": "Select to ignore own messages.",
+          "ERROR": "Select to ignore own messages."
+        },
+        "IGNORE_YOURSELF_MESSAGES": {
+          "LABEL": "Ignore your messages",
+          "PLACEHOLDER": "Select to ignore your messages.",
+          "ERROR": "Select to ignore your messages."
+        },
+        "SEND_CONNECTION_STATUS": {
+          "LABEL": "Show connection status",
+          "PLACEHOLDER": "Select to show connection status.",
+          "ERROR": "Select to show connection status."
+        },
+        "NOTIFY_FAILED_MESSAGES": {
+          "LABEL": "Notify failed messages",
+          "PLACEHOLDER": "Select to notify failed messages.",
+          "ERROR": "Select to notify failed messages."
+        },
+        "COMPOSING_MESSAGE": {
+          "LABEL": "Compose message",
+          "PLACEHOLDER": "Select to compose message.",
+          "ERROR": "Select to compose message."
+        },
+        "SEND_REACTION_AS_REPLY": {
+          "LABEL": "Show reaction as reply",
+          "PLACEHOLDER": "Select to show reaction as reply.",
+          "ERROR": "Select to show reaction as reply."
+        },
+        "SEND_PROFILE_PICTURE": {
+          "LABEL": "Show profile picture",
+          "PLACEHOLDER": "Select to show profile picture.",
+          "ERROR": "Select to show profile picture."
+        },
+        "URL": {
+          "LABEL": "Unoapi URL",
+          "PLACEHOLDER": "Please enter an Unoapi URL or use default https://unoapi.cloud",
+          "ERROR": "This field is required"
         }
       },
       "VOICE": {
@@ -355,6 +445,85 @@
         "SUBMIT_BUTTON": "Criar Canal de Voz",
         "API": {
           "ERROR_MESSAGE": "Não conseguimos criar o canal de voz"
+        },
+        "PROVIDERS": {
+          "LABEL": "Provider",
+          "TWILIO": "Twilio",
+          "CUSTOM": "Custom"
+        },
+        "CUSTOM": {
+          "WEBRTC_WS_URL": {
+            "LABEL": "WebRTC WSS URL",
+            "PLACEHOLDER": "wss://webrtc.example.com/ws",
+            "REQUIRED": "WebRTC WSS URL is required"
+          },
+          "SIP_DOMAIN": {
+            "LABEL": "SIP Domain",
+            "PLACEHOLDER": "sip.example.com",
+            "REQUIRED": "SIP domain is required"
+          },
+          "SIP_OUTBOUND_PROXY": {
+            "LABEL": "SIP Outbound Proxy",
+            "PLACEHOLDER": "sip:proxy.example.com"
+          },
+          "SIP_TRANSPORT": {
+            "LABEL": "SIP Transport",
+            "WSS": "WSS",
+            "WS": "WS"
+          },
+          "STUN_SERVERS": {
+            "LABEL": "STUN servers (one per line)",
+            "PLACEHOLDER": "stun:stun.l.google.com:19302\nstun:example.com:3478"
+          },
+          "TURN_URL": {
+            "LABEL": "TURN server URL",
+            "PLACEHOLDER": "turn:turn.example.com:3478"
+          },
+          "TURN_USERNAME": {
+            "LABEL": "TURN username",
+            "PLACEHOLDER": "turn-user"
+          },
+          "TURN_PASSWORD": {
+            "LABEL": "TURN password",
+            "PLACEHOLDER": "turn-password"
+          },
+          "AUTH_TYPE": {
+            "LABEL": "Auth type",
+            "JWT": "JWT",
+            "PASSWORD": "Username/password"
+          },
+          "TRANSFER_MODE": {
+            "LABEL": "Transfer Mode",
+            "SIP_REFER": "SIP REFER",
+            "ARI": "ARI (server API)"
+          },
+          "TRANSFER_API_URL": {
+            "LABEL": "Transfer API URL",
+            "PLACEHOLDER": "https://pbx.example.com/api/transfer",
+            "REQUIRED": "Transfer API URL is required"
+          },
+          "TRANSFER_API_TOKEN": {
+            "LABEL": "Transfer API Token",
+            "PLACEHOLDER": "Enter your transfer API token"
+          },
+          "USE_AGENT_JWT": "Use agent WebRTC JWT from profile",
+          "JWT_ISSUER": {
+            "LABEL": "JWT Issuer",
+            "PLACEHOLDER": "issuer"
+          },
+          "JWT_AUDIENCE": {
+            "LABEL": "JWT Audience",
+            "PLACEHOLDER": "audience"
+          },
+          "JWT_SECRET": {
+            "LABEL": "JWT Secret",
+            "PLACEHOLDER": "secret",
+            "REQUIRED": "JWT Secret is required"
+          },
+          "JWT_TTL": {
+            "LABEL": "JWT TTL (seconds)",
+            "PLACEHOLDER": "3600"
+          }
         }
       },
       "API_CHANNEL": {
@@ -489,6 +658,10 @@
           "VOICE": {
             "TITLE": "Voz",
             "DESCRIPTION": "Integre com o Twilio Voice"
+          },
+          "INTERNAL": {
+            "TITLE": "Internal chat",
+            "DESCRIPTION": "Chat between your agents inside ViperChat"
           }
         }
       },
@@ -523,6 +696,42 @@
         "SIGN_IN": "Entrar com o Google",
         "EMAIL_PLACEHOLDER": "Digite o endereço de e-mail",
         "ERROR_MESSAGE": "Houve um erro ao conectar com o Google, por favor, tente novamente"
+      },
+      "INTERNAL_CHANNEL": {
+        "TITLE": "Internal Chat",
+        "DESC": "Create an inbox dedicated to agent-to-agent conversations.",
+        "CHANNEL_NAME": {
+          "LABEL": "Channel Name",
+          "PLACEHOLDER": "Please enter a channel name",
+          "ERROR": "This field is required"
+        },
+        "SUBMIT_BUTTON": "Create internal chat inbox",
+        "API": {
+          "ERROR_MESSAGE": "We were not able to create the internal chat inbox"
+        }
+      },
+      "NOTIFICA_ME_CHANNEL": {
+        "TITLE": "NotificaMe Channel",
+        "DESC": "Integrate with NotificaMe Hub.",
+        "CHANNEL_NAME": {
+          "LABEL": "Channel Name",
+          "PLACEHOLDER": "Please enter a channel name",
+          "ERROR": "This field is required"
+        },
+        "CHANNEL": {
+          "LABEL": "Channel",
+          "SUBTITLE": "Choose channel",
+          "PLACEHOLDER": "Choose a channel, if empty, put the channel token first"
+        },
+        "CHANNEL_TOKEN": {
+          "LABEL": "Channel Token",
+          "SUBTITLE": "Configure channel token",
+          "PLACEHOLDER": "Configure channel token"
+        },
+        "SUBMIT_BUTTON": "Create NotificaMe Channel",
+        "API": {
+          "ERROR_MESSAGE": "We were not able to save the NotificaMe channel"
+        }
       }
     },
     "DETAILS": {
@@ -713,7 +922,8 @@
       "ALLOWED_DOMAINS": {
         "TITLE": "Domínios permitidos",
         "SUBTITLE": "Adicione coringa ou domínios separados por vírgula (deixe em branco para permitir todos), ex: *.chatwoot.dev, chatwoot.com.",
-        "PLACEHOLDER": "exemplo.com, www.exemplo.com, app.exemplo.com"
+        "PLACEHOLDER": "exemplo.com, www.exemplo.com, app.exemplo.com",
+        "DESCRIPTION": "Restrict which websites can embed your chat widget. For security, only add domains you own and trust. Add one or more domains separated by commas. Leave blank to allow all domains (not recommended for production)."
       },
       "INBOX_AGENTS": "Agentes",
       "INBOX_AGENTS_SUB_TEXT": "Adicionar ou remover agentes dessa caixa de entrada",
@@ -771,7 +981,34 @@
       "WHATSAPP_TEMPLATES_SYNC_SUBHEADER": "Sincronize manualmente os modelos de mensagens do WhatsApp para atualizar seus modelos disponíveis.",
       "WHATSAPP_TEMPLATES_SYNC_BUTTON": "Sincronizar Modelos",
       "WHATSAPP_TEMPLATES_SYNC_SUCCESS": "Sincronização de modelos iniciada com sucesso. Pode demorar alguns minutos para atualizar.",
-      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do Formulário Pre Chat"
+      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do Formulário Pre Chat",
+      "ALLOW_MOBILE_WEBVIEW": {
+        "LABEL": "Enable widget in mobile apps",
+        "SUBTITLE": "Check this if you embed the widget in iOS or Android apps. Mobile apps don't send domain information, so they would be blocked by domain restrictions unless this is enabled."
+      },
+      "IDENTITY_VALIDATION": {
+        "TITLE": "Identity Validation",
+        "DESCRIPTION": "Verify user authenticity by generating secure tokens. This prevents unauthorized users from impersonating others in your chat.",
+        "SECRET_KEY": "Secret Key",
+        "VIEW_DOCS": "View documentation",
+        "REQUIRE_LABEL": "Require identity validation for all conversations",
+        "REQUIRE_DESCRIPTION": "When enabled, users must provide a valid identity token to start conversations. Requests without valid tokens will be rejected."
+      },
+      "VOICE_AGENT_CREDENTIALS_TITLE": "Voice agent credentials",
+      "VOICE_AGENT_CREDENTIALS_SUB_TEXT": "Set WebRTC credentials per agent for this voice inbox",
+      "VOICE_AGENT_CREDENTIALS_USERNAME_LABEL": "WebRTC username",
+      "VOICE_AGENT_CREDENTIALS_USERNAME_PLACEHOLDER": "SIP username (e.g. 1001)",
+      "VOICE_AGENT_CREDENTIALS_JWT_LABEL": "WebRTC JWT",
+      "VOICE_AGENT_CREDENTIALS_JWT_PLACEHOLDER": "Paste a JWT to override this agent",
+      "VOICE_AGENT_CREDENTIALS_PASSWORD_LABEL": "WebRTC password",
+      "VOICE_AGENT_CREDENTIALS_PASSWORD_PLACEHOLDER": "Paste the SIP password for this agent",
+      "VOICE_AGENT_CREDENTIALS_TOKEN_SET": "Token already configured",
+      "VOICE_AGENT_CREDENTIALS_PASSWORD_SET": "Password already configured",
+      "VOICE_AGENT_CREDENTIALS_SAVE": "Save credentials",
+      "VOICE_AGENT_CREDENTIALS_SUCCESS": "Agent credentials updated",
+      "VOICE_AGENT_CREDENTIALS_ERROR": "Could not update agent credentials",
+      "WHATSAPP_CONNECT": "Connect",
+      "WHATSAPP_DISCONNECT": "Disconnect"
     },
     "HELP_CENTER": {
       "LABEL": "Centro de Ajuda",
@@ -1135,7 +1372,9 @@
       "API": "Canal da API",
       "INSTAGRAM": "Instagram",
       "TIKTOK": "TikTok",
-      "VOICE": "Voz"
+      "VOICE": "Voz",
+      "NOTIFICA_ME": "NotificaMe",
+      "INTERNAL": "Internal chat"
     }
   }
 }

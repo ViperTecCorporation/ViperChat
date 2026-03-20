@@ -57,7 +57,8 @@
             "CONTACT_CREATED": "Contato criado",
             "CONTACT_UPDATED": "Contato atualizado",
             "CONVERSATION_TYPING_ON": "Status de Digitação ativado",
-            "CONVERSATION_TYPING_OFF": "Status de Digitação desativado"
+            "CONVERSATION_TYPING_OFF": "Status de Digitação desativado",
+            "CONVERSATION_RESOLVED": "Conversa resolvida"
           }
         },
         "NAME": {
@@ -165,24 +166,6 @@
         "PROFESSIONAL": "Use um tom profissional",
         "CASUAL": "Use um tom casual",
         "STRAIGHTFORWARD": "Use um tom direto"
-      },
-      "REPLY_OPTIONS": {
-        "IMPROVE_REPLY": "Melhorar resposta",
-        "IMPROVE_REPLY_SELECTION": "Melhorar a seleção",
-        "CHANGE_TONE": {
-          "TITLE": "Alterar tom",
-          "OPTIONS": {
-            "PROFESSIONAL": "Profissional",
-            "CASUAL": "Casual",
-            "STRAIGHTFORWARD": "Direto",
-            "CONFIDENT": "Confiante",
-            "FRIENDLY": "Amigável"
-          }
-        },
-        "GRAMMAR": "Corrigir gramática e ortografia",
-        "SUGGESTION": "Sugerir uma resposta",
-        "SUMMARIZE": "Resumir a conversa",
-        "ASK_COPILOT": "Perguntar ao Copiloto"
       },
       "REPLY_OPTIONS": {
         "IMPROVE_REPLY": "Melhorar resposta",
