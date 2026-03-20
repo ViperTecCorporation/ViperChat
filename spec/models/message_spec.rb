@@ -201,6 +201,16 @@ RSpec.describe Message do
       expect(conversation.waiting_since).to eq conversation.created_at
     end
 
+    it 'does not update last_activity_at if the message is activity' do
+      conversation.update_columns(last_activity_at: 2.hours.ago)
+
+      create(:message, message_type: :activity, conversation: conversation)
+
+      expect(conversation.reload.last_activity_at.to_i).to be_within(1).of(
+        2.hours.ago.to_i
+      )
+    end
+
     it 'does not update the conversation first reply created at if the message is a private message' do
       expect(conversation.first_reply_created_at).to be_nil
       expect(conversation.waiting_since).to eq conversation.created_at
