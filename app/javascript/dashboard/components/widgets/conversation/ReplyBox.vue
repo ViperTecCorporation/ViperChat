@@ -19,6 +19,8 @@ import MessageSignatureMissingAlert from './MessageSignatureMissingAlert.vue';
 import ReplyBoxBanner from './ReplyBoxBanner.vue';
 import QuotedEmailPreview from './QuotedEmailPreview.vue';
 import StickerPickerDialog from 'dashboard/components-next/whatsapp/StickerPickerDialog.vue';
+import AttachedContactsPreview from 'dashboard/components-next/conversation/AttachedContactsPreview.vue';
+import ContactAttachmentModal from 'dashboard/components-next/conversation/ContactAttachmentModal.vue';
 import { REPLY_EDITOR_MODES } from 'dashboard/components/widgets/WootWriter/constants';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import AudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder.vue';
@@ -68,6 +70,7 @@ export default {
   components: {
     ArticleSearchPopover,
     AttachmentPreview,
+    AttachedContactsPreview,
     AudioRecorder,
     ReplyBoxBanner,
     EmojiInput,
@@ -77,6 +80,7 @@ export default {
     ReplyToMessage,
     ReplyTopPanel,
     ContentTemplates,
+    ContactAttachmentModal,
     WhatsappTemplates,
     WootMessageEditor,
     QuotedEmailPreview,
@@ -123,6 +127,7 @@ export default {
       isFocused: false,
       showEmojiPicker: false,
       attachedFiles: [],
+      attachedContacts: [],
       isRecordingAudio: false,
       recordingAudioState: '',
       recordingAudioDurationText: '',
@@ -133,6 +138,7 @@ export default {
       doAutoSaveDraft: () => {},
       showWhatsAppTemplatesModal: false,
       showContentTemplatesModal: false,
+      showContactAttachmentModal: false,
       showStickerPicker: false,
       updateEditorSelectionWith: '',
       undefinedVariableMessage: '',
@@ -226,7 +232,13 @@ export default {
     isReplyButtonDisabled() {
       if (this.isEditorDisabled) return true;
       if (this.isATwitterInbox) return true;
-      if (this.hasAttachments || this.hasRecordedAudio) return false;
+      if (
+        this.hasAttachments ||
+        this.hasRecordedAudio ||
+        this.hasAttachedContacts
+      ) {
+        return false;
+      }
 
       return (
         this.isMessageEmpty ||
@@ -306,11 +318,15 @@ export default {
     replyBoxClass() {
       return {
         'is-private': this.isPrivate,
-        'is-focused': this.isFocused || this.hasAttachments,
+        'is-focused':
+          this.isFocused || this.hasAttachments || this.hasAttachedContacts,
       };
     },
     hasAttachments() {
       return this.attachedFiles.length;
+    },
+    hasAttachedContacts() {
+      return this.attachedContacts.length;
     },
     showAudioRecorder() {
       return !this.isOnPrivateNote && this.showFileUpload;
@@ -600,6 +616,7 @@ export default {
       this.resetAudioRecorderInput();
       // Reset attached files
       this.attachedFiles = [];
+      this.attachedContacts = [];
     },
     saveDraft(conversationId, replyType) {
       if (this.message || this.message === '') {
@@ -750,6 +767,21 @@ export default {
     hideContentTemplatesModal() {
       this.showContentTemplatesModal = false;
     },
+    openContactAttachmentModal() {
+      this.showContactAttachmentModal = true;
+    },
+    hideContactAttachmentModal() {
+      this.showContactAttachmentModal = false;
+    },
+    setAttachedContacts(contacts) {
+      this.attachedContacts = contacts;
+      this.hideContactAttachmentModal();
+    },
+    removeAttachedContact(contactId) {
+      this.attachedContacts = this.attachedContacts.filter(
+        contact => contact.id !== contactId
+      );
+    },
     showStickerPickerModal() {
       // eslint-disable-next-line no-console
       console.info('[StickerPicker] open modal', {
@@ -787,6 +819,7 @@ export default {
         const isOnWhatsApp =
           this.isATwilioWhatsAppChannel ||
           this.isAWhatsAppCloudChannel ||
+          this.isAUnoapiChannel ||
           this.is360DialogWhatsAppChannel;
         // When users send messages containing both text and attachments on Instagram, Instagram treats them as separate messages.
         // Although ViperChat combines these into a single message, Instagram sends separate echo events for each component.
@@ -963,6 +996,7 @@ export default {
       // Clear attachments when switching between private note and reply modes
       // This is to prevent from breaking the upload rules
       if (this.attachedFiles.length > 0) this.attachedFiles = [];
+      if (this.attachedContacts.length > 0) this.attachedContacts = [];
 
       const { can_reply: canReply } = this.currentChat;
       this.$store.dispatch('draftMessages/setReplyEditorMode', {
@@ -1000,6 +1034,7 @@ export default {
         );
       }
       this.attachedFiles = [];
+      this.attachedContacts = [];
       this.isRecordingAudio = false;
       this.resetReplyToMessage();
       this.resetAudioRecorderInput();
@@ -1094,6 +1129,23 @@ export default {
     removeAttachment(attachments) {
       this.attachedFiles = attachments;
     },
+    serializeAttachedContact(contact) {
+      const fullName =
+        contact.formattedName ||
+        contact.name ||
+        [contact.firstName, contact.lastName].filter(Boolean).join(' ') ||
+        '';
+      const [firstName, ...lastNameParts] = fullName.split(' ').filter(Boolean);
+
+      return {
+        id: contact.id,
+        formatted_name: fullName,
+        first_name: firstName || fullName,
+        last_name: lastNameParts.join(' ') || '',
+        phone_number: contact.phoneNumber || contact.phone_number || '',
+        email: contact.email || '',
+      };
+    },
     setReplyToInPayload(payload) {
       if (this.inReplyTo?.id) {
         return {
@@ -1109,6 +1161,23 @@ export default {
     },
     getMultipleMessagesPayload(message) {
       const multipleMessagePayload = [];
+
+      if (this.attachedContacts.length) {
+        let contactsPayload = {
+          conversationId: this.currentChat.id,
+          private: false,
+          sender: this.sender,
+          contentType: 'text',
+          contentAttributes: {
+            contacts: this.attachedContacts.map(contact =>
+              this.serializeAttachedContact(contact)
+            ),
+          },
+        };
+
+        contactsPayload = this.setReplyToInPayload(contactsPayload);
+        multipleMessagePayload.push(contactsPayload);
+      }
 
       if (this.attachedFiles && this.attachedFiles.length) {
         let caption =
@@ -1135,12 +1204,13 @@ export default {
       const hasNoAttachments =
         !this.attachedFiles || !this.attachedFiles.length;
       // For Instagram and TikTok, text must always be sent as a separate message (no captions on attachments).
-      // For WhatsApp, we only need a text message if there are no attachments.
+      // For WhatsApp, text is sent separately only when there are no file attachments.
       if (
         ((this.isAnInstagramChannel || this.isATiktokChannel) &&
-          this.message) ||
+          message) ||
         (!(this.isAnInstagramChannel || this.isATiktokChannel) &&
-          hasNoAttachments)
+          hasNoAttachments &&
+          message)
       ) {
         let messagePayload = {
           conversationId: this.currentChat.id,
@@ -1176,6 +1246,16 @@ export default {
             messagePayload.files.push(attachment.resource.file);
           }
         });
+      }
+
+      if (this.attachedContacts.length) {
+        messagePayload.contentType = 'text';
+        messagePayload.contentAttributes = {
+          ...(messagePayload.contentAttributes || {}),
+          contacts: this.attachedContacts.map(contact =>
+            this.serializeAttachedContact(contact)
+          ),
+        };
       }
 
       if (this.ccEmails && !this.isOnPrivateNote) {
@@ -1382,11 +1462,17 @@ export default {
         />
 
         <div
-          v-if="hasAttachments && isDefaultEditorMode"
+          v-if="(hasAttachedContacts || hasAttachments) && isDefaultEditorMode"
           class="bg-transparent py-0 mb-2"
           @paste="onPaste"
         >
+          <AttachedContactsPreview
+            v-if="hasAttachedContacts"
+            :contacts="attachedContacts"
+            @remove="removeAttachedContact"
+          />
           <AttachmentPreview
+            v-if="hasAttachments"
             class="mt-2"
             :attachments="attachedFiles"
             @remove-attachment="removeAttachment"
@@ -1449,6 +1535,7 @@ export default {
         :message="message"
         :portal-slug="connectedPortalSlug"
         :new-conversation-modal-active="newConversationModalActive"
+        @open-contact-picker="openContactAttachmentModal"
         @toggle-sticker-picker="showStickerPickerModal"
         @select-whatsapp-template="openWhatsappTemplateModal"
         @select-content-template="openContentTemplateModal"
@@ -1479,6 +1566,13 @@ export default {
       @close="hideContentTemplatesModal"
       @on-send="onSendContentTemplateReply"
       @cancel="hideContentTemplatesModal"
+    />
+
+    <ContactAttachmentModal
+      v-model:show="showContactAttachmentModal"
+      :selected-contacts="attachedContacts"
+      @close="hideContactAttachmentModal"
+      @attach="setAttachedContacts"
     />
 
     <woot-confirm-modal

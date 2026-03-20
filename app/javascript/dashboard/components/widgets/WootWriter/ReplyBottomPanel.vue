@@ -131,6 +131,7 @@ export default {
     'replaceText',
     'toggleInsertArticle',
     'toggleStickerPicker',
+    'openContactPicker',
     'selectWhatsappTemplate',
     'selectContentTemplate',
     'toggleQuotedReply',
@@ -265,6 +266,13 @@ export default {
     showStickerPickerButton() {
       return this.showStickerButton && !this.hideEmojiAndStickerButtons;
     },
+    showContactPickerButton() {
+      return (
+        !this.isOnPrivateNote &&
+        !this.isEditorDisabled &&
+        (this.isAWhatsAppCloudChannel || this.isAUnoapiChannel)
+      );
+    },
     sendWithSignature() {
       // channelType is sourced from inboxMixin
       return this.fetchSignatureFlagFromUISettings(this.channelType);
@@ -328,6 +336,15 @@ export default {
         faded
         sm
         @click="handleStickerPickerClick"
+      />
+      <NextButton
+        v-if="showContactPickerButton"
+        v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_ATTACH_CONTACT_ICON')"
+        icon="i-ph-address-book-tabs"
+        slate
+        faded
+        sm
+        @click="$emit('openContactPicker')"
       />
       <FileUpload
         v-if="showAttachButton"

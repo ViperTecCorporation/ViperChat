@@ -33,8 +33,17 @@ module Whatsapp::IncomingMessageServiceHelpers
       message.dig(:interactive, :button_reply, :title) ||
       message.dig(:interactive, :list_reply, :title) ||
       interactive_content ||
-      message.dig(:name, :formatted_name) ||
+      contact_formatted_name(message[:name] || message['name']) ||
       (type_key ? message.dig(type_key.to_sym, :caption) : nil)
+  end
+
+  def contact_formatted_name(name_payload)
+    name_info = (name_payload || {}).with_indifferent_access
+
+    name_info[:formatted_name].presence ||
+      name_info[:formattedName].presence ||
+      [name_info[:first_name], name_info[:last_name]].compact.join(' ').presence ||
+      [name_info[:firstName], name_info[:lastName]].compact.join(' ').presence
   end
 
   def build_interactive_content(message)

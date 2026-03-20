@@ -26,6 +26,7 @@ class Messages::MessageBuilder
     else
       @message = @conversation.messages.build(message_params)
       process_attachments
+      process_contact_attachments
       process_emails
       # When the message has no quoted content, it will just be rendered as a regular message
       # The frontend is equipped to handle this case
@@ -71,6 +72,24 @@ class Messages::MessageBuilder
     end
   end
 
+  def process_contact_attachments
+    return if contact_attachments.blank?
+
+    contact_attachments.each do |contact|
+      @message.attachments.build(
+        account_id: @message.account_id,
+        file_type: :contact,
+        fallback_title: contact[:phone_number].to_s,
+        meta: {
+          formatted_name: contact[:formatted_name].to_s,
+          first_name: contact[:first_name].to_s,
+          last_name: contact[:last_name].to_s,
+          email: contact[:email].to_s
+        }.compact_blank
+      )
+    end
+  end
+
   def split_attachments_per_message?
     return false if @attachments.blank?
 
@@ -93,6 +112,7 @@ class Messages::MessageBuilder
       @attachments = [uploaded_attachment]
 
       process_attachments
+      process_contact_attachments
       process_emails
       process_email_content if @account.feature_enabled?(:quoted_email_reply)
 
@@ -276,6 +296,47 @@ class Messages::MessageBuilder
     html_content[:reply] = @params[:email_html_content]
 
     html_content
+  end
+
+  def contact_attachments
+    contacts = content_attributes[:contacts] || content_attributes['contacts']
+    return [] unless contacts.is_a?(Array)
+
+    contacts.filter_map do |contact|
+      normalized_contact_attachment(contact)
+    end
+  end
+
+  def normalized_contact_attachment(contact)
+    contact = contact.with_indifferent_access
+    formatted_name = contact[:formatted_name].presence ||
+                     contact[:formattedName].presence ||
+                     contact[:name].presence
+    first_name = contact[:first_name].presence || contact[:firstName].presence
+    last_name = contact[:last_name].presence || contact[:lastName].presence
+
+    if formatted_name.blank? && (first_name.present? || last_name.present?)
+      formatted_name = [first_name, last_name].compact.join(' ')
+    end
+
+    if first_name.blank? && formatted_name.present?
+      name_parts = formatted_name.split
+      first_name = name_parts.first
+      last_name = name_parts.drop(1).join(' ').presence
+    end
+
+    phone_number = contact[:phone_number].presence
+    phone_number ||= contact[:phoneNumber].presence
+    email = contact[:email].presence
+    return if formatted_name.blank? || (phone_number.blank? && email.blank?)
+
+    {
+      formatted_name: formatted_name,
+      first_name: first_name.presence || formatted_name,
+      last_name: last_name,
+      phone_number: phone_number,
+      email: email
+    }
   end
 
   # Liquid processing methods for email content

@@ -243,6 +243,7 @@
       "REPLYING_TO": "Replying to:",
       "TIP_EMOJI_ICON": "Show emoji selector",
       "TIP_STICKER_ICON": "Open stickers",
+      "TIP_ATTACH_CONTACT_ICON": "Attach contacts",
       "TIP_ATTACH_ICON": "Attach files",
       "TIP_ATTACH_SINGLE": "You cannot attach more files to this message",
       "TIP_AUDIORECORDER_ICON": "Record audio",
@@ -296,6 +297,15 @@
         "LOAD_ERROR": "Could not load stickers. Please try again.",
         "UPLOAD_ERROR": "Could not upload the sticker. Please try again.",
         "DELETE_ERROR": "Could not delete the stickers. Please try again."
+      },
+      "CONTACT_ATTACHER": {
+        "TITLE": "Attach contacts",
+        "SUBTITLE": "Search and select one or more contacts to send in WhatsApp.",
+        "SEARCH_PLACEHOLDER": "Search contacts by name, email or phone number",
+        "EMPTY": "No contacts found",
+        "SELECTED_COUNT": "{count} contacts selected",
+        "CANCEL": "Cancel",
+        "ATTACH": "Attach contacts"
       }
     },
     "VISIBLE_TO_AGENTS": "Private Note: Only visible to you and your team",

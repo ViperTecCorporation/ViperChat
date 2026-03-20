@@ -235,6 +235,7 @@
       "REPLYING_TO": "Respondendo a:",
       "TIP_EMOJI_ICON": "Mostrar seletor de emoji",
       "TIP_STICKER_ICON": "Abrir figurinhas",
+      "TIP_ATTACH_CONTACT_ICON": "Anexar contatos",
       "TIP_ATTACH_ICON": "Anexar arquivos",
       "TIP_ATTACH_SINGLE": "Você não pode adicionar mais de um arquivo para essa mensagem",
       "TIP_AUDIORECORDER_ICON": "Gravar áudio",
@@ -289,6 +290,15 @@
         "LOAD_ERROR": "Não foi possível carregar as figurinhas. Tente novamente.",
         "UPLOAD_ERROR": "Não foi possível enviar a figurinha. Tente novamente.",
         "DELETE_ERROR": "Não foi possível excluir as figurinhas. Tente novamente."
+      },
+      "CONTACT_ATTACHER": {
+        "TITLE": "Anexar contatos",
+        "SUBTITLE": "Pesquise e selecione um ou mais contatos para enviar no WhatsApp.",
+        "SEARCH_PLACEHOLDER": "Pesquisar contatos por nome, e-mail ou número de telefone",
+        "EMPTY": "Nenhum contato encontrado",
+        "SELECTED_COUNT": "{count} contatos selecionados",
+        "CANCEL": "Cancelar",
+        "ATTACH": "Anexar contatos"
       }
     },
     "VISIBLE_TO_AGENTS": "Mensagem Privada: Apenas visível para você e seu time",

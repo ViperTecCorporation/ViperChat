@@ -96,9 +96,9 @@ class Whatsapp::IncomingMessageBaseService
       return if raw_phone.blank? || raw_phone == '0'
       return unless raw_phone.match?(/^[1-9]\d{7,14}$/)
       if raw_phone.present?
-        raw_phone = normalised_brazil_mobile_number(raw_phone) if brazil_phone_number?(raw_phone)
         waid = processed_waid(raw_phone) || raw_phone
-        contact_attributes[:phone_number] = "+#{waid}" if waid.present?
+        phone_number = brazil_phone_number?(raw_phone) ? normalised_brazil_mobile_number(raw_phone) : waid
+        contact_attributes[:phone_number] = "+#{phone_number}" if phone_number.present?
       end
     end
 
@@ -204,9 +204,10 @@ class Whatsapp::IncomingMessageBaseService
     if lid_message?
       contact_attributes = contact_attributes.merge({ email: contact_params[:wa_id] })
     else
-      waid = brazil_phone_number?(contact_params[:wa_id]) ? normalised_brazil_mobile_number(contact_params[:wa_id]) : contact_params[:wa_id]
-      waid = processed_waid(waid)
-      contact_attributes = contact_attributes.merge({ phone_number: "+#{waid}" })
+      clean_waid = contact_params[:wa_id].to_s.gsub(/\D/, '')
+      waid = processed_waid(clean_waid) || clean_waid
+      phone_number = brazil_phone_number?(clean_waid) ? normalised_brazil_mobile_number(clean_waid) : waid
+      contact_attributes = contact_attributes.merge({ phone_number: "+#{phone_number}" })
     end
     contact_inbox = ::ContactInboxWithContactBuilder.new(
       source_id: waid,
@@ -216,7 +217,7 @@ class Whatsapp::IncomingMessageBaseService
 
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
-    @sender = outgoing_message_type? ? nil : contact_inbox.contact
+    @sender = outgoing_echo ? nil : contact_inbox.contact
 
     # Update existing contact name for LID-suffix placeholders or low-quality names
     update_contact_with_profile_name(contact_params)
@@ -294,11 +295,15 @@ class Whatsapp::IncomingMessageBaseService
     phones = contact[:phones]
     phones = [{ phone: 'Phone number is not available' }] if phones.blank?
 
-    name_info = contact['name'] || {}
+    name_info = (contact[:name] || contact['name'] || {}).with_indifferent_access
+    formatted_name = contact_formatted_name(name_info)
     contact_meta = {
-      firstName: name_info['first_name'],
-      lastName: name_info['last_name']
+      formattedName: formatted_name,
+      firstName: name_info[:first_name].presence || name_info[:firstName],
+      lastName: name_info[:last_name].presence || name_info[:lastName]
     }.compact
+
+    update_shared_contact_name(contact, formatted_name)
 
     phones.each do |phone|
       @message.attachments.new(
@@ -335,12 +340,40 @@ class Whatsapp::IncomingMessageBaseService
     return if profile_name.blank?
     return if @contact.name == profile_name
 
-    return unless contact_name_has_lid_suffix? || contact_name_matches_phone_number?(raw_from) || contact_name_low_quality?
+    return unless contact_name_updatable?(@contact, raw_from: raw_from)
 
     @contact.update!(name: profile_name)
   end
 
-  def contact_name_matches_phone_number?(raw_from = nil)
+  def update_shared_contact_name(contact_payload, formatted_name)
+    return if formatted_name.blank?
+
+    normalized_contact_phone_numbers(contact_payload).each do |phone_number|
+      shared_contact = Contact.find_by(account_id: @inbox.account_id, phone_number: phone_number)
+      next if shared_contact.blank? || shared_contact.name == formatted_name
+      next unless contact_name_updatable?(shared_contact, raw_from: phone_number)
+
+      shared_contact.update!(name: formatted_name)
+    end
+  end
+
+  def normalized_contact_phone_numbers(contact_payload)
+    Array(contact_payload[:phones] || contact_payload['phones']).filter_map do |phone|
+      raw_phone = (phone[:phone] || phone['phone']).to_s.gsub(/\D/, '')
+      next if raw_phone.blank? || raw_phone == '0'
+      next unless raw_phone.match?(/^[1-9]\d{7,14}$/)
+
+      raw_phone = normalised_brazil_mobile_number(raw_phone) if brazil_phone_number?(raw_phone)
+      waid = processed_waid(raw_phone) || raw_phone
+      "+#{waid}" if waid.present?
+    end.uniq
+  end
+
+  def contact_name_updatable?(contact, raw_from: nil)
+    contact_name_has_lid_suffix?(contact) || contact_name_matches_phone_number?(contact, raw_from) || contact_name_low_quality?(contact)
+  end
+
+  def contact_name_matches_phone_number?(contact, raw_from = nil)
     raw_from = raw_from.presence || messages_data&.first&.[](:from).to_s
     raw_from = contact_params[:wa_id].to_s if raw_from.blank? && contact_params.present?
     return false if raw_from.blank? || raw_from.include?('@lid')
@@ -350,7 +383,7 @@ class Whatsapp::IncomingMessageBaseService
 
     phone_number = "+#{raw_digits}"
     formatted_phone_number = TelephoneNumber.parse(phone_number).international_number
-    contact_name = @contact.name.to_s
+    contact_name = contact.name.to_s
     contact_digits = contact_name.gsub(/\D/, '')
 
     contact_name == phone_number ||
@@ -358,13 +391,13 @@ class Whatsapp::IncomingMessageBaseService
       (contact_digits.present? && contact_digits == raw_digits)
   end
 
-  def contact_name_has_lid_suffix?
-    @contact.name.to_s.downcase.end_with?('@lid')
+  def contact_name_has_lid_suffix?(contact)
+    contact.name.to_s.downcase.end_with?('@lid')
   end
 
-  def contact_name_low_quality?
-    contact_name = @contact.name.to_s.strip
-    return false if contact_name.blank?
+  def contact_name_low_quality?(contact)
+    contact_name = contact.name.to_s.strip
+    return true if contact_name.blank?
     return true if contact_name.length <= 3
 
     contact_name.match?(/\A[^\p{L}\p{N}]+\z/)

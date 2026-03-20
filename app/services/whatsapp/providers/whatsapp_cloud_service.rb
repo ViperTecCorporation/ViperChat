@@ -4,6 +4,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
     if message.content_type == 'sticker'
       send_sticker_message(phone_number, message)
+    elsif contact_message?(message)
+      send_contacts_message(phone_number, message)
     elsif message.attachments.present?
       send_attachments(phone_number, message)
     elsif message.content_type == 'input_select'
@@ -237,6 +239,29 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     process_response(response, message)
   end
 
+  def send_contacts_message(phone_number, message)
+    contacts_payload = whatsapp_contacts_payload(message)
+    request_body = {
+      messaging_product: 'whatsapp',
+      context: whatsapp_reply_context(message),
+      to: phone_number,
+      type: 'contacts',
+      contacts: contacts_payload
+    }
+
+    Rails.logger.info(
+      "[WHATSAPP] Sending contacts message_id=#{message.id} to=#{phone_number} payload=#{request_body.to_json}"
+    )
+
+    response = HTTParty.post(
+      "#{phone_id_path}/messages",
+      headers: api_headers,
+      body: request_body.to_json
+    )
+
+    process_response(response, message)
+  end
+
   def error_message(response)
     # https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes/#sample-response
     response.parsed_response&.dig('error', 'message')
@@ -290,6 +315,46 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     {
       message_id: reply_to
     }
+  end
+
+  def contact_message?(message)
+    message.attachments.any?(&:contact?)
+  end
+
+  def whatsapp_contacts_payload(message)
+    message.attachments.select(&:contact?).map do |attachment|
+      meta = attachment.meta&.with_indifferent_access || {}
+      formatted_name = meta[:formatted_name].presence ||
+                       [meta[:first_name], meta[:last_name]].compact.join(' ').presence ||
+                       attachment.fallback_title
+      wa_id = attachment.fallback_title.to_s.gsub(/\D/, '').presence
+
+      payload = {
+        name: {
+          formatted_name: formatted_name,
+          first_name: meta[:first_name].presence || formatted_name,
+          last_name: meta[:last_name].presence
+        }.compact
+      }
+
+      if attachment.fallback_title.present?
+        phone_payload = {
+          phone: attachment.fallback_title,
+          type: 'CELL'
+        }
+        phone_payload[:wa_id] = wa_id if wa_id.present?
+        payload[:phones] = [phone_payload]
+      end
+
+      if meta[:email].present?
+        payload[:emails] = [{
+          email: meta[:email],
+          type: 'WORK'
+        }]
+      end
+
+      payload
+    end
   end
 
   def send_interactive_text_message(phone_number, message)

@@ -46,7 +46,31 @@ export const getTypingUsersText = (users = []) => {
 export const createPendingMessage = data => {
   const timestamp = Math.floor(new Date().getTime() / 1000);
   const tempMessageId = getUuid();
-  const { message, file } = data;
+  const {
+    message,
+    file,
+    contentAttributes,
+    content_attributes: contentAttributesSnake,
+  } = data;
+  const normalizedContentAttributes =
+    contentAttributes || contentAttributesSnake;
+  const pendingContactAttachments =
+    normalizedContentAttributes?.contacts?.map((contact, index) => ({
+      id: `${tempMessageId}-contact-${index}`,
+      file_type: 'contact',
+      fileType: 'contact',
+      fallback_title: contact.phone_number || '',
+      fallbackTitle: contact.phone_number || '',
+      meta: {
+        first_name: contact.first_name || '',
+        firstName: contact.first_name || '',
+        last_name: contact.last_name || '',
+        lastName: contact.last_name || '',
+        formatted_name: contact.formatted_name || contact.name || '',
+        formattedName: contact.formatted_name || contact.name || '',
+        email: contact.email || '',
+      },
+    })) || [];
   const tempAttachments = [{ id: tempMessageId }];
   const pendingMessage = {
     ...data,
@@ -57,7 +81,12 @@ export const createPendingMessage = data => {
     created_at: timestamp,
     message_type: MESSAGE_TYPE.OUTGOING,
     conversation_id: data.conversationId,
-    attachments: file ? tempAttachments : null,
+    attachments:
+      pendingContactAttachments.length > 0
+        ? pendingContactAttachments
+        : file
+          ? tempAttachments
+          : null,
   };
 
   return pendingMessage;

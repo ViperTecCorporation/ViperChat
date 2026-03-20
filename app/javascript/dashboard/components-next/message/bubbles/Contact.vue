@@ -11,7 +11,7 @@ import {
   ExceptionWithMessage,
 } from 'shared/helpers/CustomErrors';
 
-const { attachments } = useMessageContext();
+const { attachments, content } = useMessageContext();
 
 const $store = useStore();
 const { t } = useI18n();
@@ -26,8 +26,13 @@ const phoneNumber = computed(() => {
 
 const contactName = computed(() => {
   const { meta } = attachment.value ?? {};
-  const { firstName, lastName } = meta ?? {};
-  return `${firstName ?? ''} ${lastName ?? ''}`.trim();
+  const { formattedName, firstName, lastName } = meta ?? {};
+  return (
+    formattedName ||
+    `${firstName ?? ''} ${lastName ?? ''}`.trim() ||
+    content.value ||
+    ''
+  );
 });
 
 const formattedPhoneNumber = computed(() => {
