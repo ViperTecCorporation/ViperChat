@@ -261,35 +261,30 @@
           "PLACEHOLDER": "Check to ignore history on connect.",
           "ERROR": "Check to ignore history on connect."
         },
-        "WEBWOOK_SEND_NEW_MESSAGES": {
-          "LABEL": "Webhook send new messages",
-          "PLACEHOLDER": "Check to ignore history on connect.",
-          "ERROR": "Check to webhook send new messages."
-        },
         "IGNORE_GROUPS": {
           "LABEL": "Ignore groups messages",
           "PLACEHOLDER": "Check to ignore groups messages.",
           "ERROR": "Check to ignore groups messages."
         },
+        "IGNORE_NEWSLETTER_MESSAGES": {
+          "LABEL": "Ignore newsletter messages",
+          "PLACEHOLDER": "Select to ignore newsletter messages.",
+          "ERROR": "Select to ignore newsletter messages."
+        },
+        "IGNORE_GROUP_INDIVIDUAL_RECEIPTS": {
+          "LABEL": "Ignore group individual receipts",
+          "PLACEHOLDER": "Select to ignore group individual receipts.",
+          "ERROR": "Select to ignore group individual receipts."
+        },
+        "GROUP_ONLY_DELIVERED_STATUS": {
+          "LABEL": "Group only delivered status",
+          "PLACEHOLDER": "Select to group only delivered status.",
+          "ERROR": "Select to group only delivered status."
+        },
         "GENERATE_API_KEY": {
           "LABEL": "Generate API Key",
           "PLACEHOLDER": "Generate API Key",
           "ERROR": "Generate API Key"
-        },
-        "REJECT_CALLS": {
-          "LABEL": "Reject call",
-          "PLACEHOLDER": "Reject call.",
-          "ERROR": "Reject call."
-        },
-        "WAVOIP_TOKEN": {
-          "LABEL": "Wavoip Token",
-          "PLACEHOLDER": "Put the Wavoip token.",
-          "ERROR": "To make/receive whatsapp calls put the wavoip token"
-        },
-        "MESSAGE_CALLS_WEBHOOK": {
-          "LABEL": "Message on reject call",
-          "PLACEHOLDER": "Message on reject call.",
-          "ERROR": "Message on reject call."
         },
         "IGNORE_BROADCAST_STATUSES": {
           "LABEL": "Ignore broadcast statuses",
@@ -310,6 +305,21 @@
           "LABEL": "Ignore your messages",
           "PLACEHOLDER": "Select to ignore your messages.",
           "ERROR": "Select to ignore your messages."
+        },
+        "READ_ON_RECEIPT": {
+          "LABEL": "Read on receipt",
+          "PLACEHOLDER": "Select to read on receipt.",
+          "ERROR": "Select to read on receipt."
+        },
+        "READ_ON_REPLY": {
+          "LABEL": "Read on reply",
+          "PLACEHOLDER": "Select to read on reply.",
+          "ERROR": "Select to read on reply."
+        },
+        "WEBHOOK_SEND_NEW_MESSAGES": {
+          "LABEL": "Webhook send new messages",
+          "PLACEHOLDER": "Check to send new messages through webhook.",
+          "ERROR": "Check to send new messages through webhook."
         },
         "SEND_CONNECTION_STATUS": {
           "LABEL": "Show connection status",

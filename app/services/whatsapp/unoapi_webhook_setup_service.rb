@@ -76,6 +76,9 @@ class Whatsapp::UnoapiWebhookSetupService
 
     {
       ignoreGroupMessages: provider_config['ignore_group_messages'],
+      ignoreNewsletterMessages: provider_config['ignore_newsletter_messages'],
+      ignoreGroupIndividualReceipts: provider_config['ignore_group_individual_receipts'],
+      groupOnlyDeliveredStatus: provider_config['group_only_delivered_status'],
       ignoreBroadcastStatuses: provider_config['ignore_broadcast_statuses'],
       ignoreBroadcastMessages: provider_config['ignore_broadcast_messages'],
       ignoreHistoryMessages: provider_config['ignore_history_messages'],
@@ -84,8 +87,8 @@ class Whatsapp::UnoapiWebhookSetupService
       sendConnectionStatus: provider_config['send_connection_status'],
       notifyFailedMessages: provider_config['notify_failed_messages'],
       composingMessage: provider_config['composing_message'],
-      readOnReceipt: false,
-      readOnReply: false,
+      readOnReceipt: provider_config['read_on_receipt'],
+      readOnReply: provider_config['read_on_reply'],
       openaiApiKey: '',
       openaiApiTranscribeModel: 'whisper-1',
       groqApiKey: '',

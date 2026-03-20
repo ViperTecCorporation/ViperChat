@@ -325,35 +325,30 @@
           "PLACEHOLDER": "Marque para ignorar o histórico ao conectar.",
           "ERROR": "Marque para ignorar o histórico ao conectar."
         },
-        "WEBWOOK_SEND_NEW_MESSAGES": {
-          "LABEL": "Enviar webhook para novas mensagens",
-          "PLACEHOLDER": "Marque para enviar webhook para novas mensagens.",
-          "ERROR": "Marque para enviar webhook para novas mensagens."
-        },
         "IGNORE_GROUPS": {
           "LABEL": "Ignorar mensagens de grupos",
           "PLACEHOLDER": "Marque para ignorar mensagens de grupos.",
           "ERROR": "Marque para ignorar mensagens de grupos."
         },
+        "IGNORE_NEWSLETTER_MESSAGES": {
+          "LABEL": "Ignorar mensagens de newsletter",
+          "PLACEHOLDER": "Selecione para ignorar mensagens de newsletter.",
+          "ERROR": "Selecione para ignorar mensagens de newsletter."
+        },
+        "IGNORE_GROUP_INDIVIDUAL_RECEIPTS": {
+          "LABEL": "Ignorar recibos individuais de grupos",
+          "PLACEHOLDER": "Selecione para ignorar recibos individuais de grupos.",
+          "ERROR": "Selecione para ignorar recibos individuais de grupos."
+        },
+        "GROUP_ONLY_DELIVERED_STATUS": {
+          "LABEL": "Status de entregue apenas em grupos",
+          "PLACEHOLDER": "Selecione para usar apenas status de entregue em grupos.",
+          "ERROR": "Selecione para usar apenas status de entregue em grupos."
+        },
         "GENERATE_API_KEY": {
           "LABEL": "Gerar chave da API",
           "PLACEHOLDER": "Gerar chave da API",
           "ERROR": "Gerar chave da API"
-        },
-        "REJECT_CALLS": {
-          "LABEL": "Rejeitar chamadas",
-          "PLACEHOLDER": "Marque para rejeitar chamadas.",
-          "ERROR": "Marque para rejeitar chamadas."
-        },
-        "WAVOIP_TOKEN": {
-          "LABEL": "Token Wavoip",
-          "PLACEHOLDER": "Informe o token Wavoip.",
-          "ERROR": "Para fazer/receber chamadas do WhatsApp, informe o token Wavoip."
-        },
-        "MESSAGE_CALLS_WEBHOOK": {
-          "LABEL": "Mensagem ao rejeitar chamada",
-          "PLACEHOLDER": "Mensagem ao rejeitar chamada.",
-          "ERROR": "Mensagem ao rejeitar chamada."
         },
         "IGNORE_BROADCAST_STATUSES": {
           "LABEL": "Ignorar status de broadcast",
@@ -374,6 +369,21 @@
           "LABEL": "Ignorar suas mensagens",
           "PLACEHOLDER": "Selecione para ignorar suas mensagens.",
           "ERROR": "Selecione para ignorar suas mensagens."
+        },
+        "READ_ON_RECEIPT": {
+          "LABEL": "Ler ao receber",
+          "PLACEHOLDER": "Selecione para ler ao receber.",
+          "ERROR": "Selecione para ler ao receber."
+        },
+        "READ_ON_REPLY": {
+          "LABEL": "Ler ao responder",
+          "PLACEHOLDER": "Selecione para ler ao responder.",
+          "ERROR": "Selecione para ler ao responder."
+        },
+        "WEBHOOK_SEND_NEW_MESSAGES": {
+          "LABEL": "Enviar webhook para novas mensagens",
+          "PLACEHOLDER": "Marque para enviar webhook para novas mensagens.",
+          "ERROR": "Marque para enviar webhook para novas mensagens."
         },
         "SEND_CONNECTION_STATUS": {
           "LABEL": "Mostrar status da conexão",

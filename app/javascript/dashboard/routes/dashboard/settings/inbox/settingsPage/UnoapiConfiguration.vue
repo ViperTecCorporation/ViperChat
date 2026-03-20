@@ -25,17 +25,21 @@ export default {
     return {
       apiKey: '',
       url: 'https://unoapi.cloud',
-      ignoreGroupMessages: true,
+      ignoreGroupMessages: false,
+      ignoreNewsletterMessages: true,
+      ignoreGroupIndividualReceipts: true,
+      groupOnlyDeliveredStatus: true,
       ignoreHistoryMessages: true,
       webhookSendNewMessages: true,
-      sendAgentName: true,
+      readOnReceipt: false,
+      readOnReply: true,
       ignoreBroadcastStatuses: true,
       ignoreBroadcastMessages: true,
-      ignoreOwnMessages: true,
-      ignoreYourselfMessages: true,
+      ignoreOwnMessages: false,
+      ignoreYourselfMessages: false,
       sendConnectionStatus: true,
       notifyFailedMessages: true,
-      composingMessage: true,
+      composingMessage: false,
       sendReactionAsReply: true,
       sendProfilePicture: true,
       connect: false,
@@ -50,9 +54,13 @@ export default {
   validations: {
     apiKey: { required },
     ignoreGroupMessages: { required },
+    ignoreNewsletterMessages: { required },
+    ignoreGroupIndividualReceipts: { required },
+    groupOnlyDeliveredStatus: { required },
     ignoreHistoryMessages: { required },
     webhookSendNewMessages: { required },
-    sendAgentName: { required },
+    readOnReceipt: { required },
+    readOnReply: { required },
     url: { required },
     ignoreBroadcastStatuses: { required },
     ignoreBroadcastMessages: { required },
@@ -78,9 +86,14 @@ export default {
       this.apiKey = this.inbox.provider_config.api_key;
       this.url = this.inbox.provider_config.url;
       this.ignoreGroupMessages = this.inbox.provider_config.ignore_group_messages;
+      this.ignoreNewsletterMessages = this.inbox.provider_config.ignore_newsletter_messages;
+      this.ignoreGroupIndividualReceipts =
+        this.inbox.provider_config.ignore_group_individual_receipts;
+      this.groupOnlyDeliveredStatus = this.inbox.provider_config.group_only_delivered_status;
       this.ignoreHistoryMessages = this.inbox.provider_config.ignore_history_messages;
       this.webhookSendNewMessages = this.inbox.provider_config.webhook_send_new_messages;
-      this.sendAgentName = this.inbox.provider_config.send_agent_name;
+      this.readOnReceipt = this.inbox.provider_config.read_on_receipt;
+      this.readOnReply = this.inbox.provider_config.read_on_reply;
       this.ignoreBroadcastStatuses = this.inbox.provider_config.ignore_broadcast_statuses;
       this.ignoreBroadcastMessages = this.inbox.provider_config.ignore_broadcast_messages;
       this.ignoreOwnMessages = this.inbox.provider_config.ignore_own_messages;
@@ -155,6 +168,7 @@ export default {
         };
 
         delete providerConfig.wavoip_token;
+        delete providerConfig.send_agent_name;
         delete providerConfig.reject_calls;
         delete providerConfig.message_calls_webhook;
 
@@ -165,11 +179,15 @@ export default {
             provider_config: {
               ...providerConfig,
               api_key: this.apiKey,
+              ignore_newsletter_messages: this.ignoreNewsletterMessages,
+              ignore_group_individual_receipts: this.ignoreGroupIndividualReceipts,
+              group_only_delivered_status: this.groupOnlyDeliveredStatus,
               ignore_history_messages: this.ignoreHistoryMessages,
               ignore_group_messages: this.ignoreGroupMessages,
-              send_agent_name: this.sendAgentName,
               webhook_send_new_messages: this.webhookSendNewMessages,
               url: this.url,
+              read_on_receipt: this.readOnReceipt,
+              read_on_reply: this.readOnReply,
               ignore_broadcast_statuses: this.ignoreBroadcastStatuses,
               ignore_broadcast_messages: this.ignoreBroadcastMessages,
               ignore_own_messages: this.ignoreOwnMessages,
@@ -232,19 +250,6 @@ export default {
       </div>
 
       <div class="w-3/4 pb-4 config-helptext">
-        <label :class="{ error: v$.sendAgentName.$error }" style="display: flex; align-items: center;">
-          <Switch
-            v-model="sendAgentName"
-            style="flex: 0 0 auto; margin-right: 10px;"
-          />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_AGENT_NAME.LABEL') }}
-          <span v-if="v$.sendAgentName.$error" class="message">
-            {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_AGENT_NAME.ERROR') }}
-          </span>
-        </label>
-      </div>
-
-      <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.ignoreGroupMessages.$error }" style="display: flex; align-items: center;">
           <Switch
             v-model="ignoreGroupMessages"
@@ -253,6 +258,45 @@ export default {
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUPS.LABEL') }}
           <span v-if="v$.ignoreGroupMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUPS.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
+        <label :class="{ error: v$.ignoreNewsletterMessages.$error }" style="display: flex; align-items: center;">
+          <Switch
+            v-model="ignoreNewsletterMessages"
+            style="flex: 0 0 auto; margin-right: 10px;"
+          />
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.LABEL') }}
+          <span v-if="v$.ignoreNewsletterMessages.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
+        <label :class="{ error: v$.ignoreGroupIndividualReceipts.$error }" style="display: flex; align-items: center;">
+          <Switch
+            v-model="ignoreGroupIndividualReceipts"
+            style="flex: 0 0 auto; margin-right: 10px;"
+          />
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUP_INDIVIDUAL_RECEIPTS.LABEL') }}
+          <span v-if="v$.ignoreGroupIndividualReceipts.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUP_INDIVIDUAL_RECEIPTS.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
+        <label :class="{ error: v$.groupOnlyDeliveredStatus.$error }" style="display: flex; align-items: center;">
+          <Switch
+            v-model="groupOnlyDeliveredStatus"
+            style="flex: 0 0 auto; margin-right: 10px;"
+          />
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.GROUP_ONLY_DELIVERED_STATUS.LABEL') }}
+          <span v-if="v$.groupOnlyDeliveredStatus.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.GROUP_ONLY_DELIVERED_STATUS.ERROR') }}
           </span>
         </label>
       </div>
@@ -271,14 +315,40 @@ export default {
       </div>
 
       <div class="w-3/4 pb-4 config-helptext">
+        <label :class="{ error: v$.readOnReceipt.$error }" style="display: flex; align-items: center;">
+          <Switch
+            v-model="readOnReceipt"
+            style="flex: 0 0 auto; margin-right: 10px;"
+          />
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_RECEIPT.LABEL') }}
+          <span v-if="v$.readOnReceipt.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_RECEIPT.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
+        <label :class="{ error: v$.readOnReply.$error }" style="display: flex; align-items: center;">
+          <Switch
+            v-model="readOnReply"
+            style="flex: 0 0 auto; margin-right: 10px;"
+          />
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_REPLY.LABEL') }}
+          <span v-if="v$.readOnReply.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_REPLY.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.webhookSendNewMessages.$error }" style="display: flex; align-items: center;">
           <Switch
             v-model="webhookSendNewMessages"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBWOOK_SEND_NEW_MESSAGES.LABEL') }}
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.LABEL') }}
           <span v-if="v$.webhookSendNewMessages.$error" class="message">
-            {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBWOOK_SEND_NEW_MESSAGES.ERROR') }}
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.ERROR') }}
           </span>
         </label>
       </div>
