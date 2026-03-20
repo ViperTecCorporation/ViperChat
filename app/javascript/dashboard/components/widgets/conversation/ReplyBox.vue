@@ -106,6 +106,7 @@ export default {
     } = useUISettings();
 
     const replyEditor = useTemplateRef('replyEditor');
+    const messageEditor = useTemplateRef('messageEditor');
     const copilot = useCopilotReply();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
 
@@ -116,6 +117,7 @@ export default {
       setQuotedReplyFlagForInbox,
       fetchQuotedReplyFlagFromUISettings,
       replyEditor,
+      messageEditor,
       copilot,
       shortcutKey,
     };
@@ -526,7 +528,7 @@ export default {
     );
 
     this.fetchAndSetReplyTo();
-    emitter.on(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.fetchAndSetReplyTo);
+    emitter.on(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
 
     // A hacky fix to solve the drag and drop
     // Is showing on top of new conversation modal drag and drop
@@ -541,7 +543,7 @@ export default {
   unmounted() {
     document.removeEventListener('paste', this.onPaste);
     document.removeEventListener('keydown', this.handleKeyEvents);
-    emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.fetchAndSetReplyTo);
+    emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
     emitter.off(BUS_EVENTS.INSERT_INTO_NORMAL_EDITOR, this.addIntoEditor);
     emitter.off(
       BUS_EVENTS.NEW_CONVERSATION_MODAL,
@@ -1305,6 +1307,15 @@ export default {
         return false;
       });
     },
+    onReplyToMessage() {
+      this.fetchAndSetReplyTo();
+      if (this.inReplyTo) {
+        this.$nextTick(() => {
+          const pos = this.isSignatureEnabledForInbox ? 'start' : 'end';
+          this.messageEditor?.focusEditorInputField(pos);
+        });
+      }
+    },
     resetReplyToMessage() {
       const replyStorageKey = LOCAL_STORAGE_KEYS.MESSAGE_REPLY_TO;
       LocalStorage.deleteFromJsonStore(replyStorageKey, this.conversationId);
@@ -1426,6 +1437,7 @@ export default {
           @send="copilot.sendFollowUp"
         />
         <WootMessageEditor
+          ref="messageEditor"
           v-else-if="!showAudioRecorderEditor"
           v-model="message"
           :conversation-id="conversationId"
