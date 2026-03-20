@@ -104,6 +104,10 @@
           "ERROR": "Failed to update audio transcription setting"
         }
       },
+      "WAITING_CONVERSATIONS_SECTION": {
+        "TITLE": "Waiting conversations",
+        "NOTE": "Open conversations that are waiting for a reply in the Waiting tab by default."
+      },
       "AUTO_RESOLVE_DURATION": {
         "LABEL": "Inactivity duration for resolution",
         "HELP": "Duration after a conversation should auto resolve if there is no activity",

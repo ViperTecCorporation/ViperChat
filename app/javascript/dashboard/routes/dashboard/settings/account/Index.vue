@@ -1,4 +1,5 @@
 <script>
+import { computed } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
 import { mapGetters } from 'vuex';
@@ -11,6 +12,7 @@ import WithLabel from 'v3/components/Form/WithLabel.vue';
 import NextInput from 'next/input/Input.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import Switch from 'next/switch/Switch.vue';
 import AccountId from './components/AccountId.vue';
 import BuildInfo from './components/BuildInfo.vue';
 import AccountDelete from './components/AccountDelete.vue';
@@ -26,6 +28,7 @@ export default {
     AccountDelete,
     AudioTranscription,
     SectionLayout,
+    Switch,
     WithLabel,
     NextInput,
   },
@@ -34,8 +37,23 @@ export default {
     const { enabledLanguages } = useConfig();
     const { accountId } = useAccount();
     const v$ = useVuelidate();
+    const openWaitingConversationsByDefault = computed({
+      get: () =>
+        uiSettings.value.open_waiting_conversations_by_default ?? false,
+      set: value =>
+        updateUISettings({
+          open_waiting_conversations_by_default: value,
+        }),
+    });
 
-    return { updateUISettings, uiSettings, v$, enabledLanguages, accountId };
+    return {
+      updateUISettings,
+      uiSettings,
+      v$,
+      enabledLanguages,
+      accountId,
+      openWaitingConversationsByDefault,
+    };
   },
   data() {
     return {
@@ -240,6 +258,19 @@ export default {
       <woot-loading-state v-if="uiFlags.isFetchingItem" />
     </div>
     <AudioTranscription v-if="showAudioTranscriptionConfig" />
+    <SectionLayout
+      with-border
+      :title="$t('GENERAL_SETTINGS.FORM.WAITING_CONVERSATIONS_SECTION.TITLE')"
+      :description="
+        $t('GENERAL_SETTINGS.FORM.WAITING_CONVERSATIONS_SECTION.NOTE')
+      "
+    >
+      <template #headerActions>
+        <div class="flex justify-end">
+          <Switch v-model="openWaitingConversationsByDefault" />
+        </div>
+      </template>
+    </SectionLayout>
     <AccountId />
     <div v-if="!uiFlags.isFetchingItem && isOnChatwootCloud">
       <AccountDelete />

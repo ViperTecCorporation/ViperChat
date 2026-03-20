@@ -104,6 +104,10 @@
           "ERROR": "Falha ao atualizar configuração de transcrição de áudio"
         }
       },
+      "WAITING_CONVERSATIONS_SECTION": {
+        "TITLE": "Conversas aguardando",
+        "NOTE": "Abrir automaticamente as conversas que estão aguardando resposta na aba Aguardando."
+      },
       "AUTO_RESOLVE_DURATION": {
         "LABEL": "Tempo de inatividade para resolução",
         "HELP": "Tempo de inatividade após o qual a conversa deve ser encerrada automaticamente",

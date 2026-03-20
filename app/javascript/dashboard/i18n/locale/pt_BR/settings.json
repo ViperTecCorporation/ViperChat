@@ -134,10 +134,6 @@
         "SOUND_PERMISSION_ERROR": "A reprodução automática está desativada no seu navegador. Para ouvir alertas automaticamente, habilite a permissão de som nas configurações do seu navegador ou interaja com a página.",
         "READ_MORE": "Saiba mais"
       },
-      "WAITING_CONVERSATIONS_SECTION": {
-        "TITLE": "Conversas aguardando",
-        "NOTE": "Abrir automaticamente as conversas que estão aguardando resposta na aba Aguardando."
-      },
       "EMAIL_NOTIFICATIONS_SECTION": {
         "TITLE": "Notificações por e-mail",
         "NOTE": "Atualize suas preferências de notificação por e-mail aqui",

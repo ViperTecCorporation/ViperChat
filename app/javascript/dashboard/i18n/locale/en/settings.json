@@ -134,10 +134,6 @@
         "SOUND_PERMISSION_ERROR": "Autoplay is disabled in your browser. To hear alerts automatically, enable sound permission in your browser settings or interact with the page.",
         "READ_MORE": "Read more"
       },
-      "WAITING_CONVERSATIONS_SECTION": {
-        "TITLE": "Waiting conversations",
-        "NOTE": "Open conversations that are waiting for a reply in the Waiting tab by default."
-      },
       "EMAIL_NOTIFICATIONS_SECTION": {
         "TITLE": "Email Notifications",
         "NOTE": "Update your email notification preferences here",
