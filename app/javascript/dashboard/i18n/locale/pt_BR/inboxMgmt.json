@@ -316,94 +316,94 @@
           "ERROR_MESSAGE": "Não foi possível salvar o canal do WhatsApp"
         },
         "SEND_AGENT_NAME": {
-          "LABEL": "Send agent name",
-          "PLACEHOLDER": "Check to send agent name.",
-          "ERROR": "Check to send agent name."
+          "LABEL": "Enviar nome do agente",
+          "PLACEHOLDER": "Marque para enviar o nome do agente.",
+          "ERROR": "Marque para enviar o nome do agente."
         },
         "IGNORE_HISTORY": {
-          "LABEL": "Ignore history on connect",
-          "PLACEHOLDER": "Check to ignore history on connect.",
-          "ERROR": "Check to ignore history on connect."
+          "LABEL": "Ignorar histórico ao conectar",
+          "PLACEHOLDER": "Marque para ignorar o histórico ao conectar.",
+          "ERROR": "Marque para ignorar o histórico ao conectar."
         },
         "WEBWOOK_SEND_NEW_MESSAGES": {
-          "LABEL": "Webhook send new messages",
-          "PLACEHOLDER": "Check to ignore history on connect.",
-          "ERROR": "Check to webhook send new messages."
+          "LABEL": "Enviar webhook para novas mensagens",
+          "PLACEHOLDER": "Marque para enviar webhook para novas mensagens.",
+          "ERROR": "Marque para enviar webhook para novas mensagens."
         },
         "IGNORE_GROUPS": {
-          "LABEL": "Ignore groups messages",
-          "PLACEHOLDER": "Check to ignore groups messages.",
-          "ERROR": "Check to ignore groups messages."
+          "LABEL": "Ignorar mensagens de grupos",
+          "PLACEHOLDER": "Marque para ignorar mensagens de grupos.",
+          "ERROR": "Marque para ignorar mensagens de grupos."
         },
         "GENERATE_API_KEY": {
-          "LABEL": "Generate API Key",
-          "PLACEHOLDER": "Generate API Key",
-          "ERROR": "Generate API Key"
+          "LABEL": "Gerar chave da API",
+          "PLACEHOLDER": "Gerar chave da API",
+          "ERROR": "Gerar chave da API"
         },
         "REJECT_CALLS": {
-          "LABEL": "Reject call",
-          "PLACEHOLDER": "Reject call.",
-          "ERROR": "Reject call."
+          "LABEL": "Rejeitar chamadas",
+          "PLACEHOLDER": "Marque para rejeitar chamadas.",
+          "ERROR": "Marque para rejeitar chamadas."
         },
         "WAVOIP_TOKEN": {
-          "LABEL": "Wavoip Token",
-          "PLACEHOLDER": "Put the Wavoip token.",
-          "ERROR": "To make/receive whatsapp calls put the wavoip token"
+          "LABEL": "Token Wavoip",
+          "PLACEHOLDER": "Informe o token Wavoip.",
+          "ERROR": "Para fazer/receber chamadas do WhatsApp, informe o token Wavoip."
         },
         "MESSAGE_CALLS_WEBHOOK": {
-          "LABEL": "Message on reject call",
-          "PLACEHOLDER": "Message on reject call.",
-          "ERROR": "Message on reject call."
+          "LABEL": "Mensagem ao rejeitar chamada",
+          "PLACEHOLDER": "Mensagem ao rejeitar chamada.",
+          "ERROR": "Mensagem ao rejeitar chamada."
         },
         "IGNORE_BROADCAST_STATUSES": {
-          "LABEL": "Ignore broadcast statuses",
-          "PLACEHOLDER": "Select to ignore broadcast statuses.",
-          "ERROR": "Select to ignore broadcast statuses."
+          "LABEL": "Ignorar status de broadcast",
+          "PLACEHOLDER": "Selecione para ignorar status de broadcast.",
+          "ERROR": "Selecione para ignorar status de broadcast."
         },
         "IGNORE_BROADCAST_MESSAGES": {
-          "LABEL": "Ignore broadcast messages",
-          "PLACEHOLDER": "Select to ignore broadcast messages.",
-          "ERROR": "Select to ignore broadcast messages."
+          "LABEL": "Ignorar mensagens de broadcast",
+          "PLACEHOLDER": "Selecione para ignorar mensagens de broadcast.",
+          "ERROR": "Selecione para ignorar mensagens de broadcast."
         },
         "IGNORE_OWN_MESSAGES": {
-          "LABEL": "Ignore own messages",
-          "PLACEHOLDER": "Select to ignore own messages.",
-          "ERROR": "Select to ignore own messages."
+          "LABEL": "Ignorar mensagens próprias",
+          "PLACEHOLDER": "Selecione para ignorar mensagens próprias.",
+          "ERROR": "Selecione para ignorar mensagens próprias."
         },
         "IGNORE_YOURSELF_MESSAGES": {
-          "LABEL": "Ignore your messages",
-          "PLACEHOLDER": "Select to ignore your messages.",
-          "ERROR": "Select to ignore your messages."
+          "LABEL": "Ignorar suas mensagens",
+          "PLACEHOLDER": "Selecione para ignorar suas mensagens.",
+          "ERROR": "Selecione para ignorar suas mensagens."
         },
         "SEND_CONNECTION_STATUS": {
-          "LABEL": "Show connection status",
-          "PLACEHOLDER": "Select to show connection status.",
-          "ERROR": "Select to show connection status."
+          "LABEL": "Mostrar status da conexão",
+          "PLACEHOLDER": "Selecione para mostrar o status da conexão.",
+          "ERROR": "Selecione para mostrar o status da conexão."
         },
         "NOTIFY_FAILED_MESSAGES": {
-          "LABEL": "Notify failed messages",
-          "PLACEHOLDER": "Select to notify failed messages.",
-          "ERROR": "Select to notify failed messages."
+          "LABEL": "Notificar mensagens com falha",
+          "PLACEHOLDER": "Selecione para notificar mensagens com falha.",
+          "ERROR": "Selecione para notificar mensagens com falha."
         },
         "COMPOSING_MESSAGE": {
-          "LABEL": "Compose message",
-          "PLACEHOLDER": "Select to compose message.",
-          "ERROR": "Select to compose message."
+          "LABEL": "Compor mensagem",
+          "PLACEHOLDER": "Selecione para compor mensagens.",
+          "ERROR": "Selecione para compor mensagens."
         },
         "SEND_REACTION_AS_REPLY": {
-          "LABEL": "Show reaction as reply",
-          "PLACEHOLDER": "Select to show reaction as reply.",
-          "ERROR": "Select to show reaction as reply."
+          "LABEL": "Mostrar reação como resposta",
+          "PLACEHOLDER": "Selecione para mostrar a reação como resposta.",
+          "ERROR": "Selecione para mostrar a reação como resposta."
         },
         "SEND_PROFILE_PICTURE": {
-          "LABEL": "Show profile picture",
-          "PLACEHOLDER": "Select to show profile picture.",
-          "ERROR": "Select to show profile picture."
+          "LABEL": "Mostrar foto de perfil",
+          "PLACEHOLDER": "Selecione para mostrar a foto de perfil.",
+          "ERROR": "Selecione para mostrar a foto de perfil."
         },
         "URL": {
-          "LABEL": "Unoapi URL",
-          "PLACEHOLDER": "Please enter an Unoapi URL or use default https://unoapi.cloud",
-          "ERROR": "This field is required"
+          "LABEL": "URL do Unoapi",
+          "PLACEHOLDER": "Informe uma URL do Unoapi ou use o padrão https://unoapi.cloud",
+          "ERROR": "Este campo é obrigatório"
         }
       },
       "VOICE": {
