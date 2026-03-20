@@ -1,6 +1,28 @@
 import * as types from '../mutation-types';
-import Wavoip from 'wavoip-api';
 import { useAlert } from 'dashboard/composables';
+
+const createWavoipClient = () => {
+  const WavoipConstructor = window.Wavoip;
+
+  if (typeof WavoipConstructor === 'function') {
+    return new WavoipConstructor();
+  }
+
+  return {
+    connect: () => ({
+      socket: {
+        on: () => {},
+      },
+      callStart: async () => ({
+        type: 'error',
+        result: 'Wavoip indisponivel',
+      }),
+      acceptCall: async () => {},
+      rejectCall: () => {},
+      endCall: () => {},
+    }),
+  };
+};
 
 const findRecordById = ($state, id) =>
   $state.records.find(record => record.id === Number(id)) || {};
@@ -51,7 +73,7 @@ export const actions = {
       return;
     }
 
-    const WAV = new Wavoip();
+    const WAV = createWavoipClient();
     const whatsapp_instance = WAV.connect(token);
 
     commit(types.default.ADD_WAVOIP, {
