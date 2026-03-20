@@ -1,4 +1,5 @@
 <script>
+import { computed } from 'vue';
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -17,8 +18,8 @@ import HotKeyCard from './HotKeyCard.vue';
 import ChangePassword from './ChangePassword.vue';
 import NotificationPreferences from './NotificationPreferences.vue';
 import AudioNotifications from './AudioNotifications.vue';
+import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsToggleSection.vue';
 import SectionLayout from '../account/components/SectionLayout.vue';
-import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import AccessToken from './AccessToken.vue';
 import MfaSettingsCard from './MfaSettingsCard.vue';
 import Policy from 'dashboard/components/policy.vue';
@@ -40,20 +41,30 @@ export default {
     ChangePassword,
     NotificationPreferences,
     AudioNotifications,
+    SettingsToggleSection,
     AccessToken,
     MfaSettingsCard,
-    BaseSettingsHeader,
   },
   setup() {
-    const { isEditorHotKeyEnabled, updateUISettings } = useUISettings();
+    const { isEditorHotKeyEnabled, updateUISettings, uiSettings } =
+      useUISettings();
     const { currentFontSize, updateFontSize } = useFontSize();
     const { replaceInstallationName } = useBranding();
+    const openWaitingConversationsByDefault = computed({
+      get: () =>
+        uiSettings.value.open_waiting_conversations_by_default ?? false,
+      set: value =>
+        updateUISettings({
+          open_waiting_conversations_by_default: value,
+        }),
+    });
 
     return {
       currentFontSize,
       updateFontSize,
       isEditorHotKeyEnabled,
       updateUISettings,
+      openWaitingConversationsByDefault,
       replaceInstallationName,
     };
   },
@@ -347,6 +358,13 @@ export default {
         <AudioNotifications />
       </SectionLayout>
     </Policy>
+    <SettingsToggleSection
+      v-model="openWaitingConversationsByDefault"
+      :header="$t('PROFILE_SETTINGS.FORM.WAITING_CONVERSATIONS_SECTION.TITLE')"
+      :description="
+        $t('PROFILE_SETTINGS.FORM.WAITING_CONVERSATIONS_SECTION.NOTE')
+      "
+    />
     <Policy :permissions="notificationPermissions">
       <SectionLayout
         with-border

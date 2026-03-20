@@ -98,6 +98,22 @@ describe ConversationFinder do
       end
     end
 
+    context 'with assignee_type waiting' do
+      let(:params) { { assignee_type: 'waiting' } }
+
+      it 'filters conversations by assignee type waiting' do
+        result = conversation_finder.perform
+
+        expect(result[:conversations].length).to be 3
+      end
+
+      it 'returns the correct waiting count' do
+        result = conversation_finder.perform
+
+        expect(result[:count][:waiting_count]).to be 3
+      end
+    end
+
     context 'with status all' do
       let(:params) { { status: 'all' } }
 
@@ -121,6 +137,8 @@ describe ConversationFinder do
                                        mine_count: 2,
                                        assigned_count: 3,
                                        unassigned_count: 1,
+                                       waiting_count: 3,
+                                       internal_count: 1,
                                        all_count: 4
                                      })
       end
@@ -216,6 +234,8 @@ describe ConversationFinder do
                                        mine_count: 2,
                                        assigned_count: 3,
                                        unassigned_count: 1,
+                                       waiting_count: 3,
+                                       internal_count: 1,
                                        all_count: 4
                                      })
       end

@@ -15,6 +15,7 @@
     },
     "FILTER_ALL": "Todos",
     "ASSIGNEE_TYPE_TABS": {
+      "waiting": "Aguardando",
       "me": "Minhas",
       "unassigned": "Não atribuídas",
       "all": "Todos",

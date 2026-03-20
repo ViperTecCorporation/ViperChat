@@ -3,6 +3,7 @@ import * as types from '../mutation-types';
 const state = {
   currentPage: {
     me: 0,
+    waiting: 0,
     unassigned: 0,
     all: 0,
     internal: 0,
@@ -10,6 +11,7 @@ const state = {
   },
   hasEndReached: {
     me: false,
+    waiting: false,
     unassigned: false,
     all: false,
     internal: false,
@@ -67,24 +69,36 @@ export const mutations = {
       $state.currentPage,
       'internal'
     );
+    const hasWaiting = Object.prototype.hasOwnProperty.call(
+      $state.currentPage,
+      'waiting'
+    );
     $state.currentPage = {
       me: 0,
+      waiting: 0,
       unassigned: 0,
       all: 0,
       appliedFilters: 0,
       ...(hasInternal ? { internal: 0 } : {}),
+      ...(hasWaiting ? { waiting: 0 } : {}),
     };
 
     const hasInternalEndReached = Object.prototype.hasOwnProperty.call(
       $state.hasEndReached,
       'internal'
     );
+    const hasWaitingEndReached = Object.prototype.hasOwnProperty.call(
+      $state.hasEndReached,
+      'waiting'
+    );
     $state.hasEndReached = {
       me: false,
+      waiting: false,
       unassigned: false,
       all: false,
       appliedFilters: false,
       ...(hasInternalEndReached ? { internal: false } : {}),
+      ...(hasWaitingEndReached ? { waiting: false } : {}),
     };
   },
 };

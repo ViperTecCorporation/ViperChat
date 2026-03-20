@@ -192,6 +192,10 @@ const hideUnassignedForAgents = computed(() => {
   );
 });
 
+const isWaitingConversationsDefaultEnabled = computed(() => {
+  return uiSettings.value.open_waiting_conversations_by_default ?? false;
+});
+
 const hasAppliedFilters = computed(() => {
   return appliedFilters.value.length !== 0;
 });
@@ -235,6 +239,9 @@ const assigneeTabItems = computed(() => {
     item => item.permissions
   )
     .filter(({ key }) => {
+      if (!isWaitingConversationsDefaultEnabled.value && key === 'waiting') {
+        return false;
+      }
       if (hideAllChatsForAgents.value && key === 'all') {
         return false;
       }
@@ -248,13 +255,15 @@ const assigneeTabItems = computed(() => {
       name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
       count: conversationStats.value[countKey] || 0,
     }));
-  return baseItems;
 });
 
 const showAssigneeInConversationCard = computed(() => {
   return (
     hasAppliedFiltersOrActiveFolders.value ||
-    activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ALL
+    [
+      wootConstants.ASSIGNEE_TYPE.ALL,
+      wootConstants.ASSIGNEE_TYPE.WAITING,
+    ].includes(activeAssigneeTab.value)
   );
 });
 
@@ -284,9 +293,9 @@ const conversationCustomAttributes = useFunctionGetter(
 );
 
 const activeAssigneeTabCount = computed(() => {
-  const count = assigneeTabItems.value.find(
-    item => item.key === activeAssigneeTab.value
-  ).count;
+  const count =
+    assigneeTabItems.value.find(item => item.key === activeAssigneeTab.value)
+      ?.count || 0;
   return count;
 });
 
@@ -315,7 +324,9 @@ const conversationFilters = computed(() => {
     activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.INTERNAL;
   const selectedInbox = inbox.value || {};
 
-  const normalizedPage = Number.isFinite(Number(conversationListPagination.value))
+  const normalizedPage = Number.isFinite(
+    Number(conversationListPagination.value)
+  )
     ? Number(conversationListPagination.value)
     : 1;
 
@@ -379,10 +390,14 @@ const conversationList = computed(() => {
 
   if (!hasAppliedFiltersOrActiveFolders.value) {
     const filters = conversationFilters.value;
-    if (activeAssigneeTab.value === 'me') {
+    if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ME) {
       localConversationList = [...mineChatsList.value(filters)];
     } else if (activeAssigneeTab.value === 'unassigned') {
       localConversationList = [...unAssignedChatsList.value(filters)];
+    } else if (
+      activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.WAITING
+    ) {
+      localConversationList = [...allChatList.value(filters)];
     } else if (
       activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.INTERNAL
     ) {
@@ -435,6 +450,10 @@ function setFiltersFromUISettings() {
   )
     ? orderBy
     : wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC;
+  activeAssigneeTab.value =
+    isWaitingConversationsDefaultEnabled.value && !props.conversationType
+      ? wootConstants.ASSIGNEE_TYPE.WAITING
+      : wootConstants.ASSIGNEE_TYPE.ME;
 }
 
 function emitConversationLoaded() {
@@ -864,8 +883,8 @@ useEmitter('fetch_conversation_stats', () => {
 });
 
 onMounted(() => {
-  store.dispatch('setChatListFilters', conversationFilters.value);
   setFiltersFromUISettings();
+  store.dispatch('setChatListFilters', conversationFilters.value);
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
   resetAndFetchData();

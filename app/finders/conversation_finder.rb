@@ -40,7 +40,8 @@ class ConversationFinder
   def perform
     set_up
 
-    mine_count, unassigned_count, all_count, internal_count = set_count_for_all_conversations
+    mine_count, unassigned_count, waiting_count, all_count, internal_count =
+      set_count_for_all_conversations
     assigned_count = all_count - unassigned_count
 
     filter_by_assignee_type
@@ -52,6 +53,7 @@ class ConversationFinder
         mine_count: mine_count,
         assigned_count: assigned_count,
         unassigned_count: unassigned_count,
+        waiting_count: waiting_count,
         internal_count: internal_count,
         all_count: all_count
       }
@@ -61,7 +63,8 @@ class ConversationFinder
   def perform_meta_only
     set_up
 
-    mine_count, unassigned_count, all_count, = set_count_for_all_conversations
+    mine_count, unassigned_count, waiting_count, all_count, internal_count =
+      set_count_for_all_conversations
     assigned_count = all_count - unassigned_count
 
     {
@@ -69,6 +72,8 @@ class ConversationFinder
         mine_count: mine_count,
         assigned_count: assigned_count,
         unassigned_count: unassigned_count,
+        waiting_count: waiting_count,
+        internal_count: internal_count,
         all_count: all_count
       }
     }
@@ -131,6 +136,8 @@ class ConversationFinder
       @conversations = @conversations.assigned_to(current_user)
     when 'unassigned'
       @conversations = @conversations.unassigned
+    when 'waiting'
+      @conversations = waiting_conversations
     when 'assigned'
       @conversations = @conversations.assigned
     when 'internal'
@@ -215,12 +222,31 @@ class ConversationFinder
       count_scope = count_scope.joins(:inbox).where.not(inboxes: { channel_type: 'Channel::Internal' })
     end
 
+    waiting_scope = count_scope.unattended
+    waiting_scope = if @is_admin
+                      waiting_scope
+                    else
+                      waiting_scope.where(assignee_id: current_user.id).or(
+                        waiting_scope.where(assignee_id: nil)
+                      )
+                    end
+
     [
       count_scope.assigned_to(current_user).count,
       count_scope.unassigned.count,
+      waiting_scope.count,
       count_scope.count,
       internal_scope.count
     ]
+  end
+
+  def waiting_conversations
+    conversations = @conversations.unattended
+    return conversations if @is_admin
+
+    conversations.where(assignee_id: current_user.id).or(
+      conversations.where(assignee_id: nil)
+    )
   end
 
   def current_page
