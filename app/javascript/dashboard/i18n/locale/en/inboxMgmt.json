@@ -321,14 +321,34 @@
           "PLACEHOLDER": "Check to send new messages through webhook.",
           "ERROR": "Check to send new messages through webhook."
         },
+        "WHATSAPP_UPDATE_AND_CONNECT": {
+          "LABEL": "Update and Connect"
+        },
+        "SEND_TRANSCRIBE_AUDIO": {
+          "LABEL": "Send audio transcription",
+          "PLACEHOLDER": "Check to send audio transcription.",
+          "ERROR": "Check to send audio transcription."
+        },
+        "GROQ_API_KEY": {
+          "LABEL": "Groq API key",
+          "SUBTITLE": "Configure the Groq API key used for audio transcription.",
+          "PLACEHOLDER": "Groq API key",
+          "ERROR": "Please enter a valid value."
+        },
         "SECTIONS": {
           "WEBHOOKS": "Webhooks",
+          "TRANSCRIPTION": "Audio transcription",
           "MESSAGING": "Messaging settings"
         },
         "SEND_CONNECTION_STATUS": {
           "LABEL": "Show connection status",
           "PLACEHOLDER": "Select to show connection status.",
           "ERROR": "Select to show connection status."
+        },
+        "MARK_ONLINE_ON_CONNECT": {
+          "LABEL": "Mark online when connected",
+          "PLACEHOLDER": "Select to mark the account online when connected.",
+          "ERROR": "Select to mark the account online when connected."
         },
         "NOTIFY_FAILED_MESSAGES": {
           "LABEL": "Notify failed messages",

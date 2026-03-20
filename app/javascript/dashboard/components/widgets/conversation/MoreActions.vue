@@ -28,25 +28,6 @@ const isLoadingMedia = ref(false);
 const isLoadingMoreMedia = ref(false);
 
 const currentChat = computed(() => store.getters.getSelectedChat);
-const currentContact = computed(() => {
-  const contactId = currentChat.value?.meta?.sender?.id;
-  if (contactId) {
-    return store.getters['contacts/getContact'](contactId);
-  }
-  return currentChat.value?.meta?.sender || {};
-});
-const currentInbox = computed(() =>
-  store.getters['inboxes/getInbox'](currentChat.value?.inbox_id)
-);
-const inboxWavoipToken = computed(
-  () => currentInbox.value?.provider_config?.wavoip_token
-);
-const contactPhoneNumber = computed(
-  () =>
-    currentContact.value?.phone_number ||
-    currentChat.value?.meta?.sender?.phone_number
-);
-const callInfo = computed(() => store.getters['webphone/getCallInfo']);
 const currentAttachments = computed(
   () => store.getters.getSelectedChatAttachments
 );
@@ -58,13 +39,6 @@ const conversationMessages = computed(
 );
 
 const mediaCounter = computed(() => currentAttachments.value.length || 0);
-const canStartWavoipCall = computed(() => {
-  return (
-    !callInfo.value.id &&
-    !!contactPhoneNumber.value &&
-    !!inboxWavoipToken.value
-  );
-});
 
 const actionMenuItems = computed(() => {
   const items = [];
@@ -92,15 +66,6 @@ const actionMenuItems = computed(() => {
     value: 'send_transcript',
   });
 
-  if (canStartWavoipCall.value) {
-    items.push({
-      icon: 'i-lucide-phone-call',
-      label: t('WEBPHONE.CALL'),
-      action: 'startCall',
-      value: 'startCall',
-    });
-  }
-
   return items;
 });
 
@@ -115,8 +80,6 @@ const handleActionClick = async ({ action }) => {
     useAlert(t('CONTACT_PANEL.UNMUTED_SUCCESS'));
   } else if (action === 'send_transcript') {
     toggleEmailModal();
-  } else if (action === 'startCall') {
-    await startCall();
   }
 };
 
@@ -129,60 +92,6 @@ const mute = () => {
 const unmute = () => {
   store.dispatch('unmuteConversation', currentChat.value.id);
   useAlert(t('CONTACT_PANEL.UNMUTED_SUCCESS'));
-};
-
-const startCall = async () => {
-  const token = inboxWavoipToken.value;
-  const phoneNumber = contactPhoneNumber.value;
-  let wavoipInstances = store.getters['webphone/getWavoip'] || {};
-
-  if (!token) {
-    useAlert(t('INBOX_MGMT.ADD.WHATSAPP.WAVOIP_TOKEN.ERROR'));
-    return;
-  }
-
-  if (!phoneNumber) {
-    useAlert(t('WEBPHONE.CONTACT_INVALID'));
-    return;
-  }
-
-  if (!wavoipInstances[token]) {
-    await store.dispatch('webphone/startWavoip', {
-      inboxName: currentInbox.value?.name,
-      token,
-    });
-    wavoipInstances = store.getters['webphone/getWavoip'] || {};
-  }
-
-  if (!wavoipInstances[token]) {
-    useAlert(t('WEBPHONE.CONNECTION_FAILED'));
-    return;
-  }
-
-  try {
-    await store.dispatch('webphone/outcomingCall', {
-      contact_name:
-        currentContact.value?.name || currentChat.value?.meta?.sender?.name,
-      profile_picture:
-        currentContact.value?.thumbnail ||
-        currentChat.value?.meta?.sender?.thumbnail,
-      phone: phoneNumber,
-      chat_id: currentChat.value?.id,
-      token,
-    });
-  } catch (error) {
-    if (error.message === 'Numero nÇœo existe') {
-      useAlert(t('WEBPHONE.CONTACT_INVALID'));
-    } else if (
-      error.message === 'Linha ocupada, tente mais tarde ou faÇõa um upgrade'
-    ) {
-      useAlert(t('WEBPHONE.ALL_INSTANCE_BUSY'));
-    } else if (error.message === 'Limite de ligaÇõÇæes atingido') {
-      useAlert(t('WEBPHONE.CALL_LIMIT'));
-    } else {
-      useAlert(`${t('WEBPHONE.ERROR_TO_MADE_CALL')}: ${error.message}`);
-    }
-  }
 };
 
 const openMediaModal = async () => {

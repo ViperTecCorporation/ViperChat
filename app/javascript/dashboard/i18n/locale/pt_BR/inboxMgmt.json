@@ -385,14 +385,34 @@
           "PLACEHOLDER": "Marque para enviar webhook para novas mensagens.",
           "ERROR": "Marque para enviar webhook para novas mensagens."
         },
+        "WHATSAPP_UPDATE_AND_CONNECT": {
+          "LABEL": "Atualizar e Conectar"
+        },
+        "SEND_TRANSCRIBE_AUDIO": {
+          "LABEL": "Enviar transcrição de áudio",
+          "PLACEHOLDER": "Marque para enviar transcrição de áudio.",
+          "ERROR": "Marque para enviar transcrição de áudio."
+        },
+        "GROQ_API_KEY": {
+          "LABEL": "Token da Groq",
+          "SUBTITLE": "Configure o token da Groq usado na transcrição de áudio.",
+          "PLACEHOLDER": "Token da Groq",
+          "ERROR": "Por favor, insira um valor válido."
+        },
         "SECTIONS": {
           "WEBHOOKS": "Webhooks",
+          "TRANSCRIPTION": "Transcrição de áudio",
           "MESSAGING": "Configurações de mensagens"
         },
         "SEND_CONNECTION_STATUS": {
           "LABEL": "Mostrar status da conexão",
           "PLACEHOLDER": "Selecione para mostrar o status da conexão.",
           "ERROR": "Selecione para mostrar o status da conexão."
+        },
+        "MARK_ONLINE_ON_CONNECT": {
+          "LABEL": "Marcar online ao conectar",
+          "PLACEHOLDER": "Selecione para marcar a conta como online ao conectar.",
+          "ERROR": "Selecione para marcar a conta como online ao conectar."
         },
         "NOTIFY_FAILED_MESSAGES": {
           "LABEL": "Notificar mensagens com falha",
@@ -1021,8 +1041,8 @@
       "VOICE_AGENT_CREDENTIALS_SAVE": "Save credentials",
       "VOICE_AGENT_CREDENTIALS_SUCCESS": "Agent credentials updated",
       "VOICE_AGENT_CREDENTIALS_ERROR": "Could not update agent credentials",
-      "WHATSAPP_CONNECT": "Connect",
-      "WHATSAPP_DISCONNECT": "Disconnect"
+      "WHATSAPP_CONNECT": "Conectar",
+      "WHATSAPP_DISCONNECT": "Desconectar"
     },
     "HELP_CENTER": {
       "LABEL": "Centro de Ajuda",

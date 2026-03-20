@@ -8,10 +8,10 @@ import Avatar from 'next/avatar/Avatar.vue';
 import SocialIcons from './SocialIcons.vue';
 import EditContact from './EditContact.vue';
 import ContactMergeModal from 'dashboard/modules/contact/ContactMergeModal.vue';
+import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import NextButton from 'dashboard/components-next/button/Button.vue';
-import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 
 import {
   isAConversationRoute,
@@ -29,7 +29,7 @@ export default {
     ComposeConversation,
     SocialIcons,
     ContactMergeModal,
-    VoiceCallButton,
+    ContactLabels,
   },
   props: {
     contact: {
@@ -58,19 +58,6 @@ export default {
     ...mapGetters({ uiFlags: 'contacts/getUIFlags' }),
     currentChat() {
       return this.$store.getters.getSelectedChat || {};
-    },
-    currentInbox() {
-      const inboxId = this.currentChat.inbox_id;
-      if (!inboxId) {
-        return {};
-      }
-      return this.$store.getters['inboxes/getInbox'](inboxId) || {};
-    },
-    wavoipToken() {
-      return this.currentInbox?.provider_config?.wavoip_token;
-    },
-    canStartWavoipCall() {
-      return Boolean(this.contact.phone_number && this.wavoipToken);
     },
     contactProfileLink() {
       return `/app/accounts/${this.$route.params.accountId}/contacts/${this.contact.id}`;
@@ -198,58 +185,6 @@ export default {
     openMergeModal() {
       this.$refs.mergeModal?.open();
     },
-    async startWavoipCall() {
-      const token = this.wavoipToken;
-      const phoneNumber = this.contact.phone_number;
-      let instances = this.$store.getters['webphone/getWavoip'] || {};
-
-      if (!token) {
-        useAlert(this.$t('INBOX_MGMT.ADD.WHATSAPP.WAVOIP_TOKEN.ERROR'));
-        return;
-      }
-
-      if (!phoneNumber) {
-        useAlert(this.$t('WEBPHONE.CONTACT_INVALID'));
-        return;
-      }
-
-      if (!instances[token]) {
-        await this.$store.dispatch('webphone/startWavoip', {
-          inboxName: this.currentInbox?.name,
-          token,
-        });
-        instances = this.$store.getters['webphone/getWavoip'] || {};
-      }
-
-      if (!instances[token]) {
-        useAlert(this.$t('WEBPHONE.CONNECTION_FAILED'));
-        return;
-      }
-
-      try {
-        await this.$store.dispatch('webphone/outcomingCall', {
-          contact_name: this.contact.name,
-          profile_picture: this.contact.thumbnail,
-          phone: phoneNumber,
-          chat_id: this.currentChat?.id,
-          token,
-        });
-      } catch (error) {
-        if (error.message === 'Numero nÇœo existe') {
-          useAlert(this.$t('WEBPHONE.CONTACT_INVALID'));
-        } else if (
-          error.message === 'Linha ocupada, tente mais tarde ou faÇõa um upgrade'
-        ) {
-          useAlert(this.$t('WEBPHONE.ALL_INSTANCE_BUSY'));
-        } else if (error.message === 'Limite de ligaÇõÇæes atingido') {
-          useAlert(this.$t('WEBPHONE.CALL_LIMIT'));
-        } else {
-          useAlert(
-            `${this.$t('WEBPHONE.ERROR_TO_MADE_CALL')}: ${error.message}`
-          );
-        }
-      }
-    },
   },
 };
 </script>
@@ -330,6 +265,15 @@ export default {
             emoji="🏢"
             :title="$t('CONTACT_PANEL.COMPANY')"
           />
+          <div
+            v-if="contact.id"
+            class="flex flex-col w-full gap-2 pt-1.5"
+          >
+            <span class="text-xs font-medium uppercase text-n-slate-11">
+              {{ $t('CONTACT_PANEL.LABELS.CONTACT.TITLE') }}
+            </span>
+            <ContactLabels :contact-id="contact.id" />
+          </div>
           <ContactInfoRow
             v-if="location || additionalAttributes.location"
             :value="location || additionalAttributes.location"
@@ -357,25 +301,6 @@ export default {
             />
           </template>
         </ComposeConversation>
-        <NextButton
-          v-if="canStartWavoipCall"
-          v-tooltip.top-end="$t('WEBPHONE.CALL')"
-          icon="i-ri-phone-fill"
-          slate
-          faded
-          sm
-          @click="startWavoipCall"
-        />
-        <VoiceCallButton
-          v-else-if="contact?.id && contact?.phone_number"
-          :phone="contact.phone_number"
-          :contact-id="contact.id"
-          icon="i-ri-phone-fill"
-          size="sm"
-          :tooltip-label="$t('CONTACT_PANEL.CALL')"
-          slate
-          faded
-        />
         <NextButton
           v-tooltip.top-end="$t('EDIT_CONTACT.BUTTON_LABEL')"
           icon="i-ph-pencil-simple"

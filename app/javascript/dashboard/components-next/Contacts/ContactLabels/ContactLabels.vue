@@ -96,11 +96,16 @@ watch(
     if (newVal !== oldVal) {
       fetchLabels(newVal);
     }
-  }
+  },
+  { immediate: true }
 );
 onMounted(() => {
-  if (route.params.contactId) {
+  if (!props.contactId && route.params.contactId) {
     fetchLabels(route.params.contactId);
+  }
+
+  if (!allLabels.value?.length) {
+    store.dispatch('labels/get');
   }
 });
 

@@ -30,7 +30,7 @@ class Whatsapp::UnoapiWebhookSetupService
     phone_number = whatsapp_channel.provider_config['business_account_id']
     url = url(whatsapp_channel)
     Rails.logger.debug { "Connecting #{phone_number} from unoapi with url #{url}" }
-    body = params(whatsapp_channel.provider_config, phone_number)
+    body = params(whatsapp_channel, phone_number)
     response = HTTParty.post("#{url}/register", headers: headers(whatsapp_channel), body: body.to_json)
     Rails.logger.debug { "Response #{response}" }
     return send_message(whatsapp_channel) if response.success?
@@ -71,8 +71,12 @@ class Whatsapp::UnoapiWebhookSetupService
   end
 
   # rubocop:disable Metrics/MethodLength
-  def params(provider_config, phone_number)
+  def params(whatsapp_channel, phone_number)
+    provider_config = whatsapp_channel.provider_config
     callback_url = webhook_callback_url(phone_number)
+    send_new_messages = provider_config.key?('webhook_send_new_messages') ? provider_config['webhook_send_new_messages'] : true
+    send_transcribe_audio = provider_config.key?('send_transcribe_audio') ? provider_config['send_transcribe_audio'] : true
+    label = "#{whatsapp_channel.inbox.name} - account #{whatsapp_channel.account_id}"
 
     {
       ignoreGroupMessages: provider_config['ignore_group_messages'],
@@ -85,18 +89,21 @@ class Whatsapp::UnoapiWebhookSetupService
       ignoreOwnMessages: provider_config['ignore_own_messages'],
       ignoreYourselfMessages: provider_config['ignore_yourself_messages'],
       sendConnectionStatus: provider_config['send_connection_status'],
+      markOnlineOnConnect: provider_config['mark_online_on_connect'],
       notifyFailedMessages: provider_config['notify_failed_messages'],
       composingMessage: provider_config['composing_message'],
+      sendTranscribeAudio: send_transcribe_audio,
       readOnReceipt: provider_config['read_on_receipt'],
       readOnReply: provider_config['read_on_reply'],
       openaiApiKey: '',
       openaiApiTranscribeModel: 'whisper-1',
-      groqApiKey: '',
+      groqApiKey: provider_config['groq_api_key'],
       groqApiTranscribeModel: 'whisper-large-v3',
       groqApiBaseUrl: 'https://api.groq.com/openai/v1',
+      label: label,
       webhooks: [
         {
-          sendNewMessages: provider_config['webhook_send_new_messages'],
+          sendNewMessages: send_new_messages,
           id: 'default',
           urlAbsolute: callback_url,
           url: callback_url,
@@ -107,7 +114,7 @@ class Whatsapp::UnoapiWebhookSetupService
           sendOutgoingMessages: true,
           sendIncomingMessages: true,
           sendUpdateMessages: true,
-          sendTranscribeAudio: true,
+          sendTranscribeAudio: send_transcribe_audio,
           addToBlackListOnOutgoingMessageWithTtl: '',
           timeoutMs: 360_000
         }

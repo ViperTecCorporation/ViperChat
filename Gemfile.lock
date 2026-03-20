@@ -668,6 +668,7 @@ GEM
       activerecord (>= 5.2)
       activesupport (>= 5.2)
     pgvector (0.1.1)
+    phonelib (0.10.17)
     prism (1.4.0)
     procore-sift (1.0.0)
       activerecord (>= 6.1)
@@ -1050,6 +1051,7 @@ DEPENDENCIES
   byebug
   cld3 (~> 3.7)
   climate_control
+  coderay (~> 1.1)
   commonmarker
   csv-safe
   database_cleaner
@@ -1099,6 +1101,7 @@ DEPENDENCIES
   lograge (~> 0.14.0)
   maxminddb
   meta_request (>= 0.8.3)
+  method_source (~> 1.1)
   mock_redis
   neighbor
   net-smtp (~> 0.3.4)
@@ -1115,6 +1118,7 @@ DEPENDENCIES
   pg
   pg_search
   pgvector
+  phonelib
   procore-sift
   pry-rails
   puma
@@ -1180,4 +1184,4 @@ RUBY VERSION
    ruby 3.4.4p34
 
 BUNDLED WITH
-   2.5.16
+   2.7.2

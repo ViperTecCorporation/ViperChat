@@ -32,6 +32,8 @@ export default {
       ignoreHistoryMessages: true,
       webhookSendNewMessages: true,
       sendAgentName: true,
+      sendTranscribeAudio: true,
+      groqApiKey: '',
       readOnReceipt: false,
       readOnReply: true,
       ignoreBroadcastStatuses: true,
@@ -39,6 +41,7 @@ export default {
       ignoreOwnMessages: false,
       ignoreYourselfMessages: false,
       sendConnectionStatus: true,
+      markOnlineOnConnect: true,
       notifyFailedMessages: true,
       composingMessage: false,
       sendReactionAsReply: true,
@@ -61,6 +64,8 @@ export default {
     ignoreHistoryMessages: { required },
     webhookSendNewMessages: { required },
     sendAgentName: { required },
+    sendTranscribeAudio: { required },
+    groqApiKey: { required },
     readOnReceipt: { required },
     readOnReply: { required },
     url: { required },
@@ -69,6 +74,7 @@ export default {
     ignoreOwnMessages: { required },
     ignoreYourselfMessages: { required },
     sendConnectionStatus: { required },
+    markOnlineOnConnect: { required },
     notifyFailedMessages: { required },
     composingMessage: { required },
     sendReactionAsReply: { required },
@@ -88,13 +94,17 @@ export default {
       this.apiKey = this.inbox.provider_config.api_key;
       this.url = this.inbox.provider_config.url;
       this.ignoreGroupMessages = this.inbox.provider_config.ignore_group_messages;
-      this.ignoreNewsletterMessages = this.inbox.provider_config.ignore_newsletter_messages;
+      this.ignoreNewsletterMessages =
+        this.inbox.provider_config.ignore_newsletter_messages ?? true;
       this.ignoreGroupIndividualReceipts =
-        this.inbox.provider_config.ignore_group_individual_receipts;
-      this.groupOnlyDeliveredStatus = this.inbox.provider_config.group_only_delivered_status;
+        this.inbox.provider_config.ignore_group_individual_receipts ?? true;
+      this.groupOnlyDeliveredStatus =
+        this.inbox.provider_config.group_only_delivered_status ?? true;
       this.ignoreHistoryMessages = this.inbox.provider_config.ignore_history_messages;
-      this.webhookSendNewMessages = this.inbox.provider_config.webhook_send_new_messages;
+      this.webhookSendNewMessages = this.inbox.provider_config.webhook_send_new_messages ?? true;
       this.sendAgentName = this.inbox.provider_config.send_agent_name;
+      this.sendTranscribeAudio = this.inbox.provider_config.send_transcribe_audio ?? true;
+      this.groqApiKey = this.inbox.provider_config.groq_api_key;
       this.readOnReceipt = this.inbox.provider_config.read_on_receipt;
       this.readOnReply = this.inbox.provider_config.read_on_reply;
       this.ignoreBroadcastStatuses = this.inbox.provider_config.ignore_broadcast_statuses;
@@ -102,6 +112,7 @@ export default {
       this.ignoreOwnMessages = this.inbox.provider_config.ignore_own_messages;
       this.ignoreYourselfMessages = this.inbox.provider_config.ignore_yourself_messages;
       this.sendConnectionStatus = this.inbox.provider_config.send_connection_status;
+      this.markOnlineOnConnect = this.inbox.provider_config.mark_online_on_connect ?? true;
       this.notifyFailedMessages = this.inbox.provider_config.notify_failed_messages;
       this.composingMessage = this.inbox.provider_config.composing_message;
       this.sendReactionAsReply = this.inbox.provider_config.send_reaction_as_reply;
@@ -188,6 +199,8 @@ export default {
               ignore_group_messages: this.ignoreGroupMessages,
               webhook_send_new_messages: this.webhookSendNewMessages,
               send_agent_name: this.sendAgentName,
+              send_transcribe_audio: this.sendTranscribeAudio,
+              groq_api_key: this.groqApiKey,
               url: this.url,
               read_on_receipt: this.readOnReceipt,
               read_on_reply: this.readOnReply,
@@ -196,6 +209,7 @@ export default {
               ignore_own_messages: this.ignoreOwnMessages,
               ignore_yourself_messages: this.ignoreYourselfMessages,
               send_connection_status: this.sendConnectionStatus,
+              mark_online_on_connect: this.markOnlineOnConnect,
               notify_failed_messages: this.notifyFailedMessages,
               composing_message: this.composingMessage,
               send_reaction_as_reply: this.sendReactionAsReply,
@@ -270,6 +284,43 @@ export default {
       </div>
 
       <div class="mt-4 mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        {{ $t('INBOX_MGMT.ADD.WHATSAPP.SECTIONS.TRANSCRIPTION') }}
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
+        <label :class="{ error: v$.sendTranscribeAudio.$error }" style="display: flex; align-items: center;">
+          <Switch
+            v-model="sendTranscribeAudio"
+            style="flex: 0 0 auto; margin-right: 10px;"
+          />
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_TRANSCRIBE_AUDIO.LABEL') }}
+          <span v-if="v$.sendTranscribeAudio.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_TRANSCRIBE_AUDIO.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="w-full max-w-3xl pb-6">
+        <label :class="{ error: v$.groqApiKey.$error }">
+          <span>
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.GROQ_API_KEY.LABEL') }}
+          </span>
+          <input
+            v-model.trim="groqApiKey"
+            type="text"
+            :placeholder="$t('INBOX_MGMT.ADD.WHATSAPP.GROQ_API_KEY.PLACEHOLDER')"
+            @blur="v$.groqApiKey.$touch"
+          />
+          <span v-if="v$.groqApiKey.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.GROQ_API_KEY.ERROR') }}
+          </span>
+        </label>
+        <span class="mt-2 block text-sm leading-6 text-slate-500">
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.GROQ_API_KEY.SUBTITLE') }}
+        </span>
+      </div>
+
+      <div class="mt-6 mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400 clear-both">
         {{ $t('INBOX_MGMT.ADD.WHATSAPP.SECTIONS.MESSAGING') }}
       </div>
 
@@ -378,19 +429,6 @@ export default {
       </div>
 
       <div class="w-3/4 pb-4 config-helptext">
-        <label :class="{ error: v$.ignoreNewsletterMessages.$error }" style="display: flex; align-items: center;">
-          <Switch
-            v-model="ignoreNewsletterMessages"
-            style="flex: 0 0 auto; margin-right: 10px;"
-          />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.LABEL') }}
-          <span v-if="v$.ignoreNewsletterMessages.$error" class="message">
-            {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.ERROR') }}
-          </span>
-        </label>
-      </div>
-
-      <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.ignoreBroadcastStatuses.$error }" style="display: flex; align-items: center;">
           <Switch
             v-model="ignoreBroadcastStatuses"
@@ -451,6 +489,19 @@ export default {
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_CONNECTION_STATUS.LABEL') }}
           <span v-if="v$.sendConnectionStatus.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_CONNECTION_STATUS.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
+        <label :class="{ error: v$.markOnlineOnConnect.$error }" style="display: flex; align-items: center;">
+          <Switch
+            v-model="markOnlineOnConnect"
+            style="flex: 0 0 auto; margin-right: 10px;"
+          />
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.MARK_ONLINE_ON_CONNECT.LABEL') }}
+          <span v-if="v$.markOnlineOnConnect.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.MARK_ONLINE_ON_CONNECT.ERROR') }}
           </span>
         </label>
       </div>
@@ -517,9 +568,7 @@ export default {
           :is-loading="uiFlags.isCreating"
           solid
           blue
-          :label="`${$t(
-            'INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_SECTION_UPDATE_BUTTON'
-          )} and ${$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_CONNECT')}`"
+          :label="$t('INBOX_MGMT.ADD.WHATSAPP.WHATSAPP_UPDATE_AND_CONNECT.LABEL')"
           @click="connect = true"
         />
         <NextButton

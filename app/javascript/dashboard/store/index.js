@@ -55,7 +55,6 @@ import captainInboxes from './captain/inboxes';
 import captainBulkActions from './captain/bulkActions';
 import copilotThreads from './captain/copilotThreads';
 import copilotMessages from './captain/copilotMessages';
-import webphone from './modules/webphone';
 import captainScenarios from './captain/scenarios';
 import captainTools from './captain/tools';
 import captainCustomTools from './captain/customTools';
@@ -119,7 +118,6 @@ export default createStore({
     captainBulkActions,
     copilotThreads,
     copilotMessages,
-    webphone,
     captainScenarios,
     captainTools,
     captainCustomTools,
