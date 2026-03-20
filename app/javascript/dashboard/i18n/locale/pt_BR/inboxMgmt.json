@@ -385,6 +385,10 @@
           "PLACEHOLDER": "Marque para enviar webhook para novas mensagens.",
           "ERROR": "Marque para enviar webhook para novas mensagens."
         },
+        "SECTIONS": {
+          "WEBHOOKS": "Webhooks",
+          "MESSAGING": "Configurações de mensagens"
+        },
         "SEND_CONNECTION_STATUS": {
           "LABEL": "Mostrar status da conexão",
           "PLACEHOLDER": "Selecione para mostrar o status da conexão.",

@@ -252,6 +252,27 @@ export default {
         </label>
       </div>
 
+      <div class="mt-4 mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        {{ $t('INBOX_MGMT.ADD.WHATSAPP.SECTIONS.WEBHOOKS') }}
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
+        <label :class="{ error: v$.webhookSendNewMessages.$error }" style="display: flex; align-items: center;">
+          <Switch
+            v-model="webhookSendNewMessages"
+            style="flex: 0 0 auto; margin-right: 10px;"
+          />
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.LABEL') }}
+          <span v-if="v$.webhookSendNewMessages.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="mt-4 mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        {{ $t('INBOX_MGMT.ADD.WHATSAPP.SECTIONS.MESSAGING') }}
+      </div>
+
       <div class="w-3/4 pb-4 config-helptext">
         <label :class="{ error: v$.sendAgentName.$error }" style="display: flex; align-items: center;">
           <Switch
@@ -357,14 +378,14 @@ export default {
       </div>
 
       <div class="w-3/4 pb-4 config-helptext">
-        <label :class="{ error: v$.webhookSendNewMessages.$error }" style="display: flex; align-items: center;">
+        <label :class="{ error: v$.ignoreNewsletterMessages.$error }" style="display: flex; align-items: center;">
           <Switch
-            v-model="webhookSendNewMessages"
+            v-model="ignoreNewsletterMessages"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.LABEL') }}
-          <span v-if="v$.webhookSendNewMessages.$error" class="message">
-            {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.ERROR') }}
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.LABEL') }}
+          <span v-if="v$.ignoreNewsletterMessages.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.ERROR') }}
           </span>
         </label>
       </div>

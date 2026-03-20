@@ -321,6 +321,10 @@
           "PLACEHOLDER": "Check to send new messages through webhook.",
           "ERROR": "Check to send new messages through webhook."
         },
+        "SECTIONS": {
+          "WEBHOOKS": "Webhooks",
+          "MESSAGING": "Messaging settings"
+        },
         "SEND_CONNECTION_STATUS": {
           "LABEL": "Show connection status",
           "PLACEHOLDER": "Select to show connection status.",
