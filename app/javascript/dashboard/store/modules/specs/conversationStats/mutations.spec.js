@@ -19,5 +19,16 @@ describe('#mutations', () => {
         updatedOn: expect.any(Date),
       });
     });
+
+    it('preserves waiting count when meta does not include it', () => {
+      const state = { waitingCount: 7 };
+      mutations[types.SET_CONV_TAB_META](state, {
+        mine_count: 1,
+        unassigned_count: 1,
+        all_count: 2,
+      });
+
+      expect(state.waitingCount).toBe(7);
+    });
   });
 });

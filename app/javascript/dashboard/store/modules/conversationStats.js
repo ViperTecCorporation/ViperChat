@@ -74,6 +74,10 @@ export const mutations = {
       requestedAssigneeType === 'internal' ||
       requestedConversationType === 'internal' ||
       requestedInboxChannelType === 'Channel::Internal';
+    const nextWaitingCount =
+      waitingCount === undefined || waitingCount === null
+        ? $state.waitingCount
+        : waitingCount;
     const nextInternalCount =
       internalCount === undefined || internalCount === null
         ? $state.internalCount
@@ -88,7 +92,7 @@ export const mutations = {
     $state.mineCount = mineCount || 0;
     $state.allCount = allCount || 0;
     $state.unAssignedCount = unAssignedCount || 0;
-    $state.waitingCount = waitingCount || 0;
+    $state.waitingCount = nextWaitingCount || 0;
     $state.internalCount = nextInternalCount || 0;
     $state.updatedOn = new Date();
   },
