@@ -84,12 +84,22 @@ class FixUnoDefaultFeaturesAgain < ActiveRecord::Migration[7.0]
   end
 
   def enable_features_on_existing_accounts
+    features_to_enable = available_features(FEATURES_TO_ENABLE)
+    features_to_disable = available_features(FEATURES_TO_DISABLE)
+
     Account.find_in_batches(batch_size: 100) do |accounts|
       accounts.each do |account|
-        account.enable_features!(*FEATURES_TO_ENABLE)
-        account.disable_features!(*FEATURES_TO_DISABLE)
+        account.enable_features!(*features_to_enable)
+        account.disable_features!(*features_to_disable)
       end
     end
+  end
+
+  def available_features(feature_names)
+    return feature_names if column_exists?(:accounts, :feature_flags_2)
+
+    unavailable_feature_names = Featurable::SECONDARY_FEATURES.map { |feature| feature.to_s.delete_prefix('feature_') }
+    feature_names - unavailable_feature_names
   end
 
   def update_pricing_plan_configs
