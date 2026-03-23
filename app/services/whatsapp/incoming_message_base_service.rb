@@ -217,7 +217,7 @@ class Whatsapp::IncomingMessageBaseService
 
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
-    @sender = external_echo_message? ? nil : contact_inbox.contact
+    @sender = webhook_outgoing_message? ? nil : contact_inbox.contact
 
     # Update existing contact name for LID-suffix placeholders or low-quality names
     update_contact_with_profile_name(contact_params)
@@ -272,18 +272,18 @@ class Whatsapp::IncomingMessageBaseService
   def create_message(message, source_id: nil)
     timestamp = message[:timestamp] ? Time.at(message[:timestamp].to_i, microsecond, :microsecond, in: 'UTC') : Time.current.utc
     Rails.logger.info("[WHATSAPP] Incoming message type=#{message_type} content_type=#{message_type == 'sticker' ? 'sticker' : 'nil'} source_id=#{message[:id]}")
-    content_attrs = external_echo_message? ? { external_echo: true } : {}
+    content_attrs = webhook_outgoing_message? ? { external_echo: true } : {}
     content_attrs[:in_reply_to_external_id] = @in_reply_to_external_id if @in_reply_to_external_id.present?
 
     @message = @conversation.messages.build(
       content: message_content(message),
       account_id: @inbox.account_id,
       inbox_id: @inbox.id,
-      message_type: external_echo_message? ? :outgoing : @message_type,
+      message_type: webhook_outgoing_message? ? :outgoing : @message_type,
       # Set status to :delivered for echo messages to prevent SendReplyJob from trying to send them
-      status: external_echo_message? ? :delivered : :sent,
+      status: webhook_outgoing_message? ? :delivered : :sent,
       content_type: message_type == 'sticker' ? 'sticker' : nil,
-      sender: external_echo_message? ? nil : @sender,
+      sender: webhook_outgoing_message? ? nil : @sender,
       source_id: (source_id || message[:id]).to_s,
       content_attributes: content_attrs,
       created_at: timestamp,
@@ -291,8 +291,8 @@ class Whatsapp::IncomingMessageBaseService
     @message
   end
 
-  def external_echo_message?
-    outgoing_echo
+  def webhook_outgoing_message?
+    outgoing_echo || @message_type == :outgoing
   end
 
   def attach_contact(contact)
