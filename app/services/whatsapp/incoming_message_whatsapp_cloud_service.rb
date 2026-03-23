@@ -72,6 +72,10 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     message[:from] == @processed_params['metadata']['display_phone_number'].sub('+', '')
   end
 
+  def external_echo_message?
+    outgoing_echo || outgoing_message_type?
+  end
+
   def activity_message_type?
     message = @processed_params[:messages]&.first
     return if message.blank?
