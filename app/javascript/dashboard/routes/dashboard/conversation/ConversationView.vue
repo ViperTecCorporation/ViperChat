@@ -79,15 +79,9 @@ export default {
       currentChat: 'getSelectedChat',
     }),
     showConversationList() {
-      if (this.isResizableLayout) {
-        return true;
-      }
       return this.isOnExpandedLayout ? !this.conversationId : true;
     },
     showMessageView() {
-      if (this.isResizableLayout) {
-        return true;
-      }
       return this.conversationId ? true : !this.isOnExpandedLayout;
     },
     isOnExpandedLayout() {
@@ -102,7 +96,7 @@ export default {
       return this.viewportWidth >= wootConstants.SMALL_SCREEN_BREAKPOINT;
     },
     isResizableLayout() {
-      return this.isOnExpandedLayout && this.isDesktop;
+      return !this.isOnExpandedLayout && this.isDesktop;
     },
 
     shouldShowSidebar() {
@@ -161,7 +155,7 @@ export default {
     },
     clampListPanelWidth(width) {
       const minWidth = 320;
-      const reservedConversationWidth = this.shouldShowSidebar ? 720 : 480;
+      const reservedConversationWidth = this.shouldShowSidebar ? 720 : 420;
       const maxAvailableWidth = Math.max(
         minWidth,
         this.viewportWidth - reservedConversationWidth

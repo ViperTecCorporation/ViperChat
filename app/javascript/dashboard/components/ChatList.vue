@@ -966,10 +966,10 @@ watch(conversationFilters, (newVal, oldVal) => {
     class="flex flex-col flex-shrink-0 conversations-list-wrap bg-n-surface-1 w-full max-w-full"
     :class="[
       { hidden: !showConversationList },
-      isOnExpandedLayout ? 'basis-full sm:basis-auto' : 'w-full sm:w-[340px] 2xl:w-[412px]',
+      isOnExpandedLayout ? 'basis-full' : 'w-full sm:basis-auto',
     ]"
     :style="
-      isOnExpandedLayout && showConversationList
+      !isOnExpandedLayout && showConversationList
         ? { width: `${listPanelWidth}px`, minWidth: `${listPanelWidth}px` }
         : undefined
     "
