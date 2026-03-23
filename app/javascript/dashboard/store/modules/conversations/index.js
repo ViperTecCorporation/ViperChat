@@ -296,6 +296,17 @@ export const mutations = {
     } else {
       chat.messages.push(message);
       chat.timestamp = message.created_at;
+      if (!message.private) {
+        if (message.message_type === wootConstants.MESSAGE_TYPE.OUTGOING) {
+          chat.waiting_since = null;
+        }
+        if (
+          message.message_type === wootConstants.MESSAGE_TYPE.INCOMING &&
+          !chat.waiting_since
+        ) {
+          chat.waiting_since = message.created_at;
+        }
+      }
       const { conversation: { unread_count: unreadCount = 0 } = {} } = message;
       chat.unread_count = unreadCount;
       if (selectedChatId === conversationId) {

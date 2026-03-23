@@ -5,6 +5,7 @@ import {
   filterByTeam,
   filterByLabel,
   filterByUnattended,
+  filterByWaiting,
 } from '../../conversations/helpers';
 
 const conversationList = [
@@ -165,6 +166,50 @@ describe('#applyPageFilters', () => {
       expect(applyPageFilters(conversationList[4], filters)).toEqual(true);
     });
   });
+
+  describe('#filter-waiting', () => {
+    it('returns true for waiting tab when conversation is still waiting', () => {
+      const filters = {
+        status: 'open',
+        assigneeType: 'waiting',
+      };
+      expect(
+        applyPageFilters(
+          {
+            id: 55,
+            inbox_id: 7,
+            status: 'open',
+            meta: {},
+            labels: [],
+            waiting_since: 1710000000,
+            first_reply_created_at: 1709999999,
+          },
+          filters
+        )
+      ).toEqual(true);
+    });
+
+    it('returns false for waiting tab when agent already replied', () => {
+      const filters = {
+        status: 'open',
+        assigneeType: 'waiting',
+      };
+      expect(
+        applyPageFilters(
+          {
+            id: 56,
+            inbox_id: 7,
+            status: 'open',
+            meta: {},
+            labels: [],
+            waiting_since: null,
+            first_reply_created_at: 1710000000,
+          },
+          filters
+        )
+      ).toEqual(false);
+    });
+  });
 });
 
 describe('#filterByInbox', () => {
@@ -213,5 +258,15 @@ describe('#filterByUnattended', () => {
   });
   it('returns true if conversation type is unattended and has first reply', () => {
     expect(filterByUnattended(true, 'mentions', 123)).toEqual(true);
+  });
+});
+
+describe('#filterByWaiting', () => {
+  it('returns true if waiting tab and conversation is still waiting', () => {
+    expect(filterByWaiting(true, 'waiting', 123, 456)).toEqual(true);
+  });
+
+  it('returns false if waiting tab and conversation is no longer waiting', () => {
+    expect(filterByWaiting(true, 'waiting', 123, null)).toEqual(false);
   });
 });

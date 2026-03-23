@@ -126,6 +126,7 @@ describe('#mutations', () => {
         conversation_id: 1,
         content: 'Test message',
         created_at: 1602256198,
+        message_type: 0,
       });
       expect(state.allConversations).toEqual([
         {
@@ -135,10 +136,12 @@ describe('#mutations', () => {
               conversation_id: 1,
               content: 'Test message',
               created_at: 1602256198,
+              message_type: 0,
             },
           ],
           unread_count: 0,
           timestamp: 1602256198,
+          waiting_since: 1602256198,
         },
       ]);
       expect(emitter.emit).not.toHaveBeenCalled();
@@ -154,6 +157,7 @@ describe('#mutations', () => {
         conversation_id: 1,
         content: 'Test message',
         created_at: 1602256198,
+        message_type: 0,
       });
       expect(state.allConversations).toEqual([
         {
@@ -163,10 +167,12 @@ describe('#mutations', () => {
               conversation_id: 1,
               content: 'Test message',
               created_at: 1602256198,
+              message_type: 0,
             },
           ],
           unread_count: 0,
           timestamp: 1602256198,
+          waiting_since: 1602256198,
         },
       ]);
       expect(emitter.emit).toHaveBeenCalledWith('SCROLL_TO_MESSAGE');
@@ -207,6 +213,21 @@ describe('#mutations', () => {
         },
       ]);
       expect(emitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('clears waiting_since when the agent sends an outgoing message', () => {
+      const state = {
+        allConversations: [{ id: 1, messages: [], waiting_since: 1602256100 }],
+        selectedChatId: -1,
+      };
+      mutations[types.ADD_MESSAGE](state, {
+        conversation_id: 1,
+        content: 'Agent reply',
+        created_at: 1602256198,
+        message_type: 1,
+      });
+
+      expect(state.allConversations[0].waiting_since).toEqual(null);
     });
   });
 

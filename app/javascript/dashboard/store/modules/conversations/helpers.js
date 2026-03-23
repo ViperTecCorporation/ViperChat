@@ -53,6 +53,17 @@ export const filterByUnattended = (
     : shouldFilter;
 };
 
+export const filterByWaiting = (
+  shouldFilter,
+  assigneeType,
+  firstReplyOn,
+  waitingSince
+) => {
+  return assigneeType === 'waiting'
+    ? (!firstReplyOn || !!waitingSince) && shouldFilter
+    : shouldFilter;
+};
+
 const filterByInternal = (
   shouldFilter,
   conversationType,
@@ -82,7 +93,8 @@ const filterByInternal = (
 };
 
 export const applyPageFilters = (conversation, filters) => {
-  const { inboxId, status, labels = [], teamId, conversationType } = filters;
+  const { inboxId, status, labels = [], teamId, conversationType, assigneeType } =
+    filters;
   const {
     status: chatStatus,
     inbox_id: chatInboxId,
@@ -100,6 +112,12 @@ export const applyPageFilters = (conversation, filters) => {
   shouldFilter = filterByUnattended(
     shouldFilter,
     conversationType,
+    firstReplyOn,
+    waitingSince
+  );
+  shouldFilter = filterByWaiting(
+    shouldFilter,
+    assigneeType,
     firstReplyOn,
     waitingSince
   );
