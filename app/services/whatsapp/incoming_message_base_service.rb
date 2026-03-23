@@ -280,8 +280,9 @@ class Whatsapp::IncomingMessageBaseService
       account_id: @inbox.account_id,
       inbox_id: @inbox.id,
       message_type: webhook_outgoing_message? ? :outgoing : @message_type,
-      # Set status to :delivered for echo messages to prevent SendReplyJob from trying to send them
-      status: webhook_outgoing_message? ? :delivered : :sent,
+      # Keep real status progression for device-sent outgoing messages.
+      # Only classic echo events should be forced to delivered immediately.
+      status: outgoing_echo ? :delivered : :sent,
       content_type: message_type == 'sticker' ? 'sticker' : nil,
       sender: webhook_outgoing_message? ? nil : @sender,
       source_id: (source_id || message[:id]).to_s,
