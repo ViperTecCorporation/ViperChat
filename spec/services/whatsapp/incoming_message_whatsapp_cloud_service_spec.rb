@@ -107,6 +107,43 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
       end
     end
 
+    context 'when webhook payload contains an outgoing message' do
+      let(:outgoing_params) do
+        {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                metadata: {
+                  display_phone_number: whatsapp_channel.phone_number.delete('+'),
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                contacts: [{ profile: { name: 'Sojan Jose' }, wa_id: '2423423243' }],
+                messages: [{
+                  from: whatsapp_channel.phone_number.delete('+'),
+                  id: 'wamid.OUTGOING_MESSAGE_ID',
+                  text: { body: 'Mensagem enviada pelo atendimento' },
+                  timestamp: '1770407829',
+                  type: 'text'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+      end
+
+      it 'stores it as outgoing external echo without contact as sender' do
+        described_class.new(inbox: whatsapp_channel.inbox, params: outgoing_params).perform
+
+        message = whatsapp_channel.inbox.messages.last
+        expect(message.message_type).to eq('outgoing')
+        expect(message.sender).to be_nil
+        expect(message.status).to eq('delivered')
+        expect(message.content_attributes['external_echo']).to be true
+      end
+    end
+
     context 'when message is a reply (has context)' do
       let(:reply_params) do
         {
