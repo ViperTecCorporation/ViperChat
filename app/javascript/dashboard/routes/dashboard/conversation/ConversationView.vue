@@ -2,9 +2,11 @@
 import { mapGetters } from 'vuex';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { LocalStorage } from 'shared/helpers/localStorage';
 import ChatList from '../../../components/ChatList.vue';
 import ConversationBox from '../../../components/widgets/conversation/ConversationBox.vue';
 import wootConstants from 'dashboard/constants/globals';
+import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import CmdBarConversationSnooze from 'dashboard/routes/dashboard/commands/CmdBarConversationSnooze.vue';
 import { emitter } from 'shared/helpers/mitt';
@@ -66,6 +68,9 @@ export default {
   data() {
     return {
       showSearchModal: false,
+      listPanelWidth: 412,
+      isResizingLayout: false,
+      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 0,
     };
   },
   computed: {
@@ -74,9 +79,15 @@ export default {
       currentChat: 'getSelectedChat',
     }),
     showConversationList() {
+      if (this.isResizableLayout) {
+        return true;
+      }
       return this.isOnExpandedLayout ? !this.conversationId : true;
     },
     showMessageView() {
+      if (this.isResizableLayout) {
+        return true;
+      }
       return this.conversationId ? true : !this.isOnExpandedLayout;
     },
     isOnExpandedLayout() {
@@ -86,6 +97,12 @@ export default {
       const { conversation_display_type: conversationDisplayType = CONDENSED } =
         this.uiSettings;
       return conversationDisplayType !== CONDENSED;
+    },
+    isDesktop() {
+      return this.viewportWidth >= wootConstants.SMALL_SCREEN_BREAKPOINT;
+    },
+    isResizableLayout() {
+      return this.isOnExpandedLayout && this.isDesktop;
     },
 
     shouldShowSidebar() {
@@ -116,14 +133,70 @@ export default {
   mounted() {
     this.$store.dispatch('agents/get');
     this.$store.dispatch('portals/index');
+    this.initializeResizableLayout();
     this.initialize();
     this.$watch('$store.state.route', () => this.initialize());
     this.$watch('chatList.length', () => {
       this.setActiveChat();
     });
+    window.addEventListener('resize', this.handleWindowResize);
+    window.addEventListener('mousemove', this.handleResizeMouseMove);
+    window.addEventListener('mouseup', this.stopResizeLayout);
+  },
+
+  beforeUnmount() {
+    window.removeEventListener('resize', this.handleWindowResize);
+    window.removeEventListener('mousemove', this.handleResizeMouseMove);
+    window.removeEventListener('mouseup', this.stopResizeLayout);
   },
 
   methods: {
+    initializeResizableLayout() {
+      const storedWidth = LocalStorage.get(
+        LOCAL_STORAGE_KEYS.CONVERSATION_LIST_PANEL_WIDTH
+      );
+      if (Number.isFinite(storedWidth)) {
+        this.listPanelWidth = this.clampListPanelWidth(storedWidth);
+      }
+    },
+    clampListPanelWidth(width) {
+      const minWidth = 320;
+      const reservedConversationWidth = this.shouldShowSidebar ? 720 : 480;
+      const maxAvailableWidth = Math.max(
+        minWidth,
+        this.viewportWidth - reservedConversationWidth
+      );
+      const maxWidth = Math.min(720, maxAvailableWidth);
+      return Math.max(minWidth, Math.min(width, maxWidth));
+    },
+    persistListPanelWidth(width) {
+      LocalStorage.set(LOCAL_STORAGE_KEYS.CONVERSATION_LIST_PANEL_WIDTH, width);
+    },
+    handleWindowResize() {
+      this.viewportWidth = window.innerWidth;
+      if (this.isResizableLayout) {
+        this.listPanelWidth = this.clampListPanelWidth(this.listPanelWidth);
+      }
+    },
+    startResizeLayout() {
+      if (!this.isResizableLayout) {
+        return;
+      }
+      this.isResizingLayout = true;
+    },
+    handleResizeMouseMove(event) {
+      if (!this.isResizingLayout || !this.isResizableLayout) {
+        return;
+      }
+      this.listPanelWidth = this.clampListPanelWidth(event.clientX);
+    },
+    stopResizeLayout() {
+      if (!this.isResizingLayout) {
+        return;
+      }
+      this.isResizingLayout = false;
+      this.persistListPanelWidth(this.listPanelWidth);
+    },
     onConversationLoad() {
       this.fetchConversationIfUnavailable();
     },
@@ -204,7 +277,16 @@ export default {
       :conversation-type="conversationType"
       :folders-id="foldersId"
       :is-on-expanded-layout="isOnExpandedLayout"
+      :list-panel-width="listPanelWidth"
       @conversation-load="onConversationLoad"
+    />
+    <button
+      v-if="isResizableLayout"
+      type="button"
+      class="hidden sm:flex w-1 shrink-0 cursor-col-resize bg-n-alpha-2 hover:bg-n-brand/40 active:bg-n-brand/50 transition-colors"
+      :class="{ 'bg-n-brand/50': isResizingLayout }"
+      :aria-label="$t('CONVERSATION.SWITCH_VIEW_LAYOUT')"
+      @mousedown.prevent="startResizeLayout"
     />
     <ConversationBox
       v-if="showMessageView"
