@@ -44,6 +44,10 @@ RSpec.describe AutomationRule do
           {
             action_name: :assign_agent,
             action_params: [1]
+          },
+          {
+            action_name: :remove_participants,
+            action_params: []
           }
         ]
       }.with_indifferent_access

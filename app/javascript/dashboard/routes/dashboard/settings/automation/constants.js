@@ -357,6 +357,10 @@ export const AUTOMATIONS = {
         name: 'SEND_MESSAGE',
       },
       {
+        key: 'remove_participants',
+        name: 'REMOVE_PARTICIPANTS',
+      },
+      {
         key: 'send_email_transcript',
         name: 'SEND_EMAIL_TRANSCRIPT',
       },
@@ -703,6 +707,11 @@ export const AUTOMATION_ACTION_TYPES = [
     key: 'send_message',
     label: 'SEND_MESSAGE',
     inputType: 'textarea',
+  },
+  {
+    key: 'remove_participants',
+    label: 'REMOVE_PARTICIPANTS',
+    inputType: null,
   },
   {
     key: 'add_private_note',

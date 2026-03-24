@@ -109,6 +109,7 @@ export const getActionOptions = ({
     send_email_to_team: teams,
     add_label: generateConditionOptions(labels, 'title'),
     remove_label: generateConditionOptions(labels, 'title'),
+    remove_participants: [],
     change_priority: priorityOptions,
     add_sla: slaPolicies,
   };

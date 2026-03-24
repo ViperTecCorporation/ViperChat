@@ -137,6 +137,24 @@ RSpec.describe AutomationRules::ActionService do
       end
     end
 
+    describe '#perform with remove_participants action' do
+      let(:participant) { create(:user, account: account) }
+
+      before do
+        create(:inbox_member, inbox: conversation.inbox, user: participant)
+        create(:conversation_participant, conversation: conversation, user: participant, account: account)
+        rule.update!(actions: [{ action_name: 'remove_participants', action_params: [] }])
+      end
+
+      it 'will remove all conversation participants' do
+        expect(conversation.conversation_participants.count).to eq(1)
+
+        described_class.new(rule, account, conversation).perform
+
+        expect(conversation.reload.conversation_participants).to be_empty
+      end
+    end
+
     describe '#perform with remove_label action' do
       before do
         conversation.add_labels(%w[bug feature support])

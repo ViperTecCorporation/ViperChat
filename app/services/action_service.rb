@@ -40,6 +40,10 @@ class ActionService
     @conversation.reload.add_labels(labels)
   end
 
+  def remove_participants(_params)
+    @conversation.conversation_participants.destroy_all
+  end
+
   def assign_agent(agent_ids = [])
     return @conversation.update!(assignee_id: nil) if agent_ids[0] == 'nil'
 

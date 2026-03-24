@@ -119,6 +119,12 @@ describe('getActionOptions', () => {
     );
   });
 
+  it('returns an empty list for remove participants', () => {
+    expect(helpers.getActionOptions({ type: 'remove_participants' })).toEqual(
+      []
+    );
+  });
+
   it('adds None option when addNoneToListFn is provided', () => {
     const mockAddNoneToListFn = list => [
       { id: 'nil', name: 'None' },

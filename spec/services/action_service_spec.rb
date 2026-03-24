@@ -40,6 +40,25 @@ describe ActionService do
     end
   end
 
+  describe '#remove_participants' do
+    let(:conversation) { create(:conversation) }
+    let(:action_service) { described_class.new(conversation) }
+    let(:participant) { create(:user, account: conversation.account) }
+
+    before do
+      create(:inbox_member, inbox: conversation.inbox, user: participant)
+      create(:conversation_participant, conversation: conversation, user: participant, account: conversation.account)
+    end
+
+    it 'removes all conversation participants' do
+      expect(conversation.conversation_participants.count).to eq(1)
+
+      action_service.remove_participants(nil)
+
+      expect(conversation.reload.conversation_participants).to be_empty
+    end
+  end
+
   describe '#assign_agent' do
     let(:agent) { create(:user, account: account, role: :agent) }
     let(:inbox_member) { create(:inbox_member, inbox: conversation.inbox, user: agent) }
