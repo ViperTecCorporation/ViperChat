@@ -83,4 +83,22 @@ describe('validateAutomation', () => {
     const errors = validateAutomation(automationWithNoParamAction);
     expect(errors).toEqual({});
   });
+
+  it('should not require action params for remove participants', () => {
+    const automationWithNoParamAction = {
+      name: 'Test',
+      description: 'Test',
+      event_name: 'conversation_resolved',
+      conditions: [
+        {
+          attribute_key: 'status',
+          filter_operator: 'equal_to',
+          values: 'resolved',
+        },
+      ],
+      actions: [{ action_name: 'remove_participants', action_params: [] }],
+    };
+    const errors = validateAutomation(automationWithNoParamAction);
+    expect(errors).toEqual({});
+  });
 });

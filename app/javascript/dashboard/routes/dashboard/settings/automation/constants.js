@@ -101,6 +101,10 @@ export const AUTOMATIONS = {
         name: 'SEND_MESSAGE',
       },
       {
+        key: 'remove_participants',
+        name: 'REMOVE_PARTICIPANTS',
+      },
+      {
         key: 'send_email_transcript',
         name: 'SEND_EMAIL_TRANSCRIPT',
       },
@@ -223,6 +227,10 @@ export const AUTOMATIONS = {
       {
         key: 'send_message',
         name: 'SEND_MESSAGE',
+      },
+      {
+        key: 'remove_participants',
+        name: 'REMOVE_PARTICIPANTS',
       },
       {
         key: 'send_email_transcript',
@@ -485,6 +493,10 @@ export const AUTOMATIONS = {
       {
         key: 'send_message',
         name: 'SEND_MESSAGE',
+      },
+      {
+        key: 'remove_participants',
+        name: 'REMOVE_PARTICIPANTS',
       },
       {
         key: 'send_email_transcript',
