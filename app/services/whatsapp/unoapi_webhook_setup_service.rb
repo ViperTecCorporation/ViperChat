@@ -74,11 +74,13 @@ class Whatsapp::UnoapiWebhookSetupService
   def params(whatsapp_channel, phone_number)
     provider_config = whatsapp_channel.provider_config
     callback_url = webhook_callback_url(phone_number)
-    send_new_messages = provider_config.key?('webhook_send_new_messages') ? provider_config['webhook_send_new_messages'] : true
     send_transcribe_audio = provider_config.key?('send_transcribe_audio') ? provider_config['send_transcribe_audio'] : true
     label = "#{whatsapp_channel.inbox.name} - account #{whatsapp_channel.account_id}"
 
     {
+      autoConnect: true,
+      useRedis: true,
+      useS3: true,
       ignoreGroupMessages: provider_config['ignore_group_messages'],
       ignoreNewsletterMessages: provider_config['ignore_newsletter_messages'],
       ignoreGroupIndividualReceipts: provider_config['ignore_group_individual_receipts'],
@@ -103,10 +105,9 @@ class Whatsapp::UnoapiWebhookSetupService
       label: label,
       webhooks: [
         {
-          sendNewMessages: send_new_messages,
+          sendNewMessages: true,
           id: 'default',
           urlAbsolute: callback_url,
-          url: callback_url,
           token: provider_config['webhook_verify_token'],
           header: :Authorization,
           sendGroupMessages: true,
