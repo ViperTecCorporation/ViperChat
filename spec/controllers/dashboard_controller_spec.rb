@@ -40,3 +40,29 @@ describe '/app/login', type: :request do
     end
   end
 end
+
+RSpec.describe 'Dashboard', type: :request do
+  describe 'GET /' do
+    context 'when installation has no accounts or super admins' do
+      it 'redirects to installation onboarding' do
+        expect(Account.count).to eq(0)
+        expect(SuperAdmin.count).to eq(0)
+
+        get '/'
+
+        expect(response).to redirect_to('/installation/onboarding')
+      end
+    end
+
+    context 'when installation is already configured' do
+      let!(:super_admin) { create(:super_admin) }
+      let!(:account) { create(:account) }
+
+      it 'does not redirect to installation onboarding' do
+        get '/'
+
+        expect(response).not_to redirect_to('/installation/onboarding')
+      end
+    end
+  end
+end

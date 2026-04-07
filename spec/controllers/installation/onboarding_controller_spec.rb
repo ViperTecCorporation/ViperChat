@@ -1,14 +1,25 @@
 require 'rails_helper'
 
 RSpec.describe 'Installation::Onboarding API', type: :request do
-  let(:super_admin) { create(:super_admin) }
-
   describe 'GET /installation/onboarding' do
     context 'when CHATWOOT_INSTALLATION_ONBOARDING redis key is not set' do
-      it 'redirects back' do
+      let!(:super_admin) { create(:super_admin) }
+
+      it 'redirects back when installation is already configured' do
         expect(Redis::Alfred.get(Redis::Alfred::CHATWOOT_INSTALLATION_ONBOARDING)).to be_nil
         get '/installation/onboarding'
         expect(response).to have_http_status(:redirect)
+      end
+    end
+
+    context 'when CHATWOOT_INSTALLATION_ONBOARDING redis key is not set and installation has no accounts or super admins' do
+      it 'returns onboarding page' do
+        expect(Account.count).to eq(0)
+        expect(SuperAdmin.count).to eq(0)
+
+        get '/installation/onboarding'
+
+        expect(response).to have_http_status(:success)
       end
     end
 

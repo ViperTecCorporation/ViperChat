@@ -231,4 +231,21 @@ describe ActionCableListener do
       listener.conversation_updated(event)
     end
   end
+
+  describe '#conversation_status_changed' do
+    let(:event_name) { :'conversation.status_changed' }
+    let!(:event) { Events::Base.new(event_name, Time.zone.now, conversation: conversation, user: agent, is_private: false) }
+
+    it 'sends status updates to inbox members, account admins and the contact' do
+      expect(conversation.inbox.reload.inbox_members.count).to eq(1)
+
+      expect(ActionCableBroadcastJob).to receive(:perform_later).with(
+        [agent.pubsub_token, admin.pubsub_token, conversation.contact_inbox.pubsub_token],
+        'conversation.status_changed',
+        conversation.push_event_data.merge(account_id: account.id)
+      )
+
+      listener.conversation_status_changed(event)
+    end
+  end
 end

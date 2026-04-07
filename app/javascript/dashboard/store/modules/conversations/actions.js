@@ -342,7 +342,7 @@ const actions = {
   },
 
   toggleStatus: async (
-    { commit },
+    { commit, dispatch, state },
     { conversationId, status, snoozedUntil = null, customAttributes = null }
   ) => {
     try {
@@ -374,6 +374,9 @@ const actions = {
         conversationId,
         status: updatedStatus,
         snoozedUntil: updatedSnoozedUntil,
+      });
+      dispatch('conversationStats/get', state.conversationFilters || {}, {
+        root: true,
       });
     } catch (error) {
       // Handle error

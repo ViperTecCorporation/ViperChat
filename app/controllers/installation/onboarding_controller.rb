@@ -38,6 +38,9 @@ class Installation::OnboardingController < ApplicationController
   end
 
   def ensure_installation_onboarding
-    redirect_to '/' unless ::Redis::Alfred.get(::Redis::Alfred::CHATWOOT_INSTALLATION_ONBOARDING)
+    return if ::Redis::Alfred.get(::Redis::Alfred::CHATWOOT_INSTALLATION_ONBOARDING)
+    return if Account.none? && SuperAdmin.none?
+
+    redirect_to '/'
   end
 end
