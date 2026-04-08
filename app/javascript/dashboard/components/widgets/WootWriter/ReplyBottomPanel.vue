@@ -128,7 +128,6 @@ export default {
     },
   },
   emits: [
-    'replaceText',
     'toggleInsertArticle',
     'toggleStickerPicker',
     'openContactPicker',
