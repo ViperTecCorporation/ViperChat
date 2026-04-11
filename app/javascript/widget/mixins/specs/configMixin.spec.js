@@ -21,7 +21,7 @@ const preChatFields = [
   },
 ];
 
-global.viperchatWebChannel = {
+global.chatwootWebChannel = {
   avatarUrl: 'https://test.url',
   hasAConnectedAgentBot: 'AgentBot',
   enabledFeatures: [
@@ -40,7 +40,7 @@ describe('configMixin', () => {
       mixins: [configMixin],
       data() {
         return {
-          channelConfig: reactive(global.viperchatWebChannel),
+          channelConfig: reactive(global.chatwootWebChannel),
         };
       },
       template: '<div />', // Render a simple div as the template

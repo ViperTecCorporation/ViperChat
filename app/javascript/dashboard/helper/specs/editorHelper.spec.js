@@ -17,8 +17,9 @@ import {
   stripUnsupportedFormatting,
   stripInlineBase64Images,
 } from '../editorHelper';
-import { EditorState } from '@viperchat/prosemirror-schema';
-import { EditorView } from '@viperchat/prosemirror-schema';
+import { EditorState } from '@chatwoot/prosemirror-schema';
+import { EditorView } from '@chatwoot/prosemirror-schema';
+import { FORMATTING } from 'dashboard/constants/editor';
 import { Schema } from 'prosemirror-model';
 
 // Define a basic ProseMirror schema

@@ -11,7 +11,7 @@ describe('#IFrameHelper', () => {
     it('returns if the event is valid', () => {
       expect(
         IFrameHelper.isAValidEvent({
-          data: 'viperchat-widget:{"event":"config-set","locale":"fr","position":"left","hideMessageBubble":false,"showPopoutButton":true}',
+          data: 'chatwoot-widget:{"event":"config-set","locale":"fr","position":"left","hideMessageBubble":false,"showPopoutButton":true}',
         })
       ).toEqual(true);
       expect(
@@ -25,7 +25,7 @@ describe('#IFrameHelper', () => {
     it('returns parsed message', () => {
       expect(
         IFrameHelper.getMessage({
-          data: 'viperchat-widget:{"event":"config-set","locale":"fr","position":"left","hideMessageBubble":false,"showPopoutButton":true}',
+          data: 'chatwoot-widget:{"event":"config-set","locale":"fr","position":"left","hideMessageBubble":false,"showPopoutButton":true}',
         })
       ).toEqual({
         event: 'config-set',

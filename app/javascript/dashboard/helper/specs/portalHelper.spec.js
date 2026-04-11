@@ -7,31 +7,31 @@ import {
 describe('PortalHelper', () => {
   describe('buildPortalURL', () => {
     it('returns the correct url', () => {
-      window.viperchatConfig = {
+      window.chatwootConfig = {
         hostURL: 'https://app.viperchat.com',
         helpCenterURL: 'https://help.viperchat.com',
       };
       expect(buildPortalURL('handbook')).toEqual(
         'https://help.viperchat.com/hc/handbook'
       );
-      window.viperchatConfig = {};
+      window.chatwootConfig = {};
     });
   });
 
   describe('buildPortalArticleURL', () => {
     it('returns the correct url', () => {
-      window.viperchatConfig = {
+      window.chatwootConfig = {
         hostURL: 'https://app.viperchat.com',
         helpCenterURL: 'https://help.viperchat.com',
       };
       expect(
         buildPortalArticleURL('handbook', 'culture', 'fr', 'article-slug')
       ).toEqual('https://help.viperchat.com/hc/handbook/articles/article-slug');
-      window.viperchatConfig = {};
+      window.chatwootConfig = {};
     });
 
     it('returns the correct url with custom domain', () => {
-      window.viperchatConfig = {
+      window.chatwootConfig = {
         hostURL: 'https://app.viperchat.com',
         helpCenterURL: 'https://help.viperchat.com',
       };
@@ -47,7 +47,7 @@ describe('PortalHelper', () => {
     });
 
     it('handles https in custom domain correctly', () => {
-      window.viperchatConfig = {
+      window.chatwootConfig = {
         hostURL: 'https://app.viperchat.com',
         helpCenterURL: 'https://help.viperchat.com',
       };
@@ -63,7 +63,7 @@ describe('PortalHelper', () => {
     });
 
     it('uses hostURL when helpCenterURL is not available', () => {
-      window.viperchatConfig = {
+      window.chatwootConfig = {
         hostURL: 'https://app.viperchat.com',
         helpCenterURL: '',
       };

@@ -16,6 +16,7 @@ describe('#mutations', () => {
         unAssignedCount: 1,
         waitingCount: 2,
         allCount: 2,
+        internalCount: 0,
         updatedOn: expect.any(Date),
       });
     });
