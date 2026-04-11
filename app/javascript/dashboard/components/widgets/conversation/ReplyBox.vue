@@ -1526,7 +1526,6 @@ export default {
         @toggle-sticker-picker="showStickerPickerModal"
         @select-whatsapp-template="openWhatsappTemplateModal"
         @select-content-template="openContentTemplateModal"
-        @replace-text="replaceText"
         @toggle-insert-article="toggleInsertArticle"
         @toggle-quoted-reply="toggleQuotedReply"
       />

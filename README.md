@@ -348,7 +348,6 @@ Thanks goes to all these [wonderful people](https://www.chatwoot.com/docs/contri
 <a href="https://github.com/chatwoot/chatwoot/graphs/contributors"><img src="https://opencollective.com/chatwoot/contributors.svg?width=890&button=false" /></a>
 
 
-<<<<<<< HEAD
 *Chatwoot* &copy; 2017-2026, Chatwoot Inc - Released under the MIT License.
 
 ## Configuration
