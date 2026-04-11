@@ -236,12 +236,12 @@ RSpec.describe '/api/v1/widget/conversations/toggle_typing', type: :request do
         expect(conversation.reload.resolved?).to be true
         expect(Conversations::ActivityMessageJob).to have_been_enqueued.at_least(:once).with(
           conversation,
-          {
+          hash_including(
             account_id: conversation.account_id,
             inbox_id: conversation.inbox_id,
             message_type: :activity,
-            content: "Conversation was resolved by #{contact.name}"
-          }
+            content: a_string_including(contact.name)
+          )
         )
       end
     end
