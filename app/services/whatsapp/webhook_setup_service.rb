@@ -31,13 +31,36 @@ class Whatsapp::WebhookSetupService
   end
 
   def register_phone_number
+    return if smb_business_registration_skipped?
+
     phone_number_id = @channel.provider_config['phone_number_id']
     pin = fetch_or_create_pin
 
     @api_client.register_phone_number(phone_number_id, pin)
     store_pin(pin)
   rescue StandardError => e
+    if smb_business_register_endpoint_unavailable?(e)
+      mark_smb_business_registration_skipped
+      Rails.logger.info("[WHATSAPP] Phone registration is not available for SMB businesses; continuing webhook setup")
+      return
+    end
+
     Rails.logger.warn("[WHATSAPP] Phone registration failed but continuing: #{e.message}")
+  end
+
+  def smb_business_registration_skipped?
+    @channel.provider_config['registration_skipped_reason'] == 'smb_business'
+  end
+
+  def smb_business_register_endpoint_unavailable?(error)
+    error.message.include?('Register endpoint is not available for SMB businesses')
+  end
+
+  def mark_smb_business_registration_skipped
+    @channel.provider_config['registration_skipped_reason'] = 'smb_business'
+    @channel.save!
+  rescue StandardError => e
+    Rails.logger.warn("[WHATSAPP] Failed to persist SMB registration skip reason: #{e.message}")
   end
 
   def fetch_or_create_pin

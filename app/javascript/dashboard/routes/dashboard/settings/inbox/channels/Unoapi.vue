@@ -214,9 +214,9 @@ export default {
           v-model="webhookSendNewMessages"
           style="flex: 0 0 auto; margin-right: 10px;"
         />
-        {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBWOOK_SEND_NEW_MESSAGES.LABEL') }}
+        {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.LABEL') }}
         <span v-if="v$.webhookSendNewMessages.$error" class="message">
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBWOOK_SEND_NEW_MESSAGES.ERROR') }}
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.ERROR') }}
         </span>
       </label>
     </div>

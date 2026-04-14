@@ -55,10 +55,10 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       job.perform_now(params)
     end
 
-    it 'will not enqueue Whatsapp::IncomingMessageWhatsappCloudService if channel reauthorization required' do
+    it 'enqueue Whatsapp::IncomingMessageWhatsappCloudService even if channel reauthorization required' do
       channel.prompt_reauthorization!
       allow(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).and_return(process_service)
-      expect(Whatsapp::IncomingMessageWhatsappCloudService).not_to receive(:new)
+      expect(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new)
       job.perform_now(params)
     end
 
@@ -82,11 +82,12 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       job.perform_now(params)
     end
 
-    it 'logs a warning when channel is inactive' do
+    it 'does not log a warning when channel only needs reauthorization' do
       channel.prompt_reauthorization!
+      allow(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).and_return(process_service)
       allow(Rails.logger).to receive(:warn)
 
-      expect(Rails.logger).to receive(:warn).with("Inactive WhatsApp channel: #{channel.phone_number}")
+      expect(Rails.logger).not_to receive(:warn).with("Inactive WhatsApp channel: #{channel.phone_number}")
       job.perform_now(params)
     end
 

@@ -418,7 +418,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_09_091202) do
     t.string "identifier"
     t.string "hmac_token"
     t.boolean "hmac_mandatory", default: false
-        t.jsonb "additional_attributes", default: {}
+    t.jsonb "additional_attributes", default: {}
     t.string "secret"
     t.index ["hmac_token"], name: "index_channel_api_on_hmac_token", unique: true
     t.index ["identifier"], name: "index_channel_api_on_identifier", unique: true

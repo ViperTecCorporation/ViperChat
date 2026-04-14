@@ -20,21 +20,13 @@ RSpec.describe Whatsapp::WebhookTeardownService do
         )
       end
 
-      it 'calls unsubscribe_waba_webhook on Facebook API client' do
-        api_client = instance_double(Whatsapp::FacebookApiClient)
-        allow(Whatsapp::FacebookApiClient).to receive(:new).with('test_api_key').and_return(api_client)
-        allow(api_client).to receive(:unsubscribe_waba_webhook).with('test_waba_id')
+      it 'does not unsubscribe the WABA webhook' do
+        expect(Whatsapp::FacebookApiClient).not_to receive(:new)
 
         service.perform
-
-        expect(api_client).to have_received(:unsubscribe_waba_webhook).with('test_waba_id')
       end
 
-      it 'handles errors gracefully without raising' do
-        api_client = instance_double(Whatsapp::FacebookApiClient)
-        allow(Whatsapp::FacebookApiClient).to receive(:new).and_return(api_client)
-        allow(api_client).to receive(:unsubscribe_waba_webhook).and_raise(StandardError, 'API Error')
-
+      it 'does not block channel deletion' do
         expect { service.perform }.not_to raise_error
       end
     end

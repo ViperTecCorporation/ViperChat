@@ -29,6 +29,9 @@ module Reauthorizable
   # Implement in your exception handling logic for authorization errors
   def authorization_error!
     ::Redis::Alfred.incr(authorization_error_count_key)
+    Rails.logger.warn(
+      "[REAUTHORIZATION] Authorization error recorded for #{self.class.name}##{id}; count=#{authorization_error_count}"
+    )
     # we are giving precendence to the authorization error threshhold defined in the class
     # so that channels can override the default value
     prompt_reauthorization! if authorization_error_count >= self.class::AUTHORIZATION_ERROR_THRESHOLD
@@ -38,6 +41,7 @@ module Reauthorizable
   # could used to manually prompt reauthorization if auth scope changes
   def prompt_reauthorization!
     ::Redis::Alfred.set(reauthorization_required_key, true)
+    Rails.logger.warn("[REAUTHORIZATION] Reauthorization required for #{self.class.name}##{id}")
 
     reauthorization_handlers[self.class.name]&.call(self)
 
@@ -65,6 +69,7 @@ module Reauthorizable
   def reauthorized!
     ::Redis::Alfred.delete(authorization_error_count_key)
     ::Redis::Alfred.delete(reauthorization_required_key)
+    Rails.logger.info("[REAUTHORIZATION] Reauthorization cleared for #{self.class.name}##{id}")
 
     invalidate_inbox_cache unless instance_of?(::AutomationRule)
   end
