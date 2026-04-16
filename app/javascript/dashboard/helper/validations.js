@@ -126,6 +126,7 @@ const validateSingleAction = action => {
     'snooze_conversation',
     'resolve_conversation',
     'remove_participants',
+    'remove_assigned_agent',
     'remove_assigned_team',
     'open_conversation',
     'pending_conversation',
