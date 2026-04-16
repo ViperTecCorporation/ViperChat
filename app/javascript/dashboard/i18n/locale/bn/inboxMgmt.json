@@ -86,6 +86,14 @@
           "PLACEHOLDER": "Please enter your Webhook URL",
           "ERROR": "Please enter a valid URL"
         },
+        "CHANNEL_WEBHOOK_SECRET": {
+          "LABEL": "Webhook Secret",
+          "COPY": "গোপন কোড ক্লিপবোর্ডে কপি করুন",
+          "COPY_SUCCESS": "গোপন কোড ক্লিপবোর্ডে কপি হয়েছে",
+          "TOGGLE": "গোপন কোডের দৃশ্যমানতা টগল করুন",
+          "RESET_SUCCESS": "Webhook secret regenerated successfully",
+          "RESET_ERROR": "Unable to regenerate webhook secret. Please try again"
+        },
         "CHANNEL_DOMAIN": {
           "LABEL": "Website Domain",
           "PLACEHOLDER": "Enter your website domain (eg: acme.com)"
