@@ -94,7 +94,7 @@ export default {
       default: false,
     },
   },
-  emits: ['update:popOutReplyBox'],
+  emits: ['update:popOutReplyBox', 'toggleEditorSize'],
   setup() {
     const {
       uiSettings,
@@ -1323,6 +1323,10 @@ export default {
     togglePopout() {
       this.$emit('update:popOutReplyBox', !this.popOutReplyBox);
     },
+    toggleEditorSize() {
+      this.$emit('toggleEditorSize');
+      this.$nextTick(() => this.messageEditor?.focusEditorInputField());
+    },
     onSubmitCopilotReply() {
       const acceptedMessage = this.copilot.accept();
       this.message = acceptedMessage;
@@ -1349,6 +1353,7 @@ export default {
       :editor-content="message"
       :popout-reply-box="popOutReplyBox"
       @set-reply-mode="setReplyMode"
+      @toggle-editor-size="toggleEditorSize"
       @toggle-popout="togglePopout"
       @toggle-copilot="copilot.toggleEditor"
       @execute-copilot-action="executeCopilotAction"
