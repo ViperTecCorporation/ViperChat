@@ -65,11 +65,12 @@ defineExpose({ conversationListRef });
   >
     <Virtualizer
       ref="virtualListRef"
-      v-slot="{ item }"
+      v-slot="{ item, index }"
       :data="conversationList"
       class="[&>div:has(+_div_.active)>*]:!border-n-surface-1 [&>div:has(+_div_.selected)>*]:!border-n-surface-1"
     >
       <ConversationItem
+        :key="index"
         :source="item"
         :label="label"
         :team-id="teamId"
