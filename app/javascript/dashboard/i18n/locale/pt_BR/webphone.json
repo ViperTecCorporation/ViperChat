@@ -20,6 +20,8 @@
     "CONTACT_INVALID": "Contato não existe no Whatsapp",
     "CALL_LIMIT": "Limite de ligações diários atingido",
     "ERROR_TO_MADE_CALL": "Ocorreu um erro ao tentar ligar",
+    "CONNECTION_FAILED": "Falha na conexão",
+    "REJECTED": "Rejeitada",
     "PERMISSIONS": {
       "TITLE": "Ativar microfone",
       "DESCRIPTION": "Permita o acesso ao microfone para receber e realizar chamadas de voz.",
@@ -36,4 +38,3 @@
     }
   }
 }
-

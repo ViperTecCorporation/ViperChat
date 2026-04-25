@@ -739,6 +739,17 @@
     "DOCUMENTS": {
       "HEADER": "Documentos",
       "ADD_NEW": "Criar um novo documento",
+      "SELECTED": "{count} selecionado(s)",
+      "SELECT_ALL": "Selecionar todos ({count})",
+      "UNSELECT_ALL": "Desmarcar todos ({count})",
+      "BULK_DELETE_BUTTON": "Excluir",
+      "BULK_DELETE": {
+        "TITLE": "Excluir documentos?",
+        "DESCRIPTION": "Tem certeza que deseja excluir os documentos selecionados? Esta ação não pode ser desfeita.",
+        "CONFIRM": "Sim, excluir todos",
+        "SUCCESS_MESSAGE": "Documentos excluídos com sucesso",
+        "ERROR_MESSAGE": "Ocorreu um erro ao excluir os documentos. Tente novamente."
+      },
       "RELATED_RESPONSES": {
         "TITLE": "FAQs Relacionadas",
         "DESCRIPTION": "Estes FAQs são gerados diretamente a partir do documento."
@@ -796,6 +807,7 @@
     "CUSTOM_TOOLS": {
       "HEADER": "Ferramentas",
       "ADD_NEW": "Criar ferramenta",
+      "SOFT_LIMIT_WARNING": "Ter mais de 10 ferramentas pode reduzir a confiabilidade do assistente ao selecionar a ferramenta correta. Considere remover ferramentas não utilizadas para obter melhores resultados.",
       "EMPTY_STATE": {
         "TITLE": "Não há ferramentas personalizadas disponíveis",
         "SUBTITLE": "Crie ferramentas personalizadas para conectar com APIs e serviços externos, permitindo obter dados e agir por você.",
@@ -826,11 +838,30 @@
         "SUCCESS_MESSAGE": "Ferramenta personalizada excluída com sucesso",
         "ERROR_MESSAGE": "Falha ao excluir a ferramenta personalizada"
       },
+      "PAYWALL": {
+        "TITLE": "Atualize para usar ferramentas com o Capitão",
+        "AVAILABLE_ON": "As ferramentas do Capitão estão disponíveis apenas nos planos Business e Enterprise. Atualize para o plano Business para usar o recurso.",
+        "UPGRADE_PROMPT": "",
+        "UPGRADE_NOW": "Abrir cobrança",
+        "CANCEL_ANYTIME": ""
+      },
+      "ENTERPRISE_PAYWALL": {
+        "AVAILABLE_ON": "As ferramentas do Capitão estão disponíveis apenas nos planos pagos.",
+        "UPGRADE_PROMPT": "Atualize para um plano pago para usar este recurso.",
+        "ASK_ADMIN": "Entre em contato com o administrador para fazer a atualização."
+      },
+      "TEST": {
+        "BUTTON": "Testar conexão",
+        "SUCCESS": "Endpoint retornou HTTP {status}",
+        "ERROR": "Falha na conexão",
+        "DISABLED_HINT": "O teste está disponível apenas para endpoints sem modelos ou corpos de requisição."
+      },
       "FORM": {
         "TITLE": {
           "LABEL": "Nome da Ferramenta",
           "PLACEHOLDER": "Consulta de pedido",
-          "ERROR": "Nome da ferramente obrigatória"
+          "ERROR": "Nome da ferramente obrigatória",
+          "MAX_LENGTH_ERROR": "O nome da ferramenta deve ter no máximo {max} caracteres"
         },
         "DESCRIPTION": {
           "LABEL": "Descrição",

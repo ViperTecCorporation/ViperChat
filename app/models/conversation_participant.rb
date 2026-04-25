@@ -11,8 +11,6 @@
 #
 # Indexes
 #
-#  idx_conv_part_conversation_id                                   (conversation_id)
-#  idx_conv_part_user_id                                           (user_id)
 #  index_conversation_participants_on_account_id                   (account_id)
 #  index_conversation_participants_on_conversation_id              (conversation_id)
 #  index_conversation_participants_on_user_id                      (user_id)

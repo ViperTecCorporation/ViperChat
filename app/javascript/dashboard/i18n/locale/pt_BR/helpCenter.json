@@ -525,6 +525,7 @@
             "PUBLISH": "Publicar",
             "DRAFT": "Rascunho",
             "ARCHIVE": "Arquivar",
+            "TRANSLATE": "Traduzir",
             "DELETE": "Excluir"
           },
           "STATUS": {
@@ -579,6 +580,41 @@
           "TITLE": "Não há artigos nesta categoria",
           "SUBTITLE": "Os artigos nesta categoria aparecerão aqui"
         }
+      },
+      "BULK_TRANSLATE": {
+        "TITLE": "Traduzir artigo | Traduzir {count} artigos",
+        "DESCRIPTION": "Traduzir o artigo selecionado para outro idioma. | Traduzir os artigos selecionados para outro idioma.",
+        "LOCALE_LABEL": "Idioma de destino",
+        "LOCALE_PLACEHOLDER": "Selecione um idioma",
+        "CATEGORY_LABEL": "Categoria de destino",
+        "CATEGORY_PLACEHOLDER": "Selecione uma categoria",
+        "OPTIONAL": "(opcional)",
+        "CONFIRM": "Traduzir",
+        "SELECT_ALL": "Selecionar todos ({count})",
+        "SELECTED_COUNT": "{count} selecionado(s)",
+        "CLEAR_SELECTION": "Limpar seleção",
+        "TRANSLATE_BUTTON": "Traduzir",
+        "CONFIRM_OVERWRITE": "Substituir e traduzir",
+        "DUPLICATE_WARNING": "Já existe uma tradução para este artigo no idioma selecionado. | Já existem traduções para {count} artigos no idioma selecionado.",
+        "DUPLICATE_CONFIRM_HINT": "Clique em traduzir novamente para substituir a tradução existente.",
+        "API": {
+          "SUCCESS_MESSAGE": "Tradução em andamento. O artigo aparecerá como rascunho quando estiver pronto.",
+          "ERROR_MESSAGE": "Não foi possível iniciar a tradução. Tente novamente."
+        }
+      },
+      "BULK_ACTIONS": {
+        "PUBLISH": "Publicar",
+        "DRAFT": "Rascunho",
+        "ARCHIVE": "Arquivar",
+        "TRANSLATE": "Traduzir",
+        "DELETE": "Excluir",
+        "STATUS_SUCCESS": "Artigos atualizados com sucesso",
+        "STATUS_ERROR": "Não foi possível atualizar os artigos",
+        "DELETE_CONFIRM_TITLE": "Excluir artigo | Excluir {count} artigos",
+        "DELETE_CONFIRM_DESCRIPTION": "Isso excluirá permanentemente o artigo selecionado. Esta ação não pode ser desfeita. | Isso excluirá permanentemente {count} artigos selecionados. Esta ação não pode ser desfeita.",
+        "DELETE_CONFIRM": "Excluir",
+        "DELETE_SUCCESS": "Artigos excluídos com sucesso",
+        "DELETE_ERROR": "Não foi possível excluir os artigos"
       }
     },
     "CATEGORY_PAGE": {

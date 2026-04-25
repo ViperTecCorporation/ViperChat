@@ -22,7 +22,6 @@
 #  idx_notifications_notification_type             (notification_type)
 #  idx_notifications_performance                   (user_id,account_id,snoozed_until,read_at)
 #  idx_notifications_read_at                       (read_at)
-#  idx_notifications_user_id                       (user_id)
 #  index_notifications_on_account_id               (account_id)
 #  index_notifications_on_last_activity_at         (last_activity_at)
 #  index_notifications_on_user_id                  (user_id)
