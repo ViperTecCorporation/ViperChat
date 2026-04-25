@@ -62,6 +62,30 @@
 - The setup workflow in `.codex/environments/environment.toml` should dynamically generate per-worktree DB/port values (Rails, Vite, Redis DB index) to avoid collisions.
 - Start each worktree with its own Overmind socket/title so multiple instances can run at the same time.
 
+## Cherry-pick Integration Workflow
+
+- Create a target branch only when the task asks for one or when the integration needs isolation; otherwise, use the current branch after confirming it is the intended destination.
+- Fetch the source branch first, then inspect the exact commit range before applying it:
+  - `git fetch origin develop`
+  - `git log --oneline --reverse <start_commit>^..origin/develop`
+- Cherry-pick commits in chronological order so conflicts stay small and authorship is preserved:
+  - `git cherry-pick <commit_sha>`
+  - For a range, iterate the ordered list from `git rev-list --reverse <start_commit>^..origin/develop`.
+- Preserve original authorship when resolving conflicts. Do not squash imported commits unless explicitly requested; use normal `git cherry-pick --continue` so each imported commit keeps its original author.
+- When a commit is only a release/version bump or would downgrade/overwrite ViperChat branding, skip it with `git cherry-pick --skip` and document why in the final summary or a follow-up adaptation commit.
+- Resolve conflicts by keeping ViperChat branding and local behavior first, then re-apply the incoming feature changes around that local behavior. Pay special attention to files that mention app names, installation names, white-label copy, logos, package metadata, routes, and localized UI strings.
+- After conflict resolution, search for leftover conflict markers and accidental comment syntax before continuing:
+  - `rg -n '<<<<<<<|=======|>>>>>>>'`
+  - For Vue/JS files, also check that conflict notes were not left as Ruby/shell comments.
+- Add small adaptation commits after the cherry-pick sequence when needed, using a conventional commit message such as `fix(viperchat): clean up cherry-pick conflict leftovers`.
+- Validate incrementally:
+  - Run focused specs for files touched by conflict resolution.
+  - Run `pnpm test` for frontend changes.
+  - Run `bundle exec rspec` or `bundle exec rspec --fail-fast` for Ruby changes.
+  - When the full suite is too slow, keep running `--fail-fast`, fix the first real failure, validate that spec directly, and repeat.
+- If the main worktree is on a synced filesystem and Git status/diff starts failing with I/O errors, use a temporary local clone/worktree for heavy test runs and keep commits in the real branch focused and explicit. Do not leave `index.lock` files behind after interrupted Git commands.
+- Stop local services started only for testing, such as per-worktree PostgreSQL or Redis, before handing the branch back.
+
 ## Commit Messages
 
 - Prefer Conventional Commits: `type(scope): subject` (scope optional)
