@@ -113,7 +113,8 @@ class Message < ApplicationRecord
   # [:data] : Used for structured content types such as voice_call
   store :content_attributes, accessors: [:submitted_email, :items, :submitted_values, :email, :in_reply_to, :deleted,
                                          :external_created_at, :story_sender, :story_id, :external_error,
-                                         :translations, :in_reply_to_external_id, :is_unsupported, :data], coder: JSON
+                                         :translations, :in_reply_to_external_id, :is_unsupported, :data,
+                                         :link_preview], coder: JSON
 
   store :external_source_ids, accessors: [:slack], coder: JSON, prefix: :external_source_id
 
@@ -340,7 +341,7 @@ class Message < ApplicationRecord
     self.content_type ||= Message.content_types[:text]
   end
 
-    def execute_after_create_commit_callbacks
+  def execute_after_create_commit_callbacks
     # rails issue with order of active record callbacks being executed https://github.com/rails/rails/issues/20911
     reopen_conversation
     mark_pending_conversation_as_open_for_human_response
@@ -349,6 +350,16 @@ class Message < ApplicationRecord
     send_reply
     execute_message_template_hooks
     update_contact_activity
+    enqueue_link_preview
+  end
+
+  def enqueue_link_preview
+    return unless incoming? || outgoing?
+    return unless text? && content.present?
+    return unless content.match?(Messages::LinkPreviewService::URL_REGEX)
+    return if link_preview.present?
+
+    Messages::LinkPreviewJob.perform_later(id)
   end
 
   def update_contact_activity

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import BaseBubble from 'next/message/bubbles/Base.vue';
 import FormattedContent from './FormattedContent.vue';
+import LinkPreviewCard from './LinkPreviewCard.vue';
 import AttachmentChips from 'next/message/chips/AttachmentChips.vue';
 import TranslationToggle from 'dashboard/components-next/message/TranslationToggle.vue';
 import { MESSAGE_TYPES } from '../../constants';
@@ -32,6 +33,14 @@ const isTemplate = computed(() => {
   return messageType.value === MESSAGE_TYPES.TEMPLATE;
 });
 
+const linkPreview = computed(() => {
+  return (
+    contentAttributes.value?.linkPreview ||
+    contentAttributes.value?.link_preview ||
+    null
+  );
+});
+
 const isEmpty = computed(() => {
   return !content.value && !attachments.value?.length;
 });
@@ -48,6 +57,7 @@ const handleSeeOriginal = () => {
         {{ $t('CONVERSATION.NO_CONTENT') }}
       </span>
       <FormattedContent v-if="renderContent" :content="renderContent" />
+      <LinkPreviewCard v-if="linkPreview" :preview="linkPreview" />
       <TranslationToggle
         v-if="hasTranslations"
         class="-mt-3"
