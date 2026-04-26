@@ -355,7 +355,7 @@
         },
         "USE_GROUP_CONVERSATION_SCHEMA": {
           "LABEL": "Usar novo modelo de conversas em grupo",
-          "HELP": "Armazena grupos como conversas estruturadas, com membros e remetente real. Use somente com Uno API 3.0.61 ou superior ou canal compatível com grupos Meta-like.",
+          "HELP": "Armazena grupos como conversas estruturadas, com membros e remetente real. Use somente com Uno API 3.0.63 ou superior ou canal compatível com grupos Meta-like.",
           "PLACEHOLDER": "Selecione para usar conversas em grupo estruturadas.",
           "ERROR": "Selecione para usar conversas em grupo estruturadas."
         },
