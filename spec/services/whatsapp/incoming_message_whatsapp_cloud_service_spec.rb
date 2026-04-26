@@ -267,6 +267,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
 
         expect(conversation).to be_group
         expect(conversation.group_title).to eq('Equipe Comercial')
+        expect(conversation.additional_attributes['group_picture']).to eq('https://cdn.example.com/groups/120363040468224422.jpg')
         expect(conversation.contact_inbox.source_id).to eq('120363040468224422@g.us')
         expect(conversation.group_contacts.count).to eq(1)
         expect(conversation.group_contacts.first.contact).to eq(message.sender)

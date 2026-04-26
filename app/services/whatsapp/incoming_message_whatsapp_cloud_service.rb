@@ -75,7 +75,8 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
       contact_id: @contact.id,
       contact_inbox_id: @contact_inbox.id,
       group: true,
-      group_title: group_payload[:group_title].presence || group_payload[:group_source_id]
+      group_title: group_payload[:group_title].presence || group_payload[:group_source_id],
+      additional_attributes: group_additional_attributes
     )
     @conversation.save!
 
@@ -171,6 +172,13 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     normalized_phone = brazil_phone_number?(phone) ? normalised_brazil_mobile_number(phone) : phone
     attrs[:phone_number] = "+#{normalized_phone}" if normalized_phone.present?
     attrs
+  end
+
+  def group_additional_attributes
+    attrs = @conversation.additional_attributes || {}
+    return attrs if group_payload[:group_picture].blank?
+
+    attrs.merge('group_picture' => group_payload[:group_picture])
   end
 
   def sync_group_sender_contact

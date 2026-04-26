@@ -9,4 +9,5 @@ json.group_created_at_external @conversation.group_created_at_external
 json.group_contacts_synced_at @conversation.group_contacts_synced_at
 json.group_session_admin @conversation.group_session_admin
 json.group_contacts_count @conversation.group_member_count
+json.group_picture @conversation.additional_attributes&.dig('group_picture').presence || @conversation.contact&.avatar_url
 json.additional_attributes @conversation.additional_attributes

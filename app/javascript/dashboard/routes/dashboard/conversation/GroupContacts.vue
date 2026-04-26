@@ -62,7 +62,8 @@ const fetchGroupInfo = async () => {
   inviteLink.value = data?.group_invite_link || '';
   groupTitle.value = data?.group_title || '';
   groupDescription.value = data?.group_description || '';
-  groupPictureUrl.value = data?.additional_attributes?.group_picture || '';
+  groupPictureUrl.value =
+    data?.group_picture || data?.additional_attributes?.group_picture || '';
 };
 
 const fetchGroupContacts = async ({ reset = false } = {}) => {
@@ -107,7 +108,8 @@ const syncGroupContacts = async () => {
     groupInfo.value = data || {};
     groupTitle.value = data?.group_title || '';
     groupDescription.value = data?.group_description || '';
-    groupPictureUrl.value = data?.additional_attributes?.group_picture || '';
+    groupPictureUrl.value =
+      data?.group_picture || data?.additional_attributes?.group_picture || '';
     await fetchGroupContacts({ reset: true });
   } finally {
     isSyncing.value = false;
@@ -226,7 +228,8 @@ const updateGroupInfo = async () => {
     groupInfo.value = data || {};
     groupTitle.value = data?.group_title || '';
     groupDescription.value = data?.group_description || '';
-    groupPictureUrl.value = data?.additional_attributes?.group_picture || '';
+    groupPictureUrl.value =
+      data?.group_picture || data?.additional_attributes?.group_picture || '';
   } finally {
     isUpdatingGroup.value = false;
   }
