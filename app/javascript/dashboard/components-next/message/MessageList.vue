@@ -187,6 +187,7 @@ const getInReplyToMessage = parentMessage => {
         :group-with-next="shouldGroupWithNext(index, allMessages)"
         :inbox-supports-reply-to="inboxSupportsReplyTo"
         :current-user-id="currentUserId"
+        :is-group-conversation="!!currentChat?.group"
         :is-forward-selection-active="isForwardSelectionActive"
         :is-forward-selected="forwardSelectedMessageIds.includes(message.id)"
         data-clarity-mask="True"

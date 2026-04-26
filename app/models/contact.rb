@@ -220,7 +220,7 @@ class Contact < ApplicationRecord
   def email_format
     return if email.blank?
 
-    return if email&.end_with?('@lid')
+    return if whatsapp_identifier_email?
 
     self.email = email_was unless email.match(Devise.email_regexp)
   end
@@ -253,11 +253,15 @@ class Contact < ApplicationRecord
   def email_format_with_lid
     return if email.blank?
 
-    return if email&.end_with?('@lid')
+    return if whatsapp_identifier_email?
 
     return if email.match?(Devise.email_regexp)
 
     errors.add(:email, I18n.t('errors.contacts.email.invalid'))
+  end
+
+  def whatsapp_identifier_email?
+    email&.end_with?('@lid') || email&.end_with?('@g.us')
   end
 
   def dispatch_create_event

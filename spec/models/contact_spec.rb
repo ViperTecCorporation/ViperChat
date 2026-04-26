@@ -89,6 +89,12 @@ RSpec.describe Contact do
       expect(contact.update!(email: 'test@test.com')).to be true
       expect(contact.email).to eq 'test@test.com'
     end
+
+    it 'allows WhatsApp group ids in email for legacy group contacts' do
+      contact = create(:contact)
+      expect(contact.update!(email: '120363039221813429@g.us')).to be true
+      expect(contact.email).to eq '120363039221813429@g.us'
+    end
   end
 
   context 'when city and country code passed in additional attributes' do

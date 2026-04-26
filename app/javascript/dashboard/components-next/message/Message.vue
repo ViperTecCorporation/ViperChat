@@ -98,6 +98,7 @@ import { useBranding } from 'shared/composables/useBranding';
  * @property {boolean} [groupWithNext=false] - Whether the message should be grouped with the next message
  * @property {Object|null} [inReplyTo=null] - The message to which this message is a reply
  * @property {boolean} [isEmailInbox=false] - Whether the message is from an email inbox
+ * @property {boolean} [isGroupConversation=false] - Whether the message belongs to a group conversation
  * @property {number} conversationId - The ID of the conversation to which the message belongs
  * @property {number} inboxId - The ID of the inbox to which the message belongs
  */
@@ -131,6 +132,7 @@ const props = defineProps({
   inboxSupportsReplyTo: { type: Object, default: () => ({}) },
   inReplyTo: { type: Object, default: null }, // eslint-disable-line vue/no-unused-properties
   isEmailInbox: { type: Boolean, default: false },
+  isGroupConversation: { type: Boolean, default: false },
   private: { type: Boolean, default: false },
   additionalAttributes: { type: Object, default: () => ({}) }, // eslint-disable-line vue/no-unused-properties
   sender: { type: Object, default: null },
@@ -265,8 +267,29 @@ const flexOrientationClass = computed(() => {
   return map[orientation.value];
 });
 
+const senderDisplayName = computed(() => {
+  return (
+    props.sender?.name ||
+    props.additionalAttributes?.senderName ||
+    props.sender?.phoneNumber ||
+    props.sender?.phone_number ||
+    ''
+  );
+});
+
+const showIncomingGroupSender = computed(() => {
+  return (
+    props.isGroupConversation &&
+    props.messageType === MESSAGE_TYPES.INCOMING &&
+    !!senderDisplayName.value
+  );
+});
+
 const hasAvatarColumnOnLeft = computed(() => {
-  return isAnInternalChannel.value && orientation.value === ORIENTATION.LEFT;
+  return (
+    orientation.value === ORIENTATION.LEFT &&
+    (isAnInternalChannel.value || showIncomingGroupSender.value)
+  );
 });
 
 const gridClass = computed(() => {
@@ -491,16 +514,6 @@ const hasReaction = computed(() => !!reactionEmoji.value);
 const longPressStartPoint = ref(null);
 const longPressPoint = ref(null);
 const longPressTarget = ref(null);
-const { start: startLongPressTimer, stop: stopLongPressTimer } = useTimeoutFn(
-  () => {
-    const touchEvent = createTouchContextEvent();
-    if (touchEvent) {
-      openContextMenu(touchEvent);
-    }
-  },
-  450,
-  { immediate: false }
-);
 
 function openContextMenu(e) {
   const shouldSkipContextMenu =
@@ -544,6 +557,17 @@ function createTouchContextEvent() {
     preventDefault: () => {},
   };
 }
+
+const { start: startLongPressTimer, stop: stopLongPressTimer } = useTimeoutFn(
+  () => {
+    const touchEvent = createTouchContextEvent();
+    if (touchEvent) {
+      openContextMenu(touchEvent);
+    }
+  },
+  450,
+  { immediate: false }
+);
 
 function cancelLongPress() {
   stopLongPressTimer();
@@ -727,14 +751,15 @@ provideMessageContext({
         class="[grid-area:bubble] flex"
         :class="{
           'ltr:ml-8 rtl:mr-8 justify-end': orientation === ORIENTATION.RIGHT,
-          'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT && !hasAvatarColumnOnLeft,
+          'ltr:mr-8 rtl:ml-8':
+            orientation === ORIENTATION.LEFT && !hasAvatarColumnOnLeft,
           'min-w-0': variant === MESSAGE_VARIANTS.EMAIL,
         }"
-      @contextmenu="openContextMenu($event)"
-      @touchstart.passive="handleTouchStart"
-      @touchmove.passive="handleTouchMove"
-      @touchend.passive="handleTouchEnd"
-      @touchcancel.passive="handleTouchCancel"
+        @contextmenu="openContextMenu($event)"
+        @touchstart.passive="handleTouchStart"
+        @touchmove.passive="handleTouchMove"
+        @touchend.passive="handleTouchEnd"
+        @touchcancel.passive="handleTouchCancel"
       >
         <div
           v-if="props.isForwardSelectionActive"
@@ -753,6 +778,12 @@ provideMessageContext({
             'w-full': variant === MESSAGE_VARIANTS.EMAIL,
           }"
         >
+          <span
+            v-if="showIncomingGroupSender"
+            class="mb-1 text-xs font-medium leading-4 text-n-slate-11"
+          >
+            {{ t('CONVERSATION.SENT_BY') }} {{ senderDisplayName }}
+          </span>
           <Component :is="componentToRender" />
           <div
             v-if="hasReaction"
