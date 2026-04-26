@@ -29,6 +29,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
           .with(
             body: {
               messaging_product: 'whatsapp',
+              recipient_type: 'individual',
               context: nil,
               to: '+123456789',
               text: { body: message.content },
@@ -39,11 +40,31 @@ describe Whatsapp::Providers::WhatsappCloudService do
         expect(service.send_message('+123456789', message)).to eq 'message_id'
       end
 
+      it 'calls message endpoints with group recipient type for group conversations' do
+        conversation.update!(group: true, group_source_id: '120363040468224422@g.us', group_title: 'Equipe Comercial')
+
+        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              recipient_type: 'group',
+              context: nil,
+              to: '120363040468224422@g.us',
+              text: { body: message.content },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('120363040468224422@g.us', message)).to eq 'message_id'
+      end
+
       it 'calls message endpoints for a reply to messages' do
         stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
+              recipient_type: 'individual',
               context: {
                 message_id: message.source_id
               },
@@ -109,7 +130,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
           .with(
             body: {
-              messaging_product: 'whatsapp', to: '+123456789',
+              messaging_product: 'whatsapp', recipient_type: 'individual', to: '+123456789',
               interactive: {
                 type: 'button',
                 body: {
@@ -136,7 +157,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
           .with(
             body: {
-              messaging_product: 'whatsapp', to: '+123456789',
+              messaging_product: 'whatsapp', recipient_type: 'individual', to: '+123456789',
               interactive: {
                 type: 'list',
                 body: {

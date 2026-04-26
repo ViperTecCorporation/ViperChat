@@ -13,6 +13,7 @@ import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import ContactConversations from './ContactConversations.vue';
 import ConversationAction from './ConversationAction.vue';
 import ConversationParticipant from './ConversationParticipant.vue';
+import GroupContacts from './GroupContacts.vue';
 import ContactInfo from './contact/ContactInfo.vue';
 import ContactNotes from './contact/ContactNotes.vue';
 import ConversationInfo from './ConversationInfo.vue';
@@ -138,6 +139,14 @@ onMounted(() => {
     />
     <ContactInfo :contact="contact" :channel-type="channelType" />
     <div class="px-2 pb-8 list-group">
+      <AccordionItem
+        v-if="currentChat.group"
+        :title="$t('CONVERSATION.GROUP.MEMBERS_TITLE')"
+        :is-open="true"
+        compact
+      >
+        <GroupContacts :conversation-id="conversationId" />
+      </AccordionItem>
       <Draggable
         :list="conversationSidebarItems"
         animation="200"

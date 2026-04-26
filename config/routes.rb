@@ -150,6 +150,7 @@ Rails.application.routes.draw do
                 end
               end
               resources :forwards, only: [:create]
+              resources :group_contacts, only: [:index]
               resources :assignments, only: [:create]
               resources :labels, only: [:create, :index]
               resource :participants, only: [:show, :create, :update, :destroy]

@@ -184,7 +184,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
 
           described_class.new(inbox: whatsapp_channel.inbox, params: reply_params).perform
 
-          reply_message = whatsapp_channel.inbox.messages.last
+          reply_message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.REPLY_MESSAGE_ID')
           expect(reply_message.content).to eq('This is a reply')
           expect(reply_message.content_attributes['in_reply_to']).to eq(original_message.id)
           expect(reply_message.content_attributes['in_reply_to_external_id']).to eq('wamid.ORIGINAL_MESSAGE_ID')
@@ -200,6 +200,92 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
           expect(reply_message.content_attributes['in_reply_to']).to be_nil
           expect(reply_message.content_attributes['in_reply_to_external_id']).to be_nil
         end
+      end
+    end
+
+    context 'when unoapi structured group schema is enabled' do
+      let!(:whatsapp_channel) do
+        create(
+          :channel_whatsapp,
+          provider: 'unoapi',
+          provider_config: {
+            'api_key' => 'test_key',
+            'phone_number_id' => '556600000000',
+            'business_account_id' => '123456789',
+            'use_group_conversation_schema' => true
+          },
+          sync_templates: false,
+          validate_provider_config: false
+        )
+      end
+
+      let(:params) do
+        {
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: {
+                  display_phone_number: '556600000000',
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                contacts: [{
+                  wa_id: '556699999999',
+                  profile: {
+                    name: 'Maria',
+                    picture: 'https://cdn.example.com/profile/maria.jpg'
+                  },
+                  group_id: '120363040468224422@g.us',
+                  group_subject: 'Equipe Comercial',
+                  group_picture: 'https://cdn.example.com/groups/120363040468224422.jpg'
+                }],
+                messages: [{
+                  from: '556699999999',
+                  id: 'wamid.GROUP_MESSAGE_ID',
+                  timestamp: '1710000000',
+                  type: 'text',
+                  group_id: '120363040468224422@g.us',
+                  text: { body: 'Bom dia pessoal' }
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+      end
+
+      it 'creates a structured group conversation with the real sender' do
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+
+        conversation = whatsapp_channel.inbox.conversations.find_by!(group_source_id: '120363040468224422@g.us')
+        message = conversation.messages.last
+
+        expect(conversation).to be_group
+        expect(conversation.group_title).to eq('Equipe Comercial')
+        expect(conversation.contact_inbox.source_id).to eq('120363040468224422@g.us')
+        expect(conversation.group_contacts.count).to eq(1)
+        expect(conversation.group_contacts.first.contact).to eq(message.sender)
+        expect(message.sender.name).to eq('Maria')
+        expect(message.content).to eq('Bom dia pessoal')
+      end
+
+      it 'updates a group message status by group recipient id' do
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+
+        status_params = params.deep_dup
+        status_params[:entry][0][:changes][0][:value].delete(:messages)
+        status_params[:entry][0][:changes][0][:value].delete(:contacts)
+        status_params[:entry][0][:changes][0][:value][:statuses] = [{
+          id: 'wamid.GROUP_MESSAGE_ID',
+          recipient_id: '120363040468224422@g.us',
+          recipient_type: 'group',
+          status: 'delivered',
+          timestamp: '1710000005'
+        }]
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform
+
+        expect(whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.GROUP_MESSAGE_ID').status).to eq('delivered')
       end
     end
   end

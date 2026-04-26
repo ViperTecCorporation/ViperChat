@@ -37,6 +37,12 @@ const hovered = ref(false);
 const unreadCount = computed(() => props.chat.unread_count);
 const hasUnread = computed(() => unreadCount.value > 0);
 const lastMessageInChat = computed(() => getLastMessage(props.chat));
+const conversationTitle = computed(
+  () => props.chat.group_title || props.currentContact.name
+);
+const conversationAvatarName = computed(
+  () => props.chat.group_title || props.currentContact.name
+);
 
 const voiceCallData = computed(() => ({
   status: props.chat.additional_attributes?.call_status,
@@ -114,7 +120,7 @@ watch(
     >
       <Avatar
         v-if="!hideThumbnail"
-        :name="currentContact.name"
+        :name="conversationAvatarName"
         :src="currentContact.thumbnail"
         :size="32"
         :status="currentContact.availability_status"
@@ -166,8 +172,14 @@ watch(
         class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
         :class="hasUnread ? 'font-semibold' : 'font-medium'"
       >
-        {{ currentContact.name }}
+        {{ conversationTitle }}
       </h4>
+      <p
+        v-if="chat.group && chat.group_contacts_count"
+        class="text-n-slate-10 text-xs my-0 mx-2 leading-4 h-4 overflow-hidden text-ellipsis whitespace-nowrap"
+      >
+        {{ chat.group_contacts_count }} {{ $t('CONVERSATION.GROUP.MEMBERS') }}
+      </p>
       <VoiceCallStatus
         v-if="voiceCallData.status"
         key="voice-status-row"

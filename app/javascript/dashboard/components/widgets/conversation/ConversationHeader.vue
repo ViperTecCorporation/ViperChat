@@ -69,6 +69,9 @@ const isHMACVerified = computed(() => {
 const currentContact = computed(() =>
   store.getters['contacts/getContact'](props.chat.meta.sender.id)
 );
+const conversationTitle = computed(
+  () => props.chat.group_title || currentContact.value?.name
+);
 
 const isSnoozed = computed(
   () => currentChat.value.status === wootConstants.STATUS_TYPE.SNOOZED
@@ -111,7 +114,7 @@ const isInternalChat = computed(
         class="ltr:mr-2 rtl:ml-2"
       />
       <Avatar
-        :name="currentContact.name"
+        :name="conversationTitle"
         :src="currentContact.thumbnail"
         :size="32"
         :status="currentContact.availability_status"
@@ -125,7 +128,7 @@ const isInternalChat = computed(
           <span
             class="text-sm font-medium truncate leading-tight text-n-slate-12"
           >
-            {{ currentContact.name }}
+            {{ conversationTitle }}
           </span>
           <fluent-icon
             v-if="!isHMACVerified"
@@ -140,6 +143,9 @@ const isInternalChat = computed(
           class="flex items-center gap-2 overflow-hidden text-xs conversation--header--actions text-ellipsis whitespace-nowrap"
         >
           <InboxName v-if="hasMultipleInboxes" :inbox="inbox" class="!mx-0" />
+          <span v-if="chat.group && chat.group_contacts_count">
+            {{ chat.group_contacts_count }} {{ t('CONVERSATION.GROUP.MEMBERS') }}
+          </span>
           <span v-if="isSnoozed" class="font-medium text-n-amber-10">
             {{ snoozedDisplayText }}
           </span>

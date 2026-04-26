@@ -395,12 +395,22 @@ export default {
       return !this.isUnsupported;
     },
     showAvatar() {
+      if (
+        this.isIncoming &&
+        this.data.conversation?.group &&
+        this.sender?.name
+      ) {
+        return true;
+      }
       if (this.isOutgoing || this.isTemplate) {
         return true;
       }
       return this.isATweet && this.isIncoming && this.sender;
     },
     senderNameForAvatar() {
+      if (this.isIncoming && this.data.conversation?.group) {
+        return this.sender.name || '';
+      }
       if (this.isOutgoing || this.isTemplate) {
         const { name = this.$t('CONVERSATION.BOT') } = this.sender || {};
         return name;
@@ -745,11 +755,11 @@ export default {
           size="16px"
         />
         <a
-          v-if="isATweet && isIncoming"
+          v-if="isIncoming && (data.conversation?.group || isATweet)"
           class="sender--available-name"
-          :href="twitterProfileLink"
-          target="_blank"
-          rel="noopener noreferrer nofollow"
+          :href="isATweet ? twitterProfileLink : null"
+          :target="isATweet ? '_blank' : null"
+          :rel="isATweet ? 'noopener noreferrer nofollow' : null"
         >
           {{ sender.name }}
         </a>

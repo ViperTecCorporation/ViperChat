@@ -50,6 +50,7 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
                    else
                      message.conversation.contact_inbox.source_id
                    end
+    phone_number = message.conversation.group_source_id if message.conversation.group?
     message_id = channel.send_message(phone_number, message)
     message.update!(source_id: message_id) if message_id.present?
   end

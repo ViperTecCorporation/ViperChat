@@ -289,6 +289,12 @@
           "PLACEHOLDER": "Select to group only delivered status.",
           "ERROR": "Select to group only delivered status."
         },
+        "USE_GROUP_CONVERSATION_SCHEMA": {
+          "LABEL": "Use structured group conversations",
+          "HELP": "Stores groups with real members and sender. Use only with Uno API 3.0.61 or newer, or a Meta-like group channel.",
+          "PLACEHOLDER": "Select to use structured group conversations.",
+          "ERROR": "Select to use structured group conversations."
+        },
         "GENERATE_API_KEY": {
           "LABEL": "Generate API Key",
           "PLACEHOLDER": "Generate API Key",

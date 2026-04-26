@@ -353,6 +353,12 @@
           "PLACEHOLDER": "Selecione para usar apenas status de entregue em grupos.",
           "ERROR": "Selecione para usar apenas status de entregue em grupos."
         },
+        "USE_GROUP_CONVERSATION_SCHEMA": {
+          "LABEL": "Usar novo modelo de conversas em grupo",
+          "HELP": "Armazena grupos como conversas estruturadas, com membros e remetente real. Use somente com Uno API 3.0.61 ou superior ou canal compatível com grupos Meta-like.",
+          "PLACEHOLDER": "Selecione para usar conversas em grupo estruturadas.",
+          "ERROR": "Selecione para usar conversas em grupo estruturadas."
+        },
         "GENERATE_API_KEY": {
           "LABEL": "Gerar chave da API",
           "PLACEHOLDER": "Gerar chave da API",

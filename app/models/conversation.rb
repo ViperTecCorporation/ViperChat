@@ -89,6 +89,8 @@ class Conversation < ApplicationRecord
 
     open.where('last_activity_at < ?', Time.now.utc - auto_resolve_after.minutes)
   }
+  scope :group_conversations, -> { where(group: true) }
+  scope :non_group_conversations, -> { where(group: false) }
 
   scope :last_user_message_at, lambda {
     joins(
@@ -113,6 +115,8 @@ class Conversation < ApplicationRecord
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
   has_many :attachments, through: :messages
   has_many :reporting_events, dependent: :destroy_async
+  has_many :group_contacts, dependent: :destroy_async
+  has_many :additional_contacts, through: :group_contacts, source: :contact
 
   before_save :ensure_snooze_until_reset
   before_create :determine_conversation_status
@@ -174,6 +178,17 @@ class Conversation < ApplicationRecord
 
   def unread_incoming_messages
     unread_messages.where(account_id: account_id).incoming.last(10)
+  end
+
+  def includes_contact?(target_contact)
+    return false if target_contact.blank?
+    return true if contact_id == target_contact.id
+
+    group_contacts.exists?(contact_id: target_contact.id)
+  end
+
+  def group_member_count
+    group_contacts.count + (contact_id.present? ? 1 : 0)
   end
 
   def cached_label_list_array

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_25_130000) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_26_120100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -735,6 +735,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_25_130000) do
     t.datetime "waiting_since"
     t.text "cached_label_list"
     t.bigint "assignee_agent_bot_id"
+    t.boolean "group", default: false, null: false
+    t.string "group_source_id"
+    t.string "group_title"
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
     t.index ["account_id", "inbox_id", "status", "assignee_id"], name: "conv_acid_inbid_stat_asgnid_idx"
@@ -745,13 +748,28 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_25_130000) do
     t.index ["contact_inbox_id"], name: "index_conversations_on_contact_inbox_id"
     t.index ["first_reply_created_at"], name: "index_conversations_on_first_reply_created_at"
     t.index ["identifier", "account_id"], name: "index_conversations_on_identifier_and_account_id"
+    t.index ["inbox_id", "group_source_id"], name: "index_conversations_on_inbox_id_and_group_source_id", unique: true, where: "(group_source_id IS NOT NULL)"
     t.index ["inbox_id"], name: "index_conversations_on_inbox_id"
+    t.index ["group"], name: "index_conversations_on_group"
     t.index ["priority"], name: "index_conversations_on_priority"
     t.index ["status", "account_id"], name: "index_conversations_on_status_and_account_id"
     t.index ["status", "priority"], name: "index_conversations_on_status_and_priority"
     t.index ["team_id"], name: "index_conversations_on_team_id"
     t.index ["uuid"], name: "index_conversations_on_uuid", unique: true
     t.index ["waiting_since"], name: "index_conversations_on_waiting_since"
+  end
+
+  create_table "group_contacts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "contact_id", null: false
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_group_contacts_on_account_id"
+    t.index ["contact_id"], name: "index_group_contacts_on_contact_id"
+    t.index ["conversation_id", "contact_id"], name: "index_group_contacts_on_conversation_id_and_contact_id", unique: true
+    t.index ["conversation_id"], name: "index_group_contacts_on_conversation_id"
   end
 
   create_table "copilot_messages", force: :cascade do |t|
@@ -1362,6 +1380,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_25_130000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "group_contacts", "accounts"
+  add_foreign_key "group_contacts", "contacts"
+  add_foreign_key "group_contacts", "conversations"
   add_foreign_key "inboxes", "portals"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").

@@ -20,7 +20,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
     request_body = {
       messaging_product: 'whatsapp',
-      recipient_type: 'individual', # Only individual messages supported (not group messages)
+      recipient_type: recipient_type_for(message),
       to: phone_number,
       type: 'template',
       template: template_body
@@ -106,10 +106,14 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       messaging_product: 'whatsapp',
       status: message[:status],
       message_id: message[:source_id],
-      recipient_id: (message[:sender] || {})[:phone_number]
+      recipient_id: (message[:sender] || {})[:phone_number],
+      recipient_type: 'individual'
     }
-    if message[:conversation][:contact_inbox][:source_id].include?('@g.us')
-      payload.merge({ group_id: message[:conversation][:contact_inbox][:source_id] })
+    if message[:conversation][:group] && message[:conversation][:group_source_id].present?
+      return payload.merge(
+        recipient_id: message[:conversation][:group_source_id],
+        recipient_type: 'group'
+      )
     end
     payload
   end
@@ -123,6 +127,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   private
+
+  def recipient_type_for(message)
+    message.conversation.group? ? 'group' : 'individual'
+  end
 
   def api_base_path
     whatsapp_channel.provider_config['url'] || ENV.fetch('WHATSAPP_CLOUD_BASE_URL', 'https://graph.facebook.com')
@@ -139,6 +147,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
   def business_account_path
     "#{api_base_path}/v14.0/#{whatsapp_channel.provider_config['business_account_id']}"
+  end
+
+  def csat_template_service
+    @csat_template_service ||= Whatsapp::CsatTemplateService.new(whatsapp_channel)
   end
 
   def send_attachments(phone_number, message)
@@ -164,6 +176,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       headers: api_headers,
       body: {
         messaging_product: 'whatsapp',
+        recipient_type: recipient_type_for(message),
         context: whatsapp_reply_context(message),
         to: phone_number,
         text: { body: format_content(message) },
@@ -195,6 +208,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       headers: api_headers,
       body: {
         :messaging_product => 'whatsapp',
+        :recipient_type => recipient_type_for(message),
         :context => whatsapp_reply_context(message),
         'to' => phone_number,
         'type' => type,
@@ -227,6 +241,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       headers: api_headers,
       body: {
         messaging_product: 'whatsapp',
+        recipient_type: recipient_type_for(message),
         context: whatsapp_reply_context(message),
         to: phone_number,
         type: 'sticker',
@@ -243,6 +258,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     contacts_payload = whatsapp_contacts_payload(message)
     request_body = {
       messaging_product: 'whatsapp',
+      recipient_type: recipient_type_for(message),
       context: whatsapp_reply_context(message),
       to: phone_number,
       type: 'contacts',
@@ -365,6 +381,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       headers: api_headers,
       body: {
         messaging_product: 'whatsapp',
+        recipient_type: recipient_type_for(message),
         to: phone_number,
         interactive: payload,
         type: 'interactive'

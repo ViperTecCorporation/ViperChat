@@ -14,6 +14,11 @@
     "SEARCH_MESSAGES": "Pesquisar por mensagens nas conversas",
     "VIEW_ORIGINAL": "Ver original",
     "VIEW_TRANSLATED": "Ver traduzido",
+    "GROUP": {
+      "MEMBERS": "membros",
+      "MEMBERS_TITLE": "Membros do grupo",
+      "LOAD_MORE": "Carregar mais membros"
+    },
     "EMPTY_STATE": {
       "CMD_BAR": "para abrir o menu de comando",
       "KEYBOARD_SHORTCUTS": "para ver os atalhos de teclado"

@@ -29,6 +29,7 @@ export default {
       ignoreNewsletterMessages: true,
       ignoreGroupIndividualReceipts: true,
       groupOnlyDeliveredStatus: true,
+      useGroupConversationSchema: false,
       ignoreHistoryMessages: true,
       webhookSendNewMessages: true,
       sendAgentName: true,
@@ -61,6 +62,7 @@ export default {
     ignoreNewsletterMessages: { required },
     ignoreGroupIndividualReceipts: { required },
     groupOnlyDeliveredStatus: { required },
+    useGroupConversationSchema: { required },
     ignoreHistoryMessages: { required },
     webhookSendNewMessages: { required },
     sendAgentName: { required },
@@ -100,6 +102,8 @@ export default {
         this.inbox.provider_config.ignore_group_individual_receipts ?? true;
       this.groupOnlyDeliveredStatus =
         this.inbox.provider_config.group_only_delivered_status ?? true;
+      this.useGroupConversationSchema =
+        this.inbox.provider_config.use_group_conversation_schema ?? false;
       this.ignoreHistoryMessages = this.inbox.provider_config.ignore_history_messages;
       this.webhookSendNewMessages = this.inbox.provider_config.webhook_send_new_messages ?? true;
       this.sendAgentName = this.inbox.provider_config.send_agent_name;
@@ -195,6 +199,7 @@ export default {
               ignore_newsletter_messages: this.ignoreNewsletterMessages,
               ignore_group_individual_receipts: this.ignoreGroupIndividualReceipts,
               group_only_delivered_status: this.groupOnlyDeliveredStatus,
+              use_group_conversation_schema: this.useGroupConversationSchema,
               ignore_history_messages: this.ignoreHistoryMessages,
               ignore_group_messages: this.ignoreGroupMessages,
               webhook_send_new_messages: this.webhookSendNewMessages,
@@ -385,6 +390,24 @@ export default {
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.GROUP_ONLY_DELIVERED_STATUS.LABEL') }}
           <span v-if="v$.groupOnlyDeliveredStatus.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.GROUP_ONLY_DELIVERED_STATUS.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
+        <label :class="{ error: v$.useGroupConversationSchema.$error }" style="display: flex; align-items: center;">
+          <Switch
+            v-model="useGroupConversationSchema"
+            style="flex: 0 0 auto; margin-right: 10px;"
+          />
+          <span>
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.LABEL') }}
+            <span class="mt-1 block text-xs leading-5 text-slate-500">
+              {{ $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.HELP') }}
+            </span>
+          </span>
+          <span v-if="v$.useGroupConversationSchema.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.ERROR') }}
           </span>
         </label>
       </div>
