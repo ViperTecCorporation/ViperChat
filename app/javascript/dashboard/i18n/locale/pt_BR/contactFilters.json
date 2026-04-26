@@ -38,6 +38,8 @@
       "EMAIL": "E-mail",
       "PHONE_NUMBER": "Número de telefone",
       "IDENTIFIER": "Identificador",
+      "BSUID": "BSUID WhatsApp",
+      "WHATSAPP_USERNAME": "Username WhatsApp",
       "CITY": "Cidade",
       "COUNTRY": "País/região",
       "CUSTOM_ATTRIBUTE_LIST": "Lista",

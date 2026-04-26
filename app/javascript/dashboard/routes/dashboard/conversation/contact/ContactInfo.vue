@@ -101,6 +101,8 @@ export default {
       return (
         this.contact.name ||
         this.contact.phone_number ||
+        this.contact.whatsapp_username ||
+        this.contact.bsuid ||
         this.contact.identifier ||
         this.$t('CONTACT_PANEL.NOT_AVAILABLE')
       );
@@ -283,6 +285,24 @@ export default {
             :title="$t('CONTACT_PANEL.IDENTIFIER')"
           />
           <ContactInfoRow
+            v-if="contact.bsuid"
+            :value="contact.bsuid"
+            icon="contact-identify"
+            emoji="🆔"
+            :title="$t('CONTACT_PANEL.BSUID')"
+            show-copy
+          />
+          <ContactInfoRow
+            v-if="contact.whatsapp_username"
+            :value="contact.whatsapp_username"
+            icon="contact-identify"
+            emoji="@"
+            :title="$t('CONTACT_PANEL.WHATSAPP_USERNAME')"
+            show-copy
+            editable
+            @update="value => onFieldUpdate('whatsapp_username', value)"
+          />
+          <ContactInfoRow
             :value="additionalAttributes.company_name"
             icon="building-bank"
             emoji="🏢"
@@ -298,10 +318,7 @@ export default {
                 })
             "
           />
-          <div
-            v-if="contact.id"
-            class="flex flex-col w-full gap-2 pt-1.5"
-          >
+          <div v-if="contact.id" class="flex flex-col w-full gap-2 pt-1.5">
             <span class="text-xs font-medium uppercase text-n-slate-11">
               {{ $t('CONTACT_PANEL.LABELS.CONTACT.TITLE') }}
             </span>

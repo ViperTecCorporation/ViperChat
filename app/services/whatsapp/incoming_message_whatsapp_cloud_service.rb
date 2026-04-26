@@ -2,6 +2,8 @@
 # https://developers.facebook.com/docs/whatsapp/api/media/
 
 class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageBaseService
+  GROUP_PARTICIPANTS_SYNC_INTERVAL = 2.hours
+
   private
 
   def set_contact
@@ -130,6 +132,8 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def set_structured_group_contact
+    Rails.logger.info("[WHATSAPP][GROUP] structured inbound group_source_id=#{group_payload[:group_source_id]}")
+
     sender_contact_inbox = ::ContactInboxWithContactBuilder.new(
       source_id: structured_sender_source_id,
       inbox: inbox,
@@ -158,15 +162,14 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   def structured_sender_contact_attributes
     attrs = {
       name: group_payload[:sender_name],
-      avatar_url: group_payload[:sender_picture]
-    }
-    if structured_sender_source_id.include?('@lid')
-      attrs[:email] = structured_sender_source_id
-    else
-      phone = structured_sender_source_id.gsub(/\D/, '')
-      normalized_phone = brazil_phone_number?(phone) ? normalised_brazil_mobile_number(phone) : phone
-      attrs[:phone_number] = "+#{normalized_phone}" if normalized_phone.present?
-    end
+      avatar_url: group_payload[:sender_picture],
+      bsuid: group_payload[:sender_bsuid],
+      whatsapp_username: group_payload[:sender_username]
+    }.compact
+
+    phone = group_payload[:sender_phone].to_s.gsub(/\D/, '')
+    normalized_phone = brazil_phone_number?(phone) ? normalised_brazil_mobile_number(phone) : phone
+    attrs[:phone_number] = "+#{normalized_phone}" if normalized_phone.present?
     attrs
   end
 
@@ -177,9 +180,26 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
       group_contact.account_id = @conversation.account_id
       group_contact.metadata = {
         jid: group_payload[:sender_identifier],
+        wa_id: group_payload[:sender_phone],
+        user_id: group_payload[:sender_bsuid],
+        username: group_payload[:sender_username],
         picture: group_payload[:sender_picture]
       }.compact
     end
+
+    enqueue_group_participants_sync
+  end
+
+  def enqueue_group_participants_sync
+    return unless group_participants_sync_due?
+
+    Whatsapp::Unoapi::GroupParticipantsSyncJob.perform_later(@conversation.id)
+    Rails.logger.info("[WHATSAPP][GROUP] participants sync enqueued conversation_id=#{@conversation.id} group_source_id=#{@conversation.group_source_id}")
+  end
+
+  def group_participants_sync_due?
+    @conversation.group_contacts_synced_at.blank? ||
+      @conversation.group_contacts_synced_at <= GROUP_PARTICIPANTS_SYNC_INTERVAL.ago
   end
 
   def process_group_status(status)

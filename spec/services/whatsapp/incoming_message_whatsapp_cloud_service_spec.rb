@@ -232,8 +232,10 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
                 },
                 contacts: [{
                   wa_id: '556699999999',
+                  user_id: '123456789012345@lid',
                   profile: {
                     name: 'Maria',
+                    username: '@maria.vendas',
                     picture: 'https://cdn.example.com/profile/maria.jpg'
                   },
                   group_id: '120363040468224422@g.us',
@@ -242,6 +244,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
                 }],
                 messages: [{
                   from: '556699999999',
+                  from_user_id: '123456789012345@lid',
                   id: 'wamid.GROUP_MESSAGE_ID',
                   timestamp: '1710000000',
                   type: 'text',
@@ -255,7 +258,9 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
       end
 
       it 'creates a structured group conversation with the real sender' do
-        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        end.to have_enqueued_job(Whatsapp::Unoapi::GroupParticipantsSyncJob)
 
         conversation = whatsapp_channel.inbox.conversations.find_by!(group_source_id: '120363040468224422@g.us')
         message = conversation.messages.last
@@ -266,7 +271,63 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(conversation.group_contacts.count).to eq(1)
         expect(conversation.group_contacts.first.contact).to eq(message.sender)
         expect(message.sender.name).to eq('Maria')
+        expect(message.sender.bsuid).to eq('123456789012345@lid')
+        expect(message.sender.whatsapp_username).to eq('@maria.vendas')
+        expect(conversation.group_contacts.first.metadata).to include(
+          'wa_id' => '556699999999',
+          'user_id' => '123456789012345@lid',
+          'username' => '@maria.vendas'
+        )
         expect(message.content).to eq('Bom dia pessoal')
+      end
+
+      it 'uses bsuid as the structured group sender when no valid phone is present' do
+        lid_params = params.deep_dup
+        contact = lid_params[:entry][0][:changes][0][:value][:contacts][0]
+        message = lid_params[:entry][0][:changes][0][:value][:messages][0]
+        contact[:wa_id] = '123456789012345@lid'
+        message[:from] = '123456789012345@lid'
+        message[:id] = 'wamid.GROUP_LID_MESSAGE_ID'
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: lid_params).perform
+
+        conversation = whatsapp_channel.inbox.conversations.find_by!(group_source_id: '120363040468224422@g.us')
+        sender = conversation.messages.find_by!(source_id: 'wamid.GROUP_LID_MESSAGE_ID').sender
+        contact_inbox = sender.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox)
+
+        expect(contact_inbox.source_id).to eq('123456789012345@lid')
+        expect(sender.bsuid).to eq('123456789012345@lid')
+        expect(sender.phone_number).to be_nil
+      end
+
+      it 'does not enqueue participants sync again before the interval expires' do
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        clear_enqueued_jobs
+
+        conversation = whatsapp_channel.inbox.conversations.find_by!(group_source_id: '120363040468224422@g.us')
+        conversation.update!(group_contacts_synced_at: 30.minutes.ago)
+
+        next_params = params.deep_dup
+        next_params[:entry][0][:changes][0][:value][:messages][0][:id] = 'wamid.GROUP_MESSAGE_ID_2'
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: next_params).perform
+        end.not_to have_enqueued_job(Whatsapp::Unoapi::GroupParticipantsSyncJob)
+      end
+
+      it 'enqueues participants sync again after the interval expires' do
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        clear_enqueued_jobs
+
+        conversation = whatsapp_channel.inbox.conversations.find_by!(group_source_id: '120363040468224422@g.us')
+        conversation.update!(group_contacts_synced_at: 3.hours.ago)
+
+        next_params = params.deep_dup
+        next_params[:entry][0][:changes][0][:value][:messages][0][:id] = 'wamid.GROUP_MESSAGE_ID_2'
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: next_params).perform
+        end.to have_enqueued_job(Whatsapp::Unoapi::GroupParticipantsSyncJob)
       end
 
       it 'updates a group message status by group recipient id' do

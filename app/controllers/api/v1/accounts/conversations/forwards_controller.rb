@@ -54,9 +54,17 @@ class Api::V1::Accounts::Conversations::ForwardsController < Api::V1::Accounts::
       ContactInboxBuilder.new(
         contact: target_contact,
         inbox: target_inbox,
-        source_id: nil,
+        source_id: target_source_id,
         hmac_verified: false
       ).perform
+  end
+
+  def target_source_id
+    contactable_inbox = Contacts::ContactableInboxesService.new(contact: target_contact).get.find do |entry|
+      entry[:inbox].id == target_inbox.id
+    end
+
+    contactable_inbox&.dig(:source_id)
   end
 
   def ensure_current_user

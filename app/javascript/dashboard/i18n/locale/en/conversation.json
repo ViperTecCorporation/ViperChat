@@ -17,7 +17,21 @@
     "GROUP": {
       "MEMBERS": "members",
       "MEMBERS_TITLE": "Group members",
-      "LOAD_MORE": "Load more members"
+      "LOAD_MORE": "Load more members",
+      "SYNC": "Sync members",
+      "SYNCING": "Syncing members...",
+      "INVITE_LINK": "Invite link",
+      "RESET_INVITE_LINK": "Reset link",
+      "REMOVE_MEMBER": "Remove",
+      "TITLE": "Group title",
+      "DESCRIPTION": "Group description",
+      "UPLOAD_PICTURE": "Upload picture",
+      "UPLOADING_PICTURE": "Uploading picture...",
+      "SAVE": "Save group",
+      "SAVING": "Saving group...",
+      "JOIN_REQUESTS": "Join requests",
+      "APPROVE_JOIN_REQUEST": "Approve",
+      "REJECT_JOIN_REQUEST": "Reject"
     },
     "EMPTY_STATE": {
       "CMD_BAR": "to open command menu",

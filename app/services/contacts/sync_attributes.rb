@@ -24,7 +24,7 @@ class Contacts::SyncAttributes
     return unless @contact.contact_type == 'visitor'
     # If the contact has an email or phone number or social details( facebook_user_id, instagram_user_id, etc) then it is a lead
     # If contact is from external channel like facebook, instagram, whatsapp, etc then it is a lead
-    return unless @contact.email.present? || @contact.phone_number.present? || social_details_present?
+    return unless @contact.email.present? || @contact.phone_number.present? || @contact.bsuid.present? || social_details_present?
 
     @contact.contact_type = 'lead'
   end

@@ -30,12 +30,21 @@ json.id conversation.display_id
 json.group conversation.group?
 json.group_source_id conversation.group_source_id
 json.group_title conversation.group_title
+json.group_description conversation.group_description
+json.group_invite_link conversation.group_invite_link
+json.group_join_approval_mode conversation.group_join_approval_mode
+json.group_suspended conversation.group_suspended
+json.group_created_at_external conversation.group_created_at_external
+json.group_contacts_synced_at conversation.group_contacts_synced_at
+json.group_session_admin conversation.group_session_admin
 json.group_contacts_count conversation.group? ? conversation.group_member_count : 0
 if conversation.group?
   json.group_contacts do
     json.array! conversation.group_contacts.includes(:contact).limit(5) do |group_contact|
       json.id group_contact.id
       json.contact_id group_contact.contact_id
+      metadata = group_contact.metadata || {}
+      json.participant_identifier metadata['jid'].presence || metadata['wa_id'].presence || metadata['lid'].presence
       json.contact do
         json.partial! 'api/v1/models/contact', formats: [:json], resource: group_contact.contact
       end

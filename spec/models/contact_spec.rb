@@ -57,6 +57,12 @@ RSpec.describe Contact do
       contact = create(:contact, additional_attributes: '')
       expect(contact.additional_attributes).to eq({})
     end
+
+    it 'sets uno identity fields to nil when empty string' do
+      contact = create(:contact, bsuid: '', whatsapp_username: '')
+      expect(contact.bsuid).to be_nil
+      expect(contact.whatsapp_username).to be_nil
+    end
   end
 
   context 'when phone number format' do

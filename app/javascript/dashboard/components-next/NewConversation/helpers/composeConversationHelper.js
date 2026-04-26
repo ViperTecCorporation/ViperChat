@@ -17,6 +17,7 @@ export const generateLabelForContactableInboxesList = ({
   email,
   channelType,
   phoneNumber,
+  sourceId,
 }) => {
   if (channelType === INBOX_TYPES.EMAIL) {
     return `${name} (${email})`;
@@ -25,7 +26,8 @@ export const generateLabelForContactableInboxesList = ({
     channelType === INBOX_TYPES.TWILIO ||
     channelType === INBOX_TYPES.WHATSAPP
   ) {
-    return phoneNumber ? `${name} (${phoneNumber})` : name;
+    const identifier = phoneNumber || sourceId;
+    return identifier ? `${name} (${identifier})` : name;
   }
   return name;
 };
@@ -46,6 +48,7 @@ const transformInbox = ({
     email,
     channelType,
     phoneNumber,
+    sourceId: rest.sourceId,
   }),
   action: 'inbox',
   value: id,
@@ -199,9 +202,9 @@ export const createContactSearcher = () => {
       } = await ContactAPI.search(trimmed, 1, 'name', '', { signal });
 
       const camelCasedPayload = camelcaseKeys(payload, { deep: true });
-      // Filter contacts that have either phone_number or email
+      // Filter contacts that have at least one addressable identity.
       const filteredPayload = camelCasedPayload?.filter(
-        contact => contact.phoneNumber || contact.email
+        contact => contact.phoneNumber || contact.email || contact.bsuid
       );
       return filteredPayload || [];
     } catch (error) {

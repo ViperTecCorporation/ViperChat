@@ -31,7 +31,7 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
     end
 
     message_id = channel.send_template(
-      message.conversation.contact_inbox.source_id,
+      whatsapp_recipient,
       {
         name: name,
         namespace: namespace,
@@ -44,18 +44,25 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   end
 
   def send_session_message
-    uuid_regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-    phone_number = if uuid_regex.match?(message.conversation.contact_inbox.source_id)
-                     message.conversation.contact_inbox.contact.phone_number.sub('+', '')
-                   else
-                     message.conversation.contact_inbox.source_id
-                   end
-    phone_number = message.conversation.group_source_id if message.conversation.group?
-    message_id = channel.send_message(phone_number, message)
+    message_id = channel.send_message(whatsapp_recipient, message)
     message.update!(source_id: message_id) if message_id.present?
   end
 
   def template_params
     message.additional_attributes && message.additional_attributes['template_params']
+  end
+
+  def whatsapp_recipient
+    return message.conversation.group_source_id if message.conversation.group?
+
+    contact_inbox = message.conversation.contact_inbox
+    source_id = contact_inbox.source_id
+    return source_id unless uuid_source_id?(source_id)
+
+    contact_inbox.contact.phone_number&.sub('+', '').presence || contact_inbox.contact.bsuid
+  end
+
+  def uuid_source_id?(source_id)
+    source_id.to_s.match?(/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/)
   end
 end

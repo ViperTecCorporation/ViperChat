@@ -10,7 +10,10 @@ class Whatsapp::GroupPayloadNormalizer
       group_title: contact[:group_subject].presence || group_source_id,
       group_picture: contact[:group_picture],
       sender_identifier: sender_identifier,
-      sender_name: contact.dig(:profile, :name),
+      sender_phone: sender_phone,
+      sender_bsuid: sender_bsuid,
+      sender_username: sender_username,
+      sender_name: sender_name,
       sender_picture: contact.dig(:profile, :picture),
       message_source_id: message[:id],
       message_from: message[:from]
@@ -32,7 +35,33 @@ class Whatsapp::GroupPayloadNormalizer
   end
 
   def sender_identifier
-    message[:from].presence || contact[:wa_id]
+    sender_phone.presence || sender_bsuid
+  end
+
+  def sender_phone
+    raw_phone = message[:from].presence || contact[:wa_id]
+    return if raw_phone.to_s.include?('@lid')
+
+    digits = raw_phone.to_s.gsub(/\D/, '')
+    return if digits.blank? || digits == '0'
+    return unless digits.match?(/^[1-9]\d{7,14}$/)
+
+    digits
+  end
+
+  def sender_bsuid
+    message[:from_user_id].presence || contact[:user_id].presence
+  end
+
+  def sender_username
+    contact.dig(:profile, :username).presence
+  end
+
+  def sender_name
+    contact.dig(:profile, :name).presence ||
+      sender_username ||
+      sender_phone ||
+      sender_bsuid
   end
 
   def normalize_group_id(value)

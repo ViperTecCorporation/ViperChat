@@ -34,6 +34,8 @@ const FORM_CONFIG = {
   LAST_NAME: { field: 'lastName' },
   EMAIL_ADDRESS: { field: 'email' },
   PHONE_NUMBER: { field: 'phoneNumber' },
+  BSUID: { field: 'bsuid' },
+  WHATSAPP_USERNAME: { field: 'whatsappUsername' },
   CITY: { field: 'additionalAttributes.city' },
   COUNTRY: { field: 'additionalAttributes.countryCode' },
   BIO: { field: 'additionalAttributes.description' },
@@ -57,6 +59,8 @@ const defaultState = {
   firstName: '',
   lastName: '',
   phoneNumber: '',
+  bsuid: '',
+  whatsappUsername: '',
   additionalAttributes: {
     description: '',
     companyName: '',
@@ -107,6 +111,8 @@ const prepareStateBasedOnProps = () => {
     name = '',
     email: emailAddress,
     phoneNumber,
+    bsuid = '',
+    whatsappUsername = '',
     additionalAttributes = {},
   } = props.contactData || {};
   const { firstName, lastName } = splitName(name || '');
@@ -130,6 +136,8 @@ const prepareStateBasedOnProps = () => {
     lastName,
     email: emailAddress,
     phoneNumber,
+    bsuid,
+    whatsappUsername,
     additionalAttributes: {
       description,
       companyName,

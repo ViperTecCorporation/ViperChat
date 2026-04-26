@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_26_120100) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_26_120400) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -682,10 +682,14 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_120100) do
     t.string "country_code", default: ""
     t.boolean "blocked", default: false, null: false
     t.bigint "company_id"
+    t.string "bsuid"
+    t.string "whatsapp_username"
     t.index "lower((email)::text), account_id", name: "index_contacts_on_lower_email_account_id"
+    t.index ["account_id", "bsuid"], name: "index_contacts_on_account_id_and_bsuid", unique: true, where: "(bsuid IS NOT NULL)"
     t.index ["account_id", "contact_type"], name: "index_contacts_on_account_id_and_contact_type"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["account_id", "last_activity_at"], name: "index_contacts_on_account_id_and_last_activity_at", order: { last_activity_at: "DESC NULLS LAST" }
+    t.index ["account_id", "whatsapp_username"], name: "index_contacts_on_account_id_and_whatsapp_username", where: "(whatsapp_username IS NOT NULL)"
     t.index ["account_id"], name: "index_contacts_on_account_id"
     t.index ["account_id"], name: "index_resolved_contact_account_id", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["blocked"], name: "index_contacts_on_blocked"
@@ -738,6 +742,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_120100) do
     t.boolean "group", default: false, null: false
     t.string "group_source_id"
     t.string "group_title"
+    t.text "group_description"
+    t.string "group_invite_link"
+    t.string "group_join_approval_mode"
+    t.boolean "group_suspended", default: false, null: false
+    t.datetime "group_created_at_external"
+    t.datetime "group_contacts_synced_at"
+    t.boolean "group_session_admin", default: false, null: false
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
     t.index ["account_id", "inbox_id", "status", "assignee_id"], name: "conv_acid_inbid_stat_asgnid_idx"
@@ -747,29 +758,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_120100) do
     t.index ["contact_id"], name: "index_conversations_on_contact_id"
     t.index ["contact_inbox_id"], name: "index_conversations_on_contact_inbox_id"
     t.index ["first_reply_created_at"], name: "index_conversations_on_first_reply_created_at"
+    t.index ["group"], name: "index_conversations_on_group"
     t.index ["identifier", "account_id"], name: "index_conversations_on_identifier_and_account_id"
     t.index ["inbox_id", "group_source_id"], name: "index_conversations_on_inbox_id_and_group_source_id", unique: true, where: "(group_source_id IS NOT NULL)"
     t.index ["inbox_id"], name: "index_conversations_on_inbox_id"
-    t.index ["group"], name: "index_conversations_on_group"
     t.index ["priority"], name: "index_conversations_on_priority"
     t.index ["status", "account_id"], name: "index_conversations_on_status_and_account_id"
     t.index ["status", "priority"], name: "index_conversations_on_status_and_priority"
     t.index ["team_id"], name: "index_conversations_on_team_id"
     t.index ["uuid"], name: "index_conversations_on_uuid", unique: true
     t.index ["waiting_since"], name: "index_conversations_on_waiting_since"
-  end
-
-  create_table "group_contacts", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.bigint "conversation_id", null: false
-    t.bigint "contact_id", null: false
-    t.jsonb "metadata", default: {}
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_group_contacts_on_account_id"
-    t.index ["contact_id"], name: "index_group_contacts_on_contact_id"
-    t.index ["conversation_id", "contact_id"], name: "index_group_contacts_on_conversation_id_and_contact_id", unique: true
-    t.index ["conversation_id"], name: "index_group_contacts_on_conversation_id"
   end
 
   create_table "copilot_messages", force: :cascade do |t|
@@ -895,6 +893,19 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_26_120100) do
     t.string "name"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+  end
+
+  create_table "group_contacts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "contact_id", null: false
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_group_contacts_on_account_id"
+    t.index ["contact_id"], name: "index_group_contacts_on_contact_id"
+    t.index ["conversation_id", "contact_id"], name: "index_group_contacts_on_conversation_id_and_contact_id", unique: true
+    t.index ["conversation_id"], name: "index_group_contacts_on_conversation_id"
   end
 
   create_table "inbox_assignment_policies", force: :cascade do |t|

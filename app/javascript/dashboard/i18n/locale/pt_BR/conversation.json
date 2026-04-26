@@ -17,7 +17,21 @@
     "GROUP": {
       "MEMBERS": "membros",
       "MEMBERS_TITLE": "Membros do grupo",
-      "LOAD_MORE": "Carregar mais membros"
+      "LOAD_MORE": "Carregar mais membros",
+      "SYNC": "Sincronizar membros",
+      "SYNCING": "Sincronizando membros...",
+      "INVITE_LINK": "Link de convite",
+      "RESET_INVITE_LINK": "Resetar link",
+      "REMOVE_MEMBER": "Remover",
+      "TITLE": "Titulo do grupo",
+      "DESCRIPTION": "Descricao do grupo",
+      "UPLOAD_PICTURE": "Enviar foto",
+      "UPLOADING_PICTURE": "Enviando foto...",
+      "SAVE": "Salvar grupo",
+      "SAVING": "Salvando grupo...",
+      "JOIN_REQUESTS": "Solicitacoes de entrada",
+      "APPROVE_JOIN_REQUEST": "Aprovar",
+      "REJECT_JOIN_REQUEST": "Rejeitar"
     },
     "EMPTY_STATE": {
       "CMD_BAR": "para abrir o menu de comando",

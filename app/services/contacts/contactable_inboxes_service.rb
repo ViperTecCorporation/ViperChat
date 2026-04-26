@@ -57,10 +57,18 @@ class Contacts::ContactableInboxesService
   end
 
   def whatsapp_contactable_inbox(inbox)
-    return if @contact.phone_number.blank?
+    source_id = whatsapp_source_id(inbox)
+    return if source_id.blank?
 
     # Remove the plus since thats the format 360 dialog uses
-    { source_id: @contact.phone_number.delete('+'), inbox: inbox }
+    { source_id: source_id, inbox: inbox }
+  end
+
+  def whatsapp_source_id(inbox)
+    return @contact.phone_number.delete('+') if @contact.phone_number.present?
+    return unless inbox.channel.provider == 'unoapi'
+
+    @contact.bsuid
   end
 
   def sms_contactable_inbox(inbox)

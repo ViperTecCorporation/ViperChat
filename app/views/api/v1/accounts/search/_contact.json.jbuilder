@@ -1,4 +1,6 @@
 json.email contact.email
+json.bsuid contact.bsuid
+json.whatsapp_username contact.whatsapp_username
 json.id contact.id
 json.name contact.name
 json.phone_number contact.phone_number

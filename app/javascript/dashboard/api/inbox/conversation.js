@@ -129,6 +129,48 @@ class ConversationApi extends ApiClient {
     });
   }
 
+  removeGroupContacts({ conversationId, participants }) {
+    return axios.delete(`${this.url}/${conversationId}/group_contacts`, {
+      data: { participants },
+    });
+  }
+
+  fetchGroup(conversationId) {
+    return axios.get(`${this.url}/${conversationId}/group`);
+  }
+
+  updateGroup({ conversationId, ...params }) {
+    return axios.patch(`${this.url}/${conversationId}/group`, params);
+  }
+
+  syncGroup(conversationId) {
+    return axios.post(`${this.url}/${conversationId}/group/sync`);
+  }
+
+  fetchGroupInviteLink(conversationId) {
+    return axios.get(`${this.url}/${conversationId}/group/invite_link`);
+  }
+
+  resetGroupInviteLink(conversationId) {
+    return axios.post(`${this.url}/${conversationId}/group/invite_link/reset`);
+  }
+
+  fetchGroupJoinRequests(conversationId) {
+    return axios.get(`${this.url}/${conversationId}/group/join_requests`);
+  }
+
+  approveGroupJoinRequests({ conversationId, participants }) {
+    return axios.post(`${this.url}/${conversationId}/group/join_requests`, {
+      participants,
+    });
+  }
+
+  rejectGroupJoinRequests({ conversationId, participants }) {
+    return axios.delete(`${this.url}/${conversationId}/group/join_requests`, {
+      data: { participants },
+    });
+  }
+
   updateParticipants({ conversationId, userIds }) {
     return axios.patch(`${this.url}/${conversationId}/participants`, {
       user_ids: userIds,

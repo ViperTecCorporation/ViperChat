@@ -38,6 +38,22 @@ const filterTypes = [
     attribute_type: 'standard',
   },
   {
+    attributeKey: 'bsuid',
+    attributeI18nKey: 'BSUID',
+    inputType: 'plain_text',
+    dataType: 'text',
+    filterOperators: OPERATOR_TYPES_3,
+    attribute_type: 'standard',
+  },
+  {
+    attributeKey: 'whatsapp_username',
+    attributeI18nKey: 'WHATSAPP_USERNAME',
+    inputType: 'plain_text',
+    dataType: 'text',
+    filterOperators: OPERATOR_TYPES_3,
+    attribute_type: 'standard',
+  },
+  {
     attributeKey: 'country_code',
     attributeI18nKey: 'COUNTRY',
     inputType: 'search_select',
@@ -115,6 +131,14 @@ export const filterAttributeGroups = [
       {
         key: 'identifier',
         i18nKey: 'IDENTIFIER',
+      },
+      {
+        key: 'bsuid',
+        i18nKey: 'BSUID',
+      },
+      {
+        key: 'whatsapp_username',
+        i18nKey: 'WHATSAPP_USERNAME',
       },
       {
         key: 'country_code',

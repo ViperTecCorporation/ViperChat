@@ -49,17 +49,11 @@ const contactableInboxesList = computed(() => {
   const contactInboxes = selectedContact.value?.contactInboxes || [];
   const baseInboxes = buildContactableInboxesList(contactInboxes);
 
-  const emailRaw =
-    selectedContact.value?.rawEmail || selectedContact.value?.email || '';
-  const email = emailRaw.toLowerCase();
-  const isLidEmail = email.endsWith('@lid');
-  const isGusEmail = email.endsWith('@g.us');
-  const lidPhone = isLidEmail ? email.split('@')[0] : null;
-  const gusPhone = isGusEmail ? email : null;
-  const contactPhone = selectedContact.value?.phoneNumber || lidPhone || gusPhone;
+  const bsuid = selectedContact.value?.bsuid || '';
+  const contactPhone = selectedContact.value?.phoneNumber || bsuid;
 
   const unoFallbackInboxes = (() => {
-    if (!(isLidEmail || isGusEmail) || !contactPhone) return [];
+    if (!bsuid || !contactPhone) return [];
 
     return (
       inboxesList.value
@@ -164,7 +158,6 @@ const handleContactSearch = async value => {
   contacts.value = [];
   try {
     contacts.value = await searchContacts({
-      keys: ['email', 'phone_number', 'name'],
       query,
     });
   } catch (error) {
@@ -189,16 +182,9 @@ const handleSelectedContact = async ({ value, action, ...rest }) => {
     contact = rest;
   }
 
-  const rawEmail = contact?.email || '';
-  const email = rawEmail.toLowerCase();
-  const isLidEmail = email.endsWith('@lid');
-  const isGusEmail = email.endsWith('@g.us');
-  const phoneFromEmail = isLidEmail ? email.split('@')[0] : isGusEmail ? email : null;
-
   contact = {
     ...contact,
-    rawEmail,
-    phoneNumber: contact.phoneNumber || phoneFromEmail,
+    phoneNumber: contact.phoneNumber || contact.bsuid,
   };
 
   selectedContact.value = contact;
@@ -254,27 +240,24 @@ const handleForward = async () => {
   }
 
   if (!hasForwardableContent.value) {
-    useAlert(
-      t('CONVERSATION.FORWARD_MESSAGES.ERROR_NO_CONTENT')
-    );
+    useAlert(t('CONVERSATION.FORWARD_MESSAGES.ERROR_NO_CONTENT'));
     return;
   }
 
   try {
-    const {
-      data,
-    } = await ConversationApi.forwardMessages(props.conversationId, {
-      message_ids: props.selectedMessages.map(message => message.id),
-      target_contact_id: selectedContact.value.id,
-      target_inbox_id: targetInbox.value.id,
-    });
+    const { data } = await ConversationApi.forwardMessages(
+      props.conversationId,
+      {
+        message_ids: props.selectedMessages.map(message => message.id),
+        target_contact_id: selectedContact.value.id,
+        target_inbox_id: targetInbox.value.id,
+      }
+    );
     emit('forwarded', data);
     show.value = false;
     resetState();
   } catch (error) {
-    useAlert(
-      t('CONVERSATION.FORWARD_MESSAGES.ERROR_API')
-    );
+    useAlert(t('CONVERSATION.FORWARD_MESSAGES.ERROR_API'));
   }
 };
 </script>

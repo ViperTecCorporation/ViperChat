@@ -4,6 +4,8 @@
     "EMAIL_ADDRESS": "Endereço de e-mail",
     "PHONE_NUMBER": "Número de telefone",
     "IDENTIFIER": "Identificador",
+    "BSUID": "BSUID WhatsApp",
+    "WHATSAPP_USERNAME": "Username WhatsApp",
     "COPY_SUCCESSFUL": "Copiado para área de transferência com sucesso",
     "COMPANY": "Empresa",
     "LOCATION": "Localização",
@@ -115,6 +117,14 @@
       "COMPANY_NAME": {
         "PLACEHOLDER": "Digite o nome da empresa",
         "LABEL": "Nome da empresa"
+      },
+      "BSUID": {
+        "PLACEHOLDER": "Digite o BSUID do WhatsApp, ex: 123456789@lid",
+        "LABEL": "BSUID WhatsApp"
+      },
+      "WHATSAPP_USERNAME": {
+        "PLACEHOLDER": "Digite o username do WhatsApp, ex: @maria.vendas",
+        "LABEL": "Username WhatsApp"
       },
       "COUNTRY": {
         "PLACEHOLDER": "Digite o nome do país ",
@@ -384,6 +394,8 @@
       "EMAIL": "E-mail",
       "PHONE_NUMBER": "Número de telefone",
       "IDENTIFIER": "Identificador",
+      "BSUID": "BSUID WhatsApp",
+      "WHATSAPP_USERNAME": "Username WhatsApp",
       "COUNTRY": "País/região",
       "CITY": "Cidade",
       "CREATED_AT": "Criado em",
@@ -428,6 +440,12 @@
           "PHONE_NUMBER": {
             "PLACEHOLDER": "Digite o número de telefone",
             "DUPLICATE": "Este número de telefone está em uso para outro contato."
+          },
+          "BSUID": {
+            "PLACEHOLDER": "Digite o BSUID do WhatsApp"
+          },
+          "WHATSAPP_USERNAME": {
+            "PLACEHOLDER": "Digite o username do WhatsApp"
           },
           "CITY": {
             "PLACEHOLDER": "Digite o nome da cidade"

@@ -16,6 +16,7 @@ class ContactInboxWithContactBuilder
   def find_or_create_contact_and_contact_inbox
     @contact_inbox = inbox.contact_inboxes.find_by(source_id: source_id) if source_id.present?
     if @contact_inbox
+      update_contact_attributes(@contact_inbox.contact)
       update_contact_avatar(@contact_inbox.contact)
       return @contact_inbox
     end
@@ -32,6 +33,7 @@ class ContactInboxWithContactBuilder
 
   def build_contact_with_contact_inbox
     @contact = find_contact || create_contact
+    update_contact_attributes(@contact)
     @contact_inbox = create_contact_inbox
   end
 
@@ -57,6 +59,8 @@ class ContactInboxWithContactBuilder
       name: contact_attributes[:name] || ::Haikunator.haikunate(1000),
       phone_number: contact_attributes[:phone_number],
       email: contact_attributes[:email],
+      bsuid: contact_attributes[:bsuid],
+      whatsapp_username: contact_attributes[:whatsapp_username],
       identifier: contact_attributes[:identifier],
       additional_attributes: contact_attributes[:additional_attributes],
       custom_attributes: contact_attributes[:custom_attributes]
@@ -64,12 +68,31 @@ class ContactInboxWithContactBuilder
   end
 
   def find_contact
-    contact = find_contact_by_identifier(contact_attributes[:identifier])
+    contact = find_contact_by_bsuid(contact_attributes[:bsuid])
+    contact ||= find_contact_by_identifier(contact_attributes[:identifier])
     contact ||= find_contact_by_email(contact_attributes[:email])
     contact ||= find_contact_by_phone_number(contact_attributes[:phone_number])
     contact ||= find_contact_by_instagram_source_id(source_id) if instagram_channel?
 
     contact
+  end
+
+  def update_contact_attributes(contact)
+    attrs = {
+      bsuid: missing_attribute(contact.bsuid, contact_attributes[:bsuid]),
+      whatsapp_username: changed_attribute(contact.whatsapp_username, contact_attributes[:whatsapp_username]),
+      phone_number: missing_attribute(contact.phone_number, contact_attributes[:phone_number]),
+      name: missing_attribute(contact.name, contact_attributes[:name])
+    }.compact
+    contact.update!(attrs) if attrs.present?
+  end
+
+  def missing_attribute(current_value, new_value)
+    new_value if current_value.blank? && new_value.present?
+  end
+
+  def changed_attribute(current_value, new_value)
+    new_value if new_value.present? && current_value != new_value
   end
 
   def instagram_channel?
@@ -98,6 +121,12 @@ class ContactInboxWithContactBuilder
     return if identifier.blank?
 
     account.contacts.find_by(identifier: identifier)
+  end
+
+  def find_contact_by_bsuid(bsuid)
+    return if bsuid.blank?
+
+    account.contacts.find_by(bsuid: bsuid)
   end
 
   def find_contact_by_email(email)

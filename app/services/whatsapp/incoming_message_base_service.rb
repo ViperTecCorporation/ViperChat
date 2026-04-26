@@ -82,26 +82,15 @@ class Whatsapp::IncomingMessageBaseService
     return if contact_params.blank?
 
     contact_attributes = {
-      name: contact_params.dig(:profile, :name),
-      avatar_url: contact_params.dig(:profile, :picture)
-    }
+      name: contact_display_name(contact_params),
+      avatar_url: contact_params.dig(:profile, :picture),
+      bsuid: contact_bsuid(contact_params),
+      whatsapp_username: contact_username(contact_params)
+    }.compact
 
-    waid = contact_params[:wa_id].to_s
-    profile_phone = contact_params.dig(:profile, :phone).to_s
-    if waid.include?('@lid')
-      contact_attributes[:email] = waid
-      waid = nil
-    else
-      raw_phone = waid.presence || profile_phone
-      raw_phone = raw_phone.gsub(/\D/, '')
-      return if raw_phone.blank? || raw_phone == '0'
-      return unless raw_phone.match?(/^[1-9]\d{7,14}$/)
-      if raw_phone.present?
-        waid = processed_waid(raw_phone) || raw_phone
-        phone_number = brazil_phone_number?(raw_phone) ? normalised_brazil_mobile_number(raw_phone) : waid
-        contact_attributes[:phone_number] = "+#{phone_number}" if phone_number.present?
-      end
-    end
+    waid = contact_source_id(contact_params)
+    apply_phone_attributes(contact_attributes, contact_phone_identifier(contact_params))
+    return if waid.blank?
 
     contact_inbox = ::ContactInboxWithContactBuilder.new(
       source_id: waid,
@@ -112,7 +101,7 @@ class Whatsapp::IncomingMessageBaseService
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
 
-    raw_from = waid.presence || profile_phone
+    raw_from = contact_phone_identifier(contact_params).presence || contact_bsuid(contact_params)
     update_contact_with_profile_name(contact_params, raw_from: raw_from)
     sync_group_contact(contact_params)
   end
@@ -200,16 +189,17 @@ class Whatsapp::IncomingMessageBaseService
     contact_params = @processed_params[:contacts]&.first
     return if contact_params.blank?
 
-    waid = nil
-    contact_attributes = { name: contact_params.dig(:profile, :name), avatar_url: contact_params.dig(:profile, :picture) }
-    if lid_message?
-      contact_attributes = contact_attributes.merge({ email: contact_params[:wa_id] })
-    else
-      clean_waid = contact_params[:wa_id].to_s.gsub(/\D/, '')
-      waid = processed_waid(clean_waid) || clean_waid
-      phone_number = brazil_phone_number?(clean_waid) ? normalised_brazil_mobile_number(clean_waid) : waid
-      contact_attributes = contact_attributes.merge({ phone_number: "+#{phone_number}" })
-    end
+    waid = contact_source_id(contact_params)
+    return if waid.blank?
+
+    contact_attributes = {
+      name: contact_display_name(contact_params),
+      avatar_url: contact_params.dig(:profile, :picture),
+      bsuid: contact_bsuid(contact_params),
+      whatsapp_username: contact_username(contact_params)
+    }.compact
+    apply_phone_attributes(contact_attributes, contact_phone_identifier(contact_params))
+
     contact_inbox = ::ContactInboxWithContactBuilder.new(
       source_id: waid,
       inbox: inbox,
@@ -337,11 +327,11 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def lid_message?
-    contact_params.present? && contact_params[:wa_id]&.include?('@lid')
+    contact_params.present? && contact_bsuid(contact_params).present? && contact_phone_identifier(contact_params).blank?
   end
 
   def update_contact_with_profile_name(contact_params, raw_from: nil)
-    profile_name = contact_params.dig(:profile, :name)
+    profile_name = contact_display_name(contact_params)
     return if profile_name.blank?
     return if @contact.name == profile_name
 
@@ -406,5 +396,44 @@ class Whatsapp::IncomingMessageBaseService
     return true if contact_name.length <= 3
 
     contact_name.match?(/\A[^\p{L}\p{N}]+\z/)
+  end
+
+  def contact_source_id(contact_params)
+    phone_identifier = contact_phone_identifier(contact_params)
+    return phone_identifier if phone_identifier.present?
+
+    contact_bsuid(contact_params)
+  end
+
+  def contact_phone_identifier(contact_params)
+    raw_phone = contact_params[:wa_id].to_s
+    raw_phone = contact_params.dig(:profile, :phone).to_s if raw_phone.blank? || raw_phone.include?('@lid')
+    raw_phone = raw_phone.gsub(/\D/, '')
+    return if raw_phone.blank? || raw_phone == '0'
+    return unless raw_phone.match?(/^[1-9]\d{7,14}$/)
+
+    processed_waid(raw_phone) || raw_phone
+  end
+
+  def apply_phone_attributes(contact_attributes, phone_identifier)
+    return if phone_identifier.blank?
+
+    phone = brazil_phone_number?(phone_identifier) ? normalised_brazil_mobile_number(phone_identifier) : phone_identifier
+    contact_attributes[:phone_number] = "+#{phone}" if phone.present?
+  end
+
+  def contact_bsuid(contact_params)
+    contact_params[:user_id].presence || messages_data&.first&.[](:from_user_id).presence
+  end
+
+  def contact_username(contact_params)
+    contact_params.dig(:profile, :username).presence
+  end
+
+  def contact_display_name(contact_params)
+    contact_params.dig(:profile, :name).presence ||
+      contact_username(contact_params) ||
+      contact_params[:wa_id].presence ||
+      contact_bsuid(contact_params)
   end
 end

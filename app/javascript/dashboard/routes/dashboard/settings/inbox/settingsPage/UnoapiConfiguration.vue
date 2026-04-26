@@ -400,11 +400,12 @@ export default {
             v-model="useGroupConversationSchema"
             style="flex: 0 0 auto; margin-right: 10px;"
           />
-          <span>
+          <span class="inline-flex items-center gap-1">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.LABEL') }}
-            <span class="mt-1 block text-xs leading-5 text-slate-500">
-              {{ $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.HELP') }}
-            </span>
+            <i
+              v-tooltip.top="$t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.HELP')"
+              class="i-lucide-circle-help size-3.5 cursor-help text-slate-500"
+            />
           </span>
           <span v-if="v$.useGroupConversationSchema.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.ERROR') }}
@@ -652,7 +653,7 @@ export default {
 
 .flex-shrink div .config-helptext{
  min-height:2px;
- height:30px;
+ height:auto;
 }
 
 .flex-shrink .messagingServiceHelptext label{

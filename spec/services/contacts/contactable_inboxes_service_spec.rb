@@ -13,6 +13,8 @@ describe Contacts::ContactableInboxesService do
   let!(:twilio_whatsapp_inbox) { create(:inbox, channel: twilio_whatsapp, account: account) }
   let!(:email_channel) { create(:channel_email, account: account) }
   let!(:email_inbox) { create(:inbox, channel: email_channel, account: account) }
+  let!(:whatsapp_channel) { create(:channel_whatsapp, account: account, provider: 'unoapi', sync_templates: false, validate_provider_config: false) }
+  let!(:whatsapp_inbox) { whatsapp_channel.inbox }
   let!(:api_channel) { create(:channel_api, account: account) }
   let!(:api_inbox) { create(:inbox, channel: api_channel, account: account) }
   let!(:website_inbox) { create(:inbox, channel: create(:channel_widget, account: account), account: account) }
@@ -24,8 +26,29 @@ describe Contacts::ContactableInboxesService do
 
       expect(contactable_inboxes).to include({ source_id: contact.phone_number, inbox: twilio_sms_inbox })
       expect(contactable_inboxes).to include({ source_id: "whatsapp:#{contact.phone_number}", inbox: twilio_whatsapp_inbox })
+      expect(contactable_inboxes).to include({ source_id: contact.phone_number.delete('+'), inbox: whatsapp_inbox })
       expect(contactable_inboxes).to include({ source_id: contact.email, inbox: email_inbox })
       expect(contactable_inboxes).to include({ source_id: contact.phone_number, inbox: sms_inbox })
+    end
+
+    it 'returns whatsapp inboxes when the contact only has a bsuid' do
+      contact.update!(phone_number: nil, bsuid: '123456789012345@lid')
+
+      contactable_inboxes = described_class.new(contact: contact).get
+
+      expect(contactable_inboxes).to include({ source_id: '123456789012345@lid', inbox: whatsapp_inbox })
+      expect(contactable_inboxes.pluck(:inbox)).not_to include(twilio_sms_inbox)
+      expect(contactable_inboxes.pluck(:inbox)).not_to include(twilio_whatsapp_inbox)
+      expect(contactable_inboxes.pluck(:inbox)).not_to include(sms_inbox)
+    end
+
+    it 'prefers phone number over bsuid for whatsapp inboxes when both are present' do
+      contact.update!(bsuid: '123456789012345@lid')
+
+      contactable_inboxes = described_class.new(contact: contact).get
+
+      expect(contactable_inboxes).to include({ source_id: contact.phone_number.delete('+'), inbox: whatsapp_inbox })
+      expect(contactable_inboxes).not_to include({ source_id: '123456789012345@lid', inbox: whatsapp_inbox })
     end
 
     it 'doest not return the non contactable inboxes for the contact' do

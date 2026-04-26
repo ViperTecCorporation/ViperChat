@@ -35,6 +35,7 @@ class Channel::Whatsapp < ApplicationRecord
   after_create :sync_templates
   before_destroy :teardown_webhooks
   after_commit :setup_webhooks, on: :create, if: :should_auto_setup_webhooks?
+  after_update_commit :enqueue_group_conversation_backfill, if: :should_backfill_group_conversations?
 
   def name
     'Whatsapp'
@@ -106,5 +107,23 @@ class Channel::Whatsapp < ApplicationRecord
     # Only auto-setup webhooks for whatsapp_cloud provider with manual setup
     # Embedded signup calls setup_webhooks explicitly in EmbeddedSignupService
     provider == 'whatsapp_cloud' && provider_config['source'] != 'embedded_signup'
+  end
+
+  def should_backfill_group_conversations?
+    return false unless provider == 'unoapi'
+    return false unless saved_change_to_provider_config?
+
+    old_config, new_config = saved_change_to_provider_config
+    old_value = ActiveModel::Type::Boolean.new.cast(old_config&.dig('use_group_conversation_schema'))
+    new_value = ActiveModel::Type::Boolean.new.cast(new_config&.dig('use_group_conversation_schema'))
+
+    !old_value && new_value
+  end
+
+  def enqueue_group_conversation_backfill
+    return if inbox.blank?
+
+    Whatsapp::GroupConversationBackfillJob.perform_later(inbox.id)
+    Rails.logger.info("[WHATSAPP][GROUP] backfill enqueued inbox_id=#{inbox.id}")
   end
 end

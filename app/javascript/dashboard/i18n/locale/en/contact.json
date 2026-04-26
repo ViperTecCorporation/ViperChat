@@ -4,6 +4,8 @@
     "EMAIL_ADDRESS": "Email Address",
     "PHONE_NUMBER": "Phone number",
     "IDENTIFIER": "Identifier",
+    "BSUID": "WhatsApp BSUID",
+    "WHATSAPP_USERNAME": "WhatsApp username",
     "COPY_SUCCESSFUL": "Copied to clipboard successfully",
     "COMPANY": "Company",
     "LOCATION": "Location",
@@ -115,6 +117,14 @@
       "COMPANY_NAME": {
         "PLACEHOLDER": "Enter the company name",
         "LABEL": "Company Name"
+      },
+      "BSUID": {
+        "PLACEHOLDER": "Enter the WhatsApp BSUID, e.g. 123456789@lid",
+        "LABEL": "WhatsApp BSUID"
+      },
+      "WHATSAPP_USERNAME": {
+        "PLACEHOLDER": "Enter the WhatsApp username, e.g. @maria.sales",
+        "LABEL": "WhatsApp username"
       },
       "COUNTRY": {
         "PLACEHOLDER": "Enter the country name",
@@ -384,6 +394,8 @@
       "EMAIL": "Email",
       "PHONE_NUMBER": "Phone number",
       "IDENTIFIER": "Identifier",
+      "BSUID": "WhatsApp BSUID",
+      "WHATSAPP_USERNAME": "WhatsApp username",
       "COUNTRY": "Country",
       "CITY": "City",
       "CREATED_AT": "Created at",
@@ -428,6 +440,12 @@
           "PHONE_NUMBER": {
             "PLACEHOLDER": "Enter the phone number",
             "DUPLICATE": "This phone number is in use for another contact."
+          },
+          "BSUID": {
+            "PLACEHOLDER": "Enter the WhatsApp BSUID"
+          },
+          "WHATSAPP_USERNAME": {
+            "PLACEHOLDER": "Enter the WhatsApp username"
           },
           "CITY": {
             "PLACEHOLDER": "Enter the city name"

@@ -209,4 +209,34 @@ RSpec.describe Channel::Whatsapp do
       end
     end
   end
+
+  describe 'group conversation backfill' do
+    it 'enqueues inbox scoped backfill when enabling structured group schema' do
+      channel = create(
+        :channel_whatsapp,
+        provider: 'unoapi',
+        provider_config: { 'api_key' => 'test_key', 'phone_number_id' => '123456789', 'use_group_conversation_schema' => false },
+        validate_provider_config: false,
+        sync_templates: false
+      )
+
+      expect do
+        channel.update!(provider_config: channel.provider_config.merge('use_group_conversation_schema' => true))
+      end.to have_enqueued_job(Whatsapp::GroupConversationBackfillJob).with(channel.inbox.id)
+    end
+
+    it 'does not enqueue backfill when structured group schema stays enabled' do
+      channel = create(
+        :channel_whatsapp,
+        provider: 'unoapi',
+        provider_config: { 'api_key' => 'test_key', 'phone_number_id' => '123456789', 'use_group_conversation_schema' => true },
+        validate_provider_config: false,
+        sync_templates: false
+      )
+
+      expect do
+        channel.update!(provider_config: channel.provider_config.merge('send_profile_picture' => true))
+      end.not_to have_enqueued_job(Whatsapp::GroupConversationBackfillJob)
+    end
+  end
 end

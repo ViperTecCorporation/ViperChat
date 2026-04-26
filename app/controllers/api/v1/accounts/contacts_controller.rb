@@ -25,7 +25,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     render json: { error: 'Specify search string with parameter q' }, status: :unprocessable_entity if params[:q].blank? && return
 
     contacts = Current.account.contacts.where(
-      'name ILIKE :search OR email ILIKE :search OR phone_number ILIKE :search OR contacts.identifier LIKE :search',
+      'name ILIKE :search OR email ILIKE :search OR phone_number ILIKE :search OR contacts.identifier LIKE :search OR bsuid ILIKE :search OR whatsapp_username ILIKE :search',
       search: "%#{params[:q].strip}%"
     )
     @contacts = fetch_contacts_with_has_more(contacts)
@@ -106,7 +106,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     Contact.transaction do
       @contact.contact_inboxes
         .select{ |ci| ['Channel::Whatsapp'].include?(ci.inbox.channel_type) }
-        .each{ |ci| ci.update_attribute(:source_id, @contact.phone_number.delete('+').to_s) }
+        .each{ |ci| ci.update_attribute(:source_id, whatsapp_source_id_for_contact) if whatsapp_source_id_for_contact.present? }
       @contact.save!
     end
     process_avatar_from_url
@@ -186,7 +186,10 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   end
 
   def permitted_params
-    params.permit(:name, :identifier, :email, :phone_number, :avatar, :blocked, :avatar_url, additional_attributes: {}, custom_attributes: {})
+    params.permit(
+      :name, :identifier, :email, :phone_number, :bsuid, :whatsapp_username, :avatar, :blocked, :avatar_url,
+      additional_attributes: {}, custom_attributes: {}
+    )
   end
 
   def contact_custom_attributes
@@ -232,8 +235,10 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   def find_existing_contact_from_params
     identifier = permitted_params[:identifier]
     email = permitted_params[:email]
+    bsuid = permitted_params[:bsuid]
     phone_number = normalized_contact_params[:phone_number]
 
+    return Current.account.contacts.find_by(bsuid: bsuid) if bsuid.present?
     return Current.account.contacts.find_by(identifier: identifier) if identifier.present?
     return Current.account.contacts.from_email(email) if email.present?
     return Current.account.contacts.find_by(phone_number: phone_number) if phone_number.present?
@@ -299,5 +304,9 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     end
 
     nil
+  end
+
+  def whatsapp_source_id_for_contact
+    @contact.phone_number&.delete('+').presence || @contact.bsuid
   end
 end

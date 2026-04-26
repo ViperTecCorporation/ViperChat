@@ -72,6 +72,26 @@ describe Whatsapp::SendOnWhatsappService do
         expect(message.reload.source_id).to eq('123456789')
       end
 
+      it 'sends to bsuid source contact when contact has no phone number' do
+        lid_contact = create(:contact, account: whatsapp_channel.account, phone_number: nil, bsuid: '123456789012345@lid')
+        lid_contact_inbox = create(:contact_inbox, contact: lid_contact, inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')
+        lid_conversation = create(:conversation, contact: lid_contact, contact_inbox: lid_contact_inbox, inbox: whatsapp_channel.inbox)
+        create(:message, message_type: :incoming, content: 'test',
+                         conversation: lid_conversation, account: lid_conversation.account)
+        message = create(:message, message_type: :outgoing, content: 'test',
+                                   conversation: lid_conversation, account: lid_conversation.account)
+
+        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+          .with(
+            headers: headers,
+            body: { 'to' => '123456789012345@lid', 'text' => { 'body' => 'test' }, 'type' => 'text' }.to_json
+          )
+          .to_return(status: 200, body: success_response, headers: { 'content-type' => 'application/json' })
+
+        described_class.new(message: message).perform
+        expect(message.reload.source_id).to eq('123456789')
+      end
+
       it 'marks message as failed when template name is blank' do
         processor = instance_double(Whatsapp::TemplateProcessorService)
         allow(Whatsapp::TemplateProcessorService).to receive(:new).and_return(processor)

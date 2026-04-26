@@ -57,28 +57,51 @@ const { t } = useI18n();
 
 const inputType = ref(INPUT_TYPES.EMAIL);
 
+const contactLabel = ({
+  name,
+  email,
+  phoneNumber,
+  bsuid,
+  whatsappUsername,
+}) => {
+  const identifier = email || whatsappUsername || phoneNumber || bsuid;
+  return identifier ? `${name} (${identifier})` : name;
+};
+
 const contactsList = computed(() => {
-  return props.contacts?.map(({ name, id, thumbnail, email, ...rest }) => ({
-    id,
-    label: email ? `${name} (${email})` : name,
-    value: id,
-    thumbnail: { name, src: thumbnail },
-    ...rest,
-    name,
-    email,
-    action: 'contact',
-  }));
+  return props.contacts?.map(
+    ({ name, id, thumbnail, email, bsuid, whatsappUsername, ...rest }) => ({
+      id,
+      label: contactLabel({ name, email, bsuid, whatsappUsername }),
+      value: id,
+      thumbnail: { name, src: thumbnail },
+      ...rest,
+      name,
+      email,
+      bsuid,
+      whatsappUsername,
+      action: 'contact',
+    })
+  );
 });
 
 const selectedContactLabel = computed(() => {
-  const { name, email = '', phoneNumber = '' } = props.selectedContact || {};
-  if (email) {
-    return `${name} (${email})`;
-  }
-  if (phoneNumber) {
-    return `${name} (${phoneNumber})`;
-  }
-  return name || '';
+  const {
+    name,
+    email = '',
+    phoneNumber = '',
+    bsuid = '',
+    whatsappUsername = '',
+  } = props.selectedContact || {};
+  return (
+    contactLabel({
+      name,
+      email,
+      phoneNumber,
+      bsuid,
+      whatsappUsername,
+    }) || ''
+  );
 });
 
 const errorClass = computed(() => {

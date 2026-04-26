@@ -96,6 +96,40 @@ describe ContactInboxWithContactBuilder do
       expect(contact_inbox.contact.id).to be(contact.id)
     end
 
+    it 'reuses and enriches contact if it already exists with bsuid' do
+      existing_contact = create(:contact, account: account, bsuid: '123456789012345@lid', phone_number: nil)
+
+      contact_inbox = described_class.new(
+        source_id: '5566999999999',
+        inbox: inbox,
+        contact_attributes: {
+          name: 'Maria',
+          bsuid: '123456789012345@lid',
+          whatsapp_username: '@maria.vendas',
+          phone_number: '+5566999999999'
+        }
+      ).perform
+
+      expect(contact_inbox.contact.id).to eq(existing_contact.id)
+      expect(contact_inbox.contact.reload.phone_number).to eq('+5566999999999')
+      expect(contact_inbox.contact.whatsapp_username).to eq('@maria.vendas')
+    end
+
+    it 'adds bsuid to an existing phone contact' do
+      contact_inbox = described_class.new(
+        source_id: '556699999999',
+        inbox: inbox,
+        contact_attributes: {
+          name: 'Maria',
+          bsuid: '123456789012345@lid',
+          phone_number: contact.phone_number
+        }
+      ).perform
+
+      expect(contact_inbox.contact.id).to eq(contact.id)
+      expect(contact.reload.bsuid).to eq('123456789012345@lid')
+    end
+
     it 'reuses contact if it exists with the same source_id in a Facebook inbox when creating for Instagram inbox' do
       instagram_source_id = '123456789'
 
