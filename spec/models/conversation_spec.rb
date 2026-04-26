@@ -232,6 +232,47 @@ RSpec.describe Conversation do
     end
   end
 
+  describe '#group_member_count' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account) }
+
+    it 'does not count the primary contact when it is the group itself' do
+      group = create(:contact, account: account, email: '120363040468224422@g.us')
+      group_contact_inbox = create(:contact_inbox, inbox: inbox, contact: group, source_id: '120363040468224422@g.us')
+      conversation = create(
+        :conversation,
+        account: account,
+        inbox: inbox,
+        contact: group,
+        contact_inbox: group_contact_inbox,
+        group: true,
+        group_source_id: '120363040468224422@g.us'
+      )
+      create(:group_contact, conversation: conversation, contact: create(:contact, account: account))
+      create(:group_contact, conversation: conversation, contact: create(:contact, account: account))
+
+      expect(conversation.group_member_count).to eq(2)
+    end
+
+    it 'counts the primary contact when it is a person in a legacy group conversation' do
+      primary_contact = create(:contact, account: account, phone_number: '+15559990000')
+      primary_contact_inbox = create(:contact_inbox, inbox: inbox, contact: primary_contact, source_id: '15559990000')
+      conversation = create(
+        :conversation,
+        account: account,
+        inbox: inbox,
+        contact: primary_contact,
+        contact_inbox: primary_contact_inbox,
+        group: true,
+        group_source_id: '120363040468224422@g.us'
+      )
+      create(:group_contact, conversation: conversation, contact: create(:contact, account: account))
+      create(:group_contact, conversation: conversation, contact: create(:contact, account: account))
+
+      expect(conversation.group_member_count).to eq(3)
+    end
+  end
+
   describe '#update_labels' do
     let(:account) { create(:account) }
     let(:conversation) { create(:conversation, account: account) }

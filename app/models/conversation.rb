@@ -188,7 +188,20 @@ class Conversation < ApplicationRecord
   end
 
   def group_member_count
-    group_contacts.count + (contact_id.present? ? 1 : 0)
+    count = group_contacts.count
+    return count if primary_contact_is_group?
+
+    count + (contact_id.present? ? 1 : 0)
+  end
+
+  def primary_contact_is_group?
+    return false unless group?
+
+    primary_identifiers = [contact_inbox&.source_id, contact&.email].compact
+    primary_identifiers.any? do |identifier|
+      identifier = identifier.to_s
+      identifier == group_source_id || identifier.end_with?('@g.us')
+    end
   end
 
   def cached_label_list_array

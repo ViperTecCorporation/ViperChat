@@ -97,12 +97,34 @@ export default {
         telegram,
       };
     },
+    whatsappUsername() {
+      return (
+        this.contact.whatsapp_username ||
+        this.contact.whatsappUsername ||
+        this.additionalAttributes.whatsapp_username ||
+        this.additionalAttributes.whatsappUsername ||
+        this.additionalAttributes.username ||
+        ''
+      );
+    },
+    bsuid() {
+      return this.contact.bsuid || this.additionalAttributes.bsuid || '';
+    },
+    identifier() {
+      return this.contact.identifier || '';
+    },
+    whatsappUsernameValue() {
+      return this.whatsappUsername || this.$t('CONTACT_PANEL.NOT_AVAILABLE');
+    },
+    bsuidValue() {
+      return this.bsuid || this.$t('CONTACT_PANEL.NOT_AVAILABLE');
+    },
     displayName() {
       return (
         this.contact.name ||
         this.contact.phone_number ||
-        this.contact.whatsapp_username ||
-        this.contact.bsuid ||
+        this.whatsappUsername ||
+        this.bsuid ||
         this.contact.identifier ||
         this.$t('CONTACT_PANEL.NOT_AVAILABLE')
       );
@@ -210,47 +232,65 @@ export default {
       </div>
 
       <div class="flex flex-col items-start gap-1.5 min-w-0 w-full">
-        <div v-if="showAvatar" class="flex items-center w-full min-w-0 gap-3">
-          <InlineInput
-            v-if="isEditingName"
-            ref="nameInput"
-            v-model="editName"
-            custom-input-class="!text-base !font-medium"
-            class="!w-fit"
-            @enter-press="saveNameEdit"
-            @escape-press="cancelNameEdit"
-            @blur="saveNameEdit"
-          />
-          <h3
-            v-else
-            class="group/name flex-shrink max-w-full min-w-0 my-0 text-base capitalize break-words text-n-slate-12 cursor-pointer hover:text-n-slate-12/80"
-            :title="$t('CONTACT_PANEL.CLICK_TO_EDIT')"
-            @click="startEditingName"
-          >
-            {{ displayName }}
-            <span
-              class="i-lucide-pencil text-xs text-n-slate-10 opacity-0 group-hover/name:opacity-100 transition-opacity ml-1 align-middle"
+        <div v-if="showAvatar" class="flex flex-col w-full min-w-0 gap-1">
+          <div class="flex items-center w-full min-w-0 gap-3">
+            <InlineInput
+              v-if="isEditingName"
+              ref="nameInput"
+              v-model="editName"
+              custom-input-class="!text-base !font-medium"
+              class="!w-fit"
+              @enter-press="saveNameEdit"
+              @escape-press="cancelNameEdit"
+              @blur="saveNameEdit"
             />
-          </h3>
-          <div class="flex flex-row items-center gap-2">
-            <span
-              v-if="contact.created_at"
-              v-tooltip.left="
-                `${$t('CONTACT_PANEL.CREATED_AT_LABEL')} ${dynamicTime(
-                  contact.created_at
-                )}`
-              "
-              class="i-lucide-info text-sm text-n-slate-10"
-            />
-            <a
-              :href="contactProfileLink"
-              target="_blank"
-              rel="noopener nofollow noreferrer"
-              class="leading-3"
+            <h3
+              v-else
+              class="group/name flex-shrink max-w-full min-w-0 my-0 text-base capitalize break-words text-n-slate-12 cursor-pointer hover:text-n-slate-12/80"
+              :title="$t('CONTACT_PANEL.CLICK_TO_EDIT')"
+              @click="startEditingName"
             >
-              <span class="i-lucide-external-link text-sm text-n-slate-10" />
-            </a>
+              {{ displayName }}
+              <span
+                class="i-lucide-pencil text-xs text-n-slate-10 opacity-0 group-hover/name:opacity-100 transition-opacity ml-1 align-middle"
+              />
+            </h3>
+            <div class="flex flex-row items-center gap-2">
+              <span
+                v-if="contact.created_at"
+                v-tooltip.left="
+                  `${$t('CONTACT_PANEL.CREATED_AT_LABEL')} ${dynamicTime(
+                    contact.created_at
+                  )}`
+                "
+                class="i-lucide-info text-sm text-n-slate-10"
+              />
+              <a
+                :href="contactProfileLink"
+                target="_blank"
+                rel="noopener nofollow noreferrer"
+                class="leading-3"
+              >
+                <span class="i-lucide-external-link text-sm text-n-slate-10" />
+              </a>
+            </div>
           </div>
+          <span
+            v-tooltip.top="$t('CONTACT_PANEL.WHATSAPP_USERNAME')"
+            class="inline-flex items-center w-full max-w-full gap-1 text-xs text-n-slate-11"
+          >
+            <span class="i-ph-at text-n-slate-10 size-3.5 shrink-0" />
+            <span class="truncate">{{ whatsappUsernameValue }}</span>
+          </span>
+          <span
+            v-tooltip.top="$t('CONTACT_PANEL.BSUID')"
+            class="inline-flex items-center w-full max-w-full gap-1 text-xs text-n-slate-10"
+          >
+            <span
+              class="i-ph-identification-card text-n-slate-10 size-3.5 shrink-0"
+            />
+            <span class="truncate">{{ bsuidValue }}</span>
+          </span>
         </div>
 
         <p v-if="additionalAttributes.description" class="break-words mb-0.5">
@@ -278,29 +318,11 @@ export default {
             @update="value => onFieldUpdate('phone_number', value)"
           />
           <ContactInfoRow
-            v-if="contact.identifier"
-            :value="contact.identifier"
+            v-if="identifier"
+            :value="identifier"
             icon="contact-identify"
             emoji="🪪"
             :title="$t('CONTACT_PANEL.IDENTIFIER')"
-          />
-          <ContactInfoRow
-            v-if="contact.bsuid"
-            :value="contact.bsuid"
-            icon="contact-identify"
-            emoji="🆔"
-            :title="$t('CONTACT_PANEL.BSUID')"
-            show-copy
-          />
-          <ContactInfoRow
-            v-if="contact.whatsapp_username"
-            :value="contact.whatsapp_username"
-            icon="contact-identify"
-            emoji="@"
-            :title="$t('CONTACT_PANEL.WHATSAPP_USERNAME')"
-            show-copy
-            editable
-            @update="value => onFieldUpdate('whatsapp_username', value)"
           />
           <ContactInfoRow
             :value="additionalAttributes.company_name"

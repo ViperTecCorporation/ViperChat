@@ -68,7 +68,11 @@ class Contacts::ContactableInboxesService
     return @contact.phone_number.delete('+') if @contact.phone_number.present?
     return unless inbox.channel.provider == 'unoapi'
 
-    @contact.bsuid
+    @contact.bsuid.presence || group_source_id
+  end
+
+  def group_source_id
+    @contact.email if @contact.email.to_s.end_with?('@g.us')
   end
 
   def sms_contactable_inbox(inbox)

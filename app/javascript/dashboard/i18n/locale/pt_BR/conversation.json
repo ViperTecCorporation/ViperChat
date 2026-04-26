@@ -20,6 +20,12 @@
       "LOAD_MORE": "Carregar mais membros",
       "SYNC": "Sincronizar membros",
       "SYNCING": "Sincronizando membros...",
+      "BACK_TO_GROUP": "Voltar para o grupo",
+      "VIEW_ALL_MEMBERS": "Ver todos os {count} membros",
+      "SEARCH_MEMBERS": "Buscar membros...",
+      "NO_MEMBERS_FOUND": "Nenhum membro encontrado",
+      "MESSAGE_MEMBER": "Enviar mensagem ao membro",
+      "VIEW_CONTACT": "Ver contato",
       "INVITE_LINK": "Link de convite",
       "RESET_INVITE_LINK": "Resetar link",
       "REMOVE_MEMBER": "Remover",
@@ -265,7 +271,7 @@
         "DISABLE_TOOLTIP": "Não incluir o encadeamento de e-mails citado",
         "REMOVE_PREVIEW": "Remover o encadeamento de e-mails citado",
         "COLLAPSE": "Recolher a prévia",
-      "EXPAND": "Expandir a prévia"
+        "EXPAND": "Expandir a prévia"
       },
       "STICKERS": {
         "TITLE": "Figurinhas",
@@ -349,6 +355,7 @@
     },
     "SIDEBAR": {
       "CONTACT": "Contatos",
+      "GROUP": "Grupo",
       "COPILOT": "Copiloto"
     },
     "VOICE_WIDGET": {

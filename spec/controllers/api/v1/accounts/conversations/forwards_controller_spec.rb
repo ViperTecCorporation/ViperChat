@@ -52,5 +52,24 @@ RSpec.describe 'Conversation Forwards API', type: :request do
       contact_inbox = ContactInbox.find_by!(contact: target_contact, inbox: target_inbox)
       expect(contact_inbox.source_id).to eq('5565999990000')
     end
+
+    it 'creates the target whatsapp contact inbox using group id when the contact is a group' do
+      target_contact = create(:contact, account: account, email: '120363040468224422@g.us', phone_number: nil)
+      whatsapp_channel = create(:channel_whatsapp, account: account, provider: 'unoapi', sync_templates: false, validate_provider_config: false)
+      target_inbox = whatsapp_channel.inbox
+
+      post "/api/v1/accounts/#{account.id}/conversations/#{source_conversation.display_id}/forwards",
+           params: {
+             target_contact_id: target_contact.id,
+             target_inbox_id: target_inbox.id,
+             message_ids: [source_message.id]
+           },
+           headers: agent.create_new_auth_token,
+           as: :json
+
+      expect(response).to have_http_status(:success)
+      contact_inbox = ContactInbox.find_by!(contact: target_contact, inbox: target_inbox)
+      expect(contact_inbox.source_id).to eq('120363040468224422@g.us')
+    end
   end
 end

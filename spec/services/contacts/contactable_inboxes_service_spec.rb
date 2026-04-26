@@ -42,6 +42,17 @@ describe Contacts::ContactableInboxesService do
       expect(contactable_inboxes.pluck(:inbox)).not_to include(sms_inbox)
     end
 
+    it 'returns unoapi whatsapp inboxes when the contact is a group' do
+      contact.update!(phone_number: nil, email: '120363040468224422@g.us')
+
+      contactable_inboxes = described_class.new(contact: contact).get
+
+      expect(contactable_inboxes).to include({ source_id: '120363040468224422@g.us', inbox: whatsapp_inbox })
+      expect(contactable_inboxes.pluck(:inbox)).not_to include(twilio_sms_inbox)
+      expect(contactable_inboxes.pluck(:inbox)).not_to include(twilio_whatsapp_inbox)
+      expect(contactable_inboxes.pluck(:inbox)).not_to include(sms_inbox)
+    end
+
     it 'prefers phone number over bsuid for whatsapp inboxes when both are present' do
       contact.update!(bsuid: '123456789012345@lid')
 

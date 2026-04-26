@@ -50,10 +50,13 @@ const contactableInboxesList = computed(() => {
   const baseInboxes = buildContactableInboxesList(contactInboxes);
 
   const bsuid = selectedContact.value?.bsuid || '';
-  const contactPhone = selectedContact.value?.phoneNumber || bsuid;
+  const groupId = selectedContact.value?.email?.endsWith('@g.us')
+    ? selectedContact.value.email
+    : '';
+  const contactPhone = selectedContact.value?.phoneNumber || bsuid || groupId;
 
   const unoFallbackInboxes = (() => {
-    if (!bsuid || !contactPhone) return [];
+    if (!contactPhone || (!bsuid && !groupId)) return [];
 
     return (
       inboxesList.value

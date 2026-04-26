@@ -63,13 +63,54 @@ const avatarSrc = computed(() => {
   return avatarUrl.value ? avatarUrl.value : contactData.value?.thumbnail;
 });
 
+const additionalAttributes = computed(() => {
+  return contactData.value?.additionalAttributes || {};
+});
+
+const whatsappUsername = computed(() => {
+  return (
+    contactData.value?.whatsappUsername ||
+    contactData.value?.whatsapp_username ||
+    additionalAttributes.value?.whatsappUsername ||
+    additionalAttributes.value?.whatsapp_username ||
+    additionalAttributes.value?.username ||
+    ''
+  );
+});
+
+const bsuid = computed(() => {
+  return contactData.value?.bsuid || additionalAttributes.value?.bsuid || '';
+});
+
+const whatsappUsernameValue = computed(() => {
+  return whatsappUsername.value || t('CONTACT_PANEL.NOT_AVAILABLE');
+});
+
+const bsuidValue = computed(() => {
+  return bsuid.value || t('CONTACT_PANEL.NOT_AVAILABLE');
+});
+
+const activityLabel = computed(() => {
+  const createdAtLabel = t('CONTACTS_LAYOUT.DETAILS.CREATED_AT', {
+    date: createdAt.value,
+  });
+  const lastActivityAtLabel = t('CONTACTS_LAYOUT.DETAILS.LAST_ACTIVITY', {
+    date: lastActivityAt.value,
+  });
+  return `${createdAtLabel} - ${lastActivityAtLabel}`;
+});
+
 const handleFormUpdate = updatedData => {
   Object.assign(contactData.value, updatedData);
 };
 
 const updateContact = async () => {
   try {
-    const { customAttributes, ...basicContactData } = contactData.value;
+    const basicContactData = { ...contactData.value };
+    delete basicContactData.customAttributes;
+    delete basicContactData.bsuid;
+    delete basicContactData.whatsappUsername;
+    delete basicContactData.whatsapp_username;
     await store.dispatch('contacts/update', basicContactData);
     await store.dispatch(
       'contacts/fetchContactableInbox',
@@ -137,6 +178,22 @@ const handleAvatarDelete = async () => {
         </h3>
         <div class="flex flex-col gap-1.5">
           <span
+            v-tooltip.top="$t('CONTACT_PANEL.WHATSAPP_USERNAME')"
+            class="inline-flex items-center max-w-full gap-1 text-sm text-n-slate-11"
+          >
+            <span class="i-ph-at text-n-slate-10 size-4 shrink-0" />
+            <span class="truncate">{{ whatsappUsernameValue }}</span>
+          </span>
+          <span
+            v-tooltip.top="$t('CONTACT_PANEL.BSUID')"
+            class="inline-flex items-center max-w-full gap-1 text-sm text-n-slate-11"
+          >
+            <span
+              class="i-ph-identification-card text-n-slate-10 size-4 shrink-0"
+            />
+            <span class="truncate">{{ bsuidValue }}</span>
+          </span>
+          <span
             v-if="selectedContact?.identifier"
             class="inline-flex items-center gap-1 text-sm text-n-slate-11"
           >
@@ -148,13 +205,7 @@ const handleAvatarDelete = async () => {
               v-if="selectedContact?.identifier"
               class="i-ph-activity text-n-slate-10 size-4"
             />
-            {{ $t('CONTACTS_LAYOUT.DETAILS.CREATED_AT', { date: createdAt }) }}
-            •
-            {{
-              $t('CONTACTS_LAYOUT.DETAILS.LAST_ACTIVITY', {
-                date: lastActivityAt,
-              })
-            }}
+            {{ activityLabel }}
           </span>
         </div>
       </div>

@@ -20,6 +20,12 @@
       "LOAD_MORE": "Load more members",
       "SYNC": "Sync members",
       "SYNCING": "Syncing members...",
+      "BACK_TO_GROUP": "Back to group",
+      "VIEW_ALL_MEMBERS": "View all {count} members",
+      "SEARCH_MEMBERS": "Search members...",
+      "NO_MEMBERS_FOUND": "No members found",
+      "MESSAGE_MEMBER": "Message member",
+      "VIEW_CONTACT": "View contact",
       "INVITE_LINK": "Invite link",
       "RESET_INVITE_LINK": "Reset link",
       "REMOVE_MEMBER": "Remove",
@@ -306,6 +312,7 @@
     },
     "SIDEBAR": {
       "CONTACT": "Contact",
+      "GROUP": "Group",
       "COPILOT": "Copilot"
     },
     "VOICE_WIDGET": {

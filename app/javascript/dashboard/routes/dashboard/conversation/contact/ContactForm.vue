@@ -45,8 +45,6 @@ export default {
       email: '',
       name: '',
       phoneNumber: '',
-      bsuid: '',
-      whatsappUsername: '',
       activeDialCode: '',
       avatarFile: null,
       avatarUrl: '',
@@ -159,8 +157,6 @@ export default {
       const {
         email: emailAddress,
         phone_number: phoneNumber,
-        bsuid,
-        whatsapp_username: whatsappUsername,
         name,
       } = this.contact;
       const additionalAttributes = this.contact.additional_attributes || {};
@@ -168,8 +164,6 @@ export default {
       this.name = name || '';
       this.email = emailAddress || '';
       this.phoneNumber = phoneNumber || '';
-      this.bsuid = bsuid || '';
-      this.whatsappUsername = whatsappUsername || '';
       this.companyName = additionalAttributes.company_name || '';
       this.country = {
         id: additionalAttributes.country_code || '',
@@ -207,8 +201,6 @@ export default {
         name: this.name,
         email: this.email,
         phone_number: this.setPhoneNumber,
-        bsuid: this.bsuid,
-        whatsapp_username: this.whatsappUsername,
         additional_attributes: {
           ...this.contact.additional_attributes,
           description: this.description,
@@ -382,18 +374,6 @@ export default {
       class="w-full"
       :label="$t('CONTACT_FORM.FORM.COMPANY_NAME.LABEL')"
       :placeholder="$t('CONTACT_FORM.FORM.COMPANY_NAME.PLACEHOLDER')"
-    />
-    <woot-input
-      v-model="bsuid"
-      class="w-full"
-      :label="$t('CONTACT_FORM.FORM.BSUID.LABEL')"
-      :placeholder="$t('CONTACT_FORM.FORM.BSUID.PLACEHOLDER')"
-    />
-    <woot-input
-      v-model="whatsappUsername"
-      class="w-full"
-      :label="$t('CONTACT_FORM.FORM.WHATSAPP_USERNAME.LABEL')"
-      :placeholder="$t('CONTACT_FORM.FORM.WHATSAPP_USERNAME.PLACEHOLDER')"
     />
     <div class="w-full mb-4">
       <label>
