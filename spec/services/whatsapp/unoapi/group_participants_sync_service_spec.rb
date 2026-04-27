@@ -111,6 +111,34 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
     expect(conversation.reload.group_session_admin).to be(false)
   end
 
+  it 'clears invalid legacy participant email before updating the contact' do
+    participant_contact = create(:contact, account: whatsapp_channel.account, name: 'Contato legado')
+    participant_contact.update_columns(email: '47017208377581') # rubocop:disable Rails/SkipsModelValidations
+    create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: participant_contact, source_id: '47017208377581@lid')
+
+    stub_request(:get, participants_url).to_return(
+      status: 200,
+      body: {
+        participants: [
+          {
+            jid: '47017208377581@lid',
+            user_id: '47017208377581@lid',
+            name: 'Contato legado atualizado',
+            username: '@legado'
+          }
+        ]
+      }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+
+    expect(service.perform).to eq(:ok)
+
+    participant_contact.reload
+    expect(participant_contact.email).to be_nil
+    expect(participant_contact.bsuid).to eq('47017208377581@lid')
+    expect(participant_contact.whatsapp_username).to eq('@legado')
+  end
+
   it 'returns cache_miss when Uno API does not have cached participants' do
     stub_request(:get, participants_url).to_return(status: 404, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
 

@@ -61,6 +61,8 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     source_id = participant_source_id(participant)
     return if source_id.blank?
 
+    sanitize_existing_contact_email(source_id, participant)
+
     contact_inbox = ContactInboxWithContactBuilder.new(
       source_id: source_id,
       inbox: @inbox,
@@ -71,6 +73,24 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     group_contact.account_id = @conversation.account_id
     group_contact.metadata = participant_metadata(participant, source_id)
     group_contact.save!
+  end
+
+  def sanitize_existing_contact_email(source_id, participant)
+    contact = existing_participant_contact(source_id, participant)
+    return if contact.blank? || contact.email.blank?
+    return if valid_contact_email?(contact.email)
+
+    Rails.logger.info("[WHATSAPP][GROUP] clearing invalid participant email contact_id=#{contact.id} email=#{contact.email}")
+    contact.update_columns(email: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def existing_participant_contact(source_id, participant)
+    @inbox.contact_inboxes.find_by(source_id: source_id)&.contact ||
+      Contact.find_by(account_id: @conversation.account_id, bsuid: participant_bsuid(participant))
+  end
+
+  def valid_contact_email?(email)
+    email.match?(Devise.email_regexp) || email.end_with?('@lid') || email.end_with?('@g.us')
   end
 
   def contact_attributes(participant, source_id)
