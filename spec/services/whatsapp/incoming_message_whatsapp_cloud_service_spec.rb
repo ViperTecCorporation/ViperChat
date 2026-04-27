@@ -144,6 +144,70 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
       end
     end
 
+    context 'when unoapi one-to-one payload has phone and bsuid contacts' do
+      let!(:whatsapp_channel) do
+        create(
+          :channel_whatsapp,
+          provider: 'unoapi',
+          provider_config: {
+            'api_key' => 'test_key',
+            'phone_number_id' => '556600000000',
+            'business_account_id' => '123456789'
+          },
+          sync_templates: false,
+          validate_provider_config: false
+        )
+      end
+
+      let(:one_to_one_params) do
+        {
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: {
+                  display_phone_number: '556600000000',
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                contacts: [{
+                  wa_id: '556699999999',
+                  user_id: '123456789012345@lid',
+                  profile: { name: 'Maria', username: '@maria.vendas' }
+                }],
+                messages: [{
+                  from: '556699999999',
+                  from_user_id: '123456789012345@lid',
+                  id: 'wamid.ONE_TO_ONE_MESSAGE_ID',
+                  timestamp: '1710000000',
+                  type: 'text',
+                  text: { body: 'Oi' }
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+      end
+
+      it 'merges the bsuid contact into the phone contact before processing' do
+        phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Contato telefone')
+        phone_contact.update_columns(phone_number: '+556699999999', email: '556699999999') # rubocop:disable Rails/SkipsModelValidations
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '556699999999')
+
+        bsuid_contact = create(:contact, account: whatsapp_channel.account, bsuid: '123456789012345@lid')
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: bsuid_contact, source_id: '123456789012345@lid')
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: one_to_one_params).perform
+
+        message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.ONE_TO_ONE_MESSAGE_ID')
+        expect(message.sender).to eq(phone_contact)
+        expect(message.sender.bsuid).to eq('123456789012345@lid')
+        expect(message.sender.email).to be_nil
+        expect(Contact.exists?(bsuid_contact.id)).to be(false)
+        expect(message.sender.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')).to be_present
+      end
+    end
+
     context 'when message is a reply (has context)' do
       let(:reply_params) do
         {

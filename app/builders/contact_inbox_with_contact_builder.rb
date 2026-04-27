@@ -6,6 +6,7 @@ class ContactInboxWithContactBuilder
   pattr_initialize [:inbox!, :contact_attributes!, :source_id, :hmac_verified]
 
   def perform
+    merge_unoapi_duplicate_contact
     find_or_create_contact_and_contact_inbox
   # in case of race conditions where contact is created by another thread
   # we will try to find the contact and create a contact inbox
@@ -27,6 +28,22 @@ class ContactInboxWithContactBuilder
     end
 
     @contact_inbox
+  end
+
+  def merge_unoapi_duplicate_contact
+    return unless inbox.channel_type == 'Channel::Whatsapp'
+    return unless inbox.channel.provider == 'unoapi'
+
+    Whatsapp::Unoapi::GroupParticipantContactMerger.new(account: account, inbox: inbox).perform(
+      participant: {
+        wa_id: source_id,
+        user_id: contact_attributes[:bsuid],
+        username: contact_attributes[:whatsapp_username],
+        name: contact_attributes[:name],
+        picture: contact_attributes[:avatar_url]
+      },
+      source_id: source_id.to_s
+    )
   end
 
   private
