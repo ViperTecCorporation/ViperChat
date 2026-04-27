@@ -285,6 +285,7 @@
     },
     "MEDIA": {
       "IMAGE_UNAVAILABLE": "Esta imagen ya no está disponible.",
+      "VIDEO_UNAVAILABLE": "This video is no longer available.",
       "LOADING_FAILED": "Error al cargar"
     }
   },

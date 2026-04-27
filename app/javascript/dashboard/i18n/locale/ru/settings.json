@@ -285,6 +285,7 @@
     },
     "MEDIA": {
       "IMAGE_UNAVAILABLE": "Это изображение больше недоступно.",
+      "VIDEO_UNAVAILABLE": "This video is no longer available.",
       "LOADING_FAILED": "Не удалось загрузить"
     }
   },

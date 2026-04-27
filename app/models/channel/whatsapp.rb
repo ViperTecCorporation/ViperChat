@@ -26,6 +26,7 @@ class Channel::Whatsapp < ApplicationRecord
 
   # default at the moment is 360dialog lets change later.
   PROVIDERS = %w[default whatsapp_cloud unoapi].freeze
+  before_validation :ensure_unoapi_group_conversation_schema_default
   before_validation :ensure_webhook_verify_token
 
   validates :provider, inclusion: { in: PROVIDERS }
@@ -82,6 +83,13 @@ class Channel::Whatsapp < ApplicationRecord
 
   def ensure_webhook_verify_token
     provider_config['webhook_verify_token'] ||= SecureRandom.hex(16) if %w[whatsapp_cloud unoapi].include?(provider)
+  end
+
+  def ensure_unoapi_group_conversation_schema_default
+    return unless provider == 'unoapi'
+
+    self.provider_config ||= {}
+    provider_config['use_group_conversation_schema'] = true unless provider_config.key?('use_group_conversation_schema')
   end
 
   def validate_provider_config

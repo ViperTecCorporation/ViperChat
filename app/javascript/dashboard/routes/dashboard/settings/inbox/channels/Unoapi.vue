@@ -79,6 +79,7 @@ export default {
                 business_account_id: this.phoneNumber.replace('+', ''),
                 ignore_history_messages: this.ignoreHistoryMessages,
                 ignore_group_messages: this.ignoreGroupMessages,
+                use_group_conversation_schema: true,
                 send_agent_name: this.sendAgentName,
                 webhook_send_new_messages: this.webhookSendNewMessages,
                 url: this.url,

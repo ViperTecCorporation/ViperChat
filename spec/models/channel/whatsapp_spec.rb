@@ -211,6 +211,18 @@ RSpec.describe Channel::Whatsapp do
   end
 
   describe 'group conversation backfill' do
+    it 'enables structured group schema by default for unoapi channels' do
+      channel = create(
+        :channel_whatsapp,
+        provider: 'unoapi',
+        provider_config: { 'api_key' => 'test_key', 'phone_number_id' => '123456789' },
+        validate_provider_config: false,
+        sync_templates: false
+      )
+
+      expect(channel.provider_config['use_group_conversation_schema']).to be true
+    end
+
     it 'enqueues inbox scoped backfill when enabling structured group schema' do
       channel = create(
         :channel_whatsapp,

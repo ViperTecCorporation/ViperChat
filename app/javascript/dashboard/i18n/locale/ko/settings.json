@@ -285,6 +285,7 @@
     },
     "MEDIA": {
       "IMAGE_UNAVAILABLE": "이 이미지는 더 이상 사용할 수 없습니다.",
+      "VIDEO_UNAVAILABLE": "This video is no longer available.",
       "LOADING_FAILED": "로딩 실패"
     }
   },

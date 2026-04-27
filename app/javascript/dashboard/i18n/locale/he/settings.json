@@ -285,6 +285,7 @@
     },
     "MEDIA": {
       "IMAGE_UNAVAILABLE": "תמונה זו אינה זמינה עוד.",
+      "VIDEO_UNAVAILABLE": "This video is no longer available.",
       "LOADING_FAILED": "טעינה נכשלה"
     }
   },

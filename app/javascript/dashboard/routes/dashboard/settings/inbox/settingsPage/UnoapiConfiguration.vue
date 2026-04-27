@@ -29,7 +29,7 @@ export default {
       ignoreNewsletterMessages: true,
       ignoreGroupIndividualReceipts: true,
       groupOnlyDeliveredStatus: true,
-      useGroupConversationSchema: false,
+      useGroupConversationSchema: true,
       ignoreHistoryMessages: true,
       webhookSendNewMessages: true,
       sendAgentName: true,
@@ -103,7 +103,7 @@ export default {
       this.groupOnlyDeliveredStatus =
         this.inbox.provider_config.group_only_delivered_status ?? true;
       this.useGroupConversationSchema =
-        this.inbox.provider_config.use_group_conversation_schema ?? false;
+        this.inbox.provider_config.use_group_conversation_schema ?? true;
       this.ignoreHistoryMessages = this.inbox.provider_config.ignore_history_messages;
       this.webhookSendNewMessages = this.inbox.provider_config.webhook_send_new_messages ?? true;
       this.sendAgentName = this.inbox.provider_config.send_agent_name;

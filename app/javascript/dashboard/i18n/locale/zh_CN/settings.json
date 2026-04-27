@@ -285,6 +285,7 @@
     },
     "MEDIA": {
       "IMAGE_UNAVAILABLE": "此图片不再可用。",
+      "VIDEO_UNAVAILABLE": "This video is no longer available.",
       "LOADING_FAILED": "加载失败"
     }
   },
