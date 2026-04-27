@@ -1,25 +1,38 @@
 class Webhooks::Trigger
+  DEFAULT_HEADERS = { content_type: :json, accept: :json }.freeze
+  HEADER_NAMES = { content_type: 'Content-Type', accept: 'Accept' }.freeze
+  HEADER_VALUES = { json: 'application/json' }.freeze
   SUPPORTED_ERROR_HANDLE_EVENTS = %w[message_created message_updated].freeze
+  RETRYABLE_AGENT_BOT_STATUSES = [429, 500].freeze
 
-  def initialize(url, payload, webhook_type, method, headers)
+  class RetryableError < StandardError
+    attr_reader :status
+
+    def initialize(status:, message:)
+      @status = status
+      super(message)
+    end
+  end
+
+  def initialize(url, payload, webhook_type, method = :post, headers = DEFAULT_HEADERS, secret: nil, delivery_id: nil)
     @url = url
     @payload = payload
     @webhook_type = webhook_type
     @method = method
     @headers = headers
+    @secret = secret
+    @delivery_id = delivery_id
   end
 
-  def self.execute(url, payload, webhook_type, method = :post, headers = { content_type: :json, accept: :json })
-    new(url, payload, webhook_type, method, headers).execute
+  def self.execute(url, payload, webhook_type, method = :post, headers = DEFAULT_HEADERS, secret: nil, delivery_id: nil)
+    new(url, payload, webhook_type, method, headers, secret: secret, delivery_id: delivery_id).execute
   end
 
   def execute
     perform_request
-  rescue RestClient::TooManyRequests, RestClient::InternalServerError => e
-    raise if @webhook_type == :agent_bot_webhook
-
-    handle_failure(e)
   rescue StandardError => e
+    raise RetryableError.new(status: http_status(e), message: e.message) if retryable_agent_bot_error?(e)
+
     handle_failure(e)
   end
 
@@ -31,18 +44,22 @@ class Webhooks::Trigger
   private
 
   def perform_request
-    Rails.logger.debug { "Webhook Trigger @method: #{@method} @url #{@url}  @payload #{ @payload.to_json} @headers #{@headers}" }
-    RestClient::Request.execute(
+    body = @payload.to_json
+    Rails.logger.debug { "Webhook Trigger @method: #{@method} @url #{@url} @payload #{body} @headers #{@headers}" }
+
+    SafeFetch.fetch(
+      @url,
       method: @method,
-      url: @url,
-      payload: @payload.to_json,
-      headers: @headers,
-      timeout: 5
-    )
+      body: body,
+      headers: request_headers(body),
+      open_timeout: webhook_timeout,
+      read_timeout: webhook_timeout,
+      validate_content_type: false
+    ) { |_response| nil }
   end
 
   def request_headers(body)
-    headers = { content_type: :json, accept: :json }
+    headers = normalized_headers
     headers['X-Chatwoot-Delivery'] = @delivery_id if @delivery_id.present?
     if @secret.present?
       ts = Time.now.to_i.to_s
@@ -50,6 +67,20 @@ class Webhooks::Trigger
       headers['X-Chatwoot-Signature'] = "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', @secret, "#{ts}.#{body}")}"
     end
     headers
+  end
+
+  def normalized_headers
+    @headers.to_h.each_with_object({}) do |(key, value), result|
+      result[header_name(key)] = header_value(value)
+    end
+  end
+
+  def header_name(key)
+    HEADER_NAMES.fetch(key.to_sym) { key.to_s.split(/[-_]/).map(&:capitalize).join('-') }
+  end
+
+  def header_value(value)
+    HEADER_VALUES.fetch(value.to_sym) { value }
   end
 
   def handle_error(error)
@@ -110,5 +141,15 @@ class Webhooks::Trigger
     timeout = raw_timeout.presence&.to_i
 
     timeout&.positive? ? timeout : 5
+  end
+
+  def retryable_agent_bot_error?(error)
+    @webhook_type == :agent_bot_webhook && RETRYABLE_AGENT_BOT_STATUSES.include?(http_status(error))
+  end
+
+  def http_status(error)
+    return unless error.is_a?(SafeFetch::HttpError)
+
+    error.message.to_s[/\A(\d{3})\b/, 1]&.to_i
   end
 end
