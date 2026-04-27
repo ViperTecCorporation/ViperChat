@@ -30,7 +30,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
     service = Messages::StatusUpdateService.new(message, 'sent')
     service.perform
-    message.update!(content_attributes: {})
+    message.update!(content_attributes: {}, source_id: nil)
     ::SendReplyJob.perform_later(message.id)
   rescue StandardError => e
     render_could_not_create_error(e.message)
@@ -56,16 +56,13 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   def reaction
     emoji = permitted_params[:emoji].to_s.strip
-    if emoji.blank?
-      return render json: { error: 'Emoji is required' }, status: :unprocessable_entity
-    end
+    return render json: { error: 'Emoji is required' }, status: :unprocessable_entity if emoji.blank?
+
     unless @conversation.inbox.whatsapp?
       return render json: { error: 'Reactions are only supported for WhatsApp inboxes' },
                     status: :unprocessable_entity
     end
-    if message.source_id.blank?
-      return render json: { error: 'Message source id is missing' }, status: :unprocessable_entity
-    end
+    return render json: { error: 'Message source id is missing' }, status: :unprocessable_entity if message.source_id.blank?
 
     reaction_sent = Whatsapp::SendReactionService.new(message: message, emoji: emoji).perform
     return render json: { error: 'Could not send reaction' }, status: :unprocessable_entity unless reaction_sent

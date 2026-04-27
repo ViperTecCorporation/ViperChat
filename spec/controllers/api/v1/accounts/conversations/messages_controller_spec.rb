@@ -252,7 +252,15 @@ RSpec.describe 'Conversation Messages API', type: :request do
   end
 
   describe 'POST /api/v1/accounts/{account.id}/conversations/:conversation_id/messages/:id/retry' do
-    let(:message) { create(:message, account: account, status: :failed, content_attributes: { external_error: 'error' }) }
+    let(:message) do
+      create(
+        :message,
+        account: account,
+        status: :failed,
+        source_id: 'old-provider-message-id',
+        content_attributes: { external_error: 'error' }
+      )
+    end
 
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do
@@ -269,13 +277,16 @@ RSpec.describe 'Conversation Messages API', type: :request do
       end
 
       it 'retries the message' do
-        post "/api/v1/accounts/#{account.id}/conversations/#{message.conversation.display_id}/messages/#{message.id}/retry",
-             headers: agent.create_new_auth_token,
-             as: :json
+        expect do
+          post "/api/v1/accounts/#{account.id}/conversations/#{message.conversation.display_id}/messages/#{message.id}/retry",
+               headers: agent.create_new_auth_token,
+               as: :json
+        end.to have_enqueued_job(SendReplyJob).with(message.id)
 
         expect(response).to have_http_status(:success)
         expect(message.reload.status).to eq('sent')
-        expect(message.reload.content_attributes['external_error']).to be_nil
+        expect(message.source_id).to be_nil
+        expect(message.content_attributes['external_error']).to be_nil
       end
     end
 
