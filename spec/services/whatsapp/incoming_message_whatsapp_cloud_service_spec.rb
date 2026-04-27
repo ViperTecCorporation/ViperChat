@@ -301,9 +301,9 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(sender.phone_number).to be_nil
       end
 
-      it 'prefers bsuid for structured group sender identity when phone contact is stale' do
-        phone_contact = create(:contact, account: whatsapp_channel.account)
-        phone_contact.update_columns(email: '556699999999') # rubocop:disable Rails/SkipsModelValidations
+      it 'merges stale phone and bsuid contacts before processing structured group sender' do
+        phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Contato telefone')
+        phone_contact.update_columns(phone_number: '+556699999999', email: '556699999999') # rubocop:disable Rails/SkipsModelValidations
         create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '556699999999')
 
         bsuid_contact = create(:contact, account: whatsapp_channel.account, bsuid: '123456789012345@lid')
@@ -311,8 +311,11 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
 
         message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.GROUP_MESSAGE_ID')
-        expect(message.sender).to eq(bsuid_contact)
-        expect(message.sender.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox).source_id).to eq('123456789012345@lid')
+        expect(message.sender).to eq(phone_contact)
+        expect(message.sender.bsuid).to eq('123456789012345@lid')
+        expect(message.sender.email).to be_nil
+        expect(Contact.exists?(bsuid_contact.id)).to be(false)
+        expect(message.sender.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')).to be_present
       end
 
       it 'does not enqueue participants sync again before the interval expires' do

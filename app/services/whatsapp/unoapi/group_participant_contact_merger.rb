@@ -14,7 +14,22 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
     lid_contact = Contact.find_by(account_id: @account.id, bsuid: bsuid)
     return if contacts_not_mergeable?(phone_contact, lid_contact)
 
-    merge_contacts(phone_contact, lid_contact)
+    merge_contacts(phone_contact, lid_contact, participant, source_id)
+  end
+
+  def perform_from_group_payload(group_payload)
+    return if group_payload[:sender_phone].blank? || group_payload[:sender_bsuid].blank?
+
+    perform(
+      participant: {
+        wa_id: group_payload[:sender_phone],
+        user_id: group_payload[:sender_bsuid],
+        username: group_payload[:sender_username],
+        name: group_payload[:sender_name],
+        picture: group_payload[:sender_picture]
+      },
+      source_id: group_payload[:sender_phone]
+    )
   end
 
   private
@@ -30,15 +45,23 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
     phone_contact.bsuid.present? && phone_contact.bsuid != lid_contact.bsuid
   end
 
-  def merge_contacts(phone_contact, lid_contact)
+  def merge_contacts(phone_contact, lid_contact, participant, source_id)
     ActiveRecord::Base.transaction do
       sanitize_contact_email(phone_contact)
+      update_phone_number(phone_contact, participant, source_id)
       lid_attributes = lid_contact_attributes(phone_contact, lid_contact)
       merge_group_contacts(lid_contact, phone_contact)
 
       ContactMergeAction.new(account: @account, base_contact: phone_contact, mergee_contact: lid_contact).perform
       merge_lid_contact_attributes(phone_contact, lid_attributes)
     end
+  end
+
+  def update_phone_number(contact, participant, source_id)
+    phone_number = participant_phone_number(participant, source_id)
+    return if phone_number.blank? || contact.phone_number == phone_number
+
+    contact.update_columns(phone_number: phone_number, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def participant_phone_contact(participant, source_id)

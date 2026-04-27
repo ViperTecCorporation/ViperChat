@@ -135,6 +135,8 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   def set_structured_group_contact
     Rails.logger.info("[WHATSAPP][GROUP] structured inbound group_source_id=#{group_payload[:group_source_id]}")
 
+    merge_structured_group_sender_contact
+
     sender_contact_inbox = ::ContactInboxWithContactBuilder.new(
       source_id: structured_sender_source_id,
       inbox: inbox,
@@ -174,6 +176,10 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     attrs
   end
 
+  def merge_structured_group_sender_contact
+    Whatsapp::Unoapi::GroupParticipantContactMerger.new(account: inbox.account, inbox: inbox).perform_from_group_payload(group_payload)
+  end
+
   def group_additional_attributes
     attrs = @conversation.additional_attributes || {}
     return attrs if group_payload[:group_picture].blank?
@@ -202,7 +208,9 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     return unless group_participants_sync_due?
 
     Whatsapp::Unoapi::GroupParticipantsSyncJob.perform_later(@conversation.id)
-    Rails.logger.info("[WHATSAPP][GROUP] participants sync enqueued conversation_id=#{@conversation.id} group_source_id=#{@conversation.group_source_id}")
+    Rails.logger.info(
+      "[WHATSAPP][GROUP] participants sync enqueued conversation_id=#{@conversation.id} group_source_id=#{@conversation.group_source_id}"
+    )
   end
 
   def group_participants_sync_due?
