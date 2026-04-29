@@ -575,6 +575,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_27_094500) do
     t.string "api_key_sid"
     t.jsonb "content_templates", default: {}
     t.datetime "content_templates_last_updated"
+    t.boolean "voice_enabled", default: false, null: false
+    t.string "twiml_app_sid"
+    t.string "api_key_secret"
     t.index ["account_sid", "phone_number"], name: "index_channel_twilio_sms_on_account_sid_and_phone_number", unique: true
     t.index ["messaging_service_sid"], name: "index_channel_twilio_sms_on_messaging_service_sid", unique: true
     t.index ["phone_number"], name: "index_channel_twilio_sms_on_phone_number", unique: true

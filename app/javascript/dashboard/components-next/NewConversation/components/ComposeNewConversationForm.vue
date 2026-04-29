@@ -2,7 +2,7 @@
 import { reactive, ref, computed, watch } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, requiredIf } from '@vuelidate/validators';
-import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { INBOX_TYPES, isVoiceCallEnabled } from 'dashboard/helper/inbox';
 import {
   appendSignature,
   removeSignature,
@@ -130,6 +130,12 @@ const whatsappMessageTemplates = computed(() =>
   Object.keys(props.targetInbox?.messageTemplates || {}).length
     ? props.targetInbox.messageTemplates
     : []
+);
+
+const voiceCallEnabled = computed(() => isVoiceCallEnabled(props.targetInbox));
+
+const effectiveChannelType = computed(() =>
+  getEffectiveChannelType(inboxChannelType.value, targetInboxMedium.value)
 );
 
 const validationRules = computed(() => ({
@@ -470,6 +476,7 @@ useKeyboardEvents({
       :is-twilio-whats-app-inbox="inboxTypes.isTwilioWhatsapp"
       :message-templates="whatsappMessageTemplates"
       :channel-type="inboxChannelType"
+      :voice-enabled="voiceCallEnabled"
       :is-loading="isCreating"
       :disable-send-button="isCreating"
       :has-selected-inbox="!!targetInbox"
