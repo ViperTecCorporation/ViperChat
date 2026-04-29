@@ -26,6 +26,7 @@ const {
   DEPLOYMENT_ENV: deploymentEnv,
   CONVERSATION_STYLE_CSS: conversationStyleCss,
   MAXIMUM_FILE_UPLOAD_SIZE: maxFileUploadSizeInMb,
+  ACTIVE_PLATFORM_BANNERS: activePlatformBanners,
 } = window.globalConfig || {};
 
 const state = {
@@ -53,6 +54,7 @@ const state = {
   conversationStyleCss: conversationStyleCss || '',
   isEnterprise: parseBoolean(isEnterprise),
   maxFileUploadSizeInMb,
+  activePlatformBanners: activePlatformBanners || [],
 };
 
 export const getters = {
