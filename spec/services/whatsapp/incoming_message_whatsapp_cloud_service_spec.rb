@@ -395,10 +395,17 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(original_message.content_attributes['existing']).to be true
       end
 
-      it 'does not create a new message when the edited original message is missing' do
+      it 'creates a fallback message when the edited original message is missing' do
         expect do
           described_class.new(inbox: whatsapp_channel.inbox, params: edited_params).perform
-        end.not_to change(whatsapp_channel.inbox.messages, :count)
+        end.to change(whatsapp_channel.inbox.messages, :count).by(1)
+
+        fallback_message = whatsapp_channel.inbox.messages.find_by!(source_id: original_source_id)
+        expect(fallback_message.content).to eq('Edited message body')
+        expect(fallback_message.content_attributes['edited']).to be true
+        expect(fallback_message.content_attributes['edit_event_id']).to eq(edit_event_id)
+        expect(fallback_message.content_attributes['edit_timestamp']).to eq('1770407830000')
+        expect(fallback_message.content_attributes['edit_missing_original_fallback']).to be true
       end
     end
 

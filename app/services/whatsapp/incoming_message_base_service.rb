@@ -172,7 +172,8 @@ class Whatsapp::IncomingMessageBaseService
 
     original_message = inbox.messages.find_by(source_id: original_source_id)
     unless original_message
-      Rails.logger.info("[WHATSAPP] Message edit ignored because original was not found original_source_id=#{original_source_id} event_id=#{message[:id]}")
+      Rails.logger.info("[WHATSAPP] Message edit fallback creating missing original original_source_id=#{original_source_id} event_id=#{message[:id]}")
+      create_message_from_edit_fallback(message, original_source_id)
       return true
     end
 
@@ -190,6 +191,28 @@ class Whatsapp::IncomingMessageBaseService
     original_message.content = edited_content if edited_content.present?
     original_message.save!
     true
+  end
+
+  def create_message_from_edit_fallback(message, original_source_id)
+    set_message_type
+    set_contact
+    return unless @contact
+    return if @contact.blocked? && !outgoing_echo
+
+    ActiveRecord::Base.transaction do
+      set_conversation
+      create_message(message, source_id: original_source_id)
+      @message.content_attributes = (@message.content_attributes || {}).merge(
+        'edited' => true,
+        'edit_event_id' => message[:id],
+        'edited_at' => Time.current.utc.iso8601,
+        'edit_missing_original_fallback' => true
+      )
+      @message.content_attributes['edit_timestamp'] = message[:edit_timestamp] if message[:edit_timestamp].present?
+      attach_files
+      attach_location if message_type == 'location'
+      @message.save!
+    end
   end
 
   def message_edit_event?
