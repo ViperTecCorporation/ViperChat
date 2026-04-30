@@ -36,7 +36,18 @@ class Api::V1::Accounts::Conversations::GroupJoinRequestsController < Api::V1::A
   end
 
   def participants
-    Array(params[:participants]).map(&:to_s).reject(&:blank?)
+    Array(params[:participants]).filter_map do |participant|
+      participant_identifier(participant)
+    end.uniq
+  end
+
+  def participant_identifier(participant)
+    return participant.to_s.presence unless participant.respond_to?(:to_unsafe_h) || participant.is_a?(Hash)
+
+    attrs = participant.respond_to?(:to_unsafe_h) ? participant.to_unsafe_h : participant
+    attrs = attrs.with_indifferent_access
+    attrs[:wa_id].presence || attrs[:phone_number].presence || attrs[:phoneNumber].presence || attrs[:pn].presence ||
+      attrs[:jid].presence || attrs[:id].presence || attrs[:user_id].presence || attrs[:lid].presence
   end
 
   def ensure_group_conversation

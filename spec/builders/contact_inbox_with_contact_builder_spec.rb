@@ -130,6 +130,24 @@ describe ContactInboxWithContactBuilder do
       expect(contact.reload.bsuid).to eq('123456789012345@lid')
     end
 
+    it 'clears invalid legacy email before enriching an existing contact' do
+      contact.update_columns(email: '123456789012345') # rubocop:disable Rails/SkipsModelValidations
+
+      contact_inbox = described_class.new(
+        source_id: '556699999999',
+        inbox: inbox,
+        contact_attributes: {
+          name: 'Maria',
+          bsuid: '123456789012345@lid',
+          phone_number: contact.phone_number
+        }
+      ).perform
+
+      expect(contact_inbox.contact.id).to eq(contact.id)
+      expect(contact.reload.email).to be_nil
+      expect(contact.bsuid).to eq('123456789012345@lid')
+    end
+
     it 'reuses contact if it exists with the same source_id in a Facebook inbox when creating for Instagram inbox' do
       instagram_source_id = '123456789'
 

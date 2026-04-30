@@ -13,6 +13,18 @@ RSpec.describe Message do
       create(:message, content: 'Veja https://example.com/post', message_type: :incoming, content_type: :text)
     end
 
+    it 'enqueues a link preview job for text messages with bare domains' do
+      expect(Messages::LinkPreviewJob).to receive(:perform_later).with(kind_of(Integer))
+
+      create(:message, content: 'Veja vipertec.net', message_type: :incoming, content_type: :text)
+    end
+
+    it 'does not enqueue a link preview job for email addresses' do
+      expect(Messages::LinkPreviewJob).not_to receive(:perform_later)
+
+      create(:message, content: 'Fale em suporte@vipertec.net', message_type: :incoming, content_type: :text)
+    end
+
     it 'does not enqueue a link preview job for text messages without links' do
       expect(Messages::LinkPreviewJob).not_to receive(:perform_later)
 

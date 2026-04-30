@@ -135,6 +135,12 @@ class ConversationApi extends ApiClient {
     });
   }
 
+  addGroupContacts({ conversationId, participants }) {
+    return axios.post(`${this.url}/${conversationId}/group_contacts`, {
+      participants,
+    });
+  }
+
   fetchGroup(conversationId) {
     return axios.get(`${this.url}/${conversationId}/group`);
   }

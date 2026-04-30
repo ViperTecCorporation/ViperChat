@@ -1,13 +1,13 @@
 class Api::V1::Accounts::Conversations::GroupContactsController < Api::V1::Accounts::Conversations::BaseController
   RESULTS_PER_PAGE = 25
-  before_action :ensure_session_group_admin, only: [:destroy]
+  before_action :ensure_session_group_admin, only: [:create, :destroy]
 
   def index
     @group_contacts = @conversation.group_contacts.includes(:contact).page(params[:page]).per(RESULTS_PER_PAGE)
   end
 
   def destroy
-    participants = Array(params[:participants]).map(&:to_s).reject(&:blank?)
+    participants = participant_identifiers(params[:participants])
     return head :no_content if participants.blank?
 
     remove_provider_participants(participants)
@@ -16,6 +16,19 @@ class Api::V1::Accounts::Conversations::GroupContactsController < Api::V1::Accou
     end
 
     head :no_content
+  end
+
+  def create
+    participants = participant_identifiers(params[:participants])
+    return render json: { error: 'participants are required' }, status: :unprocessable_entity if participants.blank?
+
+    response = @conversation.inbox.channel.provider_service.add_group_participants(
+      group_id: @conversation.group_source_id,
+      participants: participants
+    )
+    return render json: response.parsed_response if response.success?
+
+    render json: { error: provider_error(response, 'Provider failed to add participants') }, status: :unprocessable_entity
   end
 
   private
@@ -31,6 +44,25 @@ class Api::V1::Accounts::Conversations::GroupContactsController < Api::V1::Accou
       group_id: @conversation.group_source_id,
       participants: participants
     )
+  end
+
+  def participant_identifiers(raw_participants)
+    Array(raw_participants).filter_map do |participant|
+      participant_identifier_from_param(participant)
+    end.uniq
+  end
+
+  def participant_identifier_from_param(participant)
+    return participant.to_s.presence unless participant.respond_to?(:to_unsafe_h) || participant.is_a?(Hash)
+
+    attrs = participant.respond_to?(:to_unsafe_h) ? participant.to_unsafe_h : participant
+    attrs = attrs.with_indifferent_access
+    attrs[:wa_id].presence || attrs[:phone_number].presence || attrs[:phoneNumber].presence || attrs[:pn].presence ||
+      attrs[:jid].presence || attrs[:id].presence || attrs[:user_id].presence || attrs[:lid].presence
+  end
+
+  def provider_error(response, fallback)
+    response.parsed_response.try(:[], 'error') || fallback
   end
 
   def participant_identifier(group_contact)

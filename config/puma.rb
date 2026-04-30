@@ -20,7 +20,11 @@ environment ENV.fetch('RAILS_ENV') { 'development' }
 # In Docker, keep the PID outside the bind-mounted app directory so a crashed
 # container cannot leave tmp/pids/server.pid behind and block the next boot.
 default_pidfile = File.exist?('/.dockerenv') ? '/tmp/chatwoot-server.pid' : 'tmp/pids/server.pid'
-pidfile ENV.fetch('PIDFILE') { default_pidfile }
+configured_pidfile = ENV.fetch('PIDFILE') { default_pidfile }
+
+File.delete(configured_pidfile) if File.exist?('/.dockerenv') && File.exist?(configured_pidfile)
+
+pidfile configured_pidfile
 
 # Specifies the number of `workers` to boot in clustered mode.
 # Workers are forked web server processes. If using threads and workers together

@@ -1,7 +1,9 @@
 class Messages::LinkPreviewService
   HTML_CONTENT_TYPES = %w[text/html application/xhtml+xml].freeze
   MAX_HTML_BYTES = 2.megabytes
-  URL_REGEX = URI::DEFAULT_PARSER.make_regexp(%w[http https])
+  SCHEME_URL_REGEX = URI::DEFAULT_PARSER.make_regexp(%w[http https])
+  BARE_DOMAIN_URL_REGEX = %r{(?<![@\w.-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::\d{2,5})?(?:/[^\s<]*)?}i
+  URL_REGEX = Regexp.union(SCHEME_URL_REGEX, BARE_DOMAIN_URL_REGEX)
   TRAILING_URL_PUNCTUATION = /[)\].,!?;:'"]+\z/
 
   def initialize(message)
@@ -9,8 +11,7 @@ class Messages::LinkPreviewService
   end
 
   def perform
-    return if message.blank? || message.link_preview.present?
-    return unless message.text? && message.content.present?
+    return unless previewable_message?
 
     url = extract_first_url(message.content)
     return if url.blank?
@@ -27,8 +28,15 @@ class Messages::LinkPreviewService
 
   attr_reader :message
 
+  def previewable_message?
+    message.present? && message.link_preview.blank? && message.text? && message.content.present?
+  end
+
   def extract_first_url(content)
-    content.to_s[URL_REGEX]&.gsub(TRAILING_URL_PUNCTUATION, '')
+    extracted_url = content.to_s[URL_REGEX]&.gsub(TRAILING_URL_PUNCTUATION, '')
+    return if extracted_url.blank?
+
+    extracted_url.match?(%r{\Ahttps?://}i) ? extracted_url : "https://#{extracted_url}"
   end
 
   def fetch_preview(url)

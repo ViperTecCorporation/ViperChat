@@ -40,6 +40,7 @@ class Whatsapp::IncomingMessageBaseService
     # misconfigurations in the Meta business manager account.
     # We use an atomic Redis SET NX to prevent concurrent workers from both
     # processing the same message simultaneously.
+    return if process_message_edit
     return if find_message_by_source_id(messages_data.first[:id])
     return unless lock_message_source_id!
     set_message_type
@@ -159,6 +160,47 @@ class Whatsapp::IncomingMessageBaseService
     @message.save!
   end
 
+  def process_message_edit
+    return false unless message_edit_event?
+
+    message = messages_data.first
+    original_source_id = edited_original_source_id(message)
+    unless original_source_id.present?
+      Rails.logger.warn("[WHATSAPP] Message edit ignored without original context id event_id=#{message[:id]}")
+      return true
+    end
+
+    original_message = inbox.messages.find_by(source_id: original_source_id)
+    unless original_message
+      Rails.logger.info("[WHATSAPP] Message edit ignored because original was not found original_source_id=#{original_source_id} event_id=#{message[:id]}")
+      return true
+    end
+
+    edited_content = message_content(message)
+    content_attrs = original_message.content_attributes || {}
+    content_attrs = content_attrs.merge(
+      'edited' => true,
+      'edit_event_id' => message[:id],
+      'edited_at' => Time.current.utc.iso8601
+    )
+    content_attrs['edit_timestamp'] = message[:edit_timestamp] if message[:edit_timestamp].present?
+    content_attrs['previous_content'] = original_message.content if original_message.content.present? && edited_content.present? && original_message.content != edited_content
+
+    original_message.assign_attributes(content_attributes: content_attrs)
+    original_message.content = edited_content if edited_content.present?
+    original_message.save!
+    true
+  end
+
+  def message_edit_event?
+    message = messages_data&.first
+    message.present? && message[:message_type].to_s == 'message_edit'
+  end
+
+  def edited_original_source_id(message)
+    message.dig(:context, :id).presence || message.dig(:context, :message_id).presence || message[:edited_message_id].presence
+  end
+
   def set_contact
     if outgoing_echo
       set_contact_from_echo
@@ -216,15 +258,43 @@ class Whatsapp::IncomingMessageBaseService
 
   def set_conversation
     # if lock to single conversation is disabled, we will create a new conversation if previous conversation is resolved
-    @conversation = if @inbox.lock_to_single_conversation
-                      @contact_inbox.conversations.last
-                    else
-                      @contact_inbox.conversations
-                                    .where.not(status: :resolved).last
-                    end
+    merge_contact_conversation_aliases if @inbox.lock_to_single_conversation
+    @conversation = existing_contact_conversation
     return if @conversation
 
     @conversation = ::Conversation.create!(conversation_params)
+  end
+
+  def merge_contact_conversation_aliases
+    conversations = contact_conversation_aliases.to_a
+    return if conversations.size <= 1
+
+    target = preferred_contact_conversation(conversations)
+    mergees = conversations - [target]
+    Message.where(conversation_id: mergees.map(&:id)).update_all(conversation_id: target.id) # rubocop:disable Rails/SkipsModelValidations
+    target.update_columns(last_activity_at: conversations.filter_map(&:last_activity_at).max, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    mergees.each(&:destroy!)
+  end
+
+  def existing_contact_conversation
+    conversations = contact_conversation_aliases
+    return conversations.last if @inbox.lock_to_single_conversation
+
+    conversations.where.not(status: :resolved).last
+  end
+
+  def contact_conversation_aliases
+    @inbox.conversations.non_group_conversations.where(contact_id: @contact.id, contact_inbox_id: contact_inbox_aliases.select(:id))
+  end
+
+  def preferred_contact_conversation(conversations)
+    conversations.select { |conversation| conversation.contact_inbox.source_id.exclude?('@') }
+                 .max_by { |conversation| [conversation.last_activity_at, conversation.id] } ||
+      conversations.max_by { |conversation| [conversation.last_activity_at, conversation.id] }
+  end
+
+  def contact_inbox_aliases
+    @contact.contact_inboxes.where(inbox_id: @inbox.id)
   end
 
   def attach_files

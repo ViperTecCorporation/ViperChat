@@ -1,4 +1,5 @@
 require 'rails_helper'
+require 'securerandom'
 
 describe Whatsapp::IncomingMessageWhatsappCloudService do
   describe '#perform' do
@@ -6,7 +7,16 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
       Redis::Alfred.scan_each(match: 'MESSAGE_SOURCE_KEY::*') { |key| Redis::Alfred.delete(key) }
     end
 
-    let!(:whatsapp_channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
+    let!(:whatsapp_channel) do
+      create(
+        :channel_whatsapp,
+        phone_number: "+1555#{SecureRandom.random_number(10**10).to_s.rjust(10, '0')}",
+        provider: 'whatsapp_cloud',
+        provider_config: { 'api_key' => 'test_key', 'phone_number_id' => "random_id_#{SecureRandom.hex(4)}" },
+        sync_templates: false,
+        validate_provider_config: false
+      )
+    end
     let(:params) do
       {
         phone_number: whatsapp_channel.phone_number,
@@ -171,12 +181,12 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
                   phone_number_id: whatsapp_channel.provider_config['phone_number_id']
                 },
                 contacts: [{
-                  wa_id: '556699999999',
+                  wa_id: '5566999999999',
                   user_id: '123456789012345@lid',
                   profile: { name: 'Maria', username: '@maria.vendas' }
                 }],
                 messages: [{
-                  from: '556699999999',
+                  from: '5566999999999',
                   from_user_id: '123456789012345@lid',
                   id: 'wamid.ONE_TO_ONE_MESSAGE_ID',
                   timestamp: '1710000000',
@@ -191,8 +201,8 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
 
       it 'merges the bsuid contact into the phone contact before processing' do
         phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Contato telefone')
-        phone_contact.update_columns(phone_number: '+556699999999', email: '556699999999') # rubocop:disable Rails/SkipsModelValidations
-        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '556699999999')
+        phone_contact.update_columns(phone_number: '+5566999999999', email: '5566999999999') # rubocop:disable Rails/SkipsModelValidations
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '5566999999999')
 
         bsuid_contact = create(:contact, account: whatsapp_channel.account, bsuid: '123456789012345@lid')
         create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: bsuid_contact, source_id: '123456789012345@lid')
@@ -205,6 +215,67 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(message.sender.email).to be_nil
         expect(Contact.exists?(bsuid_contact.id)).to be(false)
         expect(message.sender.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')).to be_present
+      end
+
+      it 'uses the existing phone conversation when the incoming message is identified by bsuid' do
+        phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Maria')
+        phone_contact.update_columns(phone_number: '+5566999999999', bsuid: '123456789012345@lid') # rubocop:disable Rails/SkipsModelValidations
+        phone_contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '5566999999999')
+        existing_conversation = create(
+          :conversation,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          contact: phone_contact,
+          contact_inbox: phone_contact_inbox
+        )
+
+        one_to_one_params[:entry].first[:changes].first[:value][:contacts].first[:wa_id] = '123456789012345@lid'
+        one_to_one_params[:entry].first[:changes].first[:value][:messages].first[:from] = '123456789012345@lid'
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: one_to_one_params).perform
+
+        message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.ONE_TO_ONE_MESSAGE_ID')
+        expect(message.conversation).to eq(existing_conversation)
+        expect(message.sender).to eq(phone_contact)
+        expect(whatsapp_channel.inbox.conversations.count).to eq(1)
+        expect(phone_contact.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')).to be_present
+      end
+
+      it 'merges existing phone and bsuid conversations when the inbox keeps a single conversation' do
+        whatsapp_channel.inbox.update!(lock_to_single_conversation: true)
+        phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Maria')
+        phone_contact.update_columns(phone_number: '+5566999999999', bsuid: '123456789012345@lid') # rubocop:disable Rails/SkipsModelValidations
+        phone_contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '5566999999999')
+        bsuid_contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '123456789012345@lid')
+        phone_conversation = create(
+          :conversation,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          contact: phone_contact,
+          contact_inbox: phone_contact_inbox,
+          last_activity_at: 2.days.ago
+        )
+        bsuid_conversation = create(
+          :conversation,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          contact: phone_contact,
+          contact_inbox: bsuid_contact_inbox,
+          last_activity_at: 1.day.ago
+        )
+        old_bsuid_message = create(:message, account: whatsapp_channel.account, inbox: whatsapp_channel.inbox,
+                                             conversation: bsuid_conversation, sender: phone_contact)
+
+        one_to_one_params[:entry].first[:changes].first[:value][:contacts].first[:wa_id] = '123456789012345@lid'
+        one_to_one_params[:entry].first[:changes].first[:value][:messages].first[:from] = '123456789012345@lid'
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: one_to_one_params).perform
+
+        message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.ONE_TO_ONE_MESSAGE_ID')
+        expect(message.conversation).to eq(phone_conversation)
+        expect(old_bsuid_message.reload.conversation).to eq(phone_conversation)
+        expect(Conversation.exists?(bsuid_conversation.id)).to be(false)
+        expect(whatsapp_channel.inbox.conversations.where(contact: phone_contact).count).to eq(1)
       end
     end
 
@@ -267,6 +338,70 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
       end
     end
 
+    context 'when unoapi sends a WhatsApp message edit event' do
+      let(:original_source_id) { 'wamid.ORIGINAL_MESSAGE_ID' }
+      let(:edit_event_id) { 'wamid.EDIT_EVENT_ID' }
+      let(:contact_wa_id) { "1650#{SecureRandom.random_number(10**7).to_s.rjust(7, '0')}" }
+      let(:edited_params) do
+        {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                contacts: [{ profile: { name: 'Pranav' }, wa_id: contact_wa_id }],
+                messages: [{
+                  context: {
+                    id: original_source_id,
+                    message_id: original_source_id
+                  },
+                  from: contact_wa_id,
+                  id: edit_event_id,
+                  message_type: 'message_edit',
+                  timestamp: '1770407829',
+                  edit_timestamp: '1770407830000',
+                  text: { body: 'Edited message body' },
+                  type: 'text'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+      end
+
+      it 'updates the original message instead of creating a duplicate' do
+        contact = create(:contact, phone_number: "+#{contact_wa_id}", account: whatsapp_channel.account)
+        contact_inbox = create(:contact_inbox, contact: contact, inbox: whatsapp_channel.inbox, source_id: contact_wa_id)
+        conversation = create(:conversation, contact: contact, inbox: whatsapp_channel.inbox, contact_inbox: contact_inbox)
+        original_message = create(
+          :message,
+          conversation: conversation,
+          inbox: whatsapp_channel.inbox,
+          source_id: original_source_id,
+          content: 'Original message body',
+          content_attributes: { 'existing' => true }
+        )
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: edited_params).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+
+        original_message.reload
+        expect(original_message.content).to eq('Edited message body')
+        expect(original_message.content_attributes['edited']).to be true
+        expect(original_message.content_attributes['edit_event_id']).to eq(edit_event_id)
+        expect(original_message.content_attributes['edit_timestamp']).to eq('1770407830000')
+        expect(original_message.content_attributes['previous_content']).to eq('Original message body')
+        expect(original_message.content_attributes['existing']).to be true
+      end
+
+      it 'does not create a new message when the edited original message is missing' do
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: edited_params).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+      end
+    end
+
     context 'when unoapi structured group schema is enabled' do
       let!(:whatsapp_channel) do
         create(
@@ -295,7 +430,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
                   phone_number_id: whatsapp_channel.provider_config['phone_number_id']
                 },
                 contacts: [{
-                  wa_id: '556699999999',
+                  wa_id: '5566999999999',
                   user_id: '123456789012345@lid',
                   profile: {
                     name: 'Maria',
@@ -307,7 +442,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
                   group_picture: 'https://cdn.example.com/groups/120363040468224422.jpg'
                 }],
                 messages: [{
-                  from: '556699999999',
+                  from: '5566999999999',
                   from_user_id: '123456789012345@lid',
                   id: 'wamid.GROUP_MESSAGE_ID',
                   timestamp: '1710000000',
@@ -339,7 +474,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(message.sender.bsuid).to eq('123456789012345@lid')
         expect(message.sender.whatsapp_username).to eq('@maria.vendas')
         expect(conversation.group_contacts.first.metadata).to include(
-          'wa_id' => '556699999999',
+          'wa_id' => '5566999999999',
           'user_id' => '123456789012345@lid',
           'username' => '@maria.vendas'
         )
@@ -367,8 +502,8 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
 
       it 'merges stale phone and bsuid contacts before processing structured group sender' do
         phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Contato telefone')
-        phone_contact.update_columns(phone_number: '+556699999999', email: '556699999999') # rubocop:disable Rails/SkipsModelValidations
-        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '556699999999')
+        phone_contact.update_columns(phone_number: '+5566999999999', email: '5566999999999') # rubocop:disable Rails/SkipsModelValidations
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '5566999999999')
 
         bsuid_contact = create(:contact, account: whatsapp_channel.account, bsuid: '123456789012345@lid')
 

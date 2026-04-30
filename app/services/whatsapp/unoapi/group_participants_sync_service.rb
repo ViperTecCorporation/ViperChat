@@ -19,7 +19,7 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
       return :failed
     end
 
-    sync_payload(response.parsed_response.with_indifferent_access)
+    sync_payload(enriched_payload(response.parsed_response.with_indifferent_access))
     :ok
   end
 
@@ -28,6 +28,46 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
   def cache_miss
     Rails.logger.info("[WHATSAPP][GROUP] participants sync cache_miss group_source_id=#{@group_source_id}")
     :cache_miss
+  end
+
+  def enriched_payload(payload)
+    group = (payload[:group] || {}).with_indifferent_access
+    group.merge!(group_details_payload)
+    invite_link = group_invite_link
+    group[:invite_link] = invite_link if invite_link.present?
+    payload[:group] = group
+    payload
+  end
+
+  def group_details_payload
+    response = provider_response(:group_details)
+    return {} unless response&.success?
+
+    details = (response.parsed_response || {}).with_indifferent_access
+    {
+      subject: details[:subject].presence,
+      description: details[:description].presence,
+      picture: details[:picture].presence,
+      join_approval_mode: details[:join_approval_mode].presence,
+      created_at: details[:created_at].presence || details[:creation_timestamp].presence,
+      suspended: details[:suspended]
+    }.compact
+  end
+
+  def group_invite_link
+    response = provider_response(:group_invite_link)
+    return unless response&.success?
+
+    (response.parsed_response || {}).with_indifferent_access[:invite_link].presence
+  end
+
+  def provider_response(method_name)
+    return unless @channel.provider_service.respond_to?(method_name)
+
+    @channel.provider_service.public_send(method_name, @group_source_id)
+  rescue StandardError => e
+    Rails.logger.warn("[WHATSAPP][GROUP] #{method_name} skipped group_source_id=#{@group_source_id} error=#{e.class}: #{e.message}")
+    nil
   end
 
   def sync_payload(payload)
@@ -48,7 +88,7 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
       group_description: group[:description].presence,
       group_invite_link: group[:invite_link].presence,
       group_join_approval_mode: group[:join_approval_mode].presence,
-      group_created_at_external: external_time(group[:created_at])
+      group_created_at_external: external_time(group[:created_at].presence || group[:creation_timestamp].presence)
     }.compact
     attrs[:group_suspended] = group[:suspended] unless group[:suspended].nil?
 

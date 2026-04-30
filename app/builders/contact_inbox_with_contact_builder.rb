@@ -101,7 +101,20 @@ class ContactInboxWithContactBuilder
       phone_number: missing_attribute(contact.phone_number, contact_attributes[:phone_number]),
       name: missing_attribute(contact.name, contact_attributes[:name])
     }.compact
+
+    sanitize_contact_email(contact) if attrs.present?
     contact.update!(attrs) if attrs.present?
+  end
+
+  def sanitize_contact_email(contact)
+    return if contact.email.blank? || valid_contact_email?(contact.email)
+
+    Rails.logger.info("[CONTACT_INBOX] clearing invalid contact email contact_id=#{contact.id} email=#{contact.email}")
+    contact.update_columns(email: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def valid_contact_email?(email)
+    email.match?(Devise.email_regexp) || email.end_with?('@lid') || email.end_with?('@g.us')
   end
 
   def missing_attribute(current_value, new_value)

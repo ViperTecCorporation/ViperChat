@@ -40,6 +40,38 @@ RSpec.describe Messages::LinkPreviewService do
       )
     end
 
+    it 'normalizes bare domains to https URLs before fetching the preview' do
+      message.update!(content: 'Confira vipertec.net agora')
+      allow(Resolv).to receive(:getaddresses).with('vipertec.net').and_return(['93.184.216.34'])
+
+      stub_request(:get, 'https://vipertec.net').to_return(
+        status: 200,
+        body: <<~HTML,
+          <html>
+            <head>
+              <meta property="og:title" content="Viper Tec">
+            </head>
+          </html>
+        HTML
+        headers: { 'Content-Type' => 'text/html' }
+      )
+
+      described_class.new(message).perform
+
+      expect(message.reload.link_preview).to include(
+        'url' => 'https://vipertec.net',
+        'title' => 'Viper Tec'
+      )
+    end
+
+    it 'does not treat email domains as bare URLs' do
+      message.update!(content: 'Contato suporte@vipertec.net')
+
+      described_class.new(message).perform
+
+      expect(message.reload.link_preview).to be_nil
+    end
+
     it 'does not store a preview when the page has no metadata' do
       stub_request(:get, url).to_return(
         status: 200,

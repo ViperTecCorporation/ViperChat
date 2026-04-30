@@ -150,7 +150,7 @@ Rails.application.routes.draw do
                 end
               end
               resources :forwards, only: [:create]
-              resources :group_contacts, only: [:index] do
+              resources :group_contacts, only: [:index, :create] do
                 delete :destroy, on: :collection
               end
               resource :group, only: [:show, :update], controller: :group do

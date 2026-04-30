@@ -6,6 +6,7 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
   let(:whatsapp_channel) do
     create(
       :channel_whatsapp,
+      phone_number: "+1555#{SecureRandom.random_number(1_000_000_000).to_s.rjust(9, '0')}",
       provider: 'unoapi',
       provider_config: {
         'url' => 'https://uno.example.com',
@@ -33,17 +34,18 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
   end
 
   let(:participants_url) { 'https://uno.example.com/v15.0/556600000000/groups/120363040468224422%40g.us/participants' }
+  let(:details_url) { 'https://uno.example.com/v15.0/556600000000/groups/120363040468224422%40g.us' }
+  let(:invite_link_url) { 'https://uno.example.com/v15.0/556600000000/groups/120363040468224422%40g.us/invite_link' }
+
+  before do
+    stub_request(:get, details_url).to_return(status: 404, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
+    stub_request(:get, invite_link_url).to_return(status: 403, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
+  end
 
   it 'hydrates group metadata and participants from Uno API' do
     stub_request(:get, participants_url).to_return(
       status: 200,
       body: {
-        group: {
-          subject: 'Equipe Comercial VIP',
-          description: 'Canal comercial',
-          invite_link: 'https://chat.whatsapp.com/test',
-          picture: 'https://cdn.example.com/groups/group.jpg'
-        },
         participants: [
           {
             jid: '556600000000@s.whatsapp.net',
@@ -67,6 +69,23 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
       }.to_json,
       headers: { 'Content-Type' => 'application/json' }
     )
+    stub_request(:get, details_url).to_return(
+      status: 200,
+      body: {
+        subject: 'Equipe Comercial VIP',
+        description: 'Canal comercial',
+        picture: 'https://cdn.example.com/groups/group.jpg',
+        join_approval_mode: 'approval_required',
+        creation_timestamp: '1710000000',
+        suspended: false
+      }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+    stub_request(:get, invite_link_url).to_return(
+      status: 200,
+      body: { invite_link: 'https://chat.whatsapp.com/test' }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
 
     expect(service.perform).to eq(:ok)
 
@@ -74,6 +93,9 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
     expect(conversation.group_title).to eq('Equipe Comercial VIP')
     expect(conversation.group_description).to eq('Canal comercial')
     expect(conversation.group_invite_link).to eq('https://chat.whatsapp.com/test')
+    expect(conversation.group_join_approval_mode).to eq('approval_required')
+    expect(conversation.group_created_at_external).to eq(Time.zone.at(1_710_000_000))
+    expect(conversation.group_suspended).to be(false)
     expect(conversation.additional_attributes['group_picture']).to eq('https://cdn.example.com/groups/group.jpg')
     expect(conversation.group_contacts_synced_at).to be_present
     expect(conversation.group_session_admin).to be(true)
