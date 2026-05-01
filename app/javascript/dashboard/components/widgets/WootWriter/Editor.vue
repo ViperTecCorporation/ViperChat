@@ -14,6 +14,7 @@ import {
 import CannedResponse from '../conversation/CannedResponse.vue';
 import KeyboardEmojiSelector from './keyboardEmojiSelector.vue';
 import TagAgents from '../conversation/TagAgents.vue';
+import TagGroupContacts from '../conversation/TagGroupContacts.vue';
 import VariableList from '../conversation/VariableList.vue';
 import TagTools from '../conversation/TagTools.vue';
 import CopilotMenuBar from './CopilotMenuBar.vue';
@@ -83,6 +84,8 @@ const props = defineProps({
   enableVariables: { type: Boolean, default: false },
   enableCannedResponses: { type: Boolean, default: true },
   enableCaptainTools: { type: Boolean, default: false },
+  enableGroupMentions: { type: Boolean, default: false },
+  groupMentionContacts: { type: Array, default: () => [] },
   variables: { type: Object, default: () => ({}) },
   signature: { type: String, default: '' },
   // allowSignature is a kill switch, ensuring no signature methods
@@ -99,6 +102,7 @@ const emit = defineEmits([
   'typingOn',
   'typingOff',
   'toggleUserMention',
+  'toggleGroupMention',
   'toggleCannedMenu',
   'toggleVariablesMenu',
   'toggleToolsMenu',
@@ -180,6 +184,7 @@ let editorView = null;
 let state = null;
 
 const showUserMentions = ref(false);
+const showGroupMentions = ref(false);
 const showCannedMenu = ref(false);
 const showVariables = ref(false);
 const showEmojiMenu = ref(false);
@@ -285,9 +290,17 @@ const plugins = computed(() => {
     }),
     createSuggestionPlugin({
       trigger: '@',
+      showMenu: showGroupMentions,
+      searchTerm: mentionSearchKey,
+      isAllowed: () => props.enableGroupMentions && !props.isPrivate,
+    }),
+    createSuggestionPlugin({
+      trigger: '@',
       showMenu: showUserMentions,
       searchTerm: mentionSearchKey,
-      isAllowed: () => props.isPrivate || !props.enableCaptainTools,
+      isAllowed: () =>
+        !props.enableGroupMentions &&
+        (props.isPrivate || !props.enableCaptainTools),
     }),
     createSuggestionPlugin({
       trigger: '/',
@@ -327,6 +340,9 @@ const sendWithSignature = computed(() => {
 
 watch(showUserMentions, updatedValue => {
   emit('toggleUserMention', props.isPrivate && updatedValue);
+});
+watch(showGroupMentions, updatedValue => {
+  emit('toggleGroupMention', props.enableGroupMentions && updatedValue);
 });
 watch(showCannedMenu, updatedValue => {
   emit('toggleCannedMenu', !props.isPrivate && updatedValue);
@@ -856,6 +872,12 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, insertContentIntoEditor);
       v-if="showUserMentions && isPrivate"
       :search-key="mentionSearchKey"
       @select-agent="content => insertSpecialContent('mention', content)"
+    />
+    <TagGroupContacts
+      v-if="showGroupMentions && !isPrivate"
+      :contacts="groupMentionContacts"
+      :search-key="mentionSearchKey"
+      @select-contact="content => insertSpecialContent('mention', content)"
     />
     <CannedResponse
       v-if="shouldShowCannedResponses"

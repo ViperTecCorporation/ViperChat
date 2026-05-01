@@ -10,6 +10,17 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
     HTTParty.get("#{unoapi_group_path(group_id)}/participants", headers: api_headers)
   end
 
+  def create_group(subject:, participants:, description: nil, join_approval_mode: nil)
+    payload = {
+      subject: subject,
+      description: description,
+      participants: participants,
+      join_approval_mode: join_approval_mode
+    }.compact
+
+    HTTParty.post("#{unoapi_phone_path}/groups", headers: api_headers, body: payload.to_json)
+  end
+
   def group_details(group_id)
     HTTParty.get(unoapi_group_path(group_id), headers: api_headers)
   end

@@ -8,6 +8,7 @@ class Conversations::EventDataPresenter < SimpleDelegator
       group: group?,
       group_source_id: group_source_id,
       group_title: group_title,
+      group_picture: group_picture_url,
       group_contacts_count: group? ? group_member_count : 0,
       id: display_id,
       inbox_id: inbox_id,
@@ -48,6 +49,12 @@ class Conversations::EventDataPresenter < SimpleDelegator
       team: team&.push_event_data,
       hmac_verified: contact_inbox&.hmac_verified
     }
+  end
+
+  def group_picture_url
+    return unless group?
+
+    additional_attributes&.dig('group_picture').presence || contact&.avatar_url
   end
 
   def push_timestamps

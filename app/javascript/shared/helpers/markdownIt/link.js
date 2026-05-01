@@ -1,5 +1,6 @@
 // Process [@mention](mention://user/1/Pranav)
-const USER_MENTIONS_REGEX = /mention:\/\/(user|team)\/(\d+)\/(.+)/gm;
+const USER_MENTIONS_REGEX =
+  /mention:\/\/(user|team|group_contact)\/(\d+)\/(.+)/gm;
 
 const buildMentionTokens = () => (state, silent) => {
   var label;

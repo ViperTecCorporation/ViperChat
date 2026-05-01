@@ -171,27 +171,42 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def send_text_message(phone_number, message)
+    mention_ids = whatsapp_mention_ids(message)
+    request_body = {
+      messaging_product: 'whatsapp',
+      recipient_type: recipient_type_for(message),
+      context: whatsapp_reply_context(message),
+      to: phone_number,
+      text: { body: format_content(message) },
+      type: 'text'
+    }
+    request_body[:mentions] = mention_ids if mention_ids.present?
+
     response = HTTParty.post(
       messages_path,
       headers: api_headers,
-      body: {
-        messaging_product: 'whatsapp',
-        recipient_type: recipient_type_for(message),
-        context: whatsapp_reply_context(message),
-        to: phone_number,
-        text: { body: format_content(message) },
-        type: 'text'
-      }.to_json
+      body: request_body.to_json
     )
 
     process_response(response, message)
   end
 
   def format_content(message)
-    normalized_content = message.outgoing_content&.rstrip
+    normalized_content = whatsapp_outgoing_content(message)&.rstrip
     return normalized_content unless should_prefix_sender_name?(message)
 
-    message.sender_name&.present? ? "*#{message&.sender_name}*: #{normalized_content}" : normalized_content
+    message.sender_name.present? ? "*#{message.sender_name}*: #{normalized_content}" : normalized_content
+  end
+
+  def whatsapp_outgoing_content(message)
+    return message.outgoing_content unless message.conversation.group? && whatsapp_group_mentions(message).present?
+
+    content = replace_group_mentions(message.content.to_s, message)
+    Messages::MarkdownRendererService.new(
+      content,
+      message.conversation.inbox.channel_type,
+      whatsapp_channel
+    ).render
   end
 
   def should_prefix_sender_name?(message)
@@ -207,19 +222,24 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     type_content = {
       'link': attachment.download_url
     }
-    type_content['caption'] = message.outgoing_content unless %w[audio sticker].include?(type) || !include_caption
+    type_content['caption'] = whatsapp_outgoing_content(message) unless %w[audio sticker].include?(type) || !include_caption
+    mention_ids = whatsapp_mention_ids(message)
+    type_content['mentions'] = mention_ids if mention_ids.present?
     type_content['filename'] = attachment.file.filename if type == 'document'
+    request_body = {
+      :messaging_product => 'whatsapp',
+      :recipient_type => recipient_type_for(message),
+      :context => whatsapp_reply_context(message),
+      'to' => phone_number,
+      'type' => type,
+      type.to_s => type_content
+    }
+    request_body[:mentions] = mention_ids if mention_ids.present?
+
     response = HTTParty.post(
       "#{phone_id_path}/messages",
       headers: api_headers,
-      body: {
-        :messaging_product => 'whatsapp',
-        :recipient_type => recipient_type_for(message),
-        :context => whatsapp_reply_context(message),
-        'to' => phone_number,
-        'type' => type,
-        type.to_s => type_content
-      }.to_json
+      body: request_body.to_json
     )
 
     process_response(response, message)
@@ -337,6 +357,34 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     {
       message_id: reply_to
     }
+  end
+
+  def replace_group_mentions(content, message)
+    mentions_by_contact_id = whatsapp_group_mentions(message).index_by { |mention| mention[:contact_id].to_s }
+
+    content.gsub(%r{\[@[^\]]+\]\(mention://group_contact/(\d+)/[^)]+\)}) do
+      bsuid = mentions_by_contact_id[Regexp.last_match(1)]&.dig(:bsuid)
+      bsuid.present? ? "@#{bsuid}" : Regexp.last_match(0)
+    end
+  end
+
+  def whatsapp_mention_ids(message)
+    whatsapp_group_mentions(message).filter_map { |mention| mention[:bsuid].presence }
+  end
+
+  def whatsapp_group_mentions(message)
+    return [] unless message.conversation.group?
+    return [] unless whatsapp_channel.provider == 'unoapi'
+
+    mentions = message.content_attributes&.[]('group_mentions') || []
+    mentions.filter_map do |mention|
+      mention = mention.with_indifferent_access
+      bsuid = mention[:bsuid].to_s.delete_prefix('@').presence
+      contact_id = mention[:contact_id].presence
+      next if bsuid.blank? || contact_id.blank?
+
+      { contact_id: contact_id, bsuid: bsuid }
+    end
   end
 
   def contact_message?(message)

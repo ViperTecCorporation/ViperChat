@@ -73,6 +73,16 @@ const conversationTitle = computed(
   () => props.chat.group_title || currentContact.value?.name
 );
 
+const conversationAvatarSrc = computed(() => {
+  if (!props.chat.group) return currentContact.value?.thumbnail;
+
+  return (
+    props.chat.group_picture ||
+    props.chat.additional_attributes?.group_picture ||
+    currentContact.value?.thumbnail
+  );
+});
+
 const isSnoozed = computed(
   () => currentChat.value.status === wootConstants.STATUS_TYPE.SNOOZED
 );
@@ -115,7 +125,7 @@ const isInternalChat = computed(
       />
       <Avatar
         :name="conversationTitle"
-        :src="currentContact.thumbnail"
+        :src="conversationAvatarSrc"
         :size="32"
         :status="currentContact.availability_status"
         hide-offline-status
@@ -144,7 +154,8 @@ const isInternalChat = computed(
         >
           <InboxName v-if="hasMultipleInboxes" :inbox="inbox" class="!mx-0" />
           <span v-if="chat.group && chat.group_contacts_count">
-            {{ chat.group_contacts_count }} {{ t('CONVERSATION.GROUP.MEMBERS') }}
+            {{ chat.group_contacts_count }}
+            {{ t('CONVERSATION.GROUP.MEMBERS') }}
           </span>
           <span v-if="isSnoozed" class="font-medium text-n-amber-10">
             {{ snoozedDisplayText }}

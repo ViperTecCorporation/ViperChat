@@ -37,6 +37,8 @@ const readableTime = computed(() =>
   messageTimestamp(createdAt.value, 'LLL d, h:mm a')
 );
 
+const isEdited = computed(() => !!contentAttributes.value?.edited);
+
 const showStatusIndicator = computed(() => {
   if (isPrivate.value) return false;
   // Don't show status for failed messages, we already show error message
@@ -138,6 +140,13 @@ const statusToShow = computed(() => {
     <div class="inline">
       <time class="inline">{{ readableTime }}</time>
     </div>
+    <span
+      v-if="isEdited"
+      v-tooltip.top="$t('CONVERSATION.MESSAGE_EDITED')"
+      class="text-[11px] leading-none opacity-70"
+    >
+      {{ $t('CONVERSATION.EDITED') }}
+    </span>
     <Icon v-if="isPrivate" icon="i-lucide-lock-keyhole" class="size-3" />
     <MessageStatus v-if="showStatusIndicator" :status="statusToShow" />
   </div>

@@ -30,6 +30,7 @@ json.id conversation.display_id
 json.group conversation.group?
 json.group_source_id conversation.group_source_id
 json.group_title conversation.group_title
+json.group_picture conversation.additional_attributes&.dig('group_picture').presence || conversation.contact&.avatar_url if conversation.group?
 json.group_description conversation.group_description
 json.group_invite_link conversation.group_invite_link
 json.group_join_approval_mode conversation.group_join_approval_mode

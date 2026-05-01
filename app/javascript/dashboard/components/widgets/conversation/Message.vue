@@ -741,6 +741,7 @@ export default {
           :source-id="data.source_id"
           :inbox-id="data.inbox_id"
           :created-at="createdAt"
+          :content-attributes="contentAttributes"
         />
       </div>
       <Spinner v-if="isPending" size="tiny" />

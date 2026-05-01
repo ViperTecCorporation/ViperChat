@@ -20,6 +20,7 @@ import ChannelLeaf from './ChannelLeaf.vue';
 import ChannelIcon from 'next/icon/ChannelIcon.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
 import Logo from 'next/icon/Logo.vue';
+import CreateGroupModal from './CreateGroupModal.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import ComposeInternalChat from 'dashboard/components-next/InternalChat/ComposeInternalChat.vue';
 
@@ -51,8 +52,17 @@ const { width: windowWidth } = useWindowSize();
 const isMobile = computed(() => windowWidth.value < 768);
 
 const accountId = useMapGetter('getCurrentAccountId');
+const inboxes = useMapGetter('inboxes/getInboxes');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
+);
+const showCreateGroupModal = ref(false);
+
+const unoapiInboxes = computed(() =>
+  inboxes.value.filter(
+    inbox =>
+      inbox.channel_type === 'Channel::Whatsapp' && inbox.provider === 'unoapi'
+  )
 );
 
 const hasAdvancedAssignment = computed(() => {
@@ -76,6 +86,14 @@ const expandedItem = ref(null);
 
 const setExpandedItem = name => {
   expandedItem.value = expandedItem.value === name ? null : name;
+};
+
+const onGroupCreated = conversation => {
+  if (conversation?.id) {
+    window.location.assign(
+      `/app/accounts/${accountId.value}/conversations/${conversation.id}`
+    );
+  }
 };
 
 const {
@@ -154,7 +172,6 @@ useEventListener(document, 'mouseup', onResizeEnd);
 useEventListener(document, 'touchmove', onResizeMove, { passive: true });
 useEventListener(document, 'touchend', onResizeEnd);
 
-const inboxes = useMapGetter('inboxes/getInboxes');
 const labels = useMapGetter('labels/getLabelsOnSidebar');
 const teams = useMapGetter('teams/getMyTeams');
 const contactCustomViews = useMapGetter('customViews/getContactCustomViews');
@@ -776,7 +793,7 @@ const menuItems = computed(() => {
         <RouterLink
           v-if="!isEffectivelyCollapsed"
           :to="{ name: 'search' }"
-          class="flex gap-2 items-center px-2 py-1 w-full h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
+          class="flex min-w-0 flex-1 gap-2 items-center px-2 py-1 h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
         >
           <span class="flex-shrink-0 i-lucide-search size-4 text-n-slate-10" />
           <span class="flex-grow text-start text-n-slate-10">
@@ -801,9 +818,24 @@ const menuItems = computed(() => {
           class="flex gap-1 flex-shrink-0"
           :class="isEffectivelyCollapsed ? 'flex-col' : ''"
         >
+          <Button
+            v-if="unoapiInboxes.length"
+            v-tooltip.bottom="$t('CONVERSATION.GROUP.CREATE_GROUP')"
+            icon="i-lucide-message-circle-plus"
+            color="slate"
+            size="sm"
+            class="dark:hover:!bg-n-slate-9/30"
+            :class="[
+              isEffectivelyCollapsed
+                ? '!size-8 !outline-n-weak !text-n-slate-11'
+                : '!h-7 !outline-n-weak !text-n-slate-11',
+            ]"
+            @click="showCreateGroupModal = true"
+          />
           <ComposeInternalChat align-position="right">
             <template #trigger="{ toggle }">
               <Button
+                v-tooltip.bottom="$t('CONVERSATION.INTERNAL_CHAT.TITLE')"
                 icon="i-lucide-users"
                 color="slate"
                 size="sm"
@@ -813,7 +845,6 @@ const menuItems = computed(() => {
                     ? '!size-8 !outline-n-weak !text-n-slate-11'
                     : '!h-7 !outline-n-weak !text-n-slate-11',
                 ]"
-                v-tooltip.bottom="$t('CONVERSATION.INTERNAL_CHAT.TITLE')"
                 @click="toggle"
               />
             </template>
@@ -828,7 +859,7 @@ const menuItems = computed(() => {
                 :class="[
                   isEffectivelyCollapsed
                     ? '!size-8 !outline-n-weak !text-n-slate-11'
-                  : '!h-7 !outline-n-weak !text-n-slate-11',
+                    : '!h-7 !outline-n-weak !text-n-slate-11',
                   { '!bg-n-alpha-2 dark:!bg-n-slate-9/30': isOpen },
                 ]"
               />
@@ -837,6 +868,11 @@ const menuItems = computed(() => {
         </div>
       </div>
     </section>
+    <CreateGroupModal
+      v-model:show="showCreateGroupModal"
+      :inboxes="inboxes"
+      @group-created="onGroupCreated"
+    />
     <nav
       class="grid overflow-y-scroll flex-grow gap-2 pb-5 no-scrollbar min-w-0"
       :class="isEffectivelyCollapsed ? 'px-1' : 'px-2'"
@@ -896,4 +932,3 @@ const menuItems = computed(() => {
     </div>
   </aside>
 </template>
-

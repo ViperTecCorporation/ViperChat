@@ -1,9 +1,15 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import conversationApi from 'dashboard/api/inbox/conversation';
+import { useAlert } from 'dashboard/composables';
 import { uploadFile } from 'dashboard/helper/uploadHelper';
+import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import Avatar from 'next/avatar/Avatar.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
+import GroupAddMembersModal from './GroupAddMembersModal.vue';
 import GroupMembersModal from './GroupMembersModal.vue';
+import GroupJoinRequestsModal from './GroupJoinRequestsModal.vue';
 
 const props = defineProps({
   conversationId: {
@@ -12,13 +18,14 @@ const props = defineProps({
   },
 });
 
+const { t } = useI18n();
+
 const groupContacts = ref([]);
 const groupInfo = ref({});
 const inviteLink = ref('');
 const groupTitle = ref('');
 const groupDescription = ref('');
 const groupPictureUrl = ref('');
-const joinRequests = ref([]);
 const currentPage = ref(1);
 const totalCount = ref(0);
 const isLoading = ref(false);
@@ -26,8 +33,9 @@ const isSyncing = ref(false);
 const isLoadingInviteLink = ref(false);
 const isUpdatingGroup = ref(false);
 const isUploadingPicture = ref(false);
-const isLoadingJoinRequests = ref(false);
 const showMembersModal = ref(false);
+const showAddMembersModal = ref(false);
+const showJoinRequestsModal = ref(false);
 
 const isSessionAdmin = computed(() => groupInfo.value.group_session_admin);
 const groupDisplayTitle = computed(
@@ -116,6 +124,10 @@ const syncGroupContacts = async () => {
   }
 };
 
+const handleMembersAdded = async () => {
+  await syncGroupContacts();
+};
+
 const fetchInviteLink = async () => {
   if (isLoadingInviteLink.value) return;
 
@@ -144,63 +156,49 @@ const resetInviteLink = async () => {
   }
 };
 
-const fetchJoinRequests = async () => {
-  if (isLoadingJoinRequests.value) return;
+const copyInviteLink = async () => {
+  if (!inviteLink.value) return;
 
-  isLoadingJoinRequests.value = true;
-  try {
-    const { data } = await conversationApi.fetchGroupJoinRequests(
-      props.conversationId
-    );
-    joinRequests.value = data.join_requests || [];
-  } finally {
-    isLoadingJoinRequests.value = false;
-  }
-};
-
-const joinRequestIdentifier = request => request.wa_id || request.user_id;
-
-const joinRequestName = request =>
-  request.name || request.username || request.wa_id || request.user_id;
-
-const joinRequestSubtitle = request =>
-  [request.username, request.wa_id, request.user_id]
-    .filter(Boolean)
-    .join(' · ');
-
-const approveJoinRequest = async request => {
-  const participant = joinRequestIdentifier(request);
-  if (!participant) return;
-
-  await conversationApi.approveGroupJoinRequests({
-    conversationId: props.conversationId,
-    participants: [participant],
-  });
-  await fetchJoinRequests();
-};
-
-const rejectJoinRequest = async request => {
-  const participant = joinRequestIdentifier(request);
-  if (!participant) return;
-
-  await conversationApi.rejectGroupJoinRequests({
-    conversationId: props.conversationId,
-    participants: [participant],
-  });
-  await fetchJoinRequests();
+  await copyTextToClipboard(inviteLink.value);
+  useAlert(t('CONTACT_PANEL.COPY_SUCCESSFUL'));
 };
 
 const removeGroupContact = async groupContact => {
   if (!groupContact.participant_identifier) return;
 
-  await conversationApi.removeGroupContacts({
+  try {
+    await conversationApi.removeGroupContacts({
+      conversationId: props.conversationId,
+      participants: [groupContact.participant_identifier],
+    });
+    await fetchGroupContacts({ reset: true });
+  } catch (error) {
+    useAlert(
+      error.response?.data?.error ||
+        error.message ||
+        t('CONVERSATION.GROUP.REMOVE_MEMBER_ERROR')
+    );
+  }
+};
+
+const persistGroupInfo = async () => {
+  const { data } = await conversationApi.updateGroup({
     conversationId: props.conversationId,
-    participants: [groupContact.participant_identifier],
+    subject: groupTitle.value,
+    description: groupDescription.value,
+    picture_url: groupPictureUrl.value,
   });
-  await fetchGroupContacts({ reset: true });
+
+  groupInfo.value = data || {};
+  groupTitle.value = data?.group_title || '';
+  groupDescription.value = data?.group_description || '';
+  groupPictureUrl.value =
+    data?.group_picture || data?.additional_attributes?.group_picture || '';
 };
 
 const uploadGroupPicture = async event => {
+  if (!isSessionAdmin.value) return;
+
   const [file] = event.target.files || [];
   if (!file) return;
 
@@ -208,6 +206,7 @@ const uploadGroupPicture = async event => {
   try {
     const { fileUrl } = await uploadFile(file);
     groupPictureUrl.value = fileUrl;
+    await persistGroupInfo();
   } finally {
     isUploadingPicture.value = false;
     event.target.value = '';
@@ -215,21 +214,12 @@ const uploadGroupPicture = async event => {
 };
 
 const updateGroupInfo = async () => {
+  if (!isSessionAdmin.value) return;
   if (isUpdatingGroup.value || isUploadingPicture.value) return;
 
   isUpdatingGroup.value = true;
   try {
-    const { data } = await conversationApi.updateGroup({
-      conversationId: props.conversationId,
-      subject: groupTitle.value,
-      description: groupDescription.value,
-      picture_url: groupPictureUrl.value,
-    });
-    groupInfo.value = data || {};
-    groupTitle.value = data?.group_title || '';
-    groupDescription.value = data?.group_description || '';
-    groupPictureUrl.value =
-      data?.group_picture || data?.additional_attributes?.group_picture || '';
+    await persistGroupInfo();
   } finally {
     isUpdatingGroup.value = false;
   }
@@ -311,37 +301,52 @@ const updateGroupInfo = async () => {
       </div>
     </div>
 
-    <button
-      v-if="groupMemberCount"
-      type="button"
-      class="text-sm font-medium text-n-blue-11 text-left hover:underline"
-      @click="showMembersModal = true"
-    >
-      {{
-        $t('CONVERSATION.GROUP.VIEW_ALL_MEMBERS', {
-          count: groupMemberCount,
-        })
-      }}
-    </button>
+    <div class="flex items-center justify-between gap-2">
+      <button
+        v-if="groupMemberCount"
+        type="button"
+        class="min-w-0 text-left text-sm font-medium text-n-blue-11 hover:underline"
+        @click="showMembersModal = true"
+      >
+        {{
+          $t('CONVERSATION.GROUP.VIEW_ALL_MEMBERS', {
+            count: groupMemberCount,
+          })
+        }}
+      </button>
+      <span v-else />
+      <Button
+        v-if="isSessionAdmin"
+        v-tooltip.top="$t('CONVERSATION.GROUP.ADD_MEMBER')"
+        icon="i-lucide-user-plus"
+        size="xs"
+        ghost
+        slate
+        :aria-label="$t('CONVERSATION.GROUP.ADD_MEMBER')"
+        @click="showAddMembersModal = true"
+      />
+    </div>
 
-    <div
-      v-if="isSessionAdmin"
-      class="flex flex-col gap-3 border-t border-n-weak pt-3"
-    >
+    <div class="flex flex-col gap-3 border-t border-n-weak pt-3">
       <form class="flex flex-col gap-2" @submit.prevent="updateGroupInfo">
         <input
           v-model.trim="groupTitle"
           type="text"
-          class="w-full rounded-md border border-n-weak bg-n-background px-2 py-1.5 text-sm text-n-slate-12"
+          class="w-full rounded-md border border-n-weak bg-n-background px-2 py-1.5 text-sm text-n-slate-12 read-only:bg-n-alpha-2 read-only:text-n-slate-11"
           :placeholder="$t('CONVERSATION.GROUP.TITLE')"
+          :readonly="!isSessionAdmin"
         />
         <textarea
           v-model.trim="groupDescription"
           rows="2"
-          class="w-full rounded-md border border-n-weak bg-n-background px-2 py-1.5 text-sm text-n-slate-12"
+          class="w-full rounded-md border border-n-weak bg-n-background px-2 py-1.5 text-sm text-n-slate-12 read-only:bg-n-alpha-2 read-only:text-n-slate-11"
           :placeholder="$t('CONVERSATION.GROUP.DESCRIPTION')"
+          :readonly="!isSessionAdmin"
         />
-        <div class="flex items-center justify-between gap-2">
+        <div
+          v-if="isSessionAdmin"
+          class="flex items-center justify-between gap-2"
+        >
           <label
             class="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-n-blue-11 hover:underline"
           >
@@ -373,7 +378,7 @@ const updateGroupInfo = async () => {
         </div>
       </form>
 
-      <div class="flex flex-wrap gap-3">
+      <div v-if="isSessionAdmin" class="flex flex-wrap gap-3">
         <button
           type="button"
           class="text-xs font-medium text-n-blue-11 hover:underline disabled:opacity-50"
@@ -393,45 +398,21 @@ const updateGroupInfo = async () => {
         <button
           type="button"
           class="text-xs font-medium text-n-blue-11 hover:underline disabled:opacity-50"
-          :disabled="isLoadingJoinRequests"
-          @click="fetchJoinRequests"
+          @click="showJoinRequestsModal = true"
         >
           {{ $t('CONVERSATION.GROUP.JOIN_REQUESTS') }}
         </button>
       </div>
 
-      <div v-if="inviteLink" class="break-all text-xs text-n-slate-10">
-        {{ inviteLink }}
-      </div>
-
-      <div
-        v-for="request in joinRequests"
-        :key="joinRequestIdentifier(request)"
-        class="flex items-center gap-2"
+      <button
+        v-if="inviteLink"
+        type="button"
+        class="flex items-start gap-2 break-all rounded-md border border-n-weak bg-n-alpha-1 p-2 text-left text-xs text-n-blue-11 hover:bg-n-alpha-2"
+        @click="copyInviteLink"
       >
-        <div class="min-w-0">
-          <div class="truncate text-sm text-n-slate-12">
-            {{ joinRequestName(request) }}
-          </div>
-          <div class="truncate text-xs text-n-slate-10">
-            {{ joinRequestSubtitle(request) }}
-          </div>
-        </div>
-        <button
-          type="button"
-          class="ml-auto text-xs font-medium text-n-blue-11 hover:underline"
-          @click="approveJoinRequest(request)"
-        >
-          {{ $t('CONVERSATION.GROUP.APPROVE_JOIN_REQUEST') }}
-        </button>
-        <button
-          type="button"
-          class="text-xs font-medium text-n-ruby-9 hover:underline"
-          @click="rejectJoinRequest(request)"
-        >
-          {{ $t('CONVERSATION.GROUP.REJECT_JOIN_REQUEST') }}
-        </button>
-      </div>
+        <span class="i-lucide-clipboard size-3.5 shrink-0 translate-y-0.5" />
+        <span>{{ inviteLink }}</span>
+      </button>
     </div>
 
     <GroupMembersModal
@@ -440,6 +421,16 @@ const updateGroupInfo = async () => {
       :total-count="groupMemberCount"
       :is-session-admin="isSessionAdmin"
       @member-removed="fetchGroupContacts({ reset: true })"
+    />
+    <GroupAddMembersModal
+      v-model:show="showAddMembersModal"
+      :conversation-id="conversationId"
+      @members-added="handleMembersAdded"
+    />
+    <GroupJoinRequestsModal
+      v-model:show="showJoinRequestsModal"
+      :conversation-id="conversationId"
+      @request-processed="fetchGroupContacts({ reset: true })"
     />
   </div>
 </template>

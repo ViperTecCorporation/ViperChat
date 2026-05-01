@@ -33,6 +33,7 @@ import {
 } from '@chatwoot/utils';
 import WhatsappTemplates from './WhatsappTemplates/Modal.vue';
 import ContentTemplates from './ContentTemplates/ContentTemplatesModal.vue';
+import conversationApi from 'dashboard/api/inbox/conversation';
 import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
@@ -145,12 +146,16 @@ export default {
       undefinedVariableMessage: '',
       showMentions: false,
       showUserMentions: false,
+      showGroupMentions: false,
       showCannedMenu: false,
       showVariablesMenu: false,
       newConversationModalActive: false,
       showArticleSearchPopover: false,
       hasRecordedAudio: false,
       copilotAcceptedMessages: {},
+      groupMentionContacts: [],
+      isLoadingGroupMentionContacts: false,
+      groupMentionFetchTimeout: null,
     };
   },
   computed: {
@@ -167,6 +172,13 @@ export default {
       const senderId = this.currentChat?.meta?.sender?.id;
       if (!senderId) return {};
       return this.$store.getters['contacts/getContact'](senderId);
+    },
+    canUseGroupMentions() {
+      return (
+        this.currentChat?.group &&
+        this.isAUnoapiChannel &&
+        !this.isOnPrivateNote
+      );
     },
     shouldShowReplyToMessage() {
       return (
@@ -482,6 +494,15 @@ export default {
 
       this.fetchAndSetReplyTo();
     },
+    showGroupMentions(value) {
+      if (value) this.fetchGroupMentionContacts(this.groupMentionSearchTerm());
+      if (!value) this.groupMentionContacts = [];
+    },
+    message() {
+      // Autosave the current message draft.
+      this.doAutoSaveDraft();
+      if (this.showGroupMentions) this.debouncedFetchGroupMentionContacts();
+    },
     // When moving from one conversation to another, the store may not have the
     // list of all the messages. A fetch is subsequently made to get the messages.
     // This watcher handles two main cases:
@@ -500,10 +521,6 @@ export default {
         this.getFromDraft();
         this.resetRecorderAndClearAttachments();
       }
-    },
-    message() {
-      // Autosave the current message draft.
-      this.doAutoSaveDraft();
     },
     replyType(updatedReplyType, oldReplyType) {
       this.setToDraft(this.conversationIdByRoute, oldReplyType);
@@ -540,6 +557,7 @@ export default {
     emitter.on(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   unmounted() {
+    clearTimeout(this.groupMentionFetchTimeout);
     document.removeEventListener('paste', this.onPaste);
     document.removeEventListener('keydown', this.handleKeyEvents);
     emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
@@ -551,6 +569,104 @@ export default {
     emitter.off(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   methods: {
+    groupMentionSearchTerm(message = this.message) {
+      const match = message.match(/(?:^|\s)@([^\s@]*)$/);
+      return match ? match[1] : '';
+    },
+    debouncedFetchGroupMentionContacts() {
+      clearTimeout(this.groupMentionFetchTimeout);
+      this.groupMentionFetchTimeout = setTimeout(() => {
+        this.fetchGroupMentionContacts(this.groupMentionSearchTerm());
+      }, 250);
+    },
+    async fetchGroupMentionContacts(query = '') {
+      const normalizedQuery = query.trim();
+      if (normalizedQuery.length < 2) {
+        this.groupMentionContacts = [];
+        return;
+      }
+
+      if (!this.canUseGroupMentions || this.isLoadingGroupMentionContacts) {
+        this.groupMentionContacts = [];
+        return;
+      }
+
+      this.isLoadingGroupMentionContacts = true;
+      try {
+        const { data } = await conversationApi.fetchGroupContacts(
+          this.currentChat.id,
+          1,
+          normalizedQuery
+        );
+        this.groupMentionContacts = (data.payload || [])
+          .map(member => this.normalizeGroupMentionContact(member))
+          .filter(contact => contact.id && contact.bsuid);
+      } finally {
+        this.isLoadingGroupMentionContacts = false;
+      }
+    },
+    normalizeGroupMentionContact(member = {}) {
+      const contact = member.contact || {};
+      const metadata = member.metadata || {};
+      const bsuid =
+        contact.bsuid ||
+        metadata.lid ||
+        metadata.jid ||
+        member.participant_identifier;
+      const name =
+        contact.name ||
+        contact.whatsapp_username ||
+        metadata.name ||
+        member.participant_identifier ||
+        bsuid;
+
+      return {
+        id: contact.id,
+        bsuid,
+        name,
+        displayName: name,
+        whatsapp_username: contact.whatsapp_username,
+        phone_number: contact.phone_number,
+        thumbnail: contact.thumbnail,
+      };
+    },
+    groupMentionAttributesFor(message = '') {
+      if (!this.canUseGroupMentions || !message) return [];
+
+      const mentionsByContactId = new Map(
+        this.groupMentionContacts.map(contact => [
+          contact.id?.toString(),
+          contact,
+        ])
+      );
+
+      return Array.from(
+        message.matchAll(
+          /\[@([^\]]+)\]\(mention:\/\/group_contact\/(\d+)\/([^)]+)\)/g
+        )
+      ).flatMap(match => {
+        const contact = mentionsByContactId.get(match[2]);
+        if (!contact?.bsuid) return [];
+
+        return {
+          contact_id: contact.id,
+          name: decodeURIComponent(match[3] || match[1]),
+          bsuid: contact.bsuid,
+        };
+      });
+    },
+    withGroupMentionsInPayload(payload, message = payload.message) {
+      const groupMentions = this.groupMentionAttributesFor(message);
+      if (!groupMentions.length) return payload;
+
+      return {
+        ...payload,
+        contentAttributes: {
+          ...(payload.contentAttributes || {}),
+          group_mentions: groupMentions,
+        },
+      };
+    },
     getDraftKey(
       conversationId = this.conversationIdByRoute,
       replyType = this.replyType
@@ -563,7 +679,10 @@ export default {
     },
     setCopilotAcceptedMessage(message, replyType = this.replyType) {
       const key = this.getDraftKey(this.conversationIdByRoute, replyType);
-      this.copilotAcceptedMessages[key] = trimContent(message || '', this.maxLength);
+      this.copilotAcceptedMessages[key] = trimContent(
+        message || '',
+        this.maxLength
+      );
     },
     clearCopilotAcceptedMessage(replyType = this.replyType) {
       const key = this.getDraftKey(this.conversationIdByRoute, replyType);
@@ -708,6 +827,7 @@ export default {
     isAValidEvent(selectedKey) {
       return (
         !this.showUserMentions &&
+        !this.showGroupMentions &&
         !this.showMentions &&
         !this.showCannedMenu &&
         !this.showVariablesMenu &&
@@ -751,6 +871,9 @@ export default {
     },
     toggleUserMention(currentMentionState) {
       this.showUserMentions = currentMentionState;
+    },
+    toggleGroupMention(currentMentionState) {
+      this.showGroupMentions = currentMentionState;
     },
     toggleCannedMenu(value) {
       this.showCannedMenu = value;
@@ -1153,6 +1276,10 @@ export default {
         };
 
         contactsPayload = this.setReplyToInPayload(contactsPayload);
+        contactsPayload = this.withGroupMentionsInPayload(
+          contactsPayload,
+          contactsPayload.message
+        );
         multipleMessagePayload.push(contactsPayload);
       }
 
@@ -1172,6 +1299,10 @@ export default {
           };
 
           attachmentPayload = this.setReplyToInPayload(attachmentPayload);
+          attachmentPayload = this.withGroupMentionsInPayload(
+            attachmentPayload,
+            attachmentPayload.message
+          );
           multipleMessagePayload.push(attachmentPayload);
           // For WhatsApp, only the first attachment gets a caption
           if (!this.isAnInstagramChannel) caption = '';
@@ -1183,8 +1314,7 @@ export default {
       // For Instagram and TikTok, text must always be sent as a separate message (no captions on attachments).
       // For WhatsApp, text is sent separately only when there are no file attachments.
       if (
-        ((this.isAnInstagramChannel || this.isATiktokChannel) &&
-          message) ||
+        ((this.isAnInstagramChannel || this.isATiktokChannel) && message) ||
         (!(this.isAnInstagramChannel || this.isATiktokChannel) &&
           hasNoAttachments &&
           message)
@@ -1197,6 +1327,10 @@ export default {
         };
 
         messagePayload = this.setReplyToInPayload(messagePayload);
+        messagePayload = this.withGroupMentionsInPayload(
+          messagePayload,
+          messagePayload.message
+        );
 
         multipleMessagePayload.push(messagePayload);
       }
@@ -1213,6 +1347,10 @@ export default {
         sender: this.sender,
       };
       messagePayload = this.setReplyToInPayload(messagePayload);
+      messagePayload = this.withGroupMentionsInPayload(
+        messagePayload,
+        messageWithQuote
+      );
 
       if (this.attachedFiles && this.attachedFiles.length) {
         messagePayload.files = [];
@@ -1417,8 +1555,8 @@ export default {
           @send="copilot.sendFollowUp"
         />
         <WootMessageEditor
-          ref="messageEditor"
           v-else-if="!showAudioRecorderEditor"
+          ref="messageEditor"
           v-model="message"
           :conversation-id="conversationId"
           :editor-id="editorStateId"
@@ -1432,6 +1570,8 @@ export default {
           :variables="messageVariables"
           :signature="messageSignature"
           allow-signature
+          :enable-group-mentions="canUseGroupMentions"
+          :group-mention-contacts="groupMentionContacts"
           :channel-type="channelType"
           :medium="inbox.medium"
           @typing-off="onTypingOff"
@@ -1439,6 +1579,7 @@ export default {
           @focus="onFocus"
           @blur="onBlur"
           @toggle-user-mention="toggleUserMention"
+          @toggle-group-mention="toggleGroupMention"
           @toggle-canned-menu="toggleCannedMenu"
           @toggle-variables-menu="toggleVariablesMenu"
           @clear-selection="clearEditorSelection"

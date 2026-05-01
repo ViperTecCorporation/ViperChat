@@ -123,9 +123,9 @@ class ConversationApi extends ApiClient {
     return axios.get(`${this.url}/${conversationId}/participants`);
   }
 
-  fetchGroupContacts(conversationId, page = 1) {
+  fetchGroupContacts(conversationId, page = 1, query = '') {
     return axios.get(`${this.url}/${conversationId}/group_contacts`, {
-      params: { page },
+      params: { page, query },
     });
   }
 
@@ -138,6 +138,22 @@ class ConversationApi extends ApiClient {
   addGroupContacts({ conversationId, participants }) {
     return axios.post(`${this.url}/${conversationId}/group_contacts`, {
       participants,
+    });
+  }
+
+  createGroup({
+    inboxId,
+    subject,
+    description,
+    participants,
+    joinApprovalMode,
+  }) {
+    return axios.post(`${this.url}/groups`, {
+      inbox_id: inboxId,
+      subject,
+      description,
+      participants,
+      join_approval_mode: joinApprovalMode,
     });
   }
 

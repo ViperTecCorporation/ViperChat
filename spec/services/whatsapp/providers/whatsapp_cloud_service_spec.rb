@@ -7,12 +7,27 @@ describe Whatsapp::Providers::WhatsappCloudService do
   let(:whatsapp_channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false) }
 
   let(:message) do
-    create(:message, conversation: conversation, message_type: :outgoing, content: 'test', inbox: whatsapp_channel.inbox, source_id: 'external_id')
+    create(
+      :message,
+      conversation: conversation,
+      message_type: :outgoing,
+      content: 'test',
+      inbox: whatsapp_channel.inbox,
+      source_id: 'external_id',
+      sender: create(:user, account: whatsapp_channel.account, name: 'Agent Smith')
+    )
   end
 
   let(:message_with_reply) do
-    create(:message, conversation: conversation, message_type: :outgoing, content: 'reply', inbox: whatsapp_channel.inbox,
-                     content_attributes: { in_reply_to: message.id })
+    create(
+      :message,
+      conversation: conversation,
+      message_type: :outgoing,
+      content: 'reply',
+      inbox: whatsapp_channel.inbox,
+      content_attributes: { in_reply_to: message.id },
+      sender: create(:user, account: whatsapp_channel.account, name: 'Agent Smith')
+    )
   end
 
   let(:response_headers) { { 'Content-Type' => 'application/json' } }
@@ -42,6 +57,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
       it 'calls message endpoints with group recipient type for group conversations' do
         conversation.update!(group: true, group_source_id: '120363040468224422@g.us', group_title: 'Equipe Comercial')
+        expected_body = "*#{message.sender_name}*: test"
 
         stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
           .with(
@@ -50,8 +66,40 @@ describe Whatsapp::Providers::WhatsappCloudService do
               recipient_type: 'group',
               context: nil,
               to: '120363040468224422@g.us',
-              text: { body: message.content },
+              text: { body: expected_body },
               type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('120363040468224422@g.us', message)).to eq 'message_id'
+      end
+
+      it 'sends group contact mentions to UnoAPI with bsuid in body and mentions metadata' do
+        whatsapp_channel.update!(provider: 'unoapi')
+        whatsapp_channel.provider_config['url'] = 'https://graph.facebook.com'
+        whatsapp_channel.save!
+        conversation.update!(group: true, group_source_id: '120363040468224422@g.us', group_title: 'Equipe Comercial')
+        message.update!(
+          content: 'Oi [@Rodrigo](mention://group_contact/42/Rodrigo)',
+          content_attributes: {
+            group_mentions: [
+              { contact_id: 42, name: 'Rodrigo', bsuid: '94047083475061@lid' }
+            ]
+          }
+        )
+        expected_body = "*#{message.sender_name}*: Oi @94047083475061@lid"
+
+        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              recipient_type: 'group',
+              context: nil,
+              to: '120363040468224422@g.us',
+              text: { body: expected_body },
+              type: 'text',
+              mentions: ['94047083475061@lid']
             }.to_json
           )
           .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)

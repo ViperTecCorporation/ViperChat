@@ -572,6 +572,53 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
 
         expect(whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.GROUP_MESSAGE_ID').status).to eq('delivered')
       end
+
+      it 'updates local group details from group settings webhooks' do
+        group_contact = create(:contact, account: whatsapp_channel.account, name: 'Equipe Comercial')
+        group_contact_inbox = create(
+          :contact_inbox,
+          inbox: whatsapp_channel.inbox,
+          contact: group_contact,
+          source_id: '120363040468224422@g.us'
+        )
+        conversation = create(
+          :conversation,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          contact: group_contact,
+          contact_inbox: group_contact_inbox,
+          group: true,
+          group_source_id: '120363040468224422@g.us',
+          group_title: 'Equipe Comercial',
+          group_description: 'Descricao antiga'
+        )
+
+        settings_params = {
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              field: 'group_settings_update',
+              value: {
+                group_id: '120363040468224422@g.us',
+                changes: {
+                  subject: 'Equipe Comercial VIP',
+                  description: 'Descricao atualizada',
+                  picture: 'https://cdn.example.com/groups/new-picture.jpg'
+                }
+              }
+            }]
+          }]
+        }.with_indifferent_access
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: settings_params).perform
+        end.to have_enqueued_job(Avatar::AvatarFromUrlJob).with(group_contact, 'https://cdn.example.com/groups/new-picture.jpg')
+
+        expect(conversation.reload.group_title).to eq('Equipe Comercial VIP')
+        expect(conversation.group_description).to eq('Descricao atualizada')
+        expect(conversation.additional_attributes['group_picture']).to eq('https://cdn.example.com/groups/new-picture.jpg')
+        expect(group_contact.reload.name).to eq('Equipe Comercial VIP')
+      end
     end
   end
 

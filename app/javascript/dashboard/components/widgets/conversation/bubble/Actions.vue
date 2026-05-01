@@ -54,6 +54,10 @@ export default {
       type: [String, Number],
       default: 0,
     },
+    contentAttributes: {
+      type: Object,
+      default: () => ({}),
+    },
   },
   computed: {
     inbox() {
@@ -181,6 +185,12 @@ export default {
 
       return false;
     },
+    isEdited() {
+      return !!(
+        this.contentAttributes?.edited ||
+        this.contentAttributes?.isEdited
+      );
+    },
   },
 };
 </script>
@@ -195,6 +205,13 @@ export default {
       }"
     >
       {{ readableTime }}
+    </span>
+    <span
+      v-if="isEdited"
+      v-tooltip.top-start="$t('CONVERSATION.MESSAGE_EDITED')"
+      class="edited-indicator"
+    >
+      {{ $t('CONVERSATION.EDITED') }}
     </span>
     <span v-if="externalError" class="read-indicator-wrap">
       <fluent-icon
@@ -306,6 +323,10 @@ export default {
 
   .time {
     @apply mr-2 block text-xxs leading-[1.8];
+  }
+
+  .edited-indicator {
+    @apply mr-2 block text-xxs leading-[1.8] opacity-70;
   }
 
   .action--icon {

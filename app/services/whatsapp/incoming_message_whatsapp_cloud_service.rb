@@ -4,7 +4,51 @@
 class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageBaseService
   GROUP_PARTICIPANTS_SYNC_INTERVAL = 2.hours
 
+  def perform
+    return process_group_settings_update if group_settings_update_event?
+
+    super
+  end
+
   private
+
+  def group_settings_update_event?
+    params.dig(:entry, 0, :changes, 0, :field).to_s == 'group_settings_update'
+  end
+
+  def process_group_settings_update
+    value = params.dig(:entry, 0, :changes, 0, :value).to_h.with_indifferent_access
+    group_id = value[:group_id].presence
+    return if group_id.blank?
+
+    conversation = inbox.conversations.find_by(group: true, group_source_id: group_id)
+    return if conversation.blank?
+
+    changes = value.fetch(:changes, {}).with_indifferent_access
+    attrs = group_settings_attributes(changes)
+    picture_url = group_settings_picture_url(changes)
+    return if attrs.blank? && picture_url.blank?
+
+    if picture_url.present?
+      conversation.additional_attributes ||= {}
+      conversation.additional_attributes['group_picture'] = picture_url
+      Avatar::AvatarFromUrlJob.perform_later(conversation.contact, picture_url)
+    end
+
+    conversation.update!(attrs)
+    conversation.contact.update!(name: attrs[:group_title]) if attrs[:group_title].present?
+  end
+
+  def group_settings_attributes(changes)
+    attrs = {}
+    attrs[:group_title] = changes[:subject].presence if changes.key?(:subject)
+    attrs[:group_description] = changes[:description].presence if changes.key?(:description)
+    attrs.compact
+  end
+
+  def group_settings_picture_url(changes)
+    changes[:picture].presence || changes[:picture_url].presence || changes[:group_picture].presence
+  end
 
   def set_contact
     return if contact_params.blank?
