@@ -21,6 +21,7 @@ import ChannelIcon from 'next/icon/ChannelIcon.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
 import Logo from 'next/icon/Logo.vue';
 import CreateGroupModal from './CreateGroupModal.vue';
+import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import ComposeInternalChat from 'dashboard/components-next/InternalChat/ComposeInternalChat.vue';
 
@@ -876,11 +877,13 @@ const menuItems = computed(() => {
         </div>
       </div>
     </section>
-    <CreateGroupModal
-      v-model:show="showCreateGroupModal"
-      :inboxes="inboxes"
-      @group-created="onGroupCreated"
-    />
+    <TeleportWithDirection to="body">
+      <CreateGroupModal
+        v-model:show="showCreateGroupModal"
+        :inboxes="inboxes"
+        @group-created="onGroupCreated"
+      />
+    </TeleportWithDirection>
     <nav
       class="grid overflow-y-scroll flex-grow gap-2 pb-5 no-scrollbar min-w-0"
       :class="isEffectivelyCollapsed ? 'px-1' : 'px-2'"
