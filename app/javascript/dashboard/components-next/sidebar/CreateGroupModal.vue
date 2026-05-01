@@ -33,11 +33,19 @@ const selectedMap = ref({});
 const isSearching = ref(false);
 const isSaving = ref(false);
 
+const normalizedValue = value => (value || '').toString().toLowerCase();
+
+const isUnoapiWhatsappInbox = inbox => {
+  const channelType = normalizedValue(inbox.channel_type || inbox.channelType);
+  const provider = normalizedValue(
+    inbox.provider || inbox.providerName || inbox.provider_name
+  );
+
+  return channelType.includes('whatsapp') && provider.includes('uno');
+};
+
 const unoapiInboxes = computed(() =>
-  props.inboxes.filter(
-    inbox =>
-      inbox.channel_type === 'Channel::Whatsapp' && inbox.provider === 'unoapi'
-  )
+  props.inboxes.filter(inbox => isUnoapiWhatsappInbox(inbox))
 );
 
 const selectedContacts = computed(() => Object.values(selectedMap.value));
