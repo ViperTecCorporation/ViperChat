@@ -217,6 +217,24 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(message.sender.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')).to be_present
       end
 
+      it 'clears invalid legacy email from the bsuid contact before merging' do
+        phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Contato telefone')
+        phone_contact.update_columns(phone_number: '+5566999999999') # rubocop:disable Rails/SkipsModelValidations
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '5566999999999')
+
+        bsuid_contact = create(:contact, account: whatsapp_channel.account, bsuid: '123456789012345@lid')
+        bsuid_contact.update_columns(email: '123456789012345') # rubocop:disable Rails/SkipsModelValidations
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: bsuid_contact, source_id: '123456789012345@lid')
+
+        expect { described_class.new(inbox: whatsapp_channel.inbox, params: one_to_one_params).perform }.not_to raise_error
+
+        message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.ONE_TO_ONE_MESSAGE_ID')
+        expect(message.sender).to eq(phone_contact)
+        expect(message.sender.email).to be_nil
+        expect(message.sender.bsuid).to eq('123456789012345@lid')
+        expect(Contact.exists?(bsuid_contact.id)).to be(false)
+      end
+
       it 'uses the existing phone conversation when the incoming message is identified by bsuid' do
         phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Maria')
         phone_contact.update_columns(phone_number: '+5566999999999', bsuid: '123456789012345@lid') # rubocop:disable Rails/SkipsModelValidations

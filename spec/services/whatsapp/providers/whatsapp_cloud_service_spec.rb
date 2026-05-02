@@ -83,7 +83,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         expect(service.send_message('120363040468224422@g.us', message)).to eq 'message_id'
       end
 
-      it 'sends group contact mentions to UnoAPI with bsuid in body and mentions metadata' do
+      it 'sends group contact mentions to UnoAPI with clean identifier in body and bsuid in mentions metadata' do
         whatsapp_channel.update!(provider: 'unoapi')
         whatsapp_channel.provider_config['url'] = 'https://graph.facebook.com'
         whatsapp_channel.save!
@@ -96,7 +96,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
             ]
           }
         )
-        expected_body = "*#{message.sender_name}*: Oi @94047083475061@lid"
+        expected_body = "*#{message.sender_name}*: Oi @94047083475061"
 
         stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
           .with(
@@ -128,7 +128,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
             ]
           }
         )
-        expected_body = "*#{message.sender_name}*: @11343495192601@lid oi"
+        expected_body = "*#{message.sender_name}*: @11343495192601 oi"
 
         stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
           .with(
@@ -158,7 +158,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
           content: "mention://group_contact/#{contact.id}/Equipe%20Tecnica oi",
           content_attributes: {}
         )
-        expected_body = "*#{message.sender_name}*: @11343495192601@lid oi"
+        expected_body = "*#{message.sender_name}*: @11343495192601 oi"
 
         stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
           .with(

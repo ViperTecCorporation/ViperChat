@@ -512,7 +512,10 @@ Recommended for official management compatibility:
 
 Optional/future:
 
-- `POST /groups` to create groups.
+- `POST /groups` to create groups. This action is intentionally disabled in
+  the Chatwoot/ViperChat UI until the Baileys/WhatsApp platform support is
+  stable; current UnoAPI tests can return `rate-overlimit` even after
+  participant normalization and LID-to-phone-JID fallback.
 - `GET/POST/DELETE /groups/{group_id}/join_requests`.
 - `group_invite_link` template.
 - Baileys extra fields such as `is_admin`, `role`, `lid`, `pn`, as long as they

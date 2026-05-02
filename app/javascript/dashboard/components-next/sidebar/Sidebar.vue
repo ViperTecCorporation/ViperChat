@@ -70,8 +70,11 @@ const isUnoapiWhatsappInbox = inbox => {
   return channelType.includes('whatsapp') && provider.includes('uno');
 };
 
+const isGroupCreationAvailable = false;
 const unoapiInboxes = computed(() =>
-  inboxes.value.filter(inbox => isUnoapiWhatsappInbox(inbox))
+  isGroupCreationAvailable
+    ? inboxes.value.filter(inbox => isUnoapiWhatsappInbox(inbox))
+    : []
 );
 
 const hasAdvancedAssignment = computed(() => {

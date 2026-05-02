@@ -47,6 +47,7 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
   def merge_contacts(phone_contact, lid_contact, participant, source_id)
     ActiveRecord::Base.transaction do
       sanitize_contact_email(phone_contact)
+      sanitize_contact_email(lid_contact)
       update_phone_number(phone_contact, participant, source_id)
       lid_attributes = lid_contact_attributes(phone_contact, lid_contact, participant)
       merge_group_contacts(lid_contact, phone_contact)

@@ -144,6 +144,10 @@ Acoes oficiais relevantes:
   - campos principais: `subject`, `description`, `join_approval_mode`;
   - ao criar o grupo, a plataforma gera um `invite_link`;
   - o telefone business usado para criar o grupo entra como criador e admin.
+  - status no Chatwoot/ViperChat: fluxo desativado na UI enquanto a
+    plataforma Baileys/WhatsApp nao oferecer suporte estavel; nos testes com
+    UnoAPI, a chamada pode falhar com `rate-overlimit` mesmo apos normalizar
+    participantes e tentar fallback de LID para phone JID.
 - Criar template de convite de grupo:
   - template com `library_template_name: "group_invite_link"`;
   - usado para convidar usuarios ao grupo via mensagem aprovada.

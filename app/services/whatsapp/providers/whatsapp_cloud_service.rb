@@ -1,5 +1,5 @@
 class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseService
-  GROUP_CONTACT_MENTION_PATTERN = %r{\[@[^\]]+\]\(mention://group[_-]contact/(\d+)/[^)]+\)|mention://group[_-]contact/(\d+)/[^\s)]+}
+  GROUP_CONTACT_MENTION_PATTERN = %r{\[@([^\]]+)\]\(mention://group[_-]contact/(\d+)/[^)]+\)|mention://group[_-]contact/(\d+)/([^\s)]+)}
 
   def send_message(phone_number, message)
     @message = message
@@ -365,9 +365,11 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     mentions_by_contact_id = whatsapp_group_mentions(message).index_by { |mention| mention[:mention_id].to_s }
 
     content.gsub(GROUP_CONTACT_MENTION_PATTERN) do
-      contact_id = Regexp.last_match(1) || Regexp.last_match(2)
-      bsuid = mentions_by_contact_id[contact_id]&.dig(:bsuid)
-      bsuid.present? ? "@#{bsuid}" : Regexp.last_match(0)
+      contact_id = Regexp.last_match(2) || Regexp.last_match(3)
+      mention = mentions_by_contact_id[contact_id]
+      display_identifier = mention&.dig(:bsuid).to_s.delete_prefix('@').delete_suffix('@lid')
+
+      display_identifier.present? ? "@#{display_identifier}" : Regexp.last_match(0)
     end
   end
 
@@ -397,7 +399,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
   def group_mentions_from_content(message)
     message.content.to_s.scan(GROUP_CONTACT_MENTION_PATTERN).filter_map do |match|
-      mention_id = (match[0] || match[1]).presence
+      mention_id = (match[1] || match[2]).presence
       next if mention_id.blank?
 
       group_mention_from_id(message, mention_id)
