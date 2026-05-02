@@ -413,17 +413,35 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(original_message.content_attributes['existing']).to be true
       end
 
-      it 'creates a fallback message when the edited original message is missing' do
+      it 'ignores the edit event when the edited original message is missing' do
         expect do
           described_class.new(inbox: whatsapp_channel.inbox, params: edited_params).perform
-        end.to change(whatsapp_channel.inbox.messages, :count).by(1)
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+      end
 
-        fallback_message = whatsapp_channel.inbox.messages.find_by!(source_id: original_source_id)
-        expect(fallback_message.content).to eq('Edited message body')
-        expect(fallback_message.content_attributes['edited']).to be true
-        expect(fallback_message.content_attributes['edit_event_id']).to eq(edit_event_id)
-        expect(fallback_message.content_attributes['edit_timestamp']).to eq('1770407830000')
-        expect(fallback_message.content_attributes['edit_missing_original_fallback']).to be true
+      it 'recovers the original message from the recent conversation when the provider id is not mapped yet' do
+        contact = create(:contact, phone_number: "+#{contact_wa_id}", account: whatsapp_channel.account)
+        contact_inbox = create(:contact_inbox, contact: contact, inbox: whatsapp_channel.inbox, source_id: contact_wa_id)
+        conversation = create(:conversation, contact: contact, inbox: whatsapp_channel.inbox, contact_inbox: contact_inbox)
+        original_message = create(
+          :message,
+          conversation: conversation,
+          inbox: whatsapp_channel.inbox,
+          source_id: 'unoapi.ORIGINAL_MESSAGE_ID',
+          content: 'Original message body',
+          message_type: :incoming,
+          created_at: Time.zone.at(1_770_407_829)
+        )
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: edited_params).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+
+        original_message.reload
+        expect(original_message.content).to eq('Edited message body')
+        expect(original_message.content_attributes['edited']).to be true
+        expect(original_message.content_attributes['edit_event_id']).to eq(edit_event_id)
+        expect(original_message.content_attributes['previous_content']).to eq('Original message body')
       end
     end
 
@@ -504,6 +522,35 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
           'username' => '@maria.vendas'
         )
         expect(message.content).to eq('Bom dia pessoal')
+      end
+
+      it 'preserves the existing group picture when a structured webhook sends an empty picture' do
+        group_contact = create(:contact, account: whatsapp_channel.account, name: 'Equipe Comercial')
+        group_contact_inbox = create(
+          :contact_inbox,
+          inbox: whatsapp_channel.inbox,
+          contact: group_contact,
+          source_id: '120363040468224422@g.us'
+        )
+        conversation = create(
+          :conversation,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          contact: group_contact,
+          contact_inbox: group_contact_inbox,
+          group: true,
+          group_source_id: '120363040468224422@g.us',
+          group_title: 'Equipe Comercial',
+          additional_attributes: { 'group_picture' => 'https://cdn.example.com/groups/current.jpg' }
+        )
+        empty_picture_params = params.deep_dup
+        empty_picture_params[:entry][0][:changes][0][:value][:contacts][0][:group_picture] = ''
+        empty_picture_params[:entry][0][:changes][0][:value][:contacts][0][:profile][:picture] = ''
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: empty_picture_params).perform
+
+        expect(conversation.reload.additional_attributes['group_picture']).to eq('https://cdn.example.com/groups/current.jpg')
+        expect(group_contact.reload.avatar_url).to be_blank
       end
 
       it 'uses bsuid as the structured group sender when no valid phone is present' do

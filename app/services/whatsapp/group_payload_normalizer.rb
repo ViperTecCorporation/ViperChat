@@ -8,13 +8,13 @@ class Whatsapp::GroupPayloadNormalizer
       group: true,
       group_source_id: group_source_id,
       group_title: contact[:group_subject].presence || group_source_id,
-      group_picture: contact[:group_picture],
+      group_picture: contact[:group_picture].presence,
       sender_identifier: sender_identifier,
       sender_phone: sender_phone,
       sender_bsuid: sender_bsuid,
       sender_username: sender_username,
       sender_name: sender_name,
-      sender_picture: contact.dig(:profile, :picture),
+      sender_picture: contact.dig(:profile, :picture).presence,
       message_source_id: message[:id],
       message_from: message[:from]
     }

@@ -67,7 +67,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
       contact_attributes: {
         email: group_payload[:group_source_id],
         name: group_payload[:group_title],
-        avatar_url: group_payload[:group_picture]
+        avatar_url: group_payload[:group_picture].presence
       }
     ).perform
 
@@ -194,7 +194,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
       contact_attributes: {
         email: group_payload[:group_source_id],
         name: group_payload[:group_title],
-        avatar_url: group_payload[:group_picture]
+        avatar_url: group_payload[:group_picture].presence
       }
     ).perform
 
@@ -209,7 +209,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   def structured_sender_contact_attributes
     attrs = {
       name: group_payload[:sender_name],
-      avatar_url: group_payload[:sender_picture],
+      avatar_url: group_payload[:sender_picture].presence,
       bsuid: group_payload[:sender_bsuid],
       whatsapp_username: group_payload[:sender_username]
     }.compact

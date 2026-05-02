@@ -84,7 +84,7 @@ class Whatsapp::IncomingMessageBaseService
 
     contact_attributes = {
       name: contact_display_name(contact_params),
-      avatar_url: contact_params.dig(:profile, :picture),
+      avatar_url: contact_params.dig(:profile, :picture).presence,
       bsuid: contact_bsuid(contact_params),
       whatsapp_username: contact_username(contact_params)
     }.compact
@@ -116,7 +116,7 @@ class Whatsapp::IncomingMessageBaseService
       contact_attributes: {
         email: contact_params[:group_id],
         name: contact_params[:group_subject] || contact_params[:group_id],
-        avatar_url: contact_params[:group_picture]
+        avatar_url: contact_params[:group_picture].presence
       }
     ).perform
   end
@@ -170,10 +170,9 @@ class Whatsapp::IncomingMessageBaseService
       return true
     end
 
-    original_message = inbox.messages.find_by(source_id: original_source_id)
+    original_message = find_original_message_for_edit(message, original_source_id)
     unless original_message
-      Rails.logger.info("[WHATSAPP] Message edit fallback creating missing original original_source_id=#{original_source_id} event_id=#{message[:id]}")
-      create_message_from_edit_fallback(message, original_source_id)
+      Rails.logger.info("[WHATSAPP] Message edit ignored missing original original_source_id=#{original_source_id} event_id=#{message[:id]}")
       return true
     end
 
@@ -193,26 +192,46 @@ class Whatsapp::IncomingMessageBaseService
     true
   end
 
-  def create_message_from_edit_fallback(message, original_source_id)
+  def find_original_message_for_edit(message, original_source_id)
+    original_message = inbox.messages.find_by(source_id: original_source_id)
+    return original_message if original_message
+
     set_message_type
     set_contact
     return unless @contact
-    return if @contact.blocked? && !outgoing_echo
 
-    ActiveRecord::Base.transaction do
-      set_conversation
-      create_message(message, source_id: original_source_id)
-      @message.content_attributes = (@message.content_attributes || {}).merge(
-        'edited' => true,
-        'edit_event_id' => message[:id],
-        'edited_at' => Time.current.utc.iso8601,
-        'edit_missing_original_fallback' => true
-      )
-      @message.content_attributes['edit_timestamp'] = message[:edit_timestamp] if message[:edit_timestamp].present?
-      attach_files
-      attach_location if message_type == 'location'
-      @message.save!
+    set_conversation
+    candidates = @conversation.messages.chat
+                              .where(message_type: @message_type)
+                              .where(created_at: edit_lookup_window(message)..)
+                              .where('created_at <= ?', edit_event_time(message))
+                              .where.not(source_id: message[:id])
+                              .order(created_at: :desc)
+                              .limit(2)
+                              .to_a
+
+    return unless candidates.one?
+
+    Rails.logger.info(
+      "[WHATSAPP] Message edit recovered missing original original_source_id=#{original_source_id} event_id=#{message[:id]} message_id=#{candidates.first.id}"
+    )
+    candidates.first
+  end
+
+  def edit_event_time(message)
+    @edit_event_time ||= {}
+    @edit_event_time[message[:id]] ||= begin
+      timestamp = if message[:edit_timestamp].present?
+                    message[:edit_timestamp].to_f / 1000
+                  else
+                    message[:timestamp].presence.to_i
+                  end
+      timestamp.positive? ? Time.zone.at(timestamp) : Time.current
     end
+  end
+
+  def edit_lookup_window(message)
+    edit_event_time(message) - 15.minutes
   end
 
   def message_edit_event?
@@ -259,7 +278,7 @@ class Whatsapp::IncomingMessageBaseService
 
     contact_attributes = {
       name: contact_display_name(contact_params),
-      avatar_url: contact_params.dig(:profile, :picture),
+      avatar_url: contact_params.dig(:profile, :picture).presence,
       bsuid: contact_bsuid(contact_params),
       whatsapp_username: contact_username(contact_params)
     }.compact
