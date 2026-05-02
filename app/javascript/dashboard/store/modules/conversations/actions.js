@@ -174,9 +174,7 @@ const actions = {
         id: conversationId,
         data: {
           totalCount:
-            data.meta?.total_count ??
-            meta.totalCount ??
-            combined.length,
+            data.meta?.total_count ?? meta.totalCount ?? combined.length,
           page: nextPage,
           pageSize: batch.length,
         },
@@ -428,8 +426,17 @@ const actions = {
     }
   },
 
-  sendMessageReaction: async ({ commit }, { conversationId, messageId, emoji }) => {
+  sendMessageReaction: async (
+    { commit },
+    { conversationId, messageId, emoji }
+  ) => {
     const { data } = await MessageApi.react(conversationId, messageId, emoji);
+    commit(types.ADD_MESSAGE, data);
+    return data;
+  },
+
+  editMessage: async ({ commit }, { conversationId, messageId, content }) => {
+    const { data } = await MessageApi.edit(conversationId, messageId, content);
     commit(types.ADD_MESSAGE, data);
     return data;
   },

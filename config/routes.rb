@@ -148,6 +148,7 @@ Rails.application.routes.draw do
                   post :translate
                   post :retry
                   post :reaction
+                  post :edit
                 end
               end
               resources :forwards, only: [:create]

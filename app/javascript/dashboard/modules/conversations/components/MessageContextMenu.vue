@@ -57,6 +57,9 @@ export default {
   data() {
     return {
       isCannedResponseModalOpen: false,
+      isEditModalOpen: false,
+      editedContent: '',
+      isSavingEdit: false,
       showDeleteModal: false,
       isReactionModalOpen: false,
       isSendingReaction: false,
@@ -140,6 +143,34 @@ export default {
     handleForward() {
       this.$emit('forward', this.message);
       this.handleClose();
+    },
+    openEditModal() {
+      this.editedContent = this.plainTextContent;
+      this.isEditModalOpen = true;
+      this.handleClose();
+    },
+    closeEditModal() {
+      this.isEditModalOpen = false;
+      this.isSavingEdit = false;
+    },
+    async saveEdit() {
+      const content = this.editedContent.trim();
+      if (!content || this.isSavingEdit) return;
+
+      this.isSavingEdit = true;
+      try {
+        await this.$store.dispatch('editMessage', {
+          conversationId: this.conversationId,
+          messageId: this.messageId,
+          content,
+        });
+        useAlert(this.$t('CONVERSATION.EDIT_MESSAGE.SUCCESS'));
+        this.closeEditModal();
+      } catch (error) {
+        useAlert(this.$t('CONVERSATION.EDIT_MESSAGE.ERROR'));
+      } finally {
+        this.isSavingEdit = false;
+      }
     },
     openDeleteModal() {
       this.handleClose();
@@ -229,6 +260,42 @@ export default {
       :confirm-text="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.DELETE')"
       :reject-text="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.CANCEL')"
     />
+    <!-- Edit message -->
+    <woot-modal
+      v-if="isEditModalOpen && enabledOptions['edit']"
+      v-model:show="isEditModalOpen"
+      :on-close="closeEditModal"
+    >
+      <form class="flex flex-col gap-4 p-4" @submit.prevent="saveEdit">
+        <div>
+          <h4 class="mb-1 text-base font-medium text-n-slate-12">
+            {{ $t('CONVERSATION.EDIT_MESSAGE.TITLE') }}
+          </h4>
+          <p class="m-0 text-sm text-n-slate-11">
+            {{ $t('CONVERSATION.EDIT_MESSAGE.DESCRIPTION') }}
+          </p>
+        </div>
+        <textarea
+          v-model="editedContent"
+          class="w-full min-h-28 px-3 py-2 text-sm rounded-lg resize-y bg-n-alpha-2 text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+        />
+        <div class="flex justify-end gap-2">
+          <NextButton
+            type="button"
+            slate
+            ghost
+            :label="$t('CONVERSATION.EDIT_MESSAGE.CANCEL')"
+            @click="closeEditModal"
+          />
+          <NextButton
+            type="submit"
+            :label="$t('CONVERSATION.EDIT_MESSAGE.SAVE')"
+            :is-loading="isSavingEdit"
+            :disabled="!editedContent.trim()"
+          />
+        </div>
+      </form>
+    </woot-modal>
     <NextButton
       v-if="!hideButton"
       ghost
@@ -280,6 +347,15 @@ export default {
           }"
           variant="icon"
           @click.stop="handleCopy"
+        />
+        <MenuItem
+          v-if="enabledOptions['edit']"
+          :option="{
+            icon: 'edit',
+            label: $t('CONVERSATION.CONTEXT_MENU.EDIT'),
+          }"
+          variant="icon"
+          @click.stop="openEditModal"
         />
         <MenuItem
           v-if="enabledOptions['translate']"

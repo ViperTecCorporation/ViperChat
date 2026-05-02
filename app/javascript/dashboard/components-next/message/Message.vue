@@ -465,6 +465,14 @@ const contextMenuEnabledOptions = computed(() => {
       !isFailedOrProcessing &&
       !isMessageDeleted.value,
     cannedResponse: isOutgoing && hasText && !isMessageDeleted.value,
+    edit:
+      isOutgoing &&
+      hasText &&
+      isAWhatsAppChannel.value &&
+      !isATwilioWhatsAppChannel.value &&
+      !!props.sourceId &&
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
     copyLink: !isFailedOrProcessing,
     translate: !isFailedOrProcessing && !isMessageDeleted.value && hasText,
     replyTo:

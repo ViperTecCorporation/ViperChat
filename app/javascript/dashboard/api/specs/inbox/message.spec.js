@@ -43,6 +43,14 @@ describe('#ConversationAPI', () => {
         }
       );
     });
+
+    it('#edit', () => {
+      messageAPI.edit(12, 34, 'edited text');
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        '/api/v1/conversations/12/messages/34/edit',
+        { content: 'edited text' }
+      );
+    });
   });
   describe('#buildCreatePayload', () => {
     it('builds form payload if file is available', () => {

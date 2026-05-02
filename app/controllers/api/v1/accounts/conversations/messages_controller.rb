@@ -5,6 +5,14 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
     @messages = message_finder.perform
   end
 
+  def edit
+    edited_content = permitted_params[:content].to_s
+    edit_sent = Whatsapp::EditMessageService.new(message: message, content: edited_content).perform
+    return render json: { error: 'Could not edit message' }, status: :unprocessable_entity unless edit_sent
+
+    @message = message.reload
+  end
+
   def create
     user = Current.user || @resource
     mb = Messages::MessageBuilder.new(user, @conversation, params)
@@ -83,7 +91,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def permitted_params
-    params.permit(:id, :target_language, :status, :external_error, :emoji)
+    params.permit(:id, :target_language, :status, :external_error, :emoji, :content)
   end
 
   def already_translated_content_available?

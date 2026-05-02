@@ -115,6 +115,14 @@
     "UNSUPPORTED_MESSAGE_TIKTOK": "This message is unsupported. You can view this message on the TikTok app.",
     "SUCCESS_DELETE_MESSAGE": "Message deleted successfully",
     "FAIL_DELETE_MESSSAGE": "Couldn't delete message! Try again",
+    "EDIT_MESSAGE": {
+      "TITLE": "Edit message",
+      "DESCRIPTION": "Update the text that will be sent as an edit to WhatsApp.",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "SUCCESS": "Message edited successfully",
+      "ERROR": "Couldn't edit message. Try again."
+    },
     "NO_RESPONSE": "No response",
     "RESPONSE": "Response",
     "RATING_TITLE": "Rating",
@@ -324,6 +332,7 @@
     "CONTEXT_MENU": {
       "COPY": "Copy",
       "REPLY_TO": "Reply to this message",
+      "EDIT": "Edit",
       "DELETE": "Delete",
       "CREATE_A_CANNED_RESPONSE": "Add to canned responses",
       "TRANSLATE": "Translate",

@@ -115,6 +115,14 @@
     "UNSUPPORTED_MESSAGE_TIKTOK": "Esta mensagem não é compatível. Você pode visualizá-la no aplicativo do TikTok.",
     "SUCCESS_DELETE_MESSAGE": "Mensagem excluída com sucesso",
     "FAIL_DELETE_MESSSAGE": "Não foi possível excluir a mensagem! Tente novamente",
+    "EDIT_MESSAGE": {
+      "TITLE": "Editar mensagem",
+      "DESCRIPTION": "Atualize o texto que será enviado como edição para o WhatsApp.",
+      "SAVE": "Salvar",
+      "CANCEL": "Cancelar",
+      "SUCCESS": "Mensagem editada com sucesso",
+      "ERROR": "Não foi possível editar a mensagem. Tente novamente."
+    },
     "NO_RESPONSE": "Sem resposta",
     "RESPONSE": "Resposta",
     "RATING_TITLE": "Classificação",
@@ -352,6 +360,7 @@
     "CONTEXT_MENU": {
       "COPY": "Copiar",
       "REPLY_TO": "Responder mensagem",
+      "EDIT": "Editar",
       "REACTION": "Reagir",
       "FORWARD_MESSAGES": "Encaminhar mensagens",
       "DELETE": "Excluir",

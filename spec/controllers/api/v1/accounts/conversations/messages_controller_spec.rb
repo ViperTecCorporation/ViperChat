@@ -307,6 +307,68 @@ RSpec.describe 'Conversation Messages API', type: :request do
     end
   end
 
+  describe 'POST /api/v1/accounts/{account.id}/conversations/:conversation_id/messages/:id/edit' do
+    let(:whatsapp_channel) { create(:channel_whatsapp, account: account, provider: 'unoapi', validate_provider_config: false, sync_templates: false) }
+    let(:inbox) { whatsapp_channel.inbox }
+    let(:conversation) { create(:conversation, inbox: inbox, account: account) }
+    let(:agent) { create(:user, account: account, role: :agent) }
+    let(:message) do
+      create(
+        :message,
+        conversation: conversation,
+        account: account,
+        inbox: inbox,
+        message_type: :outgoing,
+        content: 'original',
+        source_id: 'uno-original-id',
+        sender: agent
+      )
+    end
+
+    context 'when it is an unauthenticated user' do
+      it 'returns unauthorized' do
+        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages/#{message.id}/edit",
+             params: { content: 'edited' },
+             as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    context 'when it is an authenticated user with access to conversation' do
+      before do
+        create(:inbox_member, inbox: inbox, user: agent)
+      end
+
+      it 'edits the outgoing WhatsApp message' do
+        service = instance_double(Whatsapp::EditMessageService)
+        expect(Whatsapp::EditMessageService).to receive(:new)
+          .with(message: message, content: 'edited')
+          .and_return(service)
+        expect(service).to receive(:perform).and_return(true)
+
+        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages/#{message.id}/edit",
+             params: { content: 'edited' },
+             headers: agent.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+      end
+
+      it 'returns unprocessable entity when the provider rejects the edit' do
+        service = instance_double(Whatsapp::EditMessageService, perform: false)
+        allow(Whatsapp::EditMessageService).to receive(:new).and_return(service)
+
+        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages/#{message.id}/edit",
+             params: { content: 'edited' },
+             headers: agent.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+  end
+
   describe 'PATCH /api/v1/accounts/{account.id}/conversations/:conversation_id/messages/:id' do
     let(:api_channel) { create(:channel_api, account: account) }
     let(:api_inbox) { create(:inbox, channel: api_channel, account: account) }

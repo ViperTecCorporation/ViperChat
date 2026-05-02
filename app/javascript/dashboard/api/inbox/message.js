@@ -127,6 +127,13 @@ class MessageApi extends ApiClient {
       { emoji }
     );
   }
+
+  edit(conversationId, messageId, content) {
+    return axios.post(
+      `${this.url}/${conversationId}/messages/${messageId}/edit`,
+      { content }
+    );
+  }
 }
 
 export default new MessageApi();

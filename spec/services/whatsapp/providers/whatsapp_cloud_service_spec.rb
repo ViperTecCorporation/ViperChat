@@ -116,7 +116,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
           content: 'mention://group_contact/10031/Equipe%20Tecnica oi',
           content_attributes: {
             group_mentions: [
-              { contact_id: 10031, name: 'Equipe Tecnica', bsuid: '11343495192601@lid' }
+              { contact_id: 10_031, name: 'Equipe Tecnica', bsuid: '11343495192601@lid' }
             ]
           }
         )
@@ -148,7 +148,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
           content: 'Oi [@Equipe Tecnica](mention://group_contact/10031/Equipe%20Tecnica)',
           content_attributes: {
             group_mentions: [
-              { contact_id: 10031, name: 'Equipe Tecnica', bsuid: '5566996222471' }
+              { contact_id: 10_031, name: 'Equipe Tecnica', bsuid: '5566996222471' }
             ]
           }
         )
@@ -282,6 +282,55 @@ describe Whatsapp::Providers::WhatsappCloudService do
           ).to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
         expect(service.send_message('+123456789', message)).to eq 'message_id'
       end
+    end
+  end
+
+  describe '#send_message_edit' do
+    subject(:service) { Whatsapp::Providers::UnoapiService.new(whatsapp_channel: whatsapp_channel) }
+
+    before do
+      whatsapp_channel.update!(provider: 'unoapi')
+      whatsapp_channel.provider_config['url'] = 'https://graph.facebook.com'
+      whatsapp_channel.save!
+    end
+
+    it 'sends message edit payload to UnoAPI for individual conversations' do
+      message.update!(source_id: 'uno-original-id')
+
+      stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        .with(
+          body: {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: '+123456789',
+            type: 'message_edit',
+            context: { message_id: 'uno-original-id' },
+            text: { body: 'edited text' }
+          }.to_json
+        )
+        .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_message_edit('+123456789', message, 'edited text')).to eq 'message_id'
+    end
+
+    it 'sends message edit payload to UnoAPI for group conversations' do
+      conversation.update!(group: true, group_source_id: '120363040468224422@g.us', group_title: 'Equipe Comercial')
+      message.update!(source_id: 'uno-original-id')
+
+      stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        .with(
+          body: {
+            messaging_product: 'whatsapp',
+            recipient_type: 'group',
+            to: '120363040468224422@g.us',
+            type: 'message_edit',
+            context: { message_id: 'uno-original-id' },
+            text: { body: 'edited group text' }
+          }.to_json
+        )
+        .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_message_edit('120363040468224422@g.us', message, 'edited group text')).to eq 'message_id'
     end
   end
 

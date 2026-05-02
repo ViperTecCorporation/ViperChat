@@ -10,6 +10,23 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
     HTTParty.get("#{unoapi_group_path(group_id)}/participants", headers: api_headers)
   end
 
+  def send_message_edit(phone_number, message, content)
+    request_body = {
+      messaging_product: 'whatsapp',
+      recipient_type: recipient_type_for(message),
+      to: phone_number,
+      type: 'message_edit',
+      context: { message_id: message.source_id },
+      text: { body: content.to_s }
+    }
+
+    response = HTTParty.post(messages_path, headers: api_headers, body: request_body.to_json)
+    return response.parsed_response.dig('messages', 0, 'id') if response.success? && response.parsed_response['error'].blank?
+
+    Rails.logger.error(response.body)
+    nil
+  end
+
   def create_group(subject:, participants:, description: nil, join_approval_mode: nil)
     payload = {
       subject: subject,
