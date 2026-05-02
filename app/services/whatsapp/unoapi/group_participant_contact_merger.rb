@@ -10,7 +10,7 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
     return if bsuid.blank?
 
     phone_contact = phone_source?(source_id) ? participant_phone_contact(participant, source_id) : compatible_group_phone_contact(participant)
-    lid_contact = Contact.find_by(account_id: @account.id, bsuid: bsuid)
+    lid_contact = participant_lid_contact(bsuid)
     return if contacts_not_mergeable?(phone_contact, lid_contact)
 
     merge_contacts(phone_contact, lid_contact, participant, source_id)
@@ -41,14 +41,14 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
     return true if phone_contact.blank? || lid_contact.blank?
     return true if phone_contact.id == lid_contact.id
 
-    phone_contact.bsuid.present? && phone_contact.bsuid != lid_contact.bsuid
+    phone_contact.bsuid.present? && lid_contact.bsuid.present? && phone_contact.bsuid != lid_contact.bsuid
   end
 
   def merge_contacts(phone_contact, lid_contact, participant, source_id)
     ActiveRecord::Base.transaction do
       sanitize_contact_email(phone_contact)
       update_phone_number(phone_contact, participant, source_id)
-      lid_attributes = lid_contact_attributes(phone_contact, lid_contact)
+      lid_attributes = lid_contact_attributes(phone_contact, lid_contact, participant)
       merge_group_contacts(lid_contact, phone_contact)
 
       ContactMergeAction.new(account: @account, base_contact: phone_contact, mergee_contact: lid_contact).perform
@@ -66,6 +66,15 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
   def participant_phone_contact(participant, source_id)
     @inbox.contact_inboxes.find_by(source_id: source_id)&.contact ||
       Contact.find_by(account_id: @account.id, phone_number: participant_phone_number(participant, source_id))
+  end
+
+  def participant_lid_contact(bsuid)
+    contact = Contact.find_by(account_id: @account.id, bsuid: bsuid)
+    contact_from_inbox = @inbox.contact_inboxes.find_by(source_id: bsuid)&.contact
+
+    return contact_from_inbox if contact_from_inbox.present? && contact_from_inbox.id != contact&.id
+
+    contact || contact_from_inbox
   end
 
   def participant_phone_number(participant, source_id)
@@ -108,9 +117,9 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
     I18n.transliterate(value.to_s).downcase.gsub(/[^a-z0-9]/, '')
   end
 
-  def lid_contact_attributes(phone_contact, lid_contact)
+  def lid_contact_attributes(phone_contact, lid_contact, participant)
     {
-      bsuid: phone_contact.bsuid.presence || lid_contact.bsuid,
+      bsuid: phone_contact.bsuid.presence || lid_contact.bsuid.presence || participant_bsuid(participant),
       whatsapp_username: phone_contact.whatsapp_username.presence || lid_contact.whatsapp_username
     }.compact
   end

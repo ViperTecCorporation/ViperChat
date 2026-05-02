@@ -139,6 +139,36 @@ describe Whatsapp::Providers::WhatsappCloudService do
         expect(service.send_message('120363040468224422@g.us', message)).to eq 'message_id'
       end
 
+      it 'resolves bare group contact mention urls from the conversation member when metadata is missing' do
+        whatsapp_channel.update!(provider: 'unoapi')
+        whatsapp_channel.provider_config['url'] = 'https://graph.facebook.com'
+        whatsapp_channel.save!
+        conversation.update!(group: true, group_source_id: '120363040468224422@g.us', group_title: 'Equipe Comercial')
+        contact = create(:contact, account: conversation.account, name: 'Equipe Tecnica', bsuid: '11343495192601@lid')
+        create(:group_contact, conversation: conversation, contact: contact, metadata: { user_id: '11343495192601@lid' })
+        message.update!(
+          content: "mention://group_contact/#{contact.id}/Equipe%20Tecnica oi",
+          content_attributes: {}
+        )
+        expected_body = "*#{message.sender_name}*: @11343495192601@lid oi"
+
+        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              recipient_type: 'group',
+              context: nil,
+              to: '120363040468224422@g.us',
+              text: { body: expected_body },
+              type: 'text',
+              mentions: ['11343495192601@lid']
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('120363040468224422@g.us', message)).to eq 'message_id'
+      end
+
       it 'uses phone number as group mention fallback when bsuid is unavailable' do
         whatsapp_channel.update!(provider: 'unoapi')
         whatsapp_channel.provider_config['url'] = 'https://graph.facebook.com'

@@ -43,13 +43,29 @@ const joinRequestsCount = ref(0);
 const groupPictureInput = ref(null);
 
 const isSessionAdmin = computed(() => groupInfo.value.group_session_admin);
+const selectedConversation = computed(
+  () => store.getters.getSelectedChat || {}
+);
 const groupDisplayTitle = computed(
-  () => groupTitle.value || groupInfo.value.group_title || 'Group Chat'
+  () =>
+    groupTitle.value ||
+    groupInfo.value.group_title ||
+    selectedConversation.value.group_title ||
+    'Group Chat'
 );
 const groupMemberCount = computed(
-  () => groupInfo.value.group_contacts_count || totalCount.value
+  () =>
+    groupInfo.value.group_contacts_count ||
+    selectedConversation.value.group_contacts_count ||
+    totalCount.value
 );
 const visibleGroupContacts = computed(() => groupContacts.value.slice(0, 5));
+const storedGroupPicture = computed(
+  () =>
+    selectedConversation.value.group_picture ||
+    selectedConversation.value.additional_attributes?.group_picture ||
+    ''
+);
 
 const memberName = groupContact =>
   groupContact.contact?.name ||
@@ -70,10 +86,21 @@ const memberSubtitle = groupContact =>
     .join(' · ');
 
 const updateConversationStore = data => {
-  if (!data?.id) return;
+  if (!data?.id || !data?.meta) return;
 
   store.dispatch('updateConversation', data);
 };
+
+const joinRequestsFrom = data =>
+  data?.join_requests ||
+  data?.requests ||
+  data?.participants ||
+  data?.data ||
+  [];
+
+const joinRequestsCountFrom = data =>
+  Number(data?.count ?? data?.pending_count ?? data?.total) ||
+  joinRequestsFrom(data).length;
 
 const fetchInviteLink = async ({ silent = false } = {}) => {
   if (isLoadingInviteLink.value) return;
@@ -83,7 +110,7 @@ const fetchInviteLink = async ({ silent = false } = {}) => {
     const { data } = await conversationApi.fetchGroupInviteLink(
       props.conversationId
     );
-    inviteLink.value = data.invite_link || '';
+    inviteLink.value = data.invite_link || inviteLink.value || '';
   } catch (error) {
     if (!silent) {
       useAlert(error.response?.data?.error || error.message);
@@ -103,7 +130,7 @@ const fetchJoinRequestsCount = async () => {
     const { data } = await conversationApi.fetchGroupJoinRequests(
       props.conversationId
     );
-    joinRequestsCount.value = data.join_requests?.length || 0;
+    joinRequestsCount.value = joinRequestsCountFrom(data);
   } catch {
     joinRequestsCount.value = 0;
   }
@@ -113,11 +140,13 @@ const fetchGroupInfo = async () => {
   const { data } = await conversationApi.fetchGroup(props.conversationId);
   groupInfo.value = data || {};
   updateConversationStore(data);
-  inviteLink.value = data?.group_invite_link || '';
+  inviteLink.value = data?.group_invite_link || inviteLink.value || '';
   groupTitle.value = data?.group_title || '';
   groupDescription.value = data?.group_description || '';
   groupPictureUrl.value =
-    data?.group_picture || data?.additional_attributes?.group_picture || '';
+    data?.group_picture ||
+    data?.additional_attributes?.group_picture ||
+    storedGroupPicture.value;
 
   await Promise.all([
     fetchInviteLink({ silent: true }),
@@ -169,7 +198,10 @@ const syncGroupContacts = async () => {
     groupTitle.value = data?.group_title || '';
     groupDescription.value = data?.group_description || '';
     groupPictureUrl.value =
-      data?.group_picture || data?.additional_attributes?.group_picture || '';
+      data?.group_picture ||
+      data?.additional_attributes?.group_picture ||
+      groupPictureUrl.value ||
+      storedGroupPicture.value;
     await fetchGroupContacts({ reset: true });
     await fetchJoinRequestsCount();
   } finally {
@@ -235,7 +267,10 @@ const persistGroupInfo = async () => {
   groupTitle.value = data?.group_title || '';
   groupDescription.value = data?.group_description || '';
   groupPictureUrl.value =
-    data?.group_picture || data?.additional_attributes?.group_picture || '';
+    data?.group_picture ||
+    data?.additional_attributes?.group_picture ||
+    groupPictureUrl.value ||
+    storedGroupPicture.value;
 };
 
 const openGroupPicturePicker = () => {

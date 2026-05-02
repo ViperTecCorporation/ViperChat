@@ -4,7 +4,7 @@ class Api::V1::Accounts::Conversations::GroupJoinRequestsController < Api::V1::A
 
   def index
     response = provider_service.group_join_requests(@conversation.group_source_id)
-    return render json: response.parsed_response if response.success?
+    return render json: normalized_join_requests(response.parsed_response) if response.success?
 
     render json: { error: provider_error(response, 'Provider failed to fetch join requests') }, status: :unprocessable_entity
   end
@@ -60,5 +60,28 @@ class Api::V1::Accounts::Conversations::GroupJoinRequestsController < Api::V1::A
 
   def provider_error(response, fallback)
     response.parsed_response.try(:[], 'error') || fallback
+  end
+
+  def normalized_join_requests(payload)
+    payload = payload.with_indifferent_access if payload.respond_to?(:with_indifferent_access)
+    requests = join_requests_from(payload)
+
+    {
+      join_requests: requests,
+      count: join_requests_count(payload, requests)
+    }
+  end
+
+  def join_requests_from(payload)
+    return payload if payload.is_a?(Array)
+    return [] unless payload.respond_to?(:[])
+
+    Array(payload[:join_requests].presence || payload[:requests].presence || payload[:participants].presence || payload[:data].presence)
+  end
+
+  def join_requests_count(payload, requests)
+    return requests.length unless payload.respond_to?(:[])
+
+    payload[:count].presence || payload[:pending_count].presence || payload[:total].presence || requests.length
   end
 end

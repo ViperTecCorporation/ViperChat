@@ -362,7 +362,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def replace_group_mentions(content, message)
-    mentions_by_contact_id = whatsapp_group_mentions(message).index_by { |mention| mention[:contact_id].to_s }
+    mentions_by_contact_id = whatsapp_group_mentions(message).index_by { |mention| mention[:mention_id].to_s }
 
     content.gsub(GROUP_CONTACT_MENTION_PATTERN) do
       contact_id = Regexp.last_match(1) || Regexp.last_match(2)
@@ -379,15 +379,49 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     return [] unless message.conversation.group?
     return [] unless whatsapp_channel.provider == 'unoapi'
 
+    mentions = group_mentions_from_content_attributes(message) + group_mentions_from_content(message)
+    mentions.uniq { |mention| [mention[:mention_id].to_s, mention[:bsuid].to_s] }
+  end
+
+  def group_mentions_from_content_attributes(message)
     mentions = message.content_attributes&.[]('group_mentions') || []
     mentions.filter_map do |mention|
       mention = mention.with_indifferent_access
-      bsuid = mention[:bsuid].to_s.delete_prefix('@').presence
+      bsuid = mention[:bsuid].to_s.delete_prefix('@').presence || mention[:phone_number].to_s.gsub(/\D/, '').presence
       contact_id = mention[:contact_id].presence
       next if bsuid.blank? || contact_id.blank?
 
-      { contact_id: contact_id, bsuid: bsuid }
+      { mention_id: contact_id, contact_id: contact_id, bsuid: bsuid }
     end
+  end
+
+  def group_mentions_from_content(message)
+    message.content.to_s.scan(GROUP_CONTACT_MENTION_PATTERN).filter_map do |match|
+      mention_id = (match[1] || match[3]).presence
+      next if mention_id.blank?
+
+      group_mention_from_id(message, mention_id)
+    end
+  end
+
+  def group_mention_from_id(message, mention_id)
+    group_contact = message.conversation.group_contacts.includes(:contact).find_by(contact_id: mention_id) ||
+                    message.conversation.group_contacts.includes(:contact).find_by(id: mention_id)
+    contact = group_contact&.contact || Contact.find_by(id: mention_id, account_id: message.account_id)
+    bsuid = group_mention_identifier(contact, group_contact)
+    return if contact.blank? || bsuid.blank?
+
+    { mention_id: mention_id, contact_id: contact.id, bsuid: bsuid }
+  end
+
+  def group_mention_identifier(contact, group_contact)
+    metadata = group_contact&.metadata || {}
+    contact&.bsuid.presence ||
+      metadata['user_id'].presence ||
+      metadata['lid'].presence ||
+      (metadata['jid'].to_s.end_with?('@lid') ? metadata['jid'] : nil) ||
+      contact&.phone_number.to_s.gsub(/\D/, '').presence ||
+      metadata['wa_id'].to_s.gsub(/\D/, '').presence
   end
 
   def contact_message?(message)

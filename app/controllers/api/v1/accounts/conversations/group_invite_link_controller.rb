@@ -1,6 +1,6 @@
 class Api::V1::Accounts::Conversations::GroupInviteLinkController < Api::V1::Accounts::Conversations::BaseController
   before_action :ensure_group_conversation
-  before_action :ensure_session_group_admin
+  before_action :ensure_session_group_admin, only: [:reset]
 
   def show
     response = @conversation.inbox.channel.provider_service.group_invite_link(@conversation.group_source_id)
@@ -34,7 +34,7 @@ class Api::V1::Accounts::Conversations::GroupInviteLinkController < Api::V1::Acc
 
   def parsed_invite_link(response)
     payload = response.parsed_response.with_indifferent_access
-    payload[:invite_link] || payload.dig(:group, :invite_link)
+    payload[:invite_link] || payload[:inviteLink] || payload[:link] || payload.dig(:group, :invite_link) || payload.dig(:group, :inviteLink)
   end
 
   def provider_error(response, fallback)

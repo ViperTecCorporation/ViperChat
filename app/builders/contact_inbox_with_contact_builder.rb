@@ -36,7 +36,7 @@ class ContactInboxWithContactBuilder
 
     Whatsapp::Unoapi::GroupParticipantContactMerger.new(account: account, inbox: inbox).perform(
       participant: {
-        wa_id: source_id,
+        wa_id: unoapi_participant_wa_id,
         user_id: contact_attributes[:bsuid],
         username: contact_attributes[:whatsapp_username],
         name: contact_attributes[:name],
@@ -47,6 +47,10 @@ class ContactInboxWithContactBuilder
   end
 
   private
+
+  def unoapi_participant_wa_id
+    contact_attributes[:phone_number].to_s.gsub(/\D/, '').presence || source_id
+  end
 
   def build_contact_with_contact_inbox
     @contact = find_contact || create_contact

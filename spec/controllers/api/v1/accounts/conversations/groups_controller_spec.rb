@@ -89,4 +89,37 @@ RSpec.describe 'Conversation Groups API', type: :request do
 
     expect(response).to have_http_status(:ok)
   end
+
+  it 'allows a non-admin group member to fetch the invite link' do
+    group_contact = create(:contact, account: account, email: '120363040468224422@g.us')
+    group_contact_inbox = create(:contact_inbox, inbox: inbox, contact: group_contact, source_id: '120363040468224422@g.us')
+    conversation = create(
+      :conversation,
+      account: account,
+      inbox: inbox,
+      contact: group_contact,
+      contact_inbox: group_contact_inbox,
+      group: true,
+      group_source_id: '120363040468224422@g.us',
+      group_session_admin: false
+    )
+    provider_response = instance_double(
+      HTTParty::Response,
+      success?: true,
+      parsed_response: { 'inviteLink' => 'https://chat.whatsapp.com/example' }
+    )
+
+    allow(provider_service)
+      .to receive(:group_invite_link)
+      .with('120363040468224422@g.us')
+      .and_return(provider_response)
+
+    get "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/group/invite_link",
+        headers: agent.create_new_auth_token,
+        as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['invite_link']).to eq('https://chat.whatsapp.com/example')
+    expect(conversation.reload.group_invite_link).to eq('https://chat.whatsapp.com/example')
+  end
 end

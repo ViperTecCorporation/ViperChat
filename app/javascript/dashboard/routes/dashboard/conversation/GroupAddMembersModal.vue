@@ -64,7 +64,8 @@ const sourceParticipantId = contact => {
 };
 
 const participantPayload = contact => {
-  const waId = digitsOnly(contact.phoneNumber) || sourceParticipantId(contact);
+  const waId =
+    digitsOnly(contact.phoneNumber) || digitsOnly(sourceParticipantId(contact));
   const userId = contact.bsuid;
 
   return {
@@ -75,7 +76,7 @@ const participantPayload = contact => {
 
 const canAddContact = contact => {
   const payload = participantPayload(contact);
-  return !!(payload.wa_id || payload.user_id);
+  return !!payload.wa_id;
 };
 
 const selectedCountLabel = computed(() =>

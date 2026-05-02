@@ -53,6 +53,13 @@ const matchesSearch = request => {
 
 const filteredRequests = computed(() => requests.value.filter(matchesSearch));
 
+const joinRequestsFrom = data =>
+  data?.join_requests ||
+  data?.requests ||
+  data?.participants ||
+  data?.data ||
+  [];
+
 const fetchJoinRequests = async () => {
   if (isLoading.value) return;
 
@@ -61,7 +68,7 @@ const fetchJoinRequests = async () => {
     const { data } = await conversationApi.fetchGroupJoinRequests(
       props.conversationId
     );
-    requests.value = data.join_requests || [];
+    requests.value = joinRequestsFrom(data);
     hasLoadedOnce.value = true;
   } finally {
     isLoading.value = false;

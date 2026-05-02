@@ -524,6 +524,23 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(message.sender.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')).to be_present
       end
 
+      it 'merges a stale lid contact inbox into the phone contact before processing structured group sender' do
+        phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Contato telefone')
+        phone_contact.update_columns(phone_number: '+5566999999999', bsuid: '123456789012345@lid') # rubocop:disable Rails/SkipsModelValidations
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '5566999999999')
+
+        stale_lid_contact = create(:contact, account: whatsapp_channel.account, name: 'Contato orfao')
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: stale_lid_contact, source_id: '123456789012345@lid')
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+
+        message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.GROUP_MESSAGE_ID')
+        expect(message.sender).to eq(phone_contact)
+        expect(message.sender.bsuid).to eq('123456789012345@lid')
+        expect(Contact.exists?(stale_lid_contact.id)).to be(false)
+        expect(message.sender.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')).to be_present
+      end
+
       it 'does not enqueue participants sync again before the interval expires' do
         described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
         clear_enqueued_jobs

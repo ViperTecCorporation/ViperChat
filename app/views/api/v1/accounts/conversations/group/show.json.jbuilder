@@ -1,13 +1,1 @@
-json.id @conversation.display_id
-json.group_source_id @conversation.group_source_id
-json.group_title @conversation.group_title
-json.group_description @conversation.group_description
-json.group_invite_link @conversation.group_invite_link
-json.group_join_approval_mode @conversation.group_join_approval_mode
-json.group_suspended @conversation.group_suspended
-json.group_created_at_external @conversation.group_created_at_external
-json.group_contacts_synced_at @conversation.group_contacts_synced_at
-json.group_session_admin @conversation.group_session_admin
-json.group_contacts_count @conversation.group_member_count
-json.group_picture @conversation.additional_attributes&.dig('group_picture').presence || @conversation.contact&.avatar_url
-json.additional_attributes @conversation.additional_attributes
+json.partial! 'api/v1/conversations/partials/conversation', formats: [:json], conversation: @conversation

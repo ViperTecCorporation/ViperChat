@@ -1,7 +1,7 @@
 class Api::V1::Accounts::Conversations::GroupContactsController < Api::V1::Accounts::Conversations::BaseController
   RESULTS_PER_PAGE = 25
   PARTICIPANT_IDENTIFIER_KEYS = [:wa_id, :phone_number, :phoneNumber, :pn, :jid, :id, :user_id, :lid].freeze
-  PARTICIPANT_PAYLOAD_KEYS = [:wa_id, :phone_number, :phoneNumber, :pn, :jid, :user_id, :lid].freeze
+  PARTICIPANT_PAYLOAD_KEYS = [:wa_id, :user_id].freeze
   before_action :ensure_session_group_admin, only: [:create, :destroy]
 
   def index
@@ -94,11 +94,28 @@ class Api::V1::Accounts::Conversations::GroupContactsController < Api::V1::Accou
 
     attrs = participant.respond_to?(:to_unsafe_h) ? participant.to_unsafe_h : participant
     attrs = attrs.with_indifferent_access
+    wa_id = participant_phone_identifier(attrs)
+    user_id = participant_lid_identifier(attrs)
     payload = PARTICIPANT_PAYLOAD_KEYS.each_with_object({}) do |key, result|
-      result[key.to_s] = attrs[key] if attrs[key].present?
+      value = key == :wa_id ? wa_id : user_id
+      result[key.to_s] = value if value.present?
     end
 
     payload.presence
+  end
+
+  def participant_phone_identifier(attrs)
+    [attrs[:wa_id], attrs[:phone_number], attrs[:phoneNumber], attrs[:pn], attrs[:jid], attrs[:id]].filter_map do |value|
+      digits = value.to_s.gsub(/\D/, '')
+      digits if digits.length >= 8
+    end.first
+  end
+
+  def participant_lid_identifier(attrs)
+    [attrs[:user_id], attrs[:lid], attrs[:wa_id], attrs[:jid], attrs[:id]].filter_map do |value|
+      value = value.to_s.strip
+      value if value.end_with?('@lid')
+    end.first
   end
 
   def participant_identifier_from_param(participant)
