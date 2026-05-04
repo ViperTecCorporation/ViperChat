@@ -23,6 +23,9 @@ env:
   # Docker/OCI image names precisam ser minúsculos
   DOCKER_REPO: ghcr.io/viperteccorporation/chatwoot
 
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
