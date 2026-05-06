@@ -76,6 +76,10 @@ const isComingSoon = computed(() => {
   return ['voice'].includes(key) && !isActive.value;
 });
 
+const isBeta = computed(() => {
+  return ['tiktok', 'voice'].includes(props.channel.key);
+});
+
 const onItemClick = () => {
   if (isActive.value) {
     emit('channelItemClick', props.channel.key);
@@ -89,6 +93,7 @@ const onItemClick = () => {
     :description="channel.description"
     :icon="channel.icon"
     :is-coming-soon="isComingSoon"
+    :is-beta="isBeta"
     :disabled="!isActive"
     @click="onItemClick"
   />
