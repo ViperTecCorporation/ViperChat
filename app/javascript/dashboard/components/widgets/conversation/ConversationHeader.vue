@@ -14,6 +14,8 @@ import { snoozedReopenTime } from 'dashboard/helper/snoozeHelpers';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { useI18n } from 'vue-i18n';
 import InternalVoiceCallButton from 'dashboard/components-next/InternalChat/InternalVoiceCallButton.vue';
+import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import { useAlert } from 'dashboard/composables';
 
 const props = defineProps({
   chat: {
@@ -108,6 +110,15 @@ const hasSlaPolicyId = computed(() => props.chat?.sla_policy_id);
 const isInternalChat = computed(
   () => inbox.value?.channel_type === 'Channel::Internal'
 );
+
+const copyConversationId = async () => {
+  try {
+    await copyTextToClipboard(String(props.chat.id));
+    useAlert(t('CONVERSATION.HEADER.COPY_ID_SUCCESS'));
+  } catch (error) {
+    // Ignore clipboard errors.
+  }
+};
 </script>
 
 <template>
@@ -150,13 +161,23 @@ const isInternalChat = computed(
         </div>
 
         <div
-          class="flex items-center gap-2 overflow-hidden text-xs conversation--header--actions text-ellipsis whitespace-nowrap"
+          class="flex items-center gap-1 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
         >
+          <button
+            type="button"
+            class="truncate text-label-small text-n-slate-11 hover:text-n-slate-12 !p-0 cursor-pointer"
+            @click="copyConversationId"
+          >
+            {{ `#${chat.id}` }}
+          </button>
+          <span v-if="hasMultipleInboxes">•</span>
           <InboxName v-if="hasMultipleInboxes" :inbox="inbox" class="!mx-0" />
+          <span v-if="chat.group && chat.group_contacts_count">•</span>
           <span v-if="chat.group && chat.group_contacts_count">
             {{ chat.group_contacts_count }}
             {{ t('CONVERSATION.GROUP.MEMBERS') }}
           </span>
+          <span v-if="isSnoozed">•</span>
           <span v-if="isSnoozed" class="font-medium text-n-amber-10">
             {{ snoozedDisplayText }}
           </span>
