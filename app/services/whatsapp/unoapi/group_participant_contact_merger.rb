@@ -11,6 +11,7 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
 
     phone_contact = phone_source?(source_id) ? participant_phone_contact(participant, source_id) : compatible_group_phone_contact(participant)
     lid_contact = participant_lid_contact(bsuid)
+    return enrich_phone_contact(phone_contact, participant) if phone_contact.present? && lid_contact.blank?
     return if contacts_not_mergeable?(phone_contact, lid_contact)
 
     merge_contacts(phone_contact, lid_contact, participant, source_id)
@@ -57,6 +58,17 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
     end
   end
 
+  def enrich_phone_contact(phone_contact, participant)
+    sanitize_contact_email(phone_contact)
+    merge_lid_contact_attributes(
+      phone_contact,
+      {
+        bsuid: participant_bsuid(participant),
+        whatsapp_username: participant[:username].presence
+      }.compact
+    )
+  end
+
   def update_phone_number(contact, participant, source_id)
     phone_number = participant_phone_number(participant, source_id)
     return if phone_number.blank? || contact.phone_number == phone_number
@@ -65,8 +77,11 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
   end
 
   def participant_phone_contact(participant, source_id)
+    phone_number = participant_phone_number(participant, source_id)
+
     @inbox.contact_inboxes.find_by(source_id: source_id)&.contact ||
-      Contact.find_by(account_id: @account.id, phone_number: participant_phone_number(participant, source_id))
+      @inbox.contact_inboxes.find_by(source_id: phone_number.to_s.delete('+'))&.contact ||
+      Contact.find_by(account_id: @account.id, phone_number: phone_number)
   end
 
   def participant_lid_contact(bsuid)

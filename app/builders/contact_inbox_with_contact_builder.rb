@@ -107,7 +107,39 @@ class ContactInboxWithContactBuilder
     }.compact
 
     sanitize_contact_email(contact) if attrs.present?
-    contact.update!(attrs) if attrs.present?
+    update_contact(contact, attrs) if attrs.present?
+  end
+
+  def update_contact(contact, attrs)
+    return contact.update_columns(safe_legacy_unoapi_attrs(contact, attrs).merge(updated_at: Time.current)) if legacy_unoapi_duplicate_phone?(contact)
+
+    contact.update!(attrs)
+  end
+
+  def safe_legacy_unoapi_attrs(contact, attrs)
+    attrs = attrs.except(:phone_number) if duplicate_phone_number?(attrs[:phone_number].presence || contact.phone_number, contact)
+    attrs = attrs.except(:bsuid) if duplicate_bsuid?(attrs[:bsuid], contact)
+    attrs
+  end
+
+  def legacy_unoapi_duplicate_phone?(contact)
+    unoapi_whatsapp_channel? && duplicate_phone_number?(contact.phone_number, contact)
+  end
+
+  def unoapi_whatsapp_channel?
+    inbox.channel_type == 'Channel::Whatsapp' && inbox.channel.provider == 'unoapi'
+  end
+
+  def duplicate_phone_number?(phone_number, contact)
+    return false if phone_number.blank?
+
+    account.contacts.where(phone_number: phone_number).where.not(id: contact.id).exists?
+  end
+
+  def duplicate_bsuid?(bsuid, contact)
+    return false if bsuid.blank?
+
+    account.contacts.where(bsuid: bsuid).where.not(id: contact.id).exists?
   end
 
   def sanitize_contact_email(contact)

@@ -421,6 +421,41 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
     expect(phone_group_contact.reload.metadata).to include('user_id' => '11343495192601@lid')
   end
 
+  it 'syncs participants when legacy contacts already have a duplicated normalized phone number' do
+    phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Clara Souza')
+    phone_contact.update_columns(phone_number: '+5566999139289') # rubocop:disable Rails/SkipsModelValidations
+    create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '5566999139289')
+
+    duplicate_contact = create(:contact, account: whatsapp_channel.account, name: 'Clara duplicada')
+    duplicate_contact.update_columns(phone_number: '+5566999139289') # rubocop:disable Rails/SkipsModelValidations
+
+    stub_request(:get, participants_url).to_return(
+      status: 200,
+      body: {
+        participants: [
+          {
+            jid: '556699139289@s.whatsapp.net',
+            wa_id: '556699139289',
+            user_id: '224566693630048@lid',
+            name: 'Clara Souza',
+            username: '@clara'
+          }
+        ]
+      }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+
+    expect(service.perform).to eq(:ok)
+
+    expect(phone_contact.reload.bsuid).to eq('224566693630048@lid')
+    expect(phone_contact.whatsapp_username).to eq('@clara')
+    expect(phone_contact.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '556699139289')).to be_present
+    expect(conversation.group_contacts.find_by!(contact: phone_contact).metadata).to include(
+      'wa_id' => '556699139289',
+      'user_id' => '224566693630048@lid'
+    )
+  end
+
   it 'removes group contacts that are no longer returned by Uno API' do
     stale_contact = create(:contact, account: whatsapp_channel.account, name: 'Membro removido')
     stale_contact.update_columns(phone_number: '+5566996222471') # rubocop:disable Rails/SkipsModelValidations
