@@ -86,7 +86,7 @@ RSpec.describe Avatar::AvatarFromUrlJob do
       expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(authenticated_url))
     end
 
-    it 'returns early when rate limited' do
+    it 'refreshes even when the contact synced recently' do
       ts = 30.seconds.ago.iso8601
       avatarable.update(additional_attributes: { 'last_avatar_sync_at' => ts })
 
@@ -99,15 +99,14 @@ RSpec.describe Avatar::AvatarFromUrlJob do
 
       described_class.perform_now(avatarable, valid_url)
       avatarable.reload
-      expect(avatarable.avatar).not_to be_attached
-      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_present
+      expect(avatarable.avatar).to be_attached
       expect(Time.zone.parse(avatarable.additional_attributes['last_avatar_sync_at']))
         .to be > Time.zone.parse(ts)
       expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(valid_url))
-      expect(WebMock).not_to have_requested(:get, valid_url)
+      expect(WebMock).to have_requested(:get, valid_url)
     end
 
-    it 'returns early when hash unchanged' do
+    it 'refreshes when hash is unchanged' do
       avatarable.update(additional_attributes: { 'avatar_url_hash' => Digest::SHA256.hexdigest(valid_url) })
 
       stub_request(:get, valid_url)
@@ -118,11 +117,35 @@ RSpec.describe Avatar::AvatarFromUrlJob do
         )
 
       described_class.perform_now(avatarable, valid_url)
-      expect(avatarable.avatar).not_to be_attached
       avatarable.reload
+      expect(avatarable.avatar).to be_attached
       expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_present
       expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(valid_url))
-      expect(WebMock).not_to have_requested(:get, valid_url)
+      expect(WebMock).to have_requested(:get, valid_url)
+    end
+
+    it 'refreshes stable profile picture URLs after the rate limit window' do
+      profile_picture_url = 'https://example.com/v15.0/download/556600000000/profile-pictures/5566999999999.jpg'
+      avatarable.update(
+        additional_attributes: {
+          'last_avatar_sync_at' => 2.minutes.ago.iso8601,
+          'avatar_url_hash' => Digest::SHA256.hexdigest(profile_picture_url)
+        }
+      )
+
+      stub_request(:get, profile_picture_url)
+        .to_return(
+          status: 200,
+          body: File.read(Rails.root.join('spec/assets/avatar.png')),
+          headers: { 'Content-Type' => 'image/png' }
+        )
+
+      described_class.perform_now(avatarable, profile_picture_url)
+      avatarable.reload
+
+      expect(avatarable.avatar).to be_attached
+      expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(profile_picture_url))
+      expect(WebMock).to have_requested(:get, profile_picture_url)
     end
 
     it 'updates sync attributes even when URL is invalid' do

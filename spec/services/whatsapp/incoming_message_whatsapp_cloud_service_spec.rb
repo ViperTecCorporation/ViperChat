@@ -52,6 +52,41 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect_message_has_attachment
       end
 
+      it 'syncs contact avatar when a status webhook includes profile picture' do
+        status_params = {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: {
+                  display_phone_number: whatsapp_channel.phone_number.delete('+'),
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                messages: [],
+                contacts: [{
+                  profile: {
+                    name: 'Sojan Jose',
+                    picture: 'https://cdn.example.com/profile/sojan.jpg'
+                  },
+                  wa_id: '2423423243'
+                }],
+                statuses: [{
+                  id: 'wamid.STATUS_ONLY',
+                  recipient_id: '2423423243',
+                  status: 'read'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform
+        end.to have_enqueued_job(Avatar::AvatarFromUrlJob).with(instance_of(Contact), 'https://cdn.example.com/profile/sojan.jpg')
+      end
+
       it 'increments reauthorization count if fetching attachment fails' do
         stub_request(
           :get,

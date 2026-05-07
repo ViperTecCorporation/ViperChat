@@ -1,17 +1,14 @@
 # Downloads and attaches avatar images from a URL.
 # Notes:
-# - For contact objects, we use `additional_attributes` to rate limit the
-#   job and track state.
-# - We save the hash of the synced URL to retrigger downloads only when
-#   there is a change in the underlying asset.
-# - A 1 minute rate limit window is enforced via `last_avatar_sync_at`.
+# - For contact objects, we use `additional_attributes` to track state.
+# - Avatar refresh cadence is controlled by the upstream provider. When the
+#   webhook sends an avatar URL, we fetch it.
 class Avatar::AvatarFromUrlJob < ApplicationJob
   include UrlHelper
   queue_as :purgable
 
   ALLOWED_CONTENT_TYPES = Avatarable::ALLOWED_AVATAR_CONTENT_TYPES
   MAX_DOWNLOAD_SIZE = 15.megabytes
-  RATE_LIMIT_WINDOW = 1.minute
 
   def perform(avatarable, avatar_url)
     return unless syncable_avatar?(avatarable, avatar_url)
@@ -62,28 +59,8 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     end
   end
 
-  def should_sync_avatar?(avatarable, avatar_url)
-    # Only Contacts are rate-limited and hash-gated.
-    return true unless avatarable.is_a?(Contact)
-
-    attrs = avatarable.additional_attributes || {}
-
-    return false if within_rate_limit?(attrs)
-    return false if duplicate_url?(attrs, avatar_url)
-
+  def should_sync_avatar?(_avatarable, _avatar_url)
     true
-  end
-
-  def within_rate_limit?(attrs)
-    ts = attrs['last_avatar_sync_at']
-    return false if ts.blank?
-
-    Time.zone.parse(ts) > RATE_LIMIT_WINDOW.ago
-  end
-
-  def duplicate_url?(attrs, avatar_url)
-    stored_hash = attrs['avatar_url_hash']
-    stored_hash.present? && stored_hash == generate_url_hash(avatar_url)
   end
 
   def generate_url_hash(url)

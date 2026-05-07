@@ -1,5 +1,5 @@
 shared: &shared
-  version: '4.13.5-viper'
+  version: '4.13.6-viper'
 
 development:
   <<: *shared

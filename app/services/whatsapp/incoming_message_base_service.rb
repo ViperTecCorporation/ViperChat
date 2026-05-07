@@ -14,6 +14,7 @@ class Whatsapp::IncomingMessageBaseService
     processed_params
 
     if processed_params.try(:[], :statuses).present?
+      sync_contacts if processed_params.try(:[], :contacts).present?
       process_statuses
     elsif contact_sync_payload?
       sync_contacts
