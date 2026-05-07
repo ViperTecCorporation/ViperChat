@@ -126,8 +126,6 @@ const {
   onAssignAgent,
   onAssignLabels,
   onRemoveLabels,
-  onAssignTeamsForBulk,
-  onUpdateConversations,
 } = useBulkActions();
 
 const {
@@ -954,7 +952,7 @@ watch(conversationFilters, (newVal, oldVal) => {
 
 <template>
   <div
-    class="flex flex-col flex-shrink-0 conversations-list-wrap bg-n-surface-1 w-full max-w-full"
+    class="flex flex-col flex-shrink-0 conversations-list-wrap bg-n-surface-1 w-full max-w-full relative"
     :class="[
       { hidden: !showConversationList },
       isOnExpandedLayout ? 'basis-full' : 'w-full sm:w-[340px] 2xl:w-[412px]',
@@ -1013,18 +1011,14 @@ watch(conversationFilters, (newVal, oldVal) => {
       {{ $t('CHAT_LIST.LIST.404') }}
     </p>
     <ConversationBulkActions
-      v-if="selectedConversations.length"
       :conversations="selectedConversations"
       :all-conversations-selected="allConversationsSelected"
       :selected-inboxes="uniqueInboxes"
       :show-open-action="allSelectedConversationsStatus('open')"
       :show-resolved-action="allSelectedConversationsStatus('resolved')"
       :show-snoozed-action="allSelectedConversationsStatus('snoozed')"
+      :class="isOnExpandedLayout && 'sm:!w-[24rem] !w-full'"
       @select-all-conversations="toggleSelectAll"
-      @assign-agent="onAssignAgent"
-      @update-conversations="onUpdateConversations"
-      @assign-labels="onAssignLabels"
-      @assign-team="onAssignTeamsForBulk"
     />
     <ConversationList
       :conversation-list="conversationList"
