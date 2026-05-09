@@ -3,6 +3,7 @@ import {
   messageTimestamp,
   dynamicTime,
   dateFormat,
+  formatDuration,
   shortTimestamp,
   getDayDifferenceFromNow,
   hasOneDayPassed,
@@ -91,6 +92,25 @@ describe('#shortTimestamp', () => {
     expect(shortTimestamp('a year ago', true)).toEqual('1y ago');
     expect(shortTimestamp('1 year ago', true)).toEqual('1y ago');
     expect(shortTimestamp('4 years ago', true)).toEqual('4y ago');
+  });
+});
+
+describe('#formatDuration', () => {
+  it('returns empty string for invalid durations', () => {
+    expect(formatDuration(null)).toEqual('');
+    expect(formatDuration(undefined)).toEqual('');
+    expect(formatDuration('duration')).toEqual('');
+    expect(formatDuration(-1)).toEqual('');
+  });
+
+  it('formats seconds into mm:ss', () => {
+    expect(formatDuration(0)).toEqual('00:00');
+    expect(formatDuration(7)).toEqual('00:07');
+    expect(formatDuration(65)).toEqual('01:05');
+  });
+
+  it('formats hour-long durations into hh:mm:ss', () => {
+    expect(formatDuration(3661)).toEqual('01:01:01');
   });
 });
 
