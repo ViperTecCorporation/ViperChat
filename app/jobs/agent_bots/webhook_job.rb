@@ -7,8 +7,8 @@ class AgentBots::WebhookJob < WebhookJob
                                                                             delivery_id: kwargs[:delivery_id]).handle_failure(error)
   end
 
-  def perform(url, payload, webhook_type = :agent_bot_webhook, secret: nil, delivery_id: nil)
-    super(url, payload, webhook_type, secret: secret, delivery_id: delivery_id)
+  def perform(url, payload, webhook_type = :agent_bot_webhook, *args, **kwargs)
+    super(url, payload, webhook_type, *args, **kwargs)
   rescue Webhooks::Trigger::RetryableError => e
     Rails.logger.warn("[AgentBots::WebhookJob] attempt #{executions} failed #{e.class.name} payload=#{payload.to_json}")
     raise

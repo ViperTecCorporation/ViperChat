@@ -27,7 +27,16 @@ RSpec.describe AgentBots::WebhookJob do
 
   it 'executes perform' do
     expect(Webhooks::Trigger).to receive(:execute)
-      .with(url, payload, webhook_type, :post, { accept: :json, content_type: :json })
+      .with(url, payload, webhook_type, :post, { accept: :json, content_type: :json }, secret: nil, delivery_id: nil)
+
+    described_class.perform_now(url, payload, webhook_type)
+  end
+
+  it 'handles keyword arguments serialized as the last positional hash' do
+    expect(Webhooks::Trigger).to receive(:execute)
+      .with(url, payload, webhook_type, :post, { accept: :json, content_type: :json }, secret: 'secret-token', delivery_id: 'delivery-id')
+
+    described_class.perform_now(url, payload, webhook_type, { 'secret' => 'secret-token', 'delivery_id' => 'delivery-id' })
   end
 
   it 'configures retry handlers for 429 and 500 errors' do

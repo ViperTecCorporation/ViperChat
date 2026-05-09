@@ -15,9 +15,9 @@ RSpec.describe WebhookJob do
       .on_queue('medium')
   end
 
-  it 'executes performm with default webhook type' do
+  it 'executes perform with default webhook type' do
     expect(Webhooks::Trigger).to receive(:execute)
-      .with(url, payload, webhook_type, :post, { accept: :json, content_type: :json })
+      .with(url, payload, webhook_type, :post, { accept: :json, content_type: :json }, secret: nil, delivery_id: nil)
     perform_enqueued_jobs { job }
   end
 
@@ -25,8 +25,25 @@ RSpec.describe WebhookJob do
     let(:webhook_type) { :api_inbox_webhook }
 
     it 'executes perform with inbox webhook type' do
-      expect(Webhooks::Trigger).to receive(:execute).with(url, payload, webhook_type, secret: nil, delivery_id: nil)
+      expect(Webhooks::Trigger).to receive(:execute)
+        .with(url, payload, webhook_type, :post, { accept: :json, content_type: :json }, secret: nil, delivery_id: nil)
       perform_enqueued_jobs { job }
     end
+  end
+
+  it 'handles keyword arguments serialized as the last positional hash' do
+    expect(Webhooks::Trigger).to receive(:execute)
+      .with(url, payload, webhook_type, :post, { accept: :json, content_type: :json }, secret: 'secret-token', delivery_id: 'delivery-id')
+
+    described_class.perform_now(url, payload, webhook_type, { 'secret' => 'secret-token', 'delivery_id' => 'delivery-id' })
+  end
+
+  it 'preserves custom method and headers when extracting serialized keyword arguments' do
+    headers = { authorization: 'Bearer token' }
+
+    expect(Webhooks::Trigger).to receive(:execute)
+      .with(url, payload, webhook_type, :put, headers, secret: 'secret-token', delivery_id: 'delivery-id')
+
+    described_class.perform_now(url, payload, webhook_type, :put, headers, { secret: 'secret-token', delivery_id: 'delivery-id' })
   end
 end
