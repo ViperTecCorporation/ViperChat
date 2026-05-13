@@ -104,9 +104,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     @contact.assign_attributes(contact_update_params)
     # 'Channel::TwilioSms', 'Channel::Whatsapp', 'Channel::Sms'
     Contact.transaction do
-      @contact.contact_inboxes
-        .select{ |ci| ['Channel::Whatsapp'].include?(ci.inbox.channel_type) }
-        .each{ |ci| ci.update_attribute(:source_id, whatsapp_source_id_for_contact) if whatsapp_source_id_for_contact.present? }
+      sync_whatsapp_contact_inbox_source_ids
       @contact.save!
     end
     process_avatar_from_url
@@ -308,5 +306,38 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   def whatsapp_source_id_for_contact
     @contact.phone_number&.delete('+').presence || @contact.bsuid
+  end
+
+  def sync_whatsapp_contact_inbox_source_ids
+    source_id = whatsapp_source_id_for_contact
+    return if source_id.blank?
+
+    @contact.contact_inboxes
+            .select { |contact_inbox| contact_inbox.inbox.channel_type == 'Channel::Whatsapp' }
+            .each { |contact_inbox| sync_whatsapp_contact_inbox_source_id(contact_inbox, source_id) }
+  end
+
+  def sync_whatsapp_contact_inbox_source_id(contact_inbox, source_id)
+    return if contact_inbox.source_id == source_id
+    return if whatsapp_non_phone_source_id?(contact_inbox.source_id)
+
+    existing_contact_inbox = ContactInbox.find_by(inbox_id: contact_inbox.inbox_id, source_id: source_id)
+    if existing_contact_inbox.present?
+      merge_duplicate_contact_inbox(contact_inbox, existing_contact_inbox) if existing_contact_inbox.contact_id == @contact.id
+      return
+    end
+
+    contact_inbox.update!(source_id: source_id)
+  end
+
+  def whatsapp_non_phone_source_id?(source_id)
+    source_id.to_s.include?('@')
+  end
+
+  def merge_duplicate_contact_inbox(duplicate_contact_inbox, existing_contact_inbox)
+    return if duplicate_contact_inbox.id == existing_contact_inbox.id
+
+    Conversation.where(contact_inbox_id: duplicate_contact_inbox.id).update_all(contact_inbox_id: existing_contact_inbox.id)
+    duplicate_contact_inbox.destroy!
   end
 end

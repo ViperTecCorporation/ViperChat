@@ -708,6 +708,28 @@ RSpec.describe 'Contacts API', type: :request do
         expect(response).to have_http_status(:success)
         expect(contact.reload.blocked).to be(false)
       end
+
+      it 'consolidates duplicate whatsapp contact inboxes while updating the contact' do
+        whatsapp_channel = create(:channel_whatsapp, account: account, provider: 'unoapi', validate_provider_config: false)
+        inbox = whatsapp_channel.inbox
+        contact.update!(phone_number: '+5561994012323')
+        current_contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: '5561994012323')
+        stale_contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: '556194012323')
+        lid_contact_inbox = create(:contact_inbox, contact: contact, inbox: inbox, source_id: '127272833052694@lid')
+        conversation = create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: stale_contact_inbox)
+
+        patch "/api/v1/accounts/#{account.id}/contacts/#{contact.id}",
+              params: { name: 'Marcos Sousa Macplan', phone_number: '+5561994012323' },
+              headers: admin.create_new_auth_token,
+              as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(contact.reload.name).to eq('Marcos Sousa Macplan')
+        expect(ContactInbox.exists?(stale_contact_inbox.id)).to be(false)
+        expect(current_contact_inbox.reload.source_id).to eq('5561994012323')
+        expect(lid_contact_inbox.reload.source_id).to eq('127272833052694@lid')
+        expect(conversation.reload.contact_inbox_id).to eq(current_contact_inbox.id)
+      end
     end
   end
 
