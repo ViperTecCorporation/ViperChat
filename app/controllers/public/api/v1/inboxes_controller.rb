@@ -46,7 +46,11 @@ class Public::Api::V1::InboxesController < PublicController
   def set_conversation
     return if params[:conversation_id].blank?
 
-    @conversation = @contact_inbox.contact.conversations.find_by!(display_id: params[:conversation_id])
+    @conversation = if @contact_inbox.hmac_verified?
+                      @contact_inbox.contact.conversations.find_by!(display_id: params[:conversation_id])
+                    else
+                      @contact_inbox.conversations.find_by!(display_id: params[:conversation_id])
+                    end
     Rails.logger.info(
       "[Public::Api::V1::InboxesController] set_conversation " \
       "conversation_id_param=#{params[:conversation_id]} found_id=#{@conversation&.id} " \
