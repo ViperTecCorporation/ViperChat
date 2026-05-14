@@ -9,9 +9,8 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   include Api::V1::Accounts::Concerns::WhatsappHealthManagement
 
   def index
-    # Run policy scope on the base relation, then apply ordering and preload avatars only.
     scoped = policy_scope(Current.account.inboxes)
-    @inboxes = scoped.order_by_name.includes({ avatar_attachment: [:blob] })
+    @inboxes = scoped.includes(:channel, :portal, :working_hours, { avatar_attachment: :blob }).order_by_name
   end
 
   def show; end
