@@ -344,7 +344,26 @@ const shouldShowAvatar = computed(() => {
   return true;
 });
 
+const isMessageDeleted = computed(() => {
+  return props.contentAttributes?.deleted;
+});
+
+const isDeletedContentPreserved = computed(() => {
+  return (
+    props.contentAttributes?.deleted_content_preserved ||
+    props.contentAttributes?.deletedContentPreserved
+  );
+});
+
+const shouldRenderDeletedPlaceholder = computed(() => {
+  return isMessageDeleted.value && !isDeletedContentPreserved.value;
+});
+
 const componentToRender = computed(() => {
+  if (shouldRenderDeletedPlaceholder.value) {
+    return TextBubble;
+  }
+
   if (props.isEmailInbox && !props.private) {
     const emailInboxTypes = [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING];
     if (emailInboxTypes.includes(props.messageType)) return EmailBubble;
@@ -415,10 +434,6 @@ const shouldShowContextMenu = computed(() => {
 
 const isBubble = computed(() => {
   return props.messageType !== MESSAGE_TYPES.ACTIVITY;
-});
-
-const isMessageDeleted = computed(() => {
-  return props.contentAttributes?.deleted;
 });
 
 const payloadForContextMenu = computed(() => {
@@ -499,7 +514,8 @@ const shouldRenderMessage = computed(() => {
     isStickerContentType ||
     isAnIntegrationMessage ||
     isFailedMessage ||
-    hasExternalError
+    hasExternalError ||
+    isMessageDeleted.value
   );
 });
 
@@ -511,6 +527,26 @@ const reactionEmoji = computed(() => {
 });
 
 const hasReaction = computed(() => !!reactionEmoji.value);
+
+const messageContent = computed(() => {
+  if (shouldRenderDeletedPlaceholder.value) {
+    return t('GENERAL_SETTINGS.FORM.DELETED_MESSAGE_CONTENT.NOTICE');
+  }
+
+  return props.content;
+});
+
+const messageAttachments = computed(() => {
+  if (shouldRenderDeletedPlaceholder.value) {
+    return [];
+  }
+
+  return props.attachments;
+});
+
+const shouldShowDeletedMediaNotice = computed(() => {
+  return isDeletedContentPreserved.value && componentToRender.value !== TextBubble;
+});
 
 const longPressStartPoint = ref(null);
 const longPressPoint = ref(null);
@@ -699,6 +735,8 @@ onMounted(setupHighlightTimer);
 
 provideMessageContext({
   ...toRefs(props),
+  content: messageContent,
+  attachments: messageAttachments,
   isPrivate: computed(() => props.private),
   variant,
   orientation,
@@ -786,6 +824,12 @@ provideMessageContext({
             {{ t('CONVERSATION.SENT_BY') }} {{ senderDisplayName }}
           </span>
           <Component :is="componentToRender" />
+          <span
+            v-if="shouldShowDeletedMediaNotice"
+            class="mt-1 px-3 text-xs font-medium text-n-slate-11"
+          >
+            {{ t('GENERAL_SETTINGS.FORM.DELETED_MESSAGE_CONTENT.NOTICE') }}
+          </span>
           <div
             v-if="hasReaction"
             class="absolute -bottom-3 left-3 inline-flex items-center rounded-full border border-n-weak bg-n-background px-2 py-0.5 text-xs text-n-slate-12 shadow-sm"

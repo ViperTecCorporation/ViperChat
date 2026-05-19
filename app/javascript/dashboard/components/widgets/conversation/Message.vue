@@ -128,7 +128,8 @@ export default {
         this.isStickerMessage ||
         this.isEmailContentType ||
         this.isUnsupported ||
-        this.isAnIntegrationMessage
+        this.isAnIntegrationMessage ||
+        this.isMessageDeleted
       );
     },
     emailMessageContent() {
@@ -339,6 +340,12 @@ export default {
         this.contentAttributes.deletedContentPreserved
       );
     },
+    shouldRenderDeletedPlaceholder() {
+      return this.isMessageDeleted && !this.isDeletedContentPreserved;
+    },
+    shouldHideDeletedMedia() {
+      return this.shouldRenderDeletedPlaceholder;
+    },
     hasText() {
       return !!this.data.content;
     },
@@ -374,8 +381,8 @@ export default {
         bubble: this.isBubble,
         'is-private': this.data.private,
         'is-unsupported': this.isUnsupported,
-        'is-image': this.hasMediaAttachment('image'),
-        'is-video': this.hasMediaAttachment('video'),
+        'is-image': !this.shouldHideDeletedMedia && this.hasMediaAttachment('image'),
+        'is-video': !this.shouldHideDeletedMedia && this.hasMediaAttachment('video'),
         'is-text': this.hasText,
         'is-from-bot': this.isSentByBot,
         'is-failed': this.isFailed,
@@ -675,13 +682,24 @@ export default {
           :display-quoted-button="displayQuotedButton"
         />
         <span
+          v-else-if="shouldRenderDeletedPlaceholder"
+          class="block px-3 py-2 text-sm text-slate-700 dark:text-slate-100"
+        >
+          {{ $t('GENERAL_SETTINGS.FORM.DELETED_MESSAGE_CONTENT.NOTICE') }}
+        </span>
+        <span
           v-if="isDeletedContentPreserved"
           class="block px-3 pb-2 -mt-1 text-xs font-medium text-slate-500 dark:text-slate-300"
         >
           {{ $t('GENERAL_SETTINGS.FORM.DELETED_MESSAGE_CONTENT.NOTICE') }}
         </span>
         <div
-          v-if="isStickerMessage && !data.content && !isUnsupported"
+          v-if="
+            isStickerMessage &&
+            !data.content &&
+            !isUnsupported &&
+            !shouldHideDeletedMedia
+          "
           class="p-2"
           @contextmenu.prevent="openContextMenu($event)"
         >
@@ -706,12 +724,19 @@ export default {
           :inbox-id="data.inbox_id"
         />
         <span
-          v-if="isPending && hasAttachments"
+          v-if="isPending && hasAttachments && !shouldHideDeletedMedia"
           class="chat-bubble has-attachment agent"
         >
           {{ $t('CONVERSATION.UPLOADING_ATTACHMENTS') }}
         </span>
-        <div v-if="!isPending && hasAttachments && !isStickerMessage">
+        <div
+          v-if="
+            !isPending &&
+            hasAttachments &&
+            !isStickerMessage &&
+            !shouldHideDeletedMedia
+          "
+        >
           <div v-for="attachment in attachments" :key="attachment.id">
             <InstagramStory
               v-if="isAnInstagramStory"
