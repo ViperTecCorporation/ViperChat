@@ -27,6 +27,10 @@ class Whatsapp::Providers::BaseService
     raise 'Overwrite this method in child class'
   end
 
+  def send_message_update(_message)
+    raise 'Overwrite this method in child class'
+  end
+
   def message_update_payload(_message)
     raise 'Overwrite this method in child class'
   end

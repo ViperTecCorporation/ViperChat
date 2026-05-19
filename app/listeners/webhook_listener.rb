@@ -132,13 +132,7 @@ class WebhookListener < BaseListener
               payload[:event] != 'message_updated'
 
     if (payload[:message_type] == 'outgoing' && payload[:status] == 'deleted') || payload[:message_type] == 'incoming'
-      WebhookJob.perform_later(
-        inbox.channel.message_path(payload),
-        inbox.channel.message_update_payload(payload),
-        :account_webhook,
-        inbox.channel.message_update_http_method,
-        inbox.channel.api_headers
-      )
+      inbox.channel.send_message_update(payload)
     end
   end
 

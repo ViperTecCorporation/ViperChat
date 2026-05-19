@@ -103,12 +103,29 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     "#{api_base_path}/v13.0/#{media_id}"
   end
 
+  def send_message_update(message)
+    payload = message_update_payload(message)
+    return false if payload[:message_id].blank? || payload[:recipient_id].blank?
+
+    response = HTTParty.public_send(
+      message_update_http_method,
+      message_path(message),
+      headers: api_headers,
+      body: payload.to_json
+    )
+
+    response.success? && response.parsed_response['error'].blank?
+  rescue StandardError => e
+    Rails.logger.error("[WHATSAPP] message update failed: #{e.class}: #{e.message}")
+    false
+  end
+
   def message_update_payload(message)
     payload = {
       messaging_product: 'whatsapp',
       status: message[:status],
       message_id: message[:source_id],
-      recipient_id: (message[:sender] || {})[:phone_number],
+      recipient_id: message_update_recipient_id(message),
       recipient_type: 'individual'
     }
     if message[:conversation][:group] && message[:conversation][:group_source_id].present?
@@ -129,6 +146,18 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   private
+
+  def message_update_recipient_id(message)
+    (message[:sender] || {})[:phone_number].presence ||
+      contact_inbox_source_id(message[:conversation]&.[](:contact_inbox))
+  end
+
+  def contact_inbox_source_id(contact_inbox)
+    return if contact_inbox.blank?
+    return contact_inbox[:source_id] if contact_inbox.respond_to?(:[]) && contact_inbox[:source_id].present?
+    return contact_inbox['source_id'] if contact_inbox.respond_to?(:[]) && contact_inbox['source_id'].present?
+    return contact_inbox.source_id if contact_inbox.respond_to?(:source_id)
+  end
 
   def recipient_type_for(message)
     message.conversation.group? ? 'group' : 'individual'

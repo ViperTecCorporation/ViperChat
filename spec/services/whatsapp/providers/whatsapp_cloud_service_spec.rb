@@ -372,6 +372,53 @@ describe Whatsapp::Providers::WhatsappCloudService do
     end
   end
 
+  describe '#send_message_update' do
+    before do
+      whatsapp_channel.provider_config['url'] = 'https://graph.facebook.com'
+      whatsapp_channel.save!
+    end
+
+    it 'falls back to conversation contact inbox source id for deleted outgoing messages' do
+      message.update!(content_attributes: { deleted: true })
+      payload = message.webhook_data.deep_symbolize_keys
+
+      stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        .with(
+          body: {
+            messaging_product: 'whatsapp',
+            status: 'deleted',
+            message_id: 'external_id',
+            recipient_id: conversation.contact_inbox.source_id,
+            recipient_type: 'individual'
+          }.to_json
+        )
+        .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_message_update(payload)).to be true
+    end
+
+    it 'sends group message updates to the group source id' do
+      message.update!(content_attributes: { deleted: true })
+      payload = message.webhook_data.deep_symbolize_keys
+      payload[:conversation][:group] = true
+      payload[:conversation][:group_source_id] = '120363040468224422@g.us'
+
+      stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        .with(
+          body: {
+            messaging_product: 'whatsapp',
+            status: 'deleted',
+            message_id: 'external_id',
+            recipient_id: '120363040468224422@g.us',
+            recipient_type: 'group'
+          }.to_json
+        )
+        .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_message_update(payload)).to be true
+    end
+  end
+
   describe '#send_template' do
     let(:template_info) do
       {
