@@ -19,6 +19,7 @@
       "me": "Minhas",
       "unassigned": "Não atribuídas",
       "all": "Todos",
+      "groups": "Grupos",
       "internal": "Chat interno"
     },
     "CHAT_STATUS_FILTER_ITEMS": {

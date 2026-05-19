@@ -81,8 +81,17 @@ const filterByInternal = (
   return !isInternalConversation && shouldFilter;
 };
 
+const filterByGroups = (shouldFilter, assigneeType, conversation = {}) => {
+  if (assigneeType !== 'groups') {
+    return shouldFilter;
+  }
+
+  return !!conversation.group && shouldFilter;
+};
+
 export const applyPageFilters = (conversation, filters) => {
-  const { inboxId, status, labels = [], teamId, conversationType } = filters;
+  const { assigneeType, inboxId, status, labels = [], teamId, conversationType } =
+    filters;
   const {
     status: chatStatus,
     inbox_id: chatInboxId,
@@ -104,6 +113,7 @@ export const applyPageFilters = (conversation, filters) => {
     waitingSince
   );
   shouldFilter = filterByInternal(shouldFilter, conversationType, conversation);
+  shouldFilter = filterByGroups(shouldFilter, assigneeType, conversation);
 
   return shouldFilter;
 };

@@ -9,7 +9,7 @@ class Conversations::FilterService < FilterService
   def perform
     validate_query_operator
     @conversations = query_builder(@filters['conversations'])
-    mine_count, unassigned_count, all_count, = set_count_for_all_conversations
+    mine_count, unassigned_count, group_count, all_count, = set_count_for_all_conversations
     assigned_count = all_count - unassigned_count
 
     {
@@ -18,6 +18,7 @@ class Conversations::FilterService < FilterService
         mine_count: mine_count,
         assigned_count: assigned_count,
         unassigned_count: unassigned_count,
+        group_count: group_count,
         all_count: all_count
       }
     }

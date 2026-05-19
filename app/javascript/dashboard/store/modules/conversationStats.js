@@ -7,6 +7,7 @@ const state = {
   unAssignedCount: 0,
   waitingCount: 0,
   allCount: 0,
+  groupCount: 0,
   internalCount: 0,
 };
 
@@ -64,6 +65,7 @@ export const mutations = {
       unassigned_count: unAssignedCount,
       waiting_count: waitingCount,
       all_count: allCount,
+      group_count: groupCount,
       internal_count: internalCount,
       requested_assignee_type: requestedAssigneeType,
       requested_conversation_type: requestedConversationType,
@@ -89,6 +91,7 @@ export const mutations = {
     $state.allCount = allCount || 0;
     $state.unAssignedCount = unAssignedCount || 0;
     $state.waitingCount = waitingCount || 0;
+    $state.groupCount = groupCount || 0;
     $state.internalCount = nextInternalCount || 0;
     $state.updatedOn = new Date();
   },

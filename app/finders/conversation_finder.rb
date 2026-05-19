@@ -40,7 +40,7 @@ class ConversationFinder
   def perform
     set_up
 
-    mine_count, unassigned_count, waiting_count, all_count, internal_count =
+    mine_count, unassigned_count, waiting_count, group_count, all_count, internal_count =
       set_count_for_all_conversations
     assigned_count = all_count - unassigned_count
 
@@ -54,6 +54,7 @@ class ConversationFinder
         assigned_count: assigned_count,
         unassigned_count: unassigned_count,
         waiting_count: waiting_count,
+        group_count: group_count,
         internal_count: internal_count,
         all_count: all_count
       }
@@ -63,7 +64,7 @@ class ConversationFinder
   def perform_meta_only
     set_up
 
-    mine_count, unassigned_count, waiting_count, all_count, internal_count =
+    mine_count, unassigned_count, waiting_count, group_count, all_count, internal_count =
       set_count_for_all_conversations
     assigned_count = all_count - unassigned_count
 
@@ -73,6 +74,7 @@ class ConversationFinder
         assigned_count: assigned_count,
         unassigned_count: unassigned_count,
         waiting_count: waiting_count,
+        group_count: group_count,
         internal_count: internal_count,
         all_count: all_count
       }
@@ -138,6 +140,8 @@ class ConversationFinder
       @conversations = @conversations.unassigned
     when 'waiting'
       @conversations = waiting_conversations
+    when 'groups'
+      @conversations = @conversations.group_conversations
     when 'assigned'
       @conversations = @conversations.assigned
     when 'internal'
@@ -235,6 +239,7 @@ class ConversationFinder
       count_scope.assigned_to(current_user).count,
       count_scope.unassigned.count,
       waiting_scope.count,
+      count_scope.group_conversations.count,
       count_scope.count,
       internal_scope.count
     ]

@@ -28,6 +28,7 @@ describe('#mutations', () => {
           waiting: 0,
           unassigned: 0,
           all: 0,
+          groups: 0,
           appliedFilters: 0,
         },
         hasEndReached: {
@@ -35,6 +36,7 @@ describe('#mutations', () => {
           waiting: false,
           unassigned: false,
           all: false,
+          groups: false,
           appliedFilters: false,
         },
       });

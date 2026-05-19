@@ -5,6 +5,7 @@ export default {
     ME: 'me',
     UNASSIGNED: 'unassigned',
     ALL: 'all',
+    GROUPS: 'groups',
     INTERNAL: 'internal',
   },
   STATUS_TYPE: {

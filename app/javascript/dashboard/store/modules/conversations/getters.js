@@ -107,6 +107,13 @@ const getters = {
       return isUnAssigned && shouldFilter;
     });
   },
+  getGroupChats: _state => activeFilters => {
+    return _state.allConversations.filter(conversation => {
+      const isGroup = !!conversation.group;
+      const shouldFilter = applyPageFilters(conversation, activeFilters);
+      return isGroup && shouldFilter;
+    });
+  },
   getParticipatingChats: (_state, _, __, rootGetters) => activeFilters => {
     const currentUserId = rootGetters.getCurrentUser?.id;
     const getWatchers = rootGetters['conversationWatchers/getByConversationId'];

@@ -111,6 +111,7 @@ class FilterService
     [
       @conversations.assigned_to(@user).count,
       @conversations.unassigned.count,
+      @conversations.group_conversations.count,
       @conversations.count
     ]
   end
