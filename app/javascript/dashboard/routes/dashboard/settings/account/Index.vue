@@ -17,6 +17,7 @@ import AccountId from './components/AccountId.vue';
 import BuildInfo from './components/BuildInfo.vue';
 import AccountDelete from './components/AccountDelete.vue';
 import AudioTranscription from './components/AudioTranscription.vue';
+import DeletedMessageContent from './components/DeletedMessageContent.vue';
 import SectionLayout from './components/SectionLayout.vue';
 
 export default {
@@ -27,6 +28,7 @@ export default {
     BuildInfo,
     AccountDelete,
     AudioTranscription,
+    DeletedMessageContent,
     SectionLayout,
     Switch,
     WithLabel,
@@ -259,6 +261,7 @@ export default {
       <woot-loading-state v-if="uiFlags.isFetchingItem" />
     </div>
     <AudioTranscription v-if="showAudioTranscriptionConfig" />
+    <DeletedMessageContent />
     <SectionLayout
       with-border
       :title="$t('GENERAL_SETTINGS.FORM.WAITING_CONVERSATIONS_SECTION.TITLE')"

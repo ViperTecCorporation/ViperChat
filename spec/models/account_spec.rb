@@ -198,6 +198,12 @@ RSpec.describe Account do
         expect(account.settings['auto_resolve_message']).to eq(message)
       end
 
+      it 'correctly gets and sets show_deleted_message_content' do
+        account.show_deleted_message_content = true
+        expect(account.show_deleted_message_content).to be(true)
+        expect(account.settings['show_deleted_message_content']).to be(true)
+      end
+
       it 'defaults captain_auto_resolve_mode to legacy when captain_tasks is disabled' do
         allow(account).to receive(:feature_enabled?).with('captain_tasks').and_return(false)
 

@@ -14,6 +14,11 @@
 - **Test JS**: `pnpm test` or `pnpm test:watch`
 - **Test Ruby**: `bundle exec rspec spec/path/to/file_spec.rb`
 - **Single Test**: `bundle exec rspec spec/path/to/file_spec.rb:LINE_NUMBER`
+- **Local Docker Test Runtime**: neste checkout, rode testes Ruby pelo Docker local/localhost quando `ruby` ou `bundle` não estiverem disponíveis no host. Use o serviço `rails`, por exemplo:
+  - `docker compose run --rm rails bundle exec rspec spec/path/to/file_spec.rb`
+  - `docker compose run --rm rails bundle exec rspec spec/path/to/file_spec.rb:LINE_NUMBER`
+  - Se os containers já estiverem de pé, pode usar `docker compose exec rails bundle exec rspec spec/path/to/file_spec.rb`.
+- **Frontend tests in Docker/container**: quando o host não conseguir rodar `pnpm test`/`vitest`, rode o teste direto no container de frontend/app disponível em localhost em vez de parar na falha do shell. Se o teste existente não cobre a alteração Vue/JS feita, crie um caso de teste focado para cobrir o componente, composable, store ou helper alterado antes de considerar a validação concluída.
 - **Run Project**: `overmind start -f Procfile.dev`
 - **Ruby Version**: Manage Ruby via `rbenv` and install the version listed in `.ruby-version` (e.g., `rbenv install $(cat .ruby-version)`)
 - **rbenv setup**: Before running any `bundle` or `rspec` commands, init rbenv in your shell (`eval "$(rbenv init -)"`) so the correct Ruby/Bundler versions are used

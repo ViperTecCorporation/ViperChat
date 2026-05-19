@@ -104,6 +104,15 @@
           "ERROR": "Falha ao atualizar configuração de transcrição de áudio"
         }
       },
+      "DELETED_MESSAGE_CONTENT": {
+        "TITLE": "Exibir conteúdo de mensagens apagadas",
+        "NOTE": "Quando uma mensagem for apagada no WhatsApp, mantém o conteúdo original visível na conversa e apenas sinaliza que ela foi apagada.",
+        "NOTICE": "Mensagem apagada",
+        "API": {
+          "SUCCESS": "Configuração de mensagens apagadas atualizada com sucesso",
+          "ERROR": "Falha ao atualizar configuração de mensagens apagadas"
+        }
+      },
       "WAITING_CONVERSATIONS_SECTION": {
         "TITLE": "Conversas aguardando",
         "NOTE": "Abrir automaticamente as conversas que estão aguardando resposta na aba Aguardando."

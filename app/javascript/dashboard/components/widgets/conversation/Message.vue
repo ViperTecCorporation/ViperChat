@@ -231,8 +231,6 @@ export default {
     },
     stickerUrl() {
       const attachment = this.data?.attachments?.[0];
-      const rawType = this.data?.content_type;
-      const isStickerType = rawType === 'sticker' || rawType === 11;
       const url =
         this.contentAttributes.sticker_url ||
         this.contentAttributes.stickerUrl ||
@@ -334,6 +332,12 @@ export default {
     },
     isMessageDeleted() {
       return this.contentAttributes.deleted;
+    },
+    isDeletedContentPreserved() {
+      return (
+        this.contentAttributes.deleted_content_preserved ||
+        this.contentAttributes.deletedContentPreserved
+      );
     },
     hasText() {
       return !!this.data.content;
@@ -631,7 +635,8 @@ export default {
         />
       </div>
       <div
-        :class="[bubbleClass, 'relative']"
+        class="relative"
+        :class="bubbleClass"
         @contextmenu="openContextMenu($event)"
         @touchstart.passive="startTouchContextMenu"
         @touchmove.passive="moveTouchContextMenu"
@@ -669,8 +674,14 @@ export default {
           :is-email="isEmailContentType"
           :display-quoted-button="displayQuotedButton"
         />
+        <span
+          v-if="isDeletedContentPreserved"
+          class="block px-3 pb-2 -mt-1 text-xs font-medium text-slate-500 dark:text-slate-300"
+        >
+          {{ $t('GENERAL_SETTINGS.FORM.DELETED_MESSAGE_CONTENT.NOTICE') }}
+        </span>
         <div
-          v-else-if="isStickerMessage"
+          v-if="isStickerMessage && !data.content && !isUnsupported"
           class="p-2"
           @contextmenu.prevent="openContextMenu($event)"
         >

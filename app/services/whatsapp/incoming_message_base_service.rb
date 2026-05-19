@@ -124,7 +124,13 @@ class Whatsapp::IncomingMessageBaseService
 
   def update_message_with_status(message, status)
     if status[:status] == 'deleted'
-      message.assign_attributes(content: I18n.t('conversations.messages.deleted'), content_attributes: { deleted: true })
+      content_attributes = (message.content_attributes || {}).merge(
+        'deleted' => true
+      )
+      preserve_content = preserve_deleted_message_content?
+      content_attributes['deleted_content_preserved'] = true if preserve_content
+      message.assign_attributes(content_attributes: content_attributes)
+      message.content = I18n.t('conversations.messages.deleted') unless preserve_content
     else
       message.status = status[:status]
     end
@@ -134,6 +140,10 @@ class Whatsapp::IncomingMessageBaseService
       message.conversation.open! unless message.conversation.open?
     end
     message.save!
+  end
+
+  def preserve_deleted_message_content?
+    ActiveModel::Type::Boolean.new.cast(inbox.account.show_deleted_message_content)
   end
 
   def create_messages
@@ -341,13 +351,7 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def single_conversation_for_contact_aliases?
-    @inbox.lock_to_single_conversation || unoapi_bsuid_contact?
-  end
-
-  def unoapi_bsuid_contact?
-    @inbox.channel_type == 'Channel::Whatsapp' &&
-      @inbox.channel.provider == 'unoapi' &&
-      @contact.bsuid.present?
+    @inbox.lock_to_single_conversation
   end
 
   def attach_files
@@ -454,7 +458,7 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def update_contact_with_profile_name(contact_params, raw_from: nil)
-    profile_name = contact_display_name(contact_params)
+    profile_name = contact_profile_display_name(contact_params)
     return if profile_name.blank?
     return if @contact.name == profile_name
 
@@ -558,5 +562,9 @@ class Whatsapp::IncomingMessageBaseService
       contact_username(contact_params) ||
       contact_params[:wa_id].presence ||
       contact_bsuid(contact_params)
+  end
+
+  def contact_profile_display_name(contact_params)
+    contact_params.dig(:profile, :name).presence || contact_username(contact_params)
   end
 end

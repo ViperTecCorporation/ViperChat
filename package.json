@@ -1,6 +1,6 @@
 {
   "name": "@viperteccoporation/viperchat",
-  "version": "4.13.7-viper-1",
+  "version": "4.13.8-viper",
   "license": "UNLICENSED",
   "scripts": {
     "eslint": "eslint app/**/*.{js,vue}",

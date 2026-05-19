@@ -294,7 +294,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(phone_contact.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')).to be_present
       end
 
-      it 'keeps the same conversation when the contact starts by bsuid and later arrives by phone number' do
+      it 'creates a new conversation when bsuid contact has only a resolved conversation and single conversation lock is disabled' do
         bsuid_contact = create(:contact, account: whatsapp_channel.account, name: 'Maria', bsuid: '123456789012345@lid')
         bsuid_contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: bsuid_contact, source_id: '123456789012345@lid')
         existing_conversation = create(
@@ -309,14 +309,16 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         described_class.new(inbox: whatsapp_channel.inbox, params: one_to_one_params).perform
 
         message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.ONE_TO_ONE_MESSAGE_ID')
-        expect(message.conversation).to eq(existing_conversation)
+        expect(message.conversation).not_to eq(existing_conversation)
+        expect(message.conversation).to be_open
         expect(message.sender).to eq(bsuid_contact)
         expect(message.sender.reload.phone_number).to eq('+5566999999999')
-        expect(whatsapp_channel.inbox.conversations.count).to eq(1)
+        expect(whatsapp_channel.inbox.conversations.count).to eq(2)
         expect(bsuid_contact.contact_inboxes.find_by!(inbox: whatsapp_channel.inbox, source_id: '5566999999999')).to be_present
       end
 
-      it 'merges existing phone and bsuid conversations for the same UnoAPI contact' do
+      it 'merges existing phone and bsuid conversations for the same UnoAPI contact when the inbox keeps a single conversation' do
+        whatsapp_channel.inbox.update!(lock_to_single_conversation: true)
         phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Maria')
         phone_contact.update_columns(phone_number: '+5566999999999', bsuid: '123456789012345@lid') # rubocop:disable Rails/SkipsModelValidations
         phone_contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '5566999999999')
