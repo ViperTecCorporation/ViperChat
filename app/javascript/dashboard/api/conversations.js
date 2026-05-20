@@ -17,6 +17,10 @@ class ConversationApi extends ApiClient {
   forwardMessages(conversationID, payload) {
     return axios.post(`${this.url}/${conversationID}/forwards`, payload);
   }
+
+  getUnreadCounts() {
+    return axios.get(`${this.url}/unread_counts`);
+  }
 }
 
 export default new ConversationApi();
