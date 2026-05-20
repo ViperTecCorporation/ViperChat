@@ -164,6 +164,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # rubocop:enable Rails/SkipsModelValidations
 
     UpdateLastSeenJob.perform_later(@conversation.id, Current.user, last_seen_at) if last_seen_at.present?
+    ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
   end
 
   def should_update_last_seen?
