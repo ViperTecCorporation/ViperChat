@@ -3,6 +3,7 @@
 # https://developers.facebook.com/docs/whatsapp/api/media/
 class Whatsapp::IncomingMessageBaseService
   include ::Whatsapp::IncomingMessageServiceHelpers
+  include ::Whatsapp::IncomingMessageIdentifierHelper
 
   # rubocop:disable Style/ClassVars
   @@microsecond = 0
@@ -56,9 +57,11 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def process_statuses
-    return unless find_message_by_source_id(@processed_params[:statuses].first[:id])
+    status = @processed_params[:statuses].first
+    return unless find_message_by_source_id(status[:id])
 
-    update_message_with_status(@message, @processed_params[:statuses].first)
+    update_whatsapp_identifiers_from_status(status)
+    update_message_with_status(@message, status)
   rescue ArgumentError => e
     Rails.logger.error "Error while processing whatsapp status update #{e.message}"
   end
@@ -104,6 +107,11 @@ class Whatsapp::IncomingMessageBaseService
     @contact = contact_inbox.contact
 
     raw_from = contact_phone_identifier(contact_params).presence || contact_bsuid(contact_params)
+    update_whatsapp_identifiers(
+      source_ids: incoming_message_source_ids(contact_params),
+      username: contact_username(contact_params),
+      phone_number: contact_attributes[:phone_number]
+    )
     update_contact_with_profile_name(contact_params, raw_from: raw_from)
     sync_group_contact(contact_params)
   end
@@ -278,6 +286,7 @@ class Whatsapp::IncomingMessageBaseService
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
     @sender = nil
+    update_whatsapp_identifiers(source_ids: outgoing_message_source_ids(messages_data.first), phone_number: "+#{phone_number}")
   end
 
   def set_contact_from_message
@@ -304,6 +313,11 @@ class Whatsapp::IncomingMessageBaseService
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
     @sender = webhook_outgoing_message? ? nil : contact_inbox.contact
+    update_whatsapp_identifiers(
+      source_ids: incoming_message_source_ids(contact_params),
+      username: contact_username(contact_params),
+      phone_number: contact_attributes[:phone_number]
+    )
 
     # Update existing contact name for LID-suffix placeholders or low-quality names
     update_contact_with_profile_name(contact_params)
