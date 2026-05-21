@@ -137,6 +137,44 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       job.perform_now(wb_params)
     end
 
+    it 'falls back to the webhook URL channel when payload display phone is not registered locally' do
+      channel.update!(
+        phone_number: '+5581999210202',
+        provider_config: channel.provider_config.merge('phone_number_id' => '1104413899428286')
+      )
+      wb_params = {
+        phone_number: channel.phone_number,
+        object: 'whatsapp_business_account',
+        entry: [
+          {
+            changes: [
+              {
+                value: {
+                  metadata: {
+                    phone_number_id: channel.provider_config['phone_number_id'],
+                    display_phone_number: '558199210202'
+                  },
+                  contacts: [{ profile: { name: 'Edcarlos Melo' }, wa_id: '558181829525', user_id: 'BR.1597711494623173' }],
+                  messages: [{
+                    from: '558181829525',
+                    from_user_id: 'BR.1597711494623173',
+                    id: 'wamid.TEST',
+                    timestamp: '1779373253',
+                    text: { body: 'rewrwerwrwerew' },
+                    type: 'text'
+                  }]
+                }
+              }
+            ]
+          }
+        ]
+      }
+      allow(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).and_return(process_service)
+
+      expect(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).with(inbox: channel.inbox, params: wb_params)
+      job.perform_now(wb_params)
+    end
+
     it 'Ignore reaction type message and stop raising error' do
       other_channel = create(:channel_whatsapp, phone_number: '+1987654', provider: 'whatsapp_cloud', sync_templates: false,
                                                 validate_provider_config: false)

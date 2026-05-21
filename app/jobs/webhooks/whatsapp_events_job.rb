@@ -117,16 +117,37 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
     # for the case where facebook cloud api support multiple numbers for a single app
     # https://github.com/chatwoot/chatwoot/issues/4712#issuecomment-1173838350
     # we will give priority to the phone_number in the payload
-    return get_channel_from_wb_payload(params) if params[:object] == 'whatsapp_business_account'
+    if params[:object] == 'whatsapp_business_account'
+      return get_channel_from_wb_payload(params) || fallback_channel_from_url_param(params)
+    end
 
     find_channel_by_url_param(params)
   end
 
   def get_channel_from_wb_payload(wb_params)
-    phone_number = "+#{wb_params[:entry].first[:changes].first.dig(:value, :metadata, :display_phone_number)}"
+    phone_number = payload_phone_number(wb_params)
     phone_number_id = wb_params[:entry].first[:changes].first.dig(:value, :metadata, :phone_number_id)
     channel = Channel::Whatsapp.find_by(phone_number: phone_number)
     # validate to ensure the phone number id matches the whatsapp channel
     return channel if channel && channel.provider_config['phone_number_id'] == phone_number_id
+  end
+
+  def fallback_channel_from_url_param(wb_params)
+    # Some official Meta payloads can send a display_phone_number that is not identical to
+    # the configured webhook URL number. If the payload number does not identify any local
+    # channel, fall back to the verified URL param. If it identifies a channel but the
+    # phone_number_id mismatches, do not fall back because that would route to the wrong inbox.
+    payload_number = payload_phone_number(wb_params)
+    return find_channel_by_url_param(wb_params) if payload_number.blank?
+    return if Channel::Whatsapp.exists?(phone_number: payload_number)
+
+    find_channel_by_url_param(wb_params)
+  end
+
+  def payload_phone_number(wb_params)
+    display_phone_number = wb_params[:entry].first[:changes].first.dig(:value, :metadata, :display_phone_number)
+    return if display_phone_number.blank?
+
+    display_phone_number.to_s.start_with?('+') ? display_phone_number.to_s : "+#{display_phone_number}"
   end
 end
