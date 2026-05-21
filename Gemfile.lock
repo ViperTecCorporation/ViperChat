@@ -335,9 +335,7 @@ GEM
     ffi (1.17.2-arm64-darwin)
     ffi (1.17.2-x86_64-darwin)
     ffi (1.17.2-x86_64-linux-gnu)
-    ffi-compiler (1.0.1)
-      ffi (>= 1.0.0)
-      rake
+    firecrawl-sdk (1.4.1)
     flag_shih_tzu (0.3.23)
     foreman (0.87.2)
     fugit (1.11.1)
@@ -1078,7 +1076,7 @@ DEPENDENCIES
   factory_bot_rails (>= 6.4.3)
   faker
   faraday_middleware-aws-sigv4
-  fcm
+  firecrawl-sdk (~> 1.0)
   flag_shih_tzu
   foreman
   gemoji
