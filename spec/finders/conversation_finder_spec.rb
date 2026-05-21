@@ -96,6 +96,17 @@ describe ConversationFinder do
         result = conversation_finder.perform
         expect(result[:conversations].length).to be 1
       end
+
+      it 'does not include unassigned group conversations in the unassigned tab' do
+        group_conversation = create(:conversation, account: account, inbox: inbox, group: true, group_title: 'Grupo Comercial')
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).not_to include(group_conversation.id)
+        expect(result[:conversations].length).to be 1
+        expect(result[:count][:unassigned_count]).to be 1
+        expect(result[:count][:group_count]).to be 1
+      end
     end
 
     context 'with assignee_type groups' do
@@ -163,7 +174,7 @@ describe ConversationFinder do
                                        unassigned_count: 1,
                                        waiting_count: 3,
                                        group_count: 0,
-                                       internal_count: 1,
+                                       internal_count: 0,
                                        all_count: 4
                                      })
       end
@@ -261,7 +272,7 @@ describe ConversationFinder do
                                        unassigned_count: 1,
                                        waiting_count: 3,
                                        group_count: 0,
-                                       internal_count: 1,
+                                       internal_count: 0,
                                        all_count: 4
                                      })
       end
@@ -281,6 +292,8 @@ describe ConversationFinder do
       end
 
       it 'returns internal conversations only for the internal tab' do
+        create(:inbox_member, user: user_1, inbox: internal_inbox)
+
         result = described_class.new(user_1, { assignee_type: 'internal' }).perform
 
         expect(result[:conversations].map(&:inbox_id)).to contain_exactly(internal_inbox.id)

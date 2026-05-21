@@ -17,7 +17,7 @@ class Conversations::PermissionFilterService
   private
 
   def accessible_conversations(base_scope = conversations.reorder(nil))
-    internal_inbox_ids = account.inboxes.where(channel_type: 'Channel::Internal').pluck(:id)
+    internal_inbox_ids = user.inboxes.where(account_id: account.id, channel_type: 'Channel::Internal').pluck(:id)
 
     internal_access_ids = Conversation
                           .joins(:inbox)

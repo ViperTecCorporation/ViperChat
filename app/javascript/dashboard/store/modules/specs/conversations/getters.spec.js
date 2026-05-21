@@ -159,6 +159,14 @@ describe('#getters', () => {
           meta: { team: { id: 5 } },
           labels: ['sales'],
         },
+        {
+          id: 33,
+          inbox_id: 4,
+          status: 1,
+          group: true,
+          meta: {},
+          labels: ['sales'],
+        },
       ];
 
       expect(

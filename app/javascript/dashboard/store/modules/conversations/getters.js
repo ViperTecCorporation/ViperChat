@@ -102,7 +102,7 @@ const getters = {
   },
   getUnAssignedChats: _state => activeFilters => {
     return _state.allConversations.filter(conversation => {
-      const isUnAssigned = !conversation.meta.assignee;
+      const isUnAssigned = !conversation.meta.assignee && !conversation.group;
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       return isUnAssigned && shouldFilter;
     });

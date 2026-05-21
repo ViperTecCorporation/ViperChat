@@ -42,6 +42,26 @@ RSpec.describe Conversations::PermissionFilterService do
         expect(result).to include(another_conversation)
         expect(result.count).to eq(2)
       end
+
+      it 'returns internal conversations only from internal inboxes where the agent is a member' do
+        administrative_channel = create(:channel_internal, account: account)
+        administrative_inbox = create(:inbox, account: account, channel: administrative_channel, name: 'Administrativo')
+        executive_channel = create(:channel_internal, account: account)
+        executive_inbox = create(:inbox, account: account, channel: executive_channel, name: 'Cupula')
+
+        administrative_conversation = create(:conversation, account: account, inbox: administrative_inbox)
+        executive_conversation = create(:conversation, account: account, inbox: executive_inbox)
+        create(:inbox_member, user: agent, inbox: administrative_inbox)
+
+        result = described_class.new(
+          account.conversations,
+          agent,
+          account
+        ).perform
+
+        expect(result).to include(administrative_conversation)
+        expect(result).not_to include(executive_conversation)
+      end
     end
   end
 end

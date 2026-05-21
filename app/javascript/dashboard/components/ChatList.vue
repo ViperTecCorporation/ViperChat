@@ -374,7 +374,7 @@ function filterByAssigneeTab(conversations) {
     );
   }
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
-    return conversations.filter(c => !c.meta?.assignee);
+    return conversations.filter(c => !c.meta?.assignee && !c.group);
   }
   return [...conversations];
 }
