@@ -107,8 +107,14 @@ class WebhookListener < BaseListener
     deliver_webhook_payloads(payload, inbox)
   end
 
-  def deliver_account_webhooks(payload, account)
-    account.webhooks.account_type.each do |webhook|
+  def deliver_account_webhooks(payload, account, inbox = nil)
+    webhooks = if inbox
+                 account.webhooks.where(webhook_type: :account_type).or(account.webhooks.where(webhook_type: :inbox_type, inbox_id: inbox.id))
+               else
+                 account.webhooks.account_type
+               end
+
+    webhooks.each do |webhook|
       next unless webhook.subscriptions.include?(payload[:event])
 
       WebhookJob.perform_later(webhook.url, payload, :account_webhook,
@@ -137,7 +143,7 @@ class WebhookListener < BaseListener
   end
 
   def deliver_webhook_payloads(payload, inbox)
-    deliver_account_webhooks(payload, inbox.account)
+    deliver_account_webhooks(payload, inbox.account, inbox)
     deliver_api_inbox_webhooks(payload, inbox)
     deliver_whatsapp_inbox_webhooks(payload, inbox)
   end

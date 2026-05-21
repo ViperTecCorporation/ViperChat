@@ -47,6 +47,19 @@ RSpec.describe 'Webhooks API', type: :request do
         expect(response).to have_http_status(:success)
 
         expect(response.parsed_body['payload']['webhook']['url']).to eql 'https://hello.com'
+        expect(response.parsed_body['payload']['webhook']['inbox']['id']).to eql inbox.id
+        expect(response.parsed_body['payload']['webhook']['inbox']['name']).to eql inbox.name
+      end
+
+      it 'creates global webhook when no inbox_id is provided' do
+        post "/api/v1/accounts/#{account.id}/webhooks",
+             params: { account_id: account.id, url: 'https://hello.com' },
+             headers: administrator.create_new_auth_token,
+             as: :json
+        expect(response).to have_http_status(:success)
+
+        expect(response.parsed_body['payload']['webhook']['url']).to eql 'https://hello.com'
+        expect(response.parsed_body['payload']['webhook']['inbox']).to be_nil
       end
 
       it 'creates webhook with name' do

@@ -29,11 +29,22 @@ class Webhook < ApplicationRecord
   validate :validate_webhook_subscriptions
   enum webhook_type: { account_type: 0, inbox_type: 1 }
 
+  before_validation :set_webhook_type
+
   ALLOWED_WEBHOOK_EVENTS = %w[conversation_status_changed conversation_updated conversation_created contact_created contact_updated
                               message_created message_updated webwidget_triggered inbox_created inbox_updated
                               conversation_typing_on conversation_typing_off].freeze
 
   private
+
+  def set_webhook_type
+    if inbox_id.present?
+      self.webhook_type = :inbox_type
+    else
+      self.webhook_type = :account_type
+      self.inbox_id = nil
+    end
+  end
 
   def validate_webhook_subscriptions
     invalid_subscriptions = !subscriptions.instance_of?(Array) ||

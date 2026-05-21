@@ -26,12 +26,28 @@ describe WebhookListener do
     end
 
     context 'when webhook is configured and event is subscribed' do
-      it 'triggers the webhook event' do
+      it 'triggers the webhook event if webhook is scoped to the same inbox' do
         webhook = create(:webhook, inbox: inbox, account: account)
         expect(WebhookJob).to receive(:perform_later).with(
           webhook.url, message.webhook_data.merge(event: 'message_created'), :account_webhook,
           secret: webhook.secret, delivery_id: instance_of(String)
         ).once
+        listener.message_created(message_created_event)
+      end
+
+      it 'triggers the webhook event if webhook is global' do
+        webhook = create(:webhook, inbox_id: nil, account: account)
+        expect(WebhookJob).to receive(:perform_later).with(
+          webhook.url, message.webhook_data.merge(event: 'message_created'), :account_webhook,
+          secret: webhook.secret, delivery_id: instance_of(String)
+        ).once
+        listener.message_created(message_created_event)
+      end
+
+      it 'does not trigger the webhook event if webhook is scoped to a different inbox' do
+        other_inbox = create(:inbox, account: account)
+        webhook = create(:webhook, inbox: other_inbox, account: account)
+        expect(WebhookJob).not_to receive(:perform_later)
         listener.message_created(message_created_event)
       end
 
@@ -207,12 +223,18 @@ describe WebhookListener do
     end
 
     context 'when webhook is configured' do
-      it 'triggers webhook' do
-        webhook = create(:webhook, account: account)
+      it 'triggers webhook if global (account type)' do
+        webhook = create(:webhook, account: account, inbox_id: nil)
         expect(WebhookJob).to receive(:perform_later).with(
           webhook.url, contact.webhook_data.merge(event: 'contact_created'), :account_webhook,
           secret: webhook.secret, delivery_id: instance_of(String)
         ).once
+        listener.contact_created(contact_event)
+      end
+
+      it 'does not trigger webhook if scoped to an inbox' do
+        webhook = create(:webhook, account: account, inbox: inbox)
+        expect(WebhookJob).not_to receive(:perform_later)
         listener.contact_created(contact_event)
       end
     end
