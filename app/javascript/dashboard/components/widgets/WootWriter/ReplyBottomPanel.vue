@@ -7,7 +7,6 @@ import * as ActiveStorage from 'activestorage';
 import inboxMixin from 'shared/mixins/inboxMixin';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { getAllowedFileTypesByChannel } from '@chatwoot/utils';
-import { ALLOWED_FILE_TYPES } from 'shared/constants/messages';
 import VideoCallButton from '../VideoCallButton.vue';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { mapGetters } from 'vuex';
@@ -129,8 +128,6 @@ export default {
   },
   emits: [
     'toggleInsertArticle',
-    'toggleStickerPicker',
-    'openContactPicker',
     'selectWhatsappTemplate',
     'selectContentTemplate',
     'toggleQuotedReply',
@@ -166,11 +163,6 @@ export default {
       setSignatureFlagForInbox,
       fetchSignatureFlagFromUISettings,
       uploadRef,
-    };
-  },
-  data() {
-    return {
-      ALLOWED_FILE_TYPES,
     };
   },
   computed: {
@@ -210,20 +202,15 @@ export default {
       if (this.isEditorDisabled) return false;
       return this.showAudioRecorder && this.isRecordingAudio;
     },
-    hideEmojiAndStickerButtons() {
-      return this.isRecordingAudio || this.recordingAudioState === 'playing';
-    },
     isInstagramDM() {
       return this.conversationType === 'instagram_direct_message';
     },
     allowedFileTypes() {
-      // Use default file types for private notes
       if (this.isOnPrivateNote) {
-        return this.ALLOWED_FILE_TYPES;
+        return getAllowedFileTypesByChannel();
       }
 
       let channelType = this.channelType || this.inbox?.channel_type;
-
       if (this.isAnInstagramChannel || this.isInstagramDM) {
         channelType = INBOX_TYPES.INSTAGRAM;
       }
@@ -253,25 +240,6 @@ export default {
       if (this.isEditorDisabled) return false;
       return !this.isOnPrivateNote;
     },
-    showStickerButton() {
-      return (
-        !this.isOnPrivateNote &&
-        (this.isAWhatsAppCloudChannel || this.isAUnoapiChannel)
-      );
-    },
-    showEmojiButton() {
-      return !this.hideEmojiAndStickerButtons;
-    },
-    showStickerPickerButton() {
-      return this.showStickerButton && !this.hideEmojiAndStickerButtons;
-    },
-    showContactPickerButton() {
-      return (
-        !this.isOnPrivateNote &&
-        !this.isEditorDisabled &&
-        (this.isAWhatsAppCloudChannel || this.isAUnoapiChannel)
-      );
-    },
     sendWithSignature() {
       // channelType is sourced from inboxMixin
       return this.fetchSignatureFlagFromUISettings(this.channelType);
@@ -297,11 +265,6 @@ export default {
     ActiveStorage.start();
   },
   methods: {
-    handleStickerPickerClick() {
-      // eslint-disable-next-line no-console
-      console.info('[StickerPicker] toggle button clicked');
-      this.$emit('toggleStickerPicker');
-    },
     toggleMessageSignature() {
       this.setSignatureFlagForInbox(this.channelType, !this.sendWithSignature);
     },
@@ -316,31 +279,13 @@ export default {
   <div class="flex justify-between p-3" :class="wrapClass">
     <div class="left-wrap">
       <NextButton
-        v-if="showEmojiButton"
+        v-if="!isEditorDisabled"
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_EMOJI_ICON')"
         icon="i-ph-smiley-sticker"
         slate
         faded
         sm
         @click="toggleEmojiPicker"
-      />
-      <NextButton
-        v-if="showStickerPickerButton"
-        v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_STICKER_ICON')"
-        icon="i-ph-sticker"
-        slate
-        faded
-        sm
-        @click="handleStickerPickerClick"
-      />
-      <NextButton
-        v-if="showContactPickerButton"
-        v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_ATTACH_CONTACT_ICON')"
-        icon="i-ph-address-book-tabs"
-        slate
-        faded
-        sm
-        @click="$emit('openContactPicker')"
       />
       <FileUpload
         v-if="showAttachButton"
