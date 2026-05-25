@@ -153,7 +153,7 @@ module Whatsapp::IncomingMessageServiceHelpers
   end
 
   def unprocessable_message_type?(message_type)
-    message_type.blank? || %w[reaction ephemeral unsupported request_welcome].include?(message_type)
+    message_type.blank? || %w[reaction ephemeral request_welcome].include?(message_type)
   end
 
   def brazil_phone_number?(phone_number)
