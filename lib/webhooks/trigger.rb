@@ -14,18 +14,16 @@ class Webhooks::Trigger
     end
   end
 
-  def initialize(url, payload, webhook_type, method = :post, headers = DEFAULT_HEADERS, secret: nil, delivery_id: nil)
+  def initialize(url, payload, webhook_type, method = :post, headers = DEFAULT_HEADERS)
     @url = url
     @payload = payload
     @webhook_type = webhook_type
     @method = method
     @headers = headers
-    @secret = secret
-    @delivery_id = delivery_id
   end
 
-  def self.execute(url, payload, webhook_type, method = :post, headers = DEFAULT_HEADERS, secret: nil, delivery_id: nil)
-    new(url, payload, webhook_type, method, headers, secret: secret, delivery_id: delivery_id).execute
+  def self.execute(url, payload, webhook_type, method = :post, headers = DEFAULT_HEADERS)
+    new(url, payload, webhook_type, method, headers).execute
   end
 
   def execute
@@ -47,26 +45,17 @@ class Webhooks::Trigger
     body = @payload.to_json
     Rails.logger.debug { "Webhook Trigger @method: #{@method} @url #{@url} @payload #{body} @headers #{@headers}" }
 
-    SafeFetch.fetch(
-      @url,
+    RestClient::Request.execute(
       method: @method,
-      body: body,
-      headers: request_headers(body),
-      open_timeout: webhook_timeout,
-      read_timeout: webhook_timeout,
-      validate_content_type: false
-    ) { |_response| nil }
+      url: @url,
+      payload: body,
+      headers: request_headers,
+      timeout: webhook_timeout
+    )
   end
 
-  def request_headers(body)
-    headers = normalized_headers
-    headers['X-Chatwoot-Delivery'] = @delivery_id if @delivery_id.present?
-    if @secret.present?
-      ts = Time.now.to_i.to_s
-      headers['X-Chatwoot-Timestamp'] = ts
-      headers['X-Chatwoot-Signature'] = "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', @secret, "#{ts}.#{body}")}"
-    end
-    headers
+  def request_headers
+    normalized_headers
   end
 
   def normalized_headers

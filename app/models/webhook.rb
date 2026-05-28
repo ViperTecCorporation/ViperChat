@@ -22,8 +22,6 @@ class Webhook < ApplicationRecord
   belongs_to :account
   belongs_to :inbox, optional: true
 
-  include WebhookSecretable
-
   validates :account_id, presence: true
   validates :url, uniqueness: { scope: [:account_id] }, format: URI::DEFAULT_PARSER.make_regexp(%w[http https])
   validate :validate_webhook_subscriptions
