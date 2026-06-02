@@ -410,11 +410,10 @@ export default {
       return `draft-${this.conversationIdByRoute}-${this.replyType}`;
     },
     audioRecordFormat() {
-      if (
-        this.isAWhatsAppChannel ||
-        this.isATelegramChannel ||
-        this.isANotificaMeChannel
-      ) {
+      if (this.isAWhatsAppChannel) {
+        return AUDIO_FORMATS.OGG;
+      }
+      if (this.isATelegramChannel || this.isANotificaMeChannel) {
         return AUDIO_FORMATS.MP3;
       }
       if (this.isAPIInbox) {
