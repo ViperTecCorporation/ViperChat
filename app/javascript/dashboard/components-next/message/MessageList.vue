@@ -70,32 +70,34 @@ const fetchedReplyMessages = reactive(new Map());
  * @returns {Promise<Object|null>} - The fetched message or null if not found/error
  */
 const fetchReplyMessage = async (messageId, conversationId) => {
+  const cacheKey = String(messageId);
+
   // Return cached result if already fetched
-  if (fetchedReplyMessages.has(messageId)) {
-    return fetchedReplyMessages.get(messageId);
+  if (fetchedReplyMessages.has(cacheKey)) {
+    return fetchedReplyMessages.get(cacheKey);
   }
 
   try {
     const response = await MessageApi.getPreviousMessages({
       conversationId,
-      before: messageId + 100,
-      after: messageId - 100,
+      before: Number(messageId) + 100,
+      after: Number(messageId) - 100,
     });
 
     const messages = response.data?.payload || [];
-    const targetMessage = messages.find(msg => msg.id === messageId);
+    const targetMessage = messages.find(msg => String(msg.id) === cacheKey);
 
     if (targetMessage) {
       const camelCaseMessage = useCamelCase(targetMessage);
-      fetchedReplyMessages.set(messageId, camelCaseMessage);
+      fetchedReplyMessages.set(cacheKey, camelCaseMessage);
       return camelCaseMessage;
     }
 
     // Cache null result to avoid repeated API calls
-    fetchedReplyMessages.set(messageId, null);
+    fetchedReplyMessages.set(cacheKey, null);
     return null;
   } catch (error) {
-    fetchedReplyMessages.set(messageId, null);
+    fetchedReplyMessages.set(cacheKey, null);
     return null;
   }
 };
@@ -147,19 +149,23 @@ const getInReplyToMessage = parentMessage => {
 
   if (!inReplyToMessageId) return null;
 
+  const replyMessageKey = String(inReplyToMessageId);
+
   // Try to find in current messages first
-  let replyMessage = props.messages?.find(msg => msg.id === inReplyToMessageId);
+  let replyMessage = props.messages?.find(
+    msg => String(msg.id) === replyMessageKey
+  );
 
   // Then try store messages
   if (!replyMessage && currentChat.value?.messages) {
     replyMessage = currentChat.value.messages.find(
-      msg => msg.id === inReplyToMessageId
+      msg => String(msg.id) === replyMessageKey
     );
   }
 
   // Then check fetch cache
-  if (!replyMessage && fetchedReplyMessages.has(inReplyToMessageId)) {
-    replyMessage = fetchedReplyMessages.get(inReplyToMessageId);
+  if (!replyMessage && fetchedReplyMessages.has(replyMessageKey)) {
+    replyMessage = fetchedReplyMessages.get(replyMessageKey);
   }
 
   // If still not found and we have conversation context, fetch it

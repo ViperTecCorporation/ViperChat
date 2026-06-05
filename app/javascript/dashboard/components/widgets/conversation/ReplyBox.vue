@@ -1433,14 +1433,17 @@ export default {
       );
 
       this.inReplyTo = this.currentChat?.messages?.find(message => {
-        if (message.id === replyToMessageId) {
+        if (String(message.id) === String(replyToMessageId)) {
           return true;
         }
         return false;
       });
     },
-    onReplyToMessage() {
-      this.fetchAndSetReplyTo();
+    onReplyToMessage(message) {
+      this.inReplyTo = message || null;
+      if (!this.inReplyTo) {
+        this.fetchAndSetReplyTo();
+      }
       if (this.inReplyTo) {
         this.$nextTick(() => {
           const pos = this.isSignatureEnabledForInbox ? 'start' : 'end';
