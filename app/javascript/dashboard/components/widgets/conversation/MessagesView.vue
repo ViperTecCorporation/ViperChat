@@ -109,6 +109,7 @@ export default {
         selectedMessageIds: [],
       },
       showForwardModal: false,
+      highlightedMessageTimer: null,
     };
   },
 
@@ -320,6 +321,9 @@ export default {
   unmounted() {
     this.removeBusListeners();
     this.removeScrollListener();
+    if (this.highlightedMessageTimer) {
+      clearTimeout(this.highlightedMessageTimer);
+    }
   },
 
   methods: {
@@ -371,13 +375,46 @@ export default {
       emitter.off(BUS_EVENTS.SCROLL_TO_MESSAGE, this.onScrollToMessage);
       emitter.off(BUS_EVENTS.FORWARD_MESSAGES, this.onForwardMessagesStart);
     },
+    highlightMessageElement(messageElement) {
+      if (this.highlightedMessageTimer) {
+        clearTimeout(this.highlightedMessageTimer);
+        this.highlightedMessageTimer = null;
+      }
+
+      const previousHighlighted = this.conversationPanel.querySelector(
+        '[data-quoted-highlight="true"]'
+      );
+      if (previousHighlighted && previousHighlighted !== messageElement) {
+        previousHighlighted.removeAttribute('data-quoted-highlight');
+        previousHighlighted.style.boxShadow = '';
+        previousHighlighted.style.borderRadius = '';
+        previousHighlighted.style.transition = '';
+      }
+
+      messageElement.setAttribute('data-quoted-highlight', 'true');
+      messageElement.style.transition = 'box-shadow 150ms ease';
+      messageElement.style.borderRadius = '0.75rem';
+      messageElement.style.boxShadow =
+        '0 0 0 2px rgb(59 130 246), 0 0 0 6px rgb(59 130 246 / 0.18)';
+
+      this.highlightedMessageTimer = setTimeout(() => {
+        messageElement.removeAttribute('data-quoted-highlight');
+        messageElement.style.boxShadow = '';
+        messageElement.style.borderRadius = '';
+        messageElement.style.transition = '';
+        this.highlightedMessageTimer = null;
+      }, 2500);
+    },
     onScrollToMessage({ messageId = '' } = {}) {
       this.$nextTick(() => {
         const messageElement = document.getElementById('message' + messageId);
         if (messageElement) {
           this.isProgrammaticScroll = true;
-          messageElement.scrollIntoView({ behavior: 'smooth' });
-          this.fetchPreviousMessages();
+          messageElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+          this.highlightMessageElement(messageElement);
         } else {
           this.scrollToBottom();
         }
