@@ -96,7 +96,9 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     if picture_url.present?
       @conversation.additional_attributes ||= {}
       @conversation.additional_attributes['group_picture'] = picture_url
-      Avatar::AvatarFromUrlJob.perform_later(@conversation.contact, picture_url)
+      if Avatar::AvatarFromUrlJob.should_enqueue?(@conversation.contact, picture_url)
+        Avatar::AvatarFromUrlJob.perform_later(@conversation.contact, picture_url)
+      end
     end
 
     @conversation.assign_attributes(attrs)

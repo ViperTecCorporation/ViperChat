@@ -120,7 +120,7 @@ RSpec.describe Avatar::AvatarFromUrlJob do
       described_class.perform_now(avatarable, valid_url)
       expect(avatarable.avatar).not_to be_attached
       avatarable.reload
-      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_present
+      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_nil
       expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(valid_url))
       expect(WebMock).not_to have_requested(:get, valid_url)
     end

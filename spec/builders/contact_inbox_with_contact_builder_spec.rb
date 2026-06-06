@@ -144,6 +144,22 @@ describe ContactInboxWithContactBuilder do
       end.not_to have_enqueued_job(Avatar::AvatarFromUrlJob)
     end
 
+    it 'does not enqueue avatar import when the avatar url hash is unchanged' do
+      avatar_url = 'https://cdn.example.com/profile/maria.jpg'
+      contact.update!(additional_attributes: { 'avatar_url_hash' => Digest::SHA256.hexdigest(avatar_url) })
+
+      expect do
+        described_class.new(
+          source_id: existing_contact_inbox.source_id,
+          inbox: inbox,
+          contact_attributes: {
+            name: 'Maria',
+            avatar_url: avatar_url
+          }
+        ).perform
+      end.not_to have_enqueued_job(Avatar::AvatarFromUrlJob)
+    end
+
     it 'clears invalid legacy email before enriching an existing contact' do
       contact.update_columns(email: '123456789012345') # rubocop:disable Rails/SkipsModelValidations
 

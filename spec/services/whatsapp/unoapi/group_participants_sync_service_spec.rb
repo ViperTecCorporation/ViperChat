@@ -166,6 +166,34 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
     expect(conversation.reload.additional_attributes['group_picture']).to eq('https://cdn.example.com/groups/current.jpg')
   end
 
+  it 'does not enqueue group avatar sync when the group picture hash is unchanged' do
+    picture_url = 'https://cdn.example.com/groups/group.jpg'
+    group_contact.update!(additional_attributes: { 'avatar_url_hash' => Digest::SHA256.hexdigest(picture_url) })
+    stub_request(:get, details_url).to_return(
+      status: 200,
+      body: {
+        picture: picture_url
+      }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+    stub_request(:get, participants_url).to_return(
+      status: 200,
+      body: {
+        participants: [
+          {
+            jid: '556600000000@s.whatsapp.net',
+            wa_id: '556600000000',
+            name: 'Sessao'
+          }
+        ]
+      }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+
+    expect { service.perform }.not_to have_enqueued_job(Avatar::AvatarFromUrlJob)
+    expect(conversation.reload.additional_attributes['group_picture']).to eq(picture_url)
+  end
+
   it 'preserves an existing participant profile picture when sync returns an empty profile_url' do
     participant_contact = create(:contact, account: whatsapp_channel.account, name: 'Maria')
     create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: participant_contact, source_id: '556699999999')

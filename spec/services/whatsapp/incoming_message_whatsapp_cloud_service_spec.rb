@@ -851,6 +851,51 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(conversation.additional_attributes['group_picture']).to eq('https://cdn.example.com/groups/new-picture.jpg')
         expect(group_contact.reload.name).to eq('Equipe Comercial VIP')
       end
+
+      it 'does not enqueue group avatar sync when group settings picture hash is unchanged' do
+        picture_url = 'https://cdn.example.com/groups/new-picture.jpg'
+        group_contact = create(
+          :contact,
+          account: whatsapp_channel.account,
+          name: 'Equipe Comercial',
+          additional_attributes: { 'avatar_url_hash' => Digest::SHA256.hexdigest(picture_url) }
+        )
+        group_contact_inbox = create(
+          :contact_inbox,
+          inbox: whatsapp_channel.inbox,
+          contact: group_contact,
+          source_id: '120363040468224422@g.us'
+        )
+        create(
+          :conversation,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          contact: group_contact,
+          contact_inbox: group_contact_inbox,
+          group: true,
+          group_source_id: '120363040468224422@g.us',
+          group_title: 'Equipe Comercial'
+        )
+
+        settings_params = {
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              field: 'group_settings_update',
+              value: {
+                group_id: '120363040468224422@g.us',
+                changes: {
+                  picture: picture_url
+                }
+              }
+            }]
+          }]
+        }.with_indifferent_access
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: settings_params).perform
+        end.not_to have_enqueued_job(Avatar::AvatarFromUrlJob)
+      end
     end
   end
 

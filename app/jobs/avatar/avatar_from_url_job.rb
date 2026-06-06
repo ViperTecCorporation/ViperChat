@@ -13,19 +13,42 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
   MAX_DOWNLOAD_SIZE = 15.megabytes
   RATE_LIMIT_WINDOW = 1.minute
 
-  def perform(avatarable, avatar_url)
-    return unless syncable_avatar?(avatarable, avatar_url)
+  def self.should_enqueue?(avatarable, avatar_url)
+    return false if avatar_url.blank?
+    return true unless avatarable.is_a?(Contact)
 
-    fetch_and_attach_avatar(avatarable, avatar_url)
-  rescue SafeFetch::HttpError => e
-    log_http_error(avatar_url, e)
-  rescue SafeFetch::Error => e
-    Rails.logger.error "AvatarFromUrlJob error for #{avatar_url}: #{e.class} - #{e.message}"
-  ensure
-    update_avatar_sync_attributes(avatarable, avatar_url)
+    attrs = avatarable.additional_attributes || {}
+    attrs['avatar_url_hash'] != generate_url_hash(avatar_url)
+  end
+
+  def self.generate_url_hash(url)
+    Digest::SHA256.hexdigest(url)
+  end
+
+  def perform(avatarable, avatar_url)
+    return if duplicate_avatar_url?(avatarable, avatar_url)
+
+    begin
+      return unless syncable_avatar?(avatarable, avatar_url)
+
+      fetch_and_attach_avatar(avatarable, avatar_url)
+    rescue SafeFetch::HttpError => e
+      log_http_error(avatar_url, e)
+    rescue SafeFetch::Error => e
+      Rails.logger.error "AvatarFromUrlJob error for #{avatar_url}: #{e.class} - #{e.message}"
+    ensure
+      update_avatar_sync_attributes(avatarable, avatar_url)
+    end
   end
 
   private
+
+  def duplicate_avatar_url?(avatarable, avatar_url)
+    return false if avatar_url.blank?
+    return false unless avatarable.is_a?(Contact)
+
+    duplicate_url?(avatarable.additional_attributes || {}, avatar_url)
+  end
 
   def syncable_avatar?(avatarable, avatar_url)
     avatarable.respond_to?(:avatar) &&
@@ -87,7 +110,7 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
   end
 
   def generate_url_hash(url)
-    Digest::SHA256.hexdigest(url)
+    self.class.generate_url_hash(url)
   end
 
   def update_avatar_sync_attributes(avatarable, avatar_url)
