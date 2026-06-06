@@ -270,6 +270,8 @@
       "DISMISS_REPLY": "Dismiss reply",
       "REPLYING_TO": "Replying to:",
       "TIP_EMOJI_ICON": "Show emoji selector",
+      "TIP_STICKER_ICON": "Open stickers",
+      "TIP_ATTACH_CONTACT_ICON": "Attach contacts",
       "TIP_ATTACH_ICON": "Attach files",
       "TIP_AUDIORECORDER_ICON": "Record audio",
       "TIP_AUDIORECORDER_PERMISSION": "Allow access to audio",
