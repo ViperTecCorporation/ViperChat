@@ -22,7 +22,9 @@ RSpec.describe 'Enterprise Audit API', type: :request do
         expect(response).to have_http_status(:unauthorized)
         json_response = JSON.parse(response.body)
         expect(json_response['success']).to be(false)
-        expect(json_response['errors']).to include(I18n.t('messages.login_saml_user'))
+        expect(json_response['errors']).to include(
+          I18n.t('messages.login_saml_user', locale: ENV.fetch('DEFAULT_LOCALE', 'pt_BR'))
+        )
       end
 
       it 'allows login with valid SSO token' do

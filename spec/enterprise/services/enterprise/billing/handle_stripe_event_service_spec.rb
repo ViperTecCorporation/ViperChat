@@ -7,6 +7,7 @@ describe Enterprise::Billing::HandleStripeEventService do
   let(:data) { double }
   let(:subscription) { double }
   let!(:account) { create(:account, custom_attributes: { stripe_customer_id: 'cus_123' }) }
+  let(:always_enabled_features) { %w[advanced_search advanced_search_indexing] }
 
   before do
     # Create cloud plans configuration
@@ -158,7 +159,7 @@ describe Enterprise::Billing::HandleStripeEventService do
                        described_class::BUSINESS_PLAN_FEATURES +
                        described_class::ENTERPRISE_PLAN_FEATURES
 
-        all_features.each do |feature|
+        (all_features - always_enabled_features).each do |feature|
           expect(account).not_to be_feature_enabled(feature)
         end
       end
@@ -178,11 +179,11 @@ describe Enterprise::Billing::HandleStripeEventService do
         end
 
         # But business and enterprise features should be disabled
-        described_class::BUSINESS_PLAN_FEATURES.each do |feature|
+        (described_class::BUSINESS_PLAN_FEATURES - always_enabled_features).each do |feature|
           expect(account).not_to be_feature_enabled(feature)
         end
 
-        described_class::ENTERPRISE_PLAN_FEATURES.each do |feature|
+        (described_class::ENTERPRISE_PLAN_FEATURES - always_enabled_features).each do |feature|
           expect(account).not_to be_feature_enabled(feature)
         end
       end
@@ -204,7 +205,7 @@ describe Enterprise::Billing::HandleStripeEventService do
           expect(account).to be_feature_enabled(feature)
         end
 
-        described_class::ENTERPRISE_PLAN_FEATURES.each do |feature|
+        (described_class::ENTERPRISE_PLAN_FEATURES - always_enabled_features).each do |feature|
           expect(account).not_to be_feature_enabled(feature)
         end
       end

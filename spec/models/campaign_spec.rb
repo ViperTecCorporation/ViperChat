@@ -142,7 +142,7 @@ RSpec.describe Campaign do
     context 'when WhatsApp campaign feature is disabled' do
       let(:account) { create(:account) }
       let(:whatsapp_channel) do
-        create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
+        create(:channel_whatsapp, account: account, provider: 'unoapi', validate_provider_config: false, sync_templates: false)
       end
       let(:campaign) { create(:campaign, account: account, inbox: whatsapp_channel.inbox) }
 

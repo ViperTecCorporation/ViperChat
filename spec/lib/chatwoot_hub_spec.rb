@@ -15,21 +15,17 @@ describe ChatwootHub do
   end
 
   context 'when fetching sync_with_hub' do
-    it 'get latest version from chatwoot hub' do
-      version = '1.1.1'
-      allow(RestClient).to receive(:post).and_return({ version: version }.to_json)
-      expect(described_class.sync_with_hub['version']).to eq version
-      expect(RestClient).to have_received(:post).with(described_class.ping_url, described_class.instance_config
-        .merge(described_class.instance_metrics).to_json, { content_type: :json, accept: :json })
+    it 'does not send instance metrics when telemetry is globally disabled' do
+      allow(RestClient).to receive(:post)
+      expect(described_class.sync_with_hub).to be_nil
+      expect(RestClient).not_to have_received(:post)
     end
 
     it 'will not send instance metrics when telemetry is disabled' do
-      version = '1.1.1'
       with_modified_env DISABLE_TELEMETRY: 'true' do
-        allow(RestClient).to receive(:post).and_return({ version: version }.to_json)
-        expect(described_class.sync_with_hub['version']).to eq version
-        expect(RestClient).to have_received(:post).with(described_class.ping_url,
-                                                        described_class.instance_config.to_json, { content_type: :json, accept: :json })
+        allow(RestClient).to receive(:post)
+        expect(described_class.sync_with_hub).to be_nil
+        expect(RestClient).not_to have_received(:post)
       end
     end
 
@@ -61,8 +57,8 @@ describe ChatwootHub do
       info = { event_name: event_name, event_data: event_data }
       allow(RestClient).to receive(:post)
       described_class.emit_event(event_name, event_data)
-      expect(RestClient).to have_received(:post).with(described_class.events_url,
-                                                      info.merge(described_class.instance_config).to_json, { content_type: :json, accept: :json })
+      expect(RestClient).not_to have_received(:post).with(described_class.events_url,
+                                                          info.merge(described_class.instance_config).to_json, { content_type: :json, accept: :json })
     end
 
     it 'will not send instance events when telemetry is disabled' do

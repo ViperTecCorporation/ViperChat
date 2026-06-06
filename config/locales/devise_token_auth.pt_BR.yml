@@ -1,0 +1,7 @@
+pt_BR:
+  devise_token_auth:
+    sessions:
+      not_confirmed: "Uma mensagem com um link de confirmação foi enviada para sua conta em '%{email}'. Você precisa seguir as instruções no e-mail antes que sua conta possa ser ativada"
+      bad_credentials: 'Credenciais de login inválidas. Tente novamente.'
+      not_supported: 'Use POST /sign_in para efetuar o login. GET não é suportado.'
+      user_not_found: 'Usuário não existe ou não está logado.'

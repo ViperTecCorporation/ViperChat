@@ -134,8 +134,6 @@ const whatsappMessageTemplates = computed(() =>
 
 const voiceCallEnabled = computed(() => isVoiceCallEnabled(props.targetInbox));
 
-const voiceCallEnabled = computed(() => isVoiceCallEnabled(props.targetInbox));
-
 const effectiveChannelType = computed(() =>
   getEffectiveChannelType(inboxChannelType.value, targetInboxMedium.value)
 );

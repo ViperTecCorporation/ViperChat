@@ -207,7 +207,9 @@ class Attachment < ApplicationRecord
   end
 
   def validate_file_size(byte_size)
-    max_size_mb = (ENV['MAXIMUM_FILE_UPLOAD_SIZE'] || 150).to_i
+    max_size_mb = GlobalConfigService.load('MAXIMUM_FILE_UPLOAD_SIZE', 40).to_i
+    max_size_mb = 40 if max_size_mb <= 0
+
     errors.add(:file, 'size is too big') if byte_size > max_size_mb.megabytes
   end
 

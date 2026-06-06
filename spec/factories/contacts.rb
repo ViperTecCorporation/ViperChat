@@ -14,7 +14,7 @@ FactoryBot.define do
     end
 
     trait :with_phone_number do
-      phone_number { Faker::PhoneNumber.cell_phone_in_e164 }
+      sequence(:phone_number) { |n| "+1415555#{format('%04d', n % 10_000)}" }
     end
   end
 end

@@ -568,7 +568,8 @@ describe Twilio::IncomingMessageService do
 
         it 'appends to existing contact when contact inbox exists in old format' do
           # Create existing contact with old format (12 digits)
-          old_contact = create(:contact, account: account, phone_number: '+554188887777')
+          old_contact = create(:contact, account: account)
+          old_contact.update_column(:phone_number, '+554188887777')
           contact_inbox = create(:contact_inbox, source_id: 'whatsapp:+554188887777', contact: old_contact, inbox: whatsapp_twilio_channel.inbox)
           last_conversation = create(:conversation, inbox: whatsapp_twilio_channel.inbox, contact_inbox: contact_inbox)
 

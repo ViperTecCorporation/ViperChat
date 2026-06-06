@@ -39,10 +39,12 @@ module Whatsapp::IncomingMessageIdentifierHelper
   end
 
   def incoming_message_source_ids(contact_params)
+    message = messages_data&.first || {}
+
     [
-      whatsapp_phone_source_id(contact_params[:wa_id].presence || messages_data.first[:from].presence),
-      whatsapp_source_id(contact_params[:user_id].presence || messages_data.first[:from_user_id].presence),
-      whatsapp_source_id(contact_params[:parent_user_id].presence || messages_data.first[:from_parent_user_id].presence)
+      whatsapp_phone_source_id(contact_params[:wa_id].presence || message[:from].presence),
+      whatsapp_source_id(contact_params[:user_id].presence || message[:from_user_id].presence),
+      whatsapp_source_id(contact_params[:parent_user_id].presence || message[:from_parent_user_id].presence)
     ].compact_blank.uniq
   end
 

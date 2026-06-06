@@ -116,9 +116,17 @@ class Twilio::IncomingMessageService
   def contact_attributes
     {
       name: contact_name,
-      phone_number: phone_number.presence,
+      phone_number: valid_contact_phone_number,
       additional_attributes: additional_attributes
     }
+  end
+
+  def valid_contact_phone_number
+    return if phone_number.blank?
+
+    contact = Contact.new(account: account, phone_number: phone_number)
+    contact.valid?
+    return phone_number if contact.errors[:phone_number].blank?
   end
 
   def contact_name

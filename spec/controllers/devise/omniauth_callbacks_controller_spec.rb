@@ -20,6 +20,8 @@ RSpec.describe 'DeviseOverrides::OmniauthCallbacksController', type: :request do
 
   before do
     allow(Account::SignUpEmailValidationService).to receive(:new).and_return(email_validation_service)
+    allow_any_instance_of(ActionView::Base).to receive(:vite_client_tag).and_return('')
+    allow_any_instance_of(ActionView::Base).to receive(:vite_javascript_tag).and_return('')
   end
 
   describe '#omniauth_sucess' do
@@ -45,7 +47,7 @@ RSpec.describe 'DeviseOverrides::OmniauthCallbacksController', type: :request do
                                                              account_name: 'example',
                                                              user_full_name: 'test',
                                                              email: 'test_not_preset@example.com',
-                                                             locale: I18n.locale,
+                                                             locale: ENV.fetch('DEFAULT_LOCALE', 'pt_BR').to_sym,
                                                              confirmed: nil
                                                            })
         expect(account_builder).to have_received(:perform)
@@ -128,7 +130,7 @@ RSpec.describe 'DeviseOverrides::OmniauthCallbacksController', type: :request do
 
     it 'allows login' do
       with_modified_env FRONTEND_URL: 'http://www.example.com' do
-        create(:user, email: 'test@example.com')
+        create(:user, email: 'test@example.com', account: create(:account))
         set_omniauth_config('test@example.com')
 
         get '/omniauth/google_oauth2/callback'
@@ -149,7 +151,7 @@ RSpec.describe 'DeviseOverrides::OmniauthCallbacksController', type: :request do
     # we need to test this explicitly
     it 'allows personal account login' do
       with_modified_env FRONTEND_URL: 'http://www.example.com' do
-        create(:user, email: 'personal-existing@gmail.com')
+        create(:user, email: 'personal-existing@gmail.com', account: create(:account))
         set_omniauth_config('personal-existing@gmail.com')
 
         get '/omniauth/google_oauth2/callback'

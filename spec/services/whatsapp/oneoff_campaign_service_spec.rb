@@ -9,9 +9,10 @@ describe Whatsapp::OneoffCampaignService do
   let(:label1) { create(:label, account: account) }
   let(:label2) { create(:label, account: account) }
   let!(:campaign) do
-    create(:campaign, inbox: whatsapp_inbox, account: account,
-                      audience: [{ type: 'Label', id: label1.id }, { type: 'Label', id: label2.id }],
-                      template_params: template_params)
+    create_legacy_whatsapp_cloud_campaign(
+      audience: [{ type: 'Label', id: label1.id }, { type: 'Label', id: label2.id }],
+      template_params: template_params
+    )
   end
   let(:template_params) do
     {
@@ -34,6 +35,20 @@ describe Whatsapp::OneoffCampaignService do
     allow_any_instance_of(described_class).to receive(:channel).and_return(whatsapp_channel) # rubocop:disable RSpec/AnyInstance
   end
 
+  def create_legacy_whatsapp_cloud_campaign(attributes = {})
+    campaign = build(
+      :campaign,
+      {
+        inbox: whatsapp_inbox,
+        account: account,
+        campaign_type: :one_off,
+        scheduled_at: Time.current
+      }.merge(attributes)
+    )
+    campaign.save!(validate: false)
+    campaign
+  end
+
   describe '#perform' do
     before do
       # Enable WhatsApp campaigns feature flag for all tests
@@ -42,7 +57,7 @@ describe Whatsapp::OneoffCampaignService do
 
     context 'when campaign validation fails' do
       it 'raises error if campaign is completed' do
-        campaign.completed!
+        campaign.update_column(:campaign_status, Campaign.campaign_statuses[:completed])
 
         expect { described_class.new(campaign: campaign).perform }.to raise_error 'Completed Campaign'
       end
@@ -157,20 +172,21 @@ describe Whatsapp::OneoffCampaignService do
         contact = create(:contact, :with_phone_number, account: account, name: 'Jane Smith', email: 'jane@example.com')
         contact.update_labels([label1.title])
 
-        campaign_with_liquid = create(:campaign, inbox: whatsapp_inbox, account: account,
-                                                 audience: [{ type: 'Label', id: label1.id }],
-                                                 template_params: {
-                                                   'name' => 'ticket_status_updated',
-                                                   'namespace' => '23423423_2342423_324234234_2343224',
-                                                   'category' => 'UTILITY',
-                                                   'language' => 'en',
-                                                   'processed_params' => {
-                                                     'body' => {
-                                                       'name' => '{{contact.name}}',
-                                                       'ticket_id' => '{{contact.email}}'
-                                                     }
-                                                   }
-                                                 })
+        campaign_with_liquid = create_legacy_whatsapp_cloud_campaign(
+          audience: [{ type: 'Label', id: label1.id }],
+          template_params: {
+            'name' => 'ticket_status_updated',
+            'namespace' => '23423423_2342423_324234234_2343224',
+            'category' => 'UTILITY',
+            'language' => 'en',
+            'processed_params' => {
+              'body' => {
+                'name' => '{{contact.name}}',
+                'ticket_id' => '{{contact.email}}'
+              }
+            }
+          }
+        )
 
         contact_drop_name = ContactDrop.new(contact).name
 
@@ -200,18 +216,19 @@ describe Whatsapp::OneoffCampaignService do
         contact = create(:contact, :with_phone_number, account: account, name: 'Jane', email: nil)
         contact.update_labels([label1.title])
 
-        campaign_with_blank_liquid = create(:campaign, inbox: whatsapp_inbox, account: account,
-                                                       audience: [{ type: 'Label', id: label1.id }],
-                                                       template_params: {
-                                                         'name' => 'test_template',
-                                                         'namespace' => 'test_namespace',
-                                                         'language' => 'en',
-                                                         'processed_params' => {
-                                                           'body' => {
-                                                             'email' => '{{contact.email}}'
-                                                           }
-                                                         }
-                                                       })
+        campaign_with_blank_liquid = create_legacy_whatsapp_cloud_campaign(
+          audience: [{ type: 'Label', id: label1.id }],
+          template_params: {
+            'name' => 'test_template',
+            'namespace' => 'test_namespace',
+            'language' => 'en',
+            'processed_params' => {
+              'body' => {
+                'email' => '{{contact.email}}'
+              }
+            }
+          }
+        )
 
         expect(whatsapp_channel).not_to receive(:send_template)
         expect(Rails.logger).to receive(:info).with("Skipping contact #{contact.name} - liquid variables resolved to blank values")

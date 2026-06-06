@@ -12,8 +12,8 @@ RSpec.describe CampaignMessageJob do
   end
 
   let(:account) { create(:account) }
-  let!(:unoapi_channel) { create(:channel_whatsapp, provider: 'unoapi', sync_templates: false, validate_provider_config: false) }
-  let!(:unoapi_inbox) { create(:inbox, channel: unoapi_channel) }
+  let!(:unoapi_channel) { create(:channel_whatsapp, account: account, provider: 'unoapi', sync_templates: false, validate_provider_config: false) }
+  let!(:unoapi_inbox) { create(:inbox, account: account, channel: unoapi_channel) }
   let(:phone_number) { Faker::PhoneNumber.cell_phone_in_e164 }
   let(:name) { Faker::Name.name }
   let(:identifier) { rand(999..1000).to_s }

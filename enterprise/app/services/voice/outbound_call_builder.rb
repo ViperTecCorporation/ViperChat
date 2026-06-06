@@ -129,8 +129,20 @@ class Voice::OutboundCallBuilder
       "VOICE_OUTBOUND_CALL_BUILDER channel " \
       "channel_class=#{channel&.class} " \
       "channel_id=#{channel&.id} " \
-      "provider=#{channel&.provider} " \
-      "provider_config_class=#{channel&.provider_config.class}"
+      "provider=#{channel_provider(channel)} " \
+      "provider_config_class=#{channel_provider_config_class(channel)}"
     )
+  end
+
+  def channel_provider(channel)
+    return channel.provider if channel&.respond_to?(:provider)
+
+    'twilio'
+  end
+
+  def channel_provider_config_class(channel)
+    return unless channel&.respond_to?(:provider_config)
+
+    channel.provider_config.class
   end
 end

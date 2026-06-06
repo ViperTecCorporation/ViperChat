@@ -4,10 +4,10 @@ describe Whatsapp::OneoffUnoapiCampaignService do
   subject(:unoapi_campaign_service) { described_class.new(campaign: campaign) }
 
   let(:account) { create(:account) }
-  let!(:unoapi_channel) { create(:channel_whatsapp, provider: 'unoapi', sync_templates: false, validate_provider_config: false) }
-  let!(:unoapi_inbox) { create(:inbox, channel: unoapi_channel) }
-  let!(:contact) { create(:contact, phone_number: Faker::PhoneNumber.cell_phone_in_e164, account: account) }
-  let(:phone_number) { Faker::PhoneNumber.cell_phone_in_e164 }
+  let!(:unoapi_channel) { create(:channel_whatsapp, account: account, provider: 'unoapi', sync_templates: false, validate_provider_config: false) }
+  let!(:unoapi_inbox) { unoapi_channel.inbox }
+  let!(:contact) { create(:contact, :with_phone_number, account: account) }
+  let(:phone_number) { '+14155552671' }
   let(:uuid) { rand(1..10) }
   let(:audience_1) { { phone_number: phone_number, audience_id: uuid, status: :scheduled } }
   let(:audience_2) { { phone_number: contact.phone_number, audience_id: uuid, status: :scheduled } }

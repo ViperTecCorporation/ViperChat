@@ -1,6 +1,11 @@
 require 'rails_helper'
 
 RSpec.describe 'Installation::Onboarding API', type: :request do
+  before do
+    allow_any_instance_of(ActionView::Base).to receive(:vite_client_tag).and_return('')
+    allow_any_instance_of(ActionView::Base).to receive(:vite_javascript_tag).and_return('')
+  end
+
   describe 'GET /installation/onboarding' do
     context 'when CHATWOOT_INSTALLATION_ONBOARDING redis key is not set' do
       let!(:super_admin) { create(:super_admin) }

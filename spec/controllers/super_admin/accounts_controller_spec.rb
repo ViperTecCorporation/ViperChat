@@ -19,7 +19,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         sign_in(super_admin, scope: :super_admin)
         get '/super_admin/accounts'
         expect(response).to have_http_status(:success)
-        expect(response.body).to include('New account')
+        expect(response.body).to include('Novo conta')
         expect(response.body).to include(account.name)
       end
     end

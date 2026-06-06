@@ -198,7 +198,7 @@ class Api::V1::Accounts::ConferenceController < Api::V1::Accounts::BaseControlle
   end
 
   def provider
-    @provider ||= @voice_inbox.channel.provider
+    @provider ||= @voice_inbox.channel.respond_to?(:provider) ? @voice_inbox.channel.provider : 'twilio'
   end
 
   def token_service
@@ -215,14 +215,17 @@ class Api::V1::Accounts::ConferenceController < Api::V1::Accounts::BaseControlle
     raise ActiveRecord::RecordNotFound, 'conversation_id required' if cid.blank?
 
     conversation = Current.account.conversations.find_by!(display_id: cid)
-    authorize conversation, :show?
-    return conversation if conversation.inbox_id == @voice_inbox.id
+    if conversation.inbox_id == @voice_inbox.id
+      authorize conversation, :show?
+      return conversation
+    end
 
     internal_voice_inbox_id = conversation.additional_attributes&.dig('voice_inbox_id')
     unless internal_voice_inbox_id == @voice_inbox.id
       raise ActiveRecord::RecordNotFound, 'Conversation not linked to voice inbox'
     end
 
+    authorize conversation, :show?
     conversation
   end
 end

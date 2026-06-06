@@ -47,24 +47,24 @@ RSpec.describe Message do
     end
 
     context 'when it validates source_id length' do
-      it 'valid when source_id is within text limit (20000 chars)' do
-        long_source_id = 'a' * 10_000
+      it 'valid when source_id is within text limit (510 chars)' do
+        long_source_id = 'a' * 500
         message.source_id = long_source_id
         expect(message.valid?).to be true
       end
 
-      it 'valid when source_id is exactly 20000 characters' do
-        long_source_id = 'a' * 20_000
+      it 'valid when source_id is exactly 510 characters' do
+        long_source_id = 'a' * 510
         message.source_id = long_source_id
         expect(message.valid?).to be true
       end
 
-      it 'invalid when source_id exceeds text limit (20000 chars)' do
-        long_source_id = 'a' * 20_001
+      it 'invalid when source_id exceeds text limit (510 chars)' do
+        long_source_id = 'a' * 511
         message.source_id = long_source_id
         message.valid?
 
-        expect(message.errors[:source_id]).to include('is too long (maximum is 20000 characters)')
+        expect(message.errors[:source_id]).to include('is too long (maximum is 510 characters)')
       end
 
       it 'handles long email Message-ID headers correctly' do
@@ -140,6 +140,9 @@ RSpec.describe Message do
           contact_inbox: {
             source_id: message.conversation.contact_inbox.source_id
           },
+          group: false,
+          group_source_id: nil,
+          group_title: nil,
           last_activity_at: message.conversation.last_activity_at.to_i,
           unread_count: message.conversation.unread_incoming_messages.count
         },
@@ -788,6 +791,8 @@ RSpec.describe Message do
       before do
         allow(ChatwootApp).to receive(:chatwoot_cloud?).and_return(true)
         account.disable_features('advanced_search_indexing')
+        allow(account).to receive(:feature_enabled?).and_call_original
+        allow(account).to receive(:feature_enabled?).with('advanced_search_indexing').and_return(false)
       end
 
       it 'returns false' do
@@ -865,6 +870,8 @@ RSpec.describe Message do
       it 'does not call reindex_for_search for unpaid account on cloud' do
         allow(ChatwootApp).to receive(:chatwoot_cloud?).and_return(true)
         account.disable_features('advanced_search_indexing')
+        allow(account).to receive(:feature_enabled?).and_call_original
+        allow(account).to receive(:feature_enabled?).with('advanced_search_indexing').and_return(false)
         message = build(:message, conversation: conversation, account: account, message_type: :incoming)
         expect(message).not_to receive(:reindex_for_search)
         message.save!

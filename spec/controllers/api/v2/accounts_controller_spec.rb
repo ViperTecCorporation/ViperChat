@@ -76,7 +76,8 @@ RSpec.describe 'Accounts API', type: :request do
           expect(AccountBuilder).to have_received(:new).with(params.merge(user_password: params[:password]))
           expect(account_builder).to have_received(:perform)
           expect(response).to have_http_status(:forbidden)
-          expect(response.body).to eq({ message: I18n.t('errors.signup.failed') }.to_json)
+          expected_message = I18n.t('errors.signup.failed', locale: ENV.fetch('DEFAULT_LOCALE', 'pt_BR'))
+          expect(response.body).to eq({ message: expected_message }.to_json)
         end
       end
     end

@@ -1,6 +1,14 @@
 require 'rails_helper'
 
 describe '/app/login', type: :request do
+  let!(:super_admin) { create(:super_admin) }
+  let!(:account) { create(:account) }
+
+  before do
+    allow_any_instance_of(ActionView::Base).to receive(:vite_client_tag).and_return('')
+    allow_any_instance_of(ActionView::Base).to receive(:vite_javascript_tag).and_return('')
+  end
+
   context 'without DEFAULT_LOCALE' do
     it 'renders the dashboard' do
       get '/app/login'
@@ -42,6 +50,11 @@ describe '/app/login', type: :request do
 end
 
 RSpec.describe 'Dashboard', type: :request do
+  before do
+    allow_any_instance_of(ActionView::Base).to receive(:vite_client_tag).and_return('')
+    allow_any_instance_of(ActionView::Base).to receive(:vite_javascript_tag).and_return('')
+  end
+
   describe 'GET /' do
     context 'when installation has no accounts or super admins' do
       it 'redirects to installation onboarding' do

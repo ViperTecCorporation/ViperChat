@@ -66,7 +66,7 @@ describe Whatsapp::UnoapiWebhookSetupService do
     expect(payload['autoConnect']).to be(true)
     expect(payload['useRedis']).to be(true)
     expect(payload['useS3']).to be(true)
-    expect(webhook['urlAbsolute']).to eq('https://chatwoot.vipertec.net/webhooks/whatsapp/+5566996222471')
+    expect(webhook['urlAbsolute']).to eq('https://chatwoot.vipertec.net/webhooks/whatsapp/5566996222471')
     expect(webhook['url']).to be_nil
     expect(webhook['token']).to eq('c84834e6b008de54e8db97b7b01cc')
     expect(webhook['sendNewMessages']).to be(true)
