@@ -128,6 +128,8 @@ export default {
   },
   emits: [
     'toggleInsertArticle',
+    'toggleStickerPicker',
+    'openContactPicker',
     'selectWhatsappTemplate',
     'selectContentTemplate',
     'toggleQuotedReply',
@@ -202,6 +204,9 @@ export default {
       if (this.isEditorDisabled) return false;
       return this.showAudioRecorder && this.isRecordingAudio;
     },
+    hideEmojiAndStickerButtons() {
+      return this.isRecordingAudio || this.recordingAudioState === 'playing';
+    },
     isInstagramDM() {
       return this.conversationType === 'instagram_direct_message';
     },
@@ -239,6 +244,24 @@ export default {
     showMessageSignatureButton() {
       if (this.isEditorDisabled) return false;
       return !this.isOnPrivateNote;
+    },
+    showEmojiButton() {
+      return !this.isEditorDisabled && !this.hideEmojiAndStickerButtons;
+    },
+    showStickerButton() {
+      return (
+        !this.isOnPrivateNote &&
+        !this.isEditorDisabled &&
+        !this.hideEmojiAndStickerButtons &&
+        (this.isAWhatsAppCloudChannel || this.isAUnoapiChannel)
+      );
+    },
+    showContactPickerButton() {
+      return (
+        !this.isOnPrivateNote &&
+        !this.isEditorDisabled &&
+        (this.isAWhatsAppCloudChannel || this.isAUnoapiChannel)
+      );
     },
     sendWithSignature() {
       // channelType is sourced from inboxMixin
@@ -279,13 +302,31 @@ export default {
   <div class="flex justify-between p-3" :class="wrapClass">
     <div class="left-wrap">
       <NextButton
-        v-if="!isEditorDisabled"
+        v-if="showEmojiButton"
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_EMOJI_ICON')"
         icon="i-ph-smiley-sticker"
         slate
         faded
         sm
         @click="toggleEmojiPicker"
+      />
+      <NextButton
+        v-if="showStickerButton"
+        v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_STICKER_ICON')"
+        icon="i-ph-sticker"
+        slate
+        faded
+        sm
+        @click="$emit('toggleStickerPicker')"
+      />
+      <NextButton
+        v-if="showContactPickerButton"
+        v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_ATTACH_CONTACT_ICON')"
+        icon="i-ph-address-book-tabs"
+        slate
+        faded
+        sm
+        @click="$emit('openContactPicker')"
       />
       <FileUpload
         v-if="showAttachButton"
