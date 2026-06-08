@@ -12,6 +12,7 @@ RSpec.describe Contact do
   context 'with associations' do
     it { is_expected.to belong_to(:account) }
     it { is_expected.to have_many(:conversations).dependent(:destroy_async) }
+    it { is_expected.to have_many(:group_contacts).dependent(:destroy) }
   end
 
   describe 'concerns' do

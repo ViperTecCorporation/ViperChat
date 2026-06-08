@@ -115,7 +115,7 @@ class Conversation < ApplicationRecord
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
   has_many :attachments, through: :messages
   has_many :reporting_events, dependent: :destroy_async
-  has_many :group_contacts, dependent: :destroy_async
+  has_many :group_contacts, dependent: :destroy
   has_many :additional_contacts, through: :group_contacts, source: :contact
 
   before_save :ensure_snooze_until_reset
