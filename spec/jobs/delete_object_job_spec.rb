@@ -42,11 +42,14 @@ RSpec.describe DeleteObjectJob, type: :job do
       before do
         create_list(:conversation, 2, account: account, inbox: inbox1)
         create_list(:conversation, 1, account: account, inbox: inbox2)
+        create(:message, :with_attachment, account: account, inbox: inbox1)
         ReportingEvent.create!(account: account, name: 'acct_metric', value: 2.5)
         ReportingEvent.create!(account: account, inbox: inbox1, name: 'acct_inbox_metric', value: 3.5)
       end
 
-      it 'pre-deletes conversations, contacts, inboxes and reporting events and then destroys the account' do
+      it 'pre-deletes attachments, conversations, contacts, inboxes and reporting events and then destroys the account' do
+        attachment_ids = account.attachments.pluck(:id)
+        active_storage_attachment_ids = ActiveStorage::Attachment.where(record_type: 'Attachment', record_id: attachment_ids).pluck(:id)
         conv_ids = account.conversations.pluck(:id)
         contact_ids = account.contacts.pluck(:id)
         inbox_ids = account.inboxes.pluck(:id)
@@ -56,6 +59,8 @@ RSpec.describe DeleteObjectJob, type: :job do
 
         # Reload associations to ensure database state is current
         expect(Conversation.where(id: conv_ids).reload).to be_empty
+        expect(Attachment.where(id: attachment_ids).reload).to be_empty
+        expect(ActiveStorage::Attachment.where(id: active_storage_attachment_ids).reload).to be_empty
         expect(Contact.where(id: contact_ids).reload).to be_empty
         expect(Inbox.where(id: inbox_ids).reload).to be_empty
         expect(ReportingEvent.where(id: re_ids).reload).to be_empty
