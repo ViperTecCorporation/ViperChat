@@ -18,7 +18,31 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     return true unless avatarable.is_a?(Contact)
 
     attrs = avatarable.additional_attributes || {}
-    attrs['avatar_url_hash'] != generate_url_hash(avatar_url)
+    url_hash = generate_url_hash(avatar_url)
+    attrs['avatar_url_hash'] != url_hash && attrs['avatar_url_enqueued_hash'] != url_hash
+  end
+
+  def self.enqueue_if_needed(avatarable, avatar_url)
+    return false unless reserve_enqueue!(avatarable, avatar_url)
+
+    perform_later(avatarable, avatar_url)
+    true
+  end
+
+  def self.reserve_enqueue!(avatarable, avatar_url)
+    return false if avatar_url.blank?
+    return true unless avatarable.is_a?(Contact)
+
+    avatarable.with_lock do
+      attrs = avatarable.additional_attributes || {}
+      url_hash = generate_url_hash(avatar_url)
+      return false if attrs['avatar_url_hash'] == url_hash || attrs['avatar_url_enqueued_hash'] == url_hash
+
+      attrs['avatar_url_enqueued_hash'] = url_hash
+      attrs['last_avatar_enqueue_at'] = Time.current.iso8601
+      avatarable.update_columns(additional_attributes: attrs) # rubocop:disable Rails/SkipsModelValidations
+      true
+    end
   end
 
   def self.generate_url_hash(url)
@@ -121,6 +145,7 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     additional_attributes = avatarable.additional_attributes || {}
     additional_attributes['last_avatar_sync_at'] = Time.current.iso8601
     additional_attributes['avatar_url_hash'] = generate_url_hash(avatar_url)
+    additional_attributes.delete('avatar_url_enqueued_hash')
 
     # Persist without triggering validations that may fail due to avatar file checks
     avatarable.update_columns(additional_attributes: additional_attributes) # rubocop:disable Rails/SkipsModelValidations

@@ -84,6 +84,21 @@ RSpec.describe 'Super Admin accounts API', type: :request do
 
     context 'when it is an authenticated user' do
       it 'Deletes the account' do
+        inbox = create(:inbox, account: account)
+        group_contact = create(:contact, account: account, email: '120363040468224422@g.us')
+        participant = create(:contact, account: account)
+        contact_inbox = create(:contact_inbox, inbox: inbox, contact: group_contact, source_id: '120363040468224422@g.us')
+        conversation = create(
+          :conversation,
+          account: account,
+          inbox: inbox,
+          contact: group_contact,
+          contact_inbox: contact_inbox,
+          group: true,
+          group_source_id: '120363040468224422@g.us'
+        )
+        create(:group_contact, account: account, conversation: conversation, contact: participant)
+
         total_accounts = Account.count
         sign_in(super_admin, scope: :super_admin)
 

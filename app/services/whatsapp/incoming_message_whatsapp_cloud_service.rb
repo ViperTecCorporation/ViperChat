@@ -32,9 +32,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     if picture_url.present?
       conversation.additional_attributes ||= {}
       conversation.additional_attributes['group_picture'] = picture_url
-      if Avatar::AvatarFromUrlJob.should_enqueue?(conversation.contact, picture_url)
-        Avatar::AvatarFromUrlJob.perform_later(conversation.contact, picture_url)
-      end
+      Avatar::AvatarFromUrlJob.enqueue_if_needed(conversation.contact, picture_url)
     end
 
     conversation.update!(attrs)

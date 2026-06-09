@@ -18,6 +18,7 @@ RSpec.describe Conversation do
     it { is_expected.to belong_to(:assignee).optional }
     it { is_expected.to belong_to(:team).optional }
     it { is_expected.to belong_to(:campaign).optional }
+    it { is_expected.to have_many(:group_contacts).dependent(:destroy) }
   end
 
   describe 'concerns' do

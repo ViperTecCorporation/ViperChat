@@ -29,7 +29,15 @@ RSpec.describe Avatar::AvatarFromUrlJob do
       avatarable.reload
       expect(avatarable.avatar).to be_attached
       expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(valid_url))
+      expect(avatarable.additional_attributes['avatar_url_enqueued_hash']).to be_nil
       expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_present
+    end
+
+    it 'does not enqueue again when the same avatar url is already queued' do
+      avatarable.update!(additional_attributes: { 'avatar_url_enqueued_hash' => Digest::SHA256.hexdigest(valid_url) })
+
+      expect(described_class.should_enqueue?(avatarable, valid_url)).to be false
+      expect(described_class.enqueue_if_needed(avatarable, valid_url)).to be false
     end
 
     it 'attaches webp avatars and updates sync attributes' do

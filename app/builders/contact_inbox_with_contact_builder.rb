@@ -73,9 +73,7 @@ class ContactInboxWithContactBuilder
 
   def update_contact_avatar(contact)
     avatar_url = contact_attributes[:avatar_url]
-    return unless ::Avatar::AvatarFromUrlJob.should_enqueue?(contact, avatar_url)
-
-    ::Avatar::AvatarFromUrlJob.perform_later(contact, avatar_url)
+    ::Avatar::AvatarFromUrlJob.enqueue_if_needed(contact, avatar_url)
   end
 
   def create_contact
