@@ -282,6 +282,9 @@ Rails.application.routes.draw do
                 post :incoming, on: :member
                 post :status, on: :member
               end
+              post :enable_whatsapp_calling, on: :member
+              post :disable_whatsapp_calling, on: :member
+              post :set_inbound_calls, on: :member
             end
 
             resource :csat_template, only: [:show, :create], controller: 'inbox_csat_templates' do
