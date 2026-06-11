@@ -233,6 +233,24 @@ class ConversationFinder
                       )
                     end
 
+    return legacy_count_for_all_conversations(count_scope, internal_scope, waiting_scope) if count_scope.limit_value || count_scope.offset_value || count_scope.eager_loading?
+
+    waiting_filter = '(first_reply_created_at IS NULL OR waiting_since IS NOT NULL)'
+    waiting_filter = "#{waiting_filter} AND (assignee_id = #{current_user.id} OR assignee_id IS NULL)" unless @is_admin
+
+    counts = count_scope.unscope(:order).pick(
+      Arel.sql("COUNT(*) FILTER (WHERE assignee_id = #{current_user.id})"),
+      Arel.sql('COUNT(*) FILTER (WHERE assignee_id IS NOT NULL)'),
+      Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = FALSE AND assignee_id IS NULL)'),
+      Arel.sql("COUNT(*) FILTER (WHERE #{waiting_filter})"),
+      Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = TRUE)'),
+      Arel.sql('COUNT(*)')
+    )
+    counts = counts || [0, 0, 0, 0, 0, 0]
+    counts + [internal_scope.count]
+  end
+
+  def legacy_count_for_all_conversations(count_scope, internal_scope, waiting_scope)
     [
       count_scope.assigned_to(current_user).count,
       count_scope.assigned.count,
