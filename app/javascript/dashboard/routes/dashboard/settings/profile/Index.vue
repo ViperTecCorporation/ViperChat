@@ -17,8 +17,10 @@ import ChangePassword from './ChangePassword.vue';
 import NotificationPreferences from './NotificationPreferences.vue';
 import AudioNotifications from './AudioNotifications.vue';
 import SectionLayout from '../account/components/SectionLayout.vue';
+import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import AccessToken from './AccessToken.vue';
 import MfaSettingsCard from './MfaSettingsCard.vue';
+import ActiveSessions from './ActiveSessions.vue';
 import Policy from 'dashboard/components/policy.vue';
 import RadioCard from 'dashboard/components-next/radioCard/RadioCard.vue';
 import {
@@ -41,6 +43,8 @@ export default {
     AudioNotifications,
     AccessToken,
     MfaSettingsCard,
+    ActiveSessions,
+    BaseSettingsHeader,
   },
   setup() {
     const { isEditorHotKeyEnabled, updateUISettings } = useUISettings();
@@ -334,6 +338,13 @@ export default {
       :description="$t('PROFILE_SETTINGS.FORM.SECURITY_SECTION.NOTE')"
     >
       <MfaSettingsCard />
+    </SectionLayout>
+    <SectionLayout
+      with-border
+      :title="$t('PROFILE_SETTINGS.FORM.SESSIONS_SECTION.TITLE')"
+      :description="$t('PROFILE_SETTINGS.FORM.SESSIONS_SECTION.NOTE')"
+    >
+      <ActiveSessions />
     </SectionLayout>
     <Policy :permissions="audioNotificationPermissions">
       <SectionLayout
