@@ -328,6 +328,7 @@ const menuItems = computed(() => {
         {
           name: 'All',
           label: t('SIDEBAR.ALL_CONVERSATIONS'),
+          icon: 'i-lucide-inbox',
           badgeCount: allUnreadCount.value,
           activeOn: ['inbox_conversation'],
           to: accountScopedRoute('home'),
@@ -335,12 +336,14 @@ const menuItems = computed(() => {
         {
           name: 'Mentions',
           label: t('SIDEBAR.MENTIONED_CONVERSATIONS'),
+          icon: 'i-lucide-at-sign',
           activeOn: ['conversation_through_mentions'],
           to: accountScopedRoute('conversation_mentions'),
         },
         {
           name: 'Participating',
           label: t('SIDEBAR.PARTICIPATING_CONVERSATIONS'),
+          icon: 'i-lucide-user-round-check',
           activeOn: ['conversation_through_participating'],
           to: accountScopedRoute('conversation_participating'),
         },
@@ -348,6 +351,7 @@ const menuItems = computed(() => {
           name: 'Unattended',
           activeOn: ['conversation_through_unattended'],
           label: t('SIDEBAR.UNATTENDED_CONVERSATIONS'),
+          icon: 'i-lucide-clock-alert',
           to: accountScopedRoute('conversation_unattended'),
         },
         {
@@ -355,6 +359,8 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CUSTOM_VIEWS_FOLDER'),
           icon: 'i-lucide-folder',
           activeOn: ['conversations_through_folders'],
+          collapsible: true,
+          showTreeLine: true,
           children: conversationCustomViews.value.map(view => ({
             name: `${view.name}-${view.id}`,
             label: view.name,
@@ -366,6 +372,8 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.TEAMS'),
           icon: 'i-lucide-users',
           activeOn: ['conversations_through_team'],
+          collapsible: true,
+          showTreeLine: true,
           children: sortedTeams.value.map(team => ({
             name: `${team.name}-${team.id}`,
             label: team.name,
@@ -378,6 +386,8 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CHANNELS'),
           icon: 'i-lucide-mailbox',
           activeOn: ['conversation_through_inbox'],
+          collapsible: true,
+          showTreeLine: true,
           children: sortedInboxes.value.map(inbox => ({
             name: `${inbox.name}-${inbox.id}`,
             label: inbox.name,
@@ -398,6 +408,8 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.LABELS'),
           icon: 'i-lucide-tag',
           activeOn: ['conversations_through_label'],
+          collapsible: true,
+          showTreeLine: true,
           children: sortedLabels.value.map(label => ({
             name: `${label.title}-${label.id}`,
             label: label.title,
@@ -509,6 +521,8 @@ const menuItems = computed(() => {
           name: 'Segments',
           icon: 'i-lucide-group',
           label: t('SIDEBAR.CUSTOM_VIEWS_SEGMENTS'),
+          collapsible: true,
+          showTreeLine: true,
           children: contactCustomViews.value.map(view => ({
             name: `${view.name}-${view.id}`,
             label: view.name,
@@ -527,6 +541,8 @@ const menuItems = computed(() => {
           name: 'Tagged With',
           icon: 'i-lucide-tag',
           label: t('SIDEBAR.TAGGED_WITH'),
+          collapsible: true,
+          showTreeLine: true,
           children: labels.value.map(label => ({
             name: `${label.title}-${label.id}`,
             label: label.title,
