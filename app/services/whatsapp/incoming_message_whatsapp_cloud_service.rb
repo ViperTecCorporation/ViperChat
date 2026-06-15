@@ -32,7 +32,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     if picture_url.present?
       conversation.additional_attributes ||= {}
       conversation.additional_attributes['group_picture'] = picture_url
-      Avatar::AvatarFromUrlJob.enqueue_if_needed(conversation.contact, picture_url)
+      Avatar::AvatarFromUrlJob.enqueue_if_needed(conversation.contact, picture_url, avatar_metadata_from(changes))
     end
 
     conversation.update!(attrs)
@@ -67,7 +67,8 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
       contact_attributes: {
         email: group_payload[:group_source_id],
         name: group_payload[:group_title],
-        avatar_url: group_payload[:group_picture].presence
+        avatar_url: group_payload[:group_picture].presence,
+        avatar_metadata: group_payload[:group_picture_metadata]
       }
     ).perform
 
@@ -194,7 +195,8 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
       contact_attributes: {
         email: group_payload[:group_source_id],
         name: group_payload[:group_title],
-        avatar_url: group_payload[:group_picture].presence
+        avatar_url: group_payload[:group_picture].presence,
+        avatar_metadata: group_payload[:group_picture_metadata]
       }
     ).perform
 
@@ -210,6 +212,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     attrs = {
       name: group_payload[:sender_name],
       avatar_url: group_payload[:sender_picture].presence,
+      avatar_metadata: group_payload[:sender_picture_metadata],
       bsuid: group_payload[:sender_bsuid],
       whatsapp_username: group_payload[:sender_username]
     }.compact

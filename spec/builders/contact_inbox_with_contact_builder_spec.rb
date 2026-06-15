@@ -200,6 +200,33 @@ describe ContactInboxWithContactBuilder do
       expect(contact.reload.additional_attributes['avatar_url_enqueued_hash']).to eq(Digest::SHA256.hexdigest(avatar_url))
     end
 
+    it 'enqueues avatar import when the avatar metadata changes for the same url' do
+      avatar_url = 'https://cdn.example.com/profile/maria.jpg'
+      original_metadata = { etag: 'old-etag', content_length: 1234 }
+      next_metadata = { etag: 'new-etag', content_length: 4321 }
+      contact.update!(
+        additional_attributes: {
+          'avatar_url_hash' => Avatar::AvatarFromUrlJob.generate_url_hash(avatar_url, original_metadata)
+        }
+      )
+
+      expect do
+        described_class.new(
+          source_id: existing_contact_inbox.source_id,
+          inbox: inbox,
+          contact_attributes: {
+            name: 'Maria',
+            avatar_url: avatar_url,
+            avatar_metadata: next_metadata
+          }
+        ).perform
+      end.to have_enqueued_job(Avatar::AvatarFromUrlJob).with(
+        contact,
+        avatar_url,
+        { 'content_length' => '4321', 'etag' => 'new-etag' }
+      )
+    end
+
     it 'clears invalid legacy email before enriching an existing contact' do
       contact.update_columns(email: '123456789012345') # rubocop:disable Rails/SkipsModelValidations
 

@@ -68,7 +68,13 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
                 contacts: [{
                   profile: {
                     name: 'Sojan Jose',
-                    picture: 'https://cdn.example.com/profile/sojan.jpg'
+                    picture: 'https://cdn.example.com/profile/sojan.jpg',
+                    picture_metadata: {
+                      etag: '"avatar-etag"',
+                      content_length: '41053',
+                      content_type: 'image/jpeg',
+                      last_modified: '2026-06-15T19:24:29.000Z'
+                    }
                   },
                   wa_id: '2423423243'
                 }],
@@ -84,7 +90,16 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
 
         expect do
           described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform
-        end.to have_enqueued_job(Avatar::AvatarFromUrlJob).with(instance_of(Contact), 'https://cdn.example.com/profile/sojan.jpg')
+        end.to have_enqueued_job(Avatar::AvatarFromUrlJob).with(
+          instance_of(Contact),
+          'https://cdn.example.com/profile/sojan.jpg',
+          {
+            'content_length' => '41053',
+            'content_type' => 'image/jpeg',
+            'etag' => '"avatar-etag"',
+            'last_modified' => '2026-06-15T19:24:29.000Z'
+          }
+        )
       end
 
       it 'increments reauthorization count if fetching attachment fails' do
@@ -628,11 +643,23 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
                   profile: {
                     name: 'Maria',
                     username: '@maria.vendas',
-                    picture: 'https://cdn.example.com/profile/maria.jpg'
+                    picture: 'https://cdn.example.com/profile/maria.jpg',
+                    picture_metadata: {
+                      etag: '"sender-etag"',
+                      content_length: '12345',
+                      content_type: 'image/jpeg',
+                      last_modified: '2026-06-15T19:24:29.000Z'
+                    }
                   },
                   group_id: '120363040468224422@g.us',
                   group_subject: 'Equipe Comercial',
-                  group_picture: 'https://cdn.example.com/groups/120363040468224422.jpg'
+                  group_picture: 'https://cdn.example.com/groups/120363040468224422.jpg',
+                  group_picture_metadata: {
+                    etag: '"group-etag"',
+                    content_length: '41053',
+                    content_type: 'image/jpeg',
+                    last_modified: '2026-06-15T19:24:29.000Z'
+                  }
                 }],
                 messages: [{
                   from: '5566999999999',

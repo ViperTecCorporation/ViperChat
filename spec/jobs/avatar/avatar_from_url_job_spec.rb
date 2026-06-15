@@ -21,6 +21,38 @@ RSpec.describe Avatar::AvatarFromUrlJob do
     expect(described_class.generate_url_hash(first_url)).to eq(described_class.generate_url_hash(next_url))
   end
 
+  it 'generates different hashes for the same avatar path when metadata changes' do
+    avatar_url = 'https://cdn.example.com/profile/maria.jpg'
+    original_metadata = { etag: 'old-etag', content_length: 1234 }
+    next_metadata = { etag: 'new-etag', content_length: 4321 }
+
+    expect(described_class.generate_url_hash(avatar_url, original_metadata))
+      .not_to eq(described_class.generate_url_hash(avatar_url, next_metadata))
+  end
+
+  it 'reads remote avatar metadata with a ranged GET request' do
+    stub_request(:get, valid_url)
+      .with(headers: { 'Range' => 'bytes=0-0' })
+      .to_return(
+        status: 206,
+        body: 'a',
+        headers: {
+          'Content-Type' => 'image/jpeg',
+          'Content-Length' => '1',
+          'Content-Range' => 'bytes 0-0/41053',
+          'ETag' => '"avatar-etag"',
+          'Last-Modified' => 'Mon, 15 Jun 2026 19:24:29 GMT'
+        }
+      )
+
+    expect(described_class.remote_avatar_metadata(valid_url)).to eq(
+      'content_length' => '41053',
+      'content_type' => 'image/jpeg',
+      'etag' => '"avatar-etag"',
+      'last_modified' => 'Mon, 15 Jun 2026 19:24:29 GMT'
+    )
+  end
+
   context 'with rate-limited avatarable (Contact)' do
     let(:avatarable) { create(:contact) }
 
@@ -45,6 +77,27 @@ RSpec.describe Avatar::AvatarFromUrlJob do
 
       expect(described_class.should_enqueue?(avatarable, valid_url)).to be false
       expect(described_class.enqueue_if_needed(avatarable, valid_url)).to be false
+    end
+
+    it 'does not enqueue again when the avatar metadata signature is unchanged' do
+      metadata = { etag: 'same-etag', content_length: 1234 }
+      avatarable.update!(additional_attributes: { 'avatar_url_hash' => described_class.generate_url_hash(valid_url, metadata) })
+
+      expect(described_class.enqueue_if_needed(avatarable, valid_url, metadata)).to be false
+    end
+
+    it 'enqueues again when the same avatar url has different metadata' do
+      original_metadata = { etag: 'old-etag', content_length: 1234 }
+      next_metadata = { etag: 'new-etag', content_length: 4321 }
+      avatarable.update!(additional_attributes: { 'avatar_url_hash' => described_class.generate_url_hash(valid_url, original_metadata) })
+
+      expect do
+        described_class.enqueue_if_needed(avatarable, valid_url, next_metadata)
+      end.to have_enqueued_job(described_class).with(
+        avatarable,
+        valid_url,
+        { 'content_length' => '4321', 'etag' => 'new-etag' }
+      )
     end
 
     it 'attaches webp avatars and updates sync attributes' do
