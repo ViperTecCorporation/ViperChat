@@ -22,6 +22,7 @@ class Inbox::EventDataPresenter < SimpleDelegator
       # Business hour config
       timezone: timezone,
       out_of_office_message: out_of_office_message,
+      out_of_office_send_to_groups: out_of_office_send_to_groups,
       working_hours_enabled: working_hours_enabled,
       working_hours: working_hours.as_json,
 

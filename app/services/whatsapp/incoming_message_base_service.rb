@@ -5,6 +5,17 @@ class Whatsapp::IncomingMessageBaseService
   include ::Whatsapp::IncomingMessageServiceHelpers
   include ::Whatsapp::IncomingMessageIdentifierHelper
 
+  STATUS_ALIASES = {
+    'received' => 'delivered'
+  }.freeze
+
+  STATUS_ORDER = {
+    'progress' => -1,
+    'sent' => 0,
+    'delivered' => 1,
+    'read' => 2
+  }.freeze
+
   # rubocop:disable Style/ClassVars
   @@microsecond = 0
   # rubocop:enable Style/ClassVars
@@ -131,7 +142,9 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def update_message_with_status(message, status)
-    if status[:status] == 'deleted'
+    incoming_status = normalized_message_status(status[:status])
+
+    if incoming_status == 'deleted'
       content_attributes = (message.content_attributes || {}).merge(
         'deleted' => true
       )
@@ -140,14 +153,31 @@ class Whatsapp::IncomingMessageBaseService
       message.assign_attributes(content_attributes: content_attributes)
       message.content = I18n.t('conversations.messages.deleted') unless preserve_content
     else
-      message.status = status[:status]
+      return unless should_update_message_status?(message, incoming_status)
+
+      message.status = incoming_status
     end
-    if status[:status] == 'failed' && status[:errors].present?
+    if incoming_status == 'failed' && status[:errors].present?
       error = status[:errors]&.first
       message.external_error = "#{error[:code]}: #{error[:title]}"
       message.conversation.open! unless message.conversation.open?
     end
     message.save!
+  end
+
+  def normalized_message_status(status)
+    STATUS_ALIASES.fetch(status.to_s, status.to_s)
+  end
+
+  def should_update_message_status?(message, incoming_status)
+    return true if incoming_status == 'failed'
+    return true if message.failed?
+
+    current_index = STATUS_ORDER[message.status]
+    incoming_index = STATUS_ORDER[incoming_status]
+    return true if current_index.blank? || incoming_index.blank?
+
+    incoming_index >= current_index
   end
 
   def preserve_deleted_message_content?

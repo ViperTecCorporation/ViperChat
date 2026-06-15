@@ -5,17 +5,24 @@ class MessageTemplates::Template::OutOfOffice
     inbox = conversation.inbox
     return unless inbox.out_of_office?
     return if inbox.out_of_office_message.blank?
+    return if skip_group_conversation?(conversation)
 
     new(conversation: conversation).perform
   end
 
   def perform
+    return if self.class.skip_group_conversation?(conversation)
+
     ActiveRecord::Base.transaction do
       conversation.messages.create!(out_of_office_message_params)
     end
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: conversation.account).capture_exception
     true
+  end
+
+  def self.skip_group_conversation?(conversation)
+    conversation.group? && !conversation.inbox.out_of_office_send_to_groups?
   end
 
   private
