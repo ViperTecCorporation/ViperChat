@@ -24,6 +24,12 @@ import CreateGroupModal from './CreateGroupModal.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import ComposeInternalChat from 'dashboard/components-next/InternalChat/ComposeInternalChat.vue';
+import {
+  SIDEBAR_SORT_SECTIONS,
+  getSidebarSortOptions,
+  resolveSidebarSort,
+  sortSidebarItems,
+} from 'dashboard/helper/sidebarSort';
 
 const props = defineProps({
   isMobileSidebarOpen: {
@@ -54,6 +60,7 @@ const isMobile = computed(() => windowWidth.value < 768);
 
 const accountId = useMapGetter('getCurrentAccountId');
 const inboxes = useMapGetter('inboxes/getInboxes');
+const currentUserId = useMapGetter('getCurrentUserID');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
@@ -100,6 +107,11 @@ const fetchConversationUnreadCounts = ([currentAccountId, isEnabled]) => {
   }
 
   store.dispatch('conversationUnreadCounts/get');
+};
+
+const fetchSidebarSortPreferences = ([currentAccountId, userId]) => {
+  if (!currentAccountId || !userId) return;
+  store.dispatch('sidebarSortPreferences/initialize');
 };
 
 const toggleShortcutModalFn = show => {
@@ -220,6 +232,9 @@ const contactCustomViews = useMapGetter('customViews/getContactCustomViews');
 const conversationCustomViews = useMapGetter(
   'customViews/getConversationCustomViews'
 );
+const getSidebarSectionSort = useMapGetter(
+  'sidebarSortPreferences/getSectionSort'
+);
 
 onMounted(() => {
   store.dispatch('labels/get');
@@ -235,44 +250,62 @@ watch([accountId, hasConversationUnreadCounts], fetchConversationUnreadCounts, {
   immediate: true,
 });
 
-const normalizeUnreadCount = count => {
-  const unreadCount = Number(count);
-  return Number.isFinite(unreadCount) && unreadCount > 0 ? unreadCount : 0;
-};
+watch([accountId, currentUserId], fetchSidebarSortPreferences, {
+  immediate: true,
+});
 
-const sortByUnreadCount = (items, labelKey, unreadCountKey) =>
-  items.slice().sort((a, b) => {
-    const unreadCountDiff =
-      normalizeUnreadCount(unreadCountKey(b)) -
-      normalizeUnreadCount(unreadCountKey(a));
-
-    if (unreadCountDiff !== 0) return unreadCountDiff;
-
-    return labelKey(a).localeCompare(labelKey(b));
+const getSortOptionsForSection = section =>
+  getSidebarSortOptions(section, {
+    hasUnreadCounts: hasConversationUnreadCounts.value,
   });
 
+const getSortForSection = section =>
+  resolveSidebarSort(section, getSidebarSectionSort.value(section), {
+    hasUnreadCounts: hasConversationUnreadCounts.value,
+  });
+
+const updateSortPreference = (section, sortBy) => {
+  store.dispatch('sidebarSortPreferences/setSectionSort', {
+    section,
+    sortBy,
+  });
+};
+
+const buildSortConfig = section => ({
+  sortOptions: getSortOptionsForSection(section),
+  activeSort: getSortForSection(section),
+  onSortChange: sortBy => updateSortPreference(section, sortBy),
+});
+
+const sortedFolders = computed(() =>
+  sortSidebarItems(conversationCustomViews.value, {
+    sortBy: getSortForSection(SIDEBAR_SORT_SECTIONS.FOLDERS),
+    labelKey: view => view.name,
+  })
+);
+
 const sortedTeams = computed(() =>
-  sortByUnreadCount(
-    teams.value,
-    team => team.name,
-    team => getTeamUnreadCount.value(team.id)
-  )
+  sortSidebarItems(teams.value, {
+    sortBy: getSortForSection(SIDEBAR_SORT_SECTIONS.TEAMS),
+    labelKey: team => team.name,
+    unreadCountKey: team => getTeamUnreadCount.value(team.id),
+  })
 );
 
 const sortedInboxes = computed(() =>
-  sortByUnreadCount(
-    inboxes.value,
-    inbox => inbox.name,
-    inbox => getInboxUnreadCount.value(inbox.id)
-  )
+  sortSidebarItems(inboxes.value, {
+    sortBy: getSortForSection(SIDEBAR_SORT_SECTIONS.CHANNELS),
+    labelKey: inbox => inbox.name,
+    unreadCountKey: inbox => getInboxUnreadCount.value(inbox.id),
+  })
 );
 
 const sortedLabels = computed(() =>
-  sortByUnreadCount(
-    labels.value,
-    label => label.title,
-    label => getLabelUnreadCount.value(label.id)
-  )
+  sortSidebarItems(labels.value, {
+    sortBy: getSortForSection(SIDEBAR_SORT_SECTIONS.LABELS),
+    labelKey: label => label.title,
+    unreadCountKey: label => getLabelUnreadCount.value(label.id),
+  })
 );
 
 const closeMobileSidebar = () => {
@@ -359,9 +392,10 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CUSTOM_VIEWS_FOLDER'),
           icon: 'i-lucide-folder',
           activeOn: ['conversations_through_folders'],
+          ...buildSortConfig(SIDEBAR_SORT_SECTIONS.FOLDERS),
           collapsible: true,
           showTreeLine: true,
-          children: conversationCustomViews.value.map(view => ({
+          children: sortedFolders.value.map(view => ({
             name: `${view.name}-${view.id}`,
             label: view.name,
             to: accountScopedRoute('folder_conversations', { id: view.id }),
@@ -372,6 +406,7 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.TEAMS'),
           icon: 'i-lucide-users',
           activeOn: ['conversations_through_team'],
+          ...buildSortConfig(SIDEBAR_SORT_SECTIONS.TEAMS),
           collapsible: true,
           showTreeLine: true,
           children: sortedTeams.value.map(team => ({
@@ -386,6 +421,7 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CHANNELS'),
           icon: 'i-lucide-mailbox',
           activeOn: ['conversation_through_inbox'],
+          ...buildSortConfig(SIDEBAR_SORT_SECTIONS.CHANNELS),
           collapsible: true,
           showTreeLine: true,
           children: sortedInboxes.value.map(inbox => ({
@@ -408,6 +444,7 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.LABELS'),
           icon: 'i-lucide-tag',
           activeOn: ['conversations_through_label'],
+          ...buildSortConfig(SIDEBAR_SORT_SECTIONS.LABELS),
           collapsible: true,
           showTreeLine: true,
           children: sortedLabels.value.map(label => ({
