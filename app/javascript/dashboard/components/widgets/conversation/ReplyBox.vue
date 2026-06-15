@@ -65,8 +65,9 @@ import { emitter } from 'shared/helpers/mitt';
 const GROUP_CONTACT_MENTION_REGEX =
   /\[@([^\]]+)\]\(mention:\/\/group[_-]contact\/(\d+)\/([^)]+)\)|mention:\/\/group[_-]contact\/(\d+)\/([^\s)]+)/g;
 
-const EmojiInput = defineAsyncComponent(
-  () => import('shared/components/emoji/EmojiInput.vue')
+const EmojiIconPicker = defineAsyncComponent(
+  () =>
+    import('dashboard/components-next/emoji-icon-picker/EmojiIconPicker.vue')
 );
 
 export default {
@@ -76,7 +77,7 @@ export default {
     AttachedContactsPreview,
     AudioRecorder,
     ReplyBoxBanner,
-    EmojiInput,
+    EmojiIconPicker,
     MessageSignatureMissingAlert,
     ReplyBottomPanel,
     ReplyEmailHead,
@@ -1544,13 +1545,15 @@ export default {
           :message="inReplyTo"
           @dismiss="resetReplyToMessage"
         />
-        <EmojiInput
+        <EmojiIconPicker
           v-if="showEmojiPicker"
           v-on-clickaway="hideEmojiPicker"
+          mode="emoji"
+          class="emoji-dialog"
           :class="{
             'emoji-dialog--expanded': isOnExpandedLayout || popOutReplyBox,
           }"
-          :on-click="addIntoEditor"
+          @select="addIntoEditor($event.value)"
         />
         <ReplyEmailHead
           v-if="showReplyHead && isDefaultEditorMode"
