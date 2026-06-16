@@ -236,7 +236,6 @@
   display_name: Advanced Search
   enabled: true
   premium: true
-  chatwoot_internal: true
 - name: saml
   display_name: SAML
   enabled: false
