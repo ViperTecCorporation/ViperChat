@@ -232,7 +232,7 @@ class Whatsapp::IncomingMessageBaseService
   def create_contact_messages(message)
     message['contacts'].each do |contact|
       # Pass source_id from parent message since contact objects don't have :id
-      create_message(contact, source_id: message[:id])
+      create_message(contact, source_id: message[:id], content_attributes_source: message)
       attach_contact(contact)
       @message.save!
     end
@@ -478,12 +478,9 @@ class Whatsapp::IncomingMessageBaseService
     )
   end
 
-  def create_message(message, source_id: nil)
+  def create_message(message, source_id: nil, content_attributes_source: message)
     timestamp = message[:timestamp] ? Time.at(message[:timestamp].to_i, microsecond, :microsecond, in: 'UTC') : Time.current.utc
     Rails.logger.info("[WHATSAPP] Incoming message type=#{message_type} content_type=#{message_type == 'sticker' ? 'sticker' : 'nil'} source_id=#{message[:id]}")
-    content_attrs = webhook_outgoing_message? ? { external_echo: true } : {}
-    content_attrs[:in_reply_to_external_id] = @in_reply_to_external_id if @in_reply_to_external_id.present?
-
     @message = @conversation.messages.build(
       content: message_content(message),
       account_id: @inbox.account_id,
@@ -494,7 +491,7 @@ class Whatsapp::IncomingMessageBaseService
       content_type: message_type == 'sticker' ? 'sticker' : nil,
       sender: webhook_outgoing_message? ? nil : @sender,
       source_id: (source_id || message[:id]).to_s,
-      content_attributes: content_attrs,
+      content_attributes: message_content_attributes(content_attributes_source),
       created_at: timestamp,
     )
     @message
@@ -502,6 +499,14 @@ class Whatsapp::IncomingMessageBaseService
 
   def webhook_outgoing_message?
     outgoing_echo || @message_type == :outgoing
+  end
+
+  def message_content_attributes(message)
+    content_attrs = webhook_outgoing_message? ? { external_echo: true } : {}
+    content_attrs[:in_reply_to_external_id] = @in_reply_to_external_id if @in_reply_to_external_id.present?
+    referral_content_attrs = referral_attributes(message)
+    content_attrs[:referral] = referral_content_attrs if referral_content_attrs.present?
+    content_attrs
   end
 
   def attach_contact(contact)
