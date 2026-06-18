@@ -51,6 +51,29 @@ RSpec.describe Account do
     end
   end
 
+  describe 'feature flags' do
+    it 'ignores stale default features that are no longer configured' do
+      InstallationConfig.find_or_create_by!(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
+        value: [
+          { 'name' => 'channel_twitter', 'enabled' => true },
+          { 'name' => 'inbox_management', 'enabled' => true }
+        ]
+      )
+
+      account = create(:account)
+
+      expect(account).to be_feature_inbox_management
+      expect(account.feature_enabled?('channel_twitter')).to be(false)
+    end
+
+    it 'ignores unknown features when enabling or disabling flags' do
+      account = create(:account)
+
+      expect { account.enable_features(:channel_twitter) }.not_to raise_error
+      expect { account.disable_features(:channel_twitter) }.not_to raise_error
+    end
+  end
+
   describe 'conversation unread counts feature flag' do
     let(:account) { create(:account) }
     let(:inbox) { create(:inbox, account: account) }

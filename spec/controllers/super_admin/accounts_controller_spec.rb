@@ -25,6 +25,34 @@ RSpec.describe 'Super Admin accounts API', type: :request do
     end
   end
 
+  describe 'POST /super_admin/accounts' do
+    context 'when it is an authenticated user' do
+      it 'creates an account while ignoring blank limits' do
+        sign_in(super_admin, scope: :super_admin)
+
+        expect do
+          post '/super_admin/accounts', params: {
+            account: {
+              name: 'CIRI',
+              locale: 'pt_BR',
+              status: 'active',
+              limits: {
+                agents: '',
+                inboxes: '10',
+                captain_responses: '',
+                captain_documents: '',
+                emails: ''
+              }
+            }
+          }
+        end.to change(Account, :count).by(1)
+
+        expect(response).to redirect_to("http://www.example.com/super_admin/accounts/#{Account.last.id}")
+        expect(Account.last.limits).to eq('inboxes' => 10)
+      end
+    end
+  end
+
   describe 'POST /super_admin/accounts/{account_id}/reset_cache' do
     before do
       create(:label, account: account)

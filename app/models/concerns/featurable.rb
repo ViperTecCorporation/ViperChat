@@ -44,7 +44,7 @@ module Featurable
   end
 
   def enable_features(*names)
-    names.each do |name|
+    known_features(names).each do |name|
       send("feature_#{name}=", true)
     end
   end
@@ -55,7 +55,7 @@ module Featurable
   end
 
   def disable_features(*names)
-    names.each do |name|
+    known_features(names).each do |name|
       send("feature_#{name}=", false)
     end
   end
@@ -68,6 +68,7 @@ module Featurable
   def feature_enabled?(name)
     # Force-enable advanced search flags across all accounts.
     return true if %w[advanced_search advanced_search_indexing].include?(name.to_s)
+    return false unless known_feature?(name)
 
     send("feature_#{name}?")
   end
@@ -94,5 +95,13 @@ module Featurable
 
     features_to_enabled = config.value.select { |f| f[:enabled] }.pluck(:name)
     enable_features(*features_to_enabled)
+  end
+
+  def known_features(names)
+    names.select { |name| known_feature?(name) }
+  end
+
+  def known_feature?(name)
+    FEATURE_NAMES.include?("feature_#{name}".to_sym)
   end
 end
