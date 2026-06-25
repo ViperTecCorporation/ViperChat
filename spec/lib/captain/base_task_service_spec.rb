@@ -21,6 +21,7 @@ RSpec.describe Captain::BaseTaskService do
   let(:service) { test_service_class.new(account: account, conversation_display_id: conversation.display_id) }
 
   before do
+    InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').destroy_all
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'test-key')
     # Stub captain enabled check to allow OSS specs to test base functionality
     # without enterprise module interference
@@ -176,6 +177,26 @@ RSpec.describe Captain::BaseTaskService do
       ).and_call_original
 
       service.send(:make_api_call, feature: 'editor', messages: messages)
+    end
+
+    it 'uses the supplied model as a feature fallback when there is no account override' do
+      expect(mock_context).to receive(:chat).with(model: 'gpt-5.2').and_return(mock_chat)
+
+      service.send(:make_api_call, feature: 'document_faq_generation', model: 'gpt-5.2', messages: messages)
+    end
+
+    it 'uses the help center article generation feature default' do
+      expect(mock_context).to receive(:chat).with(model: 'gpt-5.2').and_return(mock_chat)
+
+      service.send(:make_api_call, feature: 'help_center_article_generation', messages: messages)
+    end
+
+    it 'prefers account overrides over supplied feature fallback models' do
+      account.update!(captain_models: { 'help_center_article_generation' => 'gpt-4.1' })
+
+      expect(mock_context).to receive(:chat).with(model: 'gpt-4.1').and_return(mock_chat)
+
+      service.send(:make_api_call, feature: 'help_center_article_generation', model: 'gpt-5.2', messages: messages)
     end
 
     it 'returns formatted response with tokens' do
