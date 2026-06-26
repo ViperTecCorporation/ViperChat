@@ -21,7 +21,36 @@ class Conversations::ResolutionJob < ApplicationJob
                  else
                    account.conversations.resolvable_all(account.auto_resolve_after)
                  end
+    base_scope = apply_inbox_scope(base_scope, account)
     # Exclude orphan conversations where contact was deleted but conversation cleanup is pending
     base_scope.where.not(contact_id: nil)
+  end
+
+  def apply_inbox_scope(scope, account)
+    rules = auto_resolve_inbox_rules(account)
+    return scope.non_group_conversations if rules.blank?
+
+    regular_inbox_ids = rules.keys
+    group_inbox_ids = rules.select { |_inbox_id, send_to_groups| send_to_groups }.keys
+
+    scope.where(inbox_id: regular_inbox_ids, group: false)
+         .or(scope.where(inbox_id: group_inbox_ids, group: true))
+  end
+
+  def auto_resolve_inbox_rules(account)
+    rules = Array(account.auto_resolve_inboxes).filter_map do |rule|
+      inbox_id = Integer(rule['inbox_id'] || rule[:inbox_id], exception: false)
+      next if inbox_id.blank?
+
+      [inbox_id, ActiveModel::Type::Boolean.new.cast(rule['send_to_groups'] || rule[:send_to_groups])]
+    end.to_h
+    return rules if rules.present?
+
+    Array(account.settings&.[]('auto_resolve_inbox_ids')).filter_map do |inbox_id|
+      normalized_inbox_id = Integer(inbox_id, exception: false)
+      if normalized_inbox_id
+        [normalized_inbox_id, ActiveModel::Type::Boolean.new.cast(account.settings&.[]('auto_resolve_send_to_groups'))]
+      end
+    end.to_h
   end
 end

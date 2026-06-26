@@ -145,6 +145,29 @@ describe Whatsapp::IncomingMessageService do
         expect(message.reload.status).to eq('read')
       end
 
+      it 'does not downgrade read messages when older delivered status arrives later' do
+        message = Message.find_by!(source_id: from)
+        message.update!(status: :read)
+        status_params = {
+          'statuses' => [{ 'recipient_id' => from, 'id' => from, 'status' => 'delivered' }]
+        }.with_indifferent_access
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform
+
+        expect(message.reload.status).to eq('read')
+      end
+
+      it 'maps received status to delivered' do
+        status_params = {
+          'statuses' => [{ 'recipient_id' => from, 'id' => from, 'status' => 'received' }]
+        }.with_indifferent_access
+        message = Message.find_by!(source_id: from)
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform
+
+        expect(message.reload.status).to eq('delivered')
+      end
+
       it 'update status message to failed' do
         status_params = {
           'statuses' => [{ 'recipient_id' => from, 'id' => from, 'status' => 'failed',

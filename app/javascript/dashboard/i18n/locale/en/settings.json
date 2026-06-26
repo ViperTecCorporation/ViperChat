@@ -584,7 +584,16 @@
       "NO_ATTRIBUTES": "No attributes added yet",
       "ADD": {
         "TITLE": "Add Attributes",
-        "SEARCH_PLACEHOLDER": "Search attributes"
+        "SEARCH_PLACEHOLDER": "Search attributes",
+        "ATTRIBUTE_PLACEHOLDER": "Select an attribute",
+        "INBOX_PLACEHOLDER": "Select an inbox",
+        "APPLY_TO_GROUPS": "Also apply to groups in this inbox",
+        "ALREADY_EXISTS": "This attribute is already required for this inbox.",
+        "SAVE": "Add"
+      },
+      "ITEM": {
+        "LEGACY_SCOPE": "All inboxes",
+        "GROUPS": "Groups"
       },
       "SAVE": {
         "SUCCESS": "Required attributes updated",

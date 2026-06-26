@@ -112,6 +112,30 @@ describe('useConversationRequiredAttributes', () => {
     });
   });
 
+  describe('requiredAttributeRules', () => {
+    it('should return scoped rules from account settings', () => {
+      setupMocks([
+        {
+          attribute_key: 'priority',
+          inbox_id: 1,
+          apply_to_groups: false,
+        },
+      ]);
+
+      const { requiredAttributeRules } = useConversationRequiredAttributes();
+
+      expect(requiredAttributeRules.value).toEqual([
+        {
+          attributeKey: 'priority',
+          inboxId: 1,
+          applyToGroups: false,
+          scope: 'inbox',
+          value: 'priority:1',
+        },
+      ]);
+    });
+  });
+
   describe('requiredAttributes', () => {
     it('should return full attribute definitions for required attributes only', () => {
       setupMocks();
@@ -343,6 +367,64 @@ describe('useConversationRequiredAttributes', () => {
 
       expect(result.hasMissing).toBe(true);
       expect(result.missing[0].value).toBe('category');
+    });
+
+    it('should only require scoped attributes for the selected inbox', () => {
+      setupMocks([
+        {
+          attribute_key: 'priority',
+          inbox_id: 1,
+          apply_to_groups: false,
+        },
+        {
+          attribute_key: 'category',
+          inbox_id: 2,
+          apply_to_groups: false,
+        },
+      ]);
+
+      const { checkMissingAttributes } = useConversationRequiredAttributes();
+      const result = checkMissingAttributes({}, { inbox_id: 1 });
+
+      expect(result.hasMissing).toBe(true);
+      expect(result.missing).toHaveLength(1);
+      expect(result.missing[0].value).toBe('priority');
+      expect(result.all.map(attribute => attribute.value)).toEqual([
+        'priority',
+      ]);
+    });
+
+    it('should ignore scoped attributes for group conversations by default', () => {
+      setupMocks([
+        {
+          attribute_key: 'priority',
+          inbox_id: 1,
+          apply_to_groups: false,
+        },
+      ]);
+
+      const { checkMissingAttributes } = useConversationRequiredAttributes();
+      const result = checkMissingAttributes({}, { inbox_id: 1, group: true });
+
+      expect(result.hasMissing).toBe(false);
+      expect(result.missing).toEqual([]);
+    });
+
+    it('should require scoped attributes for groups when enabled', () => {
+      setupMocks([
+        {
+          attribute_key: 'priority',
+          inbox_id: 1,
+          apply_to_groups: true,
+        },
+      ]);
+
+      const { checkMissingAttributes } = useConversationRequiredAttributes();
+      const result = checkMissingAttributes({}, { inbox_id: 1, group: true });
+
+      expect(result.hasMissing).toBe(true);
+      expect(result.missing).toHaveLength(1);
+      expect(result.missing[0].value).toBe('priority');
     });
   });
 });

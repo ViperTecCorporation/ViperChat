@@ -17,6 +17,7 @@ import {
   useMapGetter,
 } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { hasRequiredRuleForAttribute } from 'dashboard/helper/conversationRequiredAttributes';
 
 const { t } = useI18n();
 
@@ -129,7 +130,10 @@ const buildBadges = attribute => {
 
   if (
     attribute.attribute_model === 'conversation_attribute' &&
-    requiredAttributeKeys.value.includes(attribute.attribute_key)
+    hasRequiredRuleForAttribute(
+      requiredAttributeKeys.value,
+      attribute.attribute_key
+    )
   ) {
     badges.push({
       type: 'resolution',

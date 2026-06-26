@@ -3,6 +3,10 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { ATTRIBUTE_TYPES } from 'dashboard/components-next/ConversationWorkflow/constants';
+import {
+  isRequiredRuleForConversation,
+  normalizeRequiredAttributeRules,
+} from 'dashboard/helper/conversationRequiredAttributes';
 
 /**
  * Composable for managing conversation required attributes workflow
@@ -26,12 +30,16 @@ export function useConversationRequiredAttributes() {
     )
   );
 
-  const requiredAttributeKeys = computed(() => {
+  const requiredAttributeRules = computed(() => {
     if (!isFeatureEnabled.value) return [];
-    return (
+    return normalizeRequiredAttributeRules(
       currentAccount.value?.settings?.conversation_required_attributes || []
     );
   });
+
+  const requiredAttributeKeys = computed(() => [
+    ...new Set(requiredAttributeRules.value.map(rule => rule.attributeKey)),
+  ]);
 
   const allAttributeOptions = computed(() =>
     (conversationAttributes.value || []).map(attribute => ({
@@ -50,26 +58,47 @@ export function useConversationRequiredAttributes() {
   const requiredAttributes = computed(
     () =>
       requiredAttributeKeys.value
-        .map(key =>
-          allAttributeOptions.value.find(attribute => attribute.value === key)
+        .map(attributeKey =>
+          allAttributeOptions.value.find(
+            attribute => attribute.value === attributeKey
+          )
         )
         .filter(Boolean) // Remove any undefined attributes (deleted attributes)
   );
+
+  const getRequiredAttributesForConversation = (conversation = {}) => {
+    const matchingAttributeKeys = new Set(
+      requiredAttributeRules.value
+        .filter(rule => isRequiredRuleForConversation(rule, conversation))
+        .map(rule => rule.attributeKey)
+    );
+
+    return allAttributeOptions.value.filter(attribute =>
+      matchingAttributeKeys.has(attribute.value)
+    );
+  };
 
   /**
    * Check if a conversation is missing any required attributes
    *
    * @param {Object} conversationCustomAttributes - Current conversation's custom attributes
+   * @param {Object} conversation - Conversation being resolved
    * @returns {Object} - Analysis result with missing attributes info
    */
-  const checkMissingAttributes = (conversationCustomAttributes = {}) => {
+  const checkMissingAttributes = (
+    conversationCustomAttributes = {},
+    conversation = {}
+  ) => {
+    const conversationRequiredAttributes =
+      getRequiredAttributesForConversation(conversation);
+
     // If no attributes are required, conversation can be resolved
-    if (!requiredAttributes.value.length) {
+    if (!conversationRequiredAttributes.length) {
       return { hasMissing: false, missing: [] };
     }
 
     // Find attributes that are missing or empty
-    const missing = requiredAttributes.value.filter(attribute => {
+    const missing = conversationRequiredAttributes.filter(attribute => {
       const value = conversationCustomAttributes[attribute.value];
 
       // For checkbox/boolean attributes, only check if the key exists
@@ -85,13 +114,15 @@ export function useConversationRequiredAttributes() {
     return {
       hasMissing: missing.length > 0,
       missing,
-      all: requiredAttributes.value,
+      all: conversationRequiredAttributes,
     };
   };
 
   return {
+    requiredAttributeRules,
     requiredAttributeKeys,
     requiredAttributes,
+    getRequiredAttributesForConversation,
     checkMissingAttributes,
   };
 }

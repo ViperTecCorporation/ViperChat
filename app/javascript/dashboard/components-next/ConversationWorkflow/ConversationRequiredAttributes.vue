@@ -1,16 +1,22 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useToggle } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
-import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
+import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
+import Select from 'dashboard/components-next/select/Select.vue';
 import ConversationRequiredAttributeItem from 'dashboard/components-next/ConversationWorkflow/ConversationRequiredAttributeItem.vue';
 import ConversationRequiredEmpty from 'dashboard/components-next/Conversation/ConversationRequiredEmpty.vue';
 import BasePaywallModal from 'dashboard/routes/dashboard/settings/components/BasePaywallModal.vue';
+import {
+  LEGACY_REQUIRED_ATTRIBUTE_SCOPE,
+  normalizeRequiredAttributeRules,
+  serializeRequiredAttributeRule,
+} from 'dashboard/helper/conversationRequiredAttributes';
 
 const props = defineProps({
   isEnabled: {
@@ -21,14 +27,19 @@ const props = defineProps({
 
 const emit = defineEmits(['click']);
 const router = useRouter();
+const store = useStore();
 const { t } = useI18n();
 const { currentAccount, accountId, isOnChatwootCloud, updateAccount } =
   useAccount();
 const [showDropdown, toggleDropdown] = useToggle(false);
 const [isSaving, toggleSaving] = useToggle(false);
+const selectedAttributeKey = ref('');
+const selectedInboxId = ref('');
+const applyToGroups = ref(false);
 const conversationAttributes = useMapGetter(
   'attributes/getConversationAttributes'
 );
+const inboxes = useMapGetter('inboxes/getInboxes');
 const currentUser = useMapGetter('getCurrentUser');
 
 const isSuperAdmin = computed(() => currentUser.value.type === 'SuperAdmin');
@@ -48,8 +59,17 @@ const handleClick = () => {
   emit('click');
 };
 
-const selectedAttributeKeys = computed(
+onMounted(() => {
+  store.dispatch('attributes/get');
+  store.dispatch('inboxes/get');
+});
+
+const savedRequiredAttributes = computed(
   () => currentAccount.value?.settings?.conversation_required_attributes || []
+);
+
+const selectedAttributeRules = computed(() =>
+  normalizeRequiredAttributeRules(savedRequiredAttributes.value)
 );
 
 const allAttributeOptions = computed(() =>
@@ -62,19 +82,79 @@ const allAttributeOptions = computed(() =>
   }))
 );
 
-const attributeOptions = computed(() => {
-  const selectedKeysSet = new Set(selectedAttributeKeys.value);
-  return allAttributeOptions.value.filter(
-    attribute => !selectedKeysSet.has(attribute.value)
+const attributeOptions = computed(() => allAttributeOptions.value);
+
+const inboxOptions = computed(() =>
+  (inboxes.value || []).map(inbox => ({
+    value: Number(inbox.id),
+    label: inbox.name,
+  }))
+);
+
+const selectedInbox = computed(() =>
+  (inboxes.value || []).find(
+    inbox => Number(inbox.id) === Number(selectedInboxId.value)
+  )
+);
+
+const normalizedValue = value => (value || '').toString().toLowerCase();
+
+const isUnoapiWhatsappInbox = inbox => {
+  const channelType = normalizedValue(
+    inbox?.channel_type || inbox?.channelType
   );
+  const provider = normalizedValue(
+    inbox?.provider || inbox?.providerName || inbox?.provider_name
+  );
+
+  return channelType.includes('whatsapp') && provider.includes('uno');
+};
+
+const showApplyToGroups = computed(() =>
+  isUnoapiWhatsappInbox(selectedInbox.value)
+);
+
+watch(selectedInboxId, () => {
+  applyToGroups.value = false;
 });
+
+const ruleExists = computed(() =>
+  selectedAttributeRules.value.some(
+    rule =>
+      rule.scope !== LEGACY_REQUIRED_ATTRIBUTE_SCOPE &&
+      rule.attributeKey === selectedAttributeKey.value &&
+      Number(rule.inboxId) === Number(selectedInboxId.value)
+  )
+);
+
+const canAddRule = computed(
+  () => selectedAttributeKey.value && selectedInboxId.value && !ruleExists.value
+);
 
 const conversationRequiredAttributes = computed(() => {
   const attributeMap = new Map(
     allAttributeOptions.value.map(attr => [attr.value, attr])
   );
-  return selectedAttributeKeys.value
-    .map(key => attributeMap.get(key))
+  const inboxMap = new Map(
+    (inboxes.value || []).map(inbox => [Number(inbox.id), inbox.name])
+  );
+
+  return selectedAttributeRules.value
+    .map(rule => {
+      const attribute = attributeMap.get(rule.attributeKey);
+      if (!attribute) return null;
+
+      return {
+        ...attribute,
+        rule,
+        value: rule.value,
+        inboxName:
+          rule.scope === LEGACY_REQUIRED_ATTRIBUTE_SCOPE
+            ? t('CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.ITEM.LEGACY_SCOPE')
+            : inboxMap.get(Number(rule.inboxId)),
+        applyToGroups: rule.applyToGroups,
+      };
+    })
     .filter(Boolean);
 });
 
@@ -83,14 +163,29 @@ const handleAddAttributesClick = event => {
   toggleDropdown();
 };
 
-const saveRequiredAttributes = async keys => {
+const resetForm = () => {
+  selectedAttributeKey.value = '';
+  selectedInboxId.value = '';
+  applyToGroups.value = false;
+};
+
+const serializeRule = rule => {
+  if (rule.scope === LEGACY_REQUIRED_ATTRIBUTE_SCOPE) {
+    return rule.attributeKey;
+  }
+
+  return serializeRequiredAttributeRule(rule);
+};
+
+const saveRequiredAttributes = async rules => {
   try {
     toggleSaving(true);
     await updateAccount(
-      { conversation_required_attributes: keys },
+      { conversation_required_attributes: rules.map(serializeRule) },
       { silent: true }
     );
     useAlert(t('CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.SAVE.SUCCESS'));
+    resetForm();
   } catch (error) {
     useAlert(t('CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.SAVE.ERROR'));
   } finally {
@@ -99,12 +194,16 @@ const saveRequiredAttributes = async keys => {
   }
 };
 
-const handleAttributeAction = ({ value }) => {
-  if (!value || isSaving.value) return;
-  const updatedKeys = Array.from(
-    new Set([...selectedAttributeKeys.value, value])
-  );
-  saveRequiredAttributes(updatedKeys);
+const handleAttributeAction = () => {
+  if (!canAddRule.value || isSaving.value) return;
+  const nextRule = {
+    attributeKey: selectedAttributeKey.value,
+    inboxId: Number(selectedInboxId.value),
+    applyToGroups: showApplyToGroups.value ? applyToGroups.value : false,
+    scope: 'inbox',
+  };
+
+  saveRequiredAttributes([...selectedAttributeRules.value, nextRule]);
 };
 
 const closeDropdown = () => {
@@ -113,10 +212,10 @@ const closeDropdown = () => {
 
 const handleDelete = attribute => {
   if (isSaving.value) return;
-  const updatedKeys = selectedAttributeKeys.value.filter(
-    key => key !== attribute.value
+  const updatedRules = selectedAttributeRules.value.filter(
+    rule => rule.value !== attribute.rule.value
   );
-  saveRequiredAttributes(updatedKeys);
+  saveRequiredAttributes(updatedRules);
 };
 </script>
 
@@ -141,21 +240,66 @@ const handleDelete = attribute => {
             icon="i-lucide-circle-plus"
             :label="$t('CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.ADD.TITLE')"
             :is-loading="isSaving"
-            :disabled="isSaving || attributeOptions.length === 0"
+            :disabled="
+              isSaving ||
+              attributeOptions.length === 0 ||
+              inboxOptions.length === 0
+            "
             @click="handleAddAttributesClick"
           />
-          <DropdownMenu
+          <div
             v-if="showDropdown"
-            :menu-items="attributeOptions"
-            show-search
-            :search-placeholder="
-              $t(
-                'CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.ADD.SEARCH_PLACEHOLDER'
-              )
-            "
-            class="top-full mt-1 w-52 ltr:right-0 rtl:left-0"
-            @action="handleAttributeAction"
-          />
+            class="absolute top-full z-20 mt-2 flex w-[22rem] flex-col gap-3 rounded-lg border border-n-weak bg-n-solid-1 p-3 shadow-md ltr:right-0 rtl:left-0"
+          >
+            <Select
+              v-model="selectedAttributeKey"
+              class="w-full"
+              :options="attributeOptions"
+              :placeholder="
+                $t(
+                  'CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.ADD.ATTRIBUTE_PLACEHOLDER'
+                )
+              "
+            />
+            <Select
+              v-model="selectedInboxId"
+              class="w-full"
+              :options="inboxOptions"
+              :placeholder="
+                $t(
+                  'CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.ADD.INBOX_PLACEHOLDER'
+                )
+              "
+            />
+            <label
+              v-if="showApplyToGroups"
+              class="flex items-center gap-2 text-body-para text-n-slate-11"
+            >
+              <Checkbox v-model="applyToGroups" />
+              <span>
+                {{
+                  $t(
+                    'CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.ADD.APPLY_TO_GROUPS'
+                  )
+                }}
+              </span>
+            </label>
+            <span v-if="ruleExists" class="text-body-para text-n-amber-11">
+              {{
+                $t(
+                  'CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.ADD.ALREADY_EXISTS'
+                )
+              }}
+            </span>
+            <Button
+              class="self-end"
+              size="sm"
+              :label="$t('CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.ADD.SAVE')"
+              :disabled="!canAddRule || isSaving"
+              :is-loading="isSaving"
+              @click="handleAttributeAction"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -167,7 +311,7 @@ const handleDelete = attribute => {
 
       <ConversationRequiredAttributeItem
         v-for="attribute in conversationRequiredAttributes"
-        :key="attribute.value"
+        :key="attribute.rule.value"
         :attribute="attribute"
         @delete="handleDelete"
       />

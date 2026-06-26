@@ -1,5 +1,10 @@
 # rubocop:disable Metrics/ClassLength
 class Whatsapp::Unoapi::GroupParticipantsSyncService
+  AVATAR_METADATA_KEYS = %i[
+    avatar_hash content_length content_md5 content_type etag file_hash file_size
+    hash last_modified picture_hash profile_picture_hash size updated_at
+  ].freeze
+
   def initialize(inbox:, conversation:, group_source_id: nil)
     @inbox = inbox
     @channel = inbox.channel
@@ -44,14 +49,14 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     return {} unless response&.success?
 
     details = (response.parsed_response || {}).with_indifferent_access
-    {
+    avatar_metadata_from(details).merge(
       subject: details[:subject].presence,
       description: details[:description].presence,
       picture: group_picture_url(details),
       join_approval_mode: details[:join_approval_mode].presence,
       created_at: details[:created_at].presence || details[:creation_timestamp].presence,
       suspended: details[:suspended]
-    }.compact
+    ).compact
   end
 
   def group_invite_link
@@ -96,7 +101,7 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     if picture_url.present?
       @conversation.additional_attributes ||= {}
       @conversation.additional_attributes['group_picture'] = picture_url
-      Avatar::AvatarFromUrlJob.enqueue_if_needed(@conversation.contact, picture_url)
+      Avatar::AvatarFromUrlJob.enqueue_if_needed(@conversation.contact, picture_url, avatar_metadata_from(group))
     end
 
     @conversation.assign_attributes(attrs)
@@ -173,6 +178,7 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     attrs = {
       name: participant_name(participant, source_id),
       avatar_url: participant_picture_url(participant),
+      avatar_metadata: avatar_metadata_from(participant, participant[:profile]),
       bsuid: participant_bsuid(participant),
       whatsapp_username: participant[:username].presence
     }.compact
@@ -224,6 +230,21 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
       participant[:profile_picture_url].presence ||
       participant.dig(:profile, :picture).presence ||
       participant.dig(:profile, :profile_url).presence
+  end
+
+  def avatar_metadata_from(*sources)
+    Array(sources).compact.each_with_object({}) do |source, result|
+      next unless source.respond_to?(:with_indifferent_access)
+
+      attrs = source.with_indifferent_access
+      [attrs[:picture_metadata], attrs[:profile_picture_metadata], attrs[:group_picture_metadata]].compact.each do |metadata|
+        result.merge!(avatar_metadata_from(metadata))
+      end
+      AVATAR_METADATA_KEYS.each do |key|
+        value = attrs[key].presence || attrs[:"picture_#{key}"].presence || attrs[:"profile_picture_#{key}"].presence
+        result[key] = value if value.present?
+      end
+    end
   end
 
   def participant_source_id(participant)

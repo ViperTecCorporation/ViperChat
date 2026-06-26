@@ -114,7 +114,7 @@ class Api::V1::AccountsController < Api::BaseController
   end
 
   def settings_params
-    params.permit(*permitted_settings_attributes)
+    params.permit(*permitted_settings_attributes, auto_resolve_inboxes: [:inbox_id, :send_to_groups])
   end
 
   def permitted_settings_attributes

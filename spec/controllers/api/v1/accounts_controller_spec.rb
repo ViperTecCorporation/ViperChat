@@ -257,6 +257,10 @@ RSpec.describe 'Accounts API', type: :request do
         auto_resolve_after: 40,
         auto_resolve_message: 'Auto resolved',
         auto_resolve_ignore_waiting: false,
+        auto_resolve_inboxes: [
+          { inbox_id: 1, send_to_groups: true },
+          { inbox_id: 2, send_to_groups: false }
+        ],
         show_deleted_message_content: true,
         timezone: 'Asia/Kolkata',
         industry: 'Technology',
@@ -292,6 +296,10 @@ RSpec.describe 'Accounts API', type: :request do
         ].each do |attribute|
           expect(account.reload.settings[attribute]).to eq(params[attribute.to_sym])
         end
+        expect(account.reload.settings['auto_resolve_inboxes']).to eq([
+                                                                        { 'inbox_id' => 1, 'send_to_groups' => true },
+                                                                        { 'inbox_id' => 2, 'send_to_groups' => false }
+                                                                      ])
 
         %w[timezone industry company_size].each do |attribute|
           expect(account.reload.custom_attributes[attribute]).to eq(params[attribute.to_sym])

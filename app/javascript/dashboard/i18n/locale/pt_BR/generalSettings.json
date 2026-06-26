@@ -70,6 +70,13 @@
         "IGNORE_WAITING": {
           "LABEL": "Pular conversas aguardando a resposta do agente"
         },
+        "INBOXES": {
+          "LABEL": "Aplicar somente às caixas selecionadas",
+          "HELP": "Deixe todas as caixas desmarcadas para aplicar a resolução automática em todas as caixas."
+        },
+        "SEND_TO_GROUPS": {
+          "LABEL": "Aplicar aos grupos"
+        },
         "UPDATE_BUTTON": "Salvar Alterações"
       },
       "NAME": {

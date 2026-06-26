@@ -35,7 +35,7 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
   #
   def resource_params
     permitted_params = super
-    permitted_params[:limits] = permitted_params[:limits].to_h.compact
+    permitted_params[:limits] = normalize_limits(permitted_params[:limits])
     permitted_params[:selected_feature_flags] = params[:enabled_features].keys.map(&:to_sym) if params[:enabled_features].present?
     permitted_params
   end
@@ -64,6 +64,16 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     # rubocop:disable Rails/I18nLocaleTexts
     redirect_back(fallback_location: [namespace, requested_resource], notice: 'Account deletion is in progress.')
     # rubocop:enable Rails/I18nLocaleTexts
+  end
+
+  private
+
+  def normalize_limits(limits)
+    limits.to_h.each_with_object({}) do |(key, value), normalized_limits|
+      next if value.blank?
+
+      normalized_limits[key] = value.to_s.match?(/\A-?\d+\z/) ? value.to_i : value
+    end
   end
 end
 

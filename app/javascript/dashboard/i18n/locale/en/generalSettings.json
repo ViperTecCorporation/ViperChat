@@ -70,6 +70,13 @@
         "IGNORE_WAITING": {
           "LABEL": "Skip conversations waiting for agent’s reply"
         },
+        "INBOXES": {
+          "LABEL": "Apply only to selected inboxes",
+          "HELP": "Leave all inboxes unselected to apply auto-resolution to every inbox."
+        },
+        "SEND_TO_GROUPS": {
+          "LABEL": "Apply to groups"
+        },
         "UPDATE_BUTTON": "Save Changes"
       },
       "NAME": {

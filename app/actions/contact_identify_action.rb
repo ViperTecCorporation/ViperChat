@@ -112,7 +112,7 @@ class ContactIdentifyAction
     return unless params[:avatar_url].present? && !@contact.avatar.attached?
     return unless url_valid?(params[:avatar_url])
 
-    Avatar::AvatarFromUrlJob.perform_later(@contact, params[:avatar_url])
+    Avatar::AvatarFromUrlJob.enqueue_if_needed(@contact, params[:avatar_url])
   end
 
   def merge_contact(base_contact, merge_contact)

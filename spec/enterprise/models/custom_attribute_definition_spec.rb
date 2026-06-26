@@ -27,6 +27,23 @@ RSpec.describe CustomAttributeDefinition do
         end
       end
 
+      context 'when conversation attribute is in scoped required attributes list' do
+        before do
+          account.update!(
+            conversation_required_attributes: [
+              { 'attribute_key' => attribute_key, 'inbox_id' => 1, 'apply_to_groups' => false },
+              { 'attribute_key' => 'other_attribute', 'inbox_id' => 1, 'apply_to_groups' => false }
+            ]
+          )
+        end
+
+        it 'removes the scoped attribute from conversation_required_attributes when destroyed' do
+          expect { custom_attribute.destroy! }
+            .to change { account.reload.conversation_required_attributes }
+            .to([{ 'attribute_key' => 'other_attribute', 'inbox_id' => 1, 'apply_to_groups' => false }])
+        end
+      end
+
       context 'when attribute is contact_attribute' do
         let!(:contact_attribute) do
           create(:custom_attribute_definition,

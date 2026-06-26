@@ -79,13 +79,21 @@ class ConfigLoader
   end
 
   def compare_and_save_feature(config)
+    current_feature_names = account_features.pluck('name')
+    existing_features = Array(config.value).select { |feature| current_feature_names.include?(feature_name(feature)) }
+
     features = if @reconcile_only_new
-                 # leave the existing feature flag values as it is and add new feature flags with default values
-                 (config.value + account_features).uniq { |h| h['name'] }
+                 # leave the existing feature flag values as it is, add new feature flags with default values,
+                 # and drop stale feature flags no longer present in config/features.yml
+                 (existing_features + account_features).uniq { |feature| feature_name(feature) }
                else
                  # update the existing feature flag values with default values and add new feature flags with default values
-                 (account_features + config.value).uniq { |h| h['name'] }
+                 account_features
                end
     config.update({ name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS', value: features, locked: true })
+  end
+
+  def feature_name(feature)
+    feature['name'] || feature[:name]
   end
 end

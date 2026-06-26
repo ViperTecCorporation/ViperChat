@@ -5,6 +5,7 @@ import inboxMixin from 'shared/mixins/inboxMixin';
 import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsToggleSection.vue';
 import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFieldSection.vue';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
+import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import BusinessDay from './BusinessDay.vue';
 import {
   timeSlotParse,
@@ -28,6 +29,7 @@ export default {
     NextButton,
     WootMessageEditor,
     ComboBox,
+    Checkbox,
   },
   mixins: [inboxMixin],
   props: {
@@ -40,6 +42,7 @@ export default {
     return {
       isBusinessHoursEnabled: false,
       unavailableMessage: '',
+      outOfOfficeSendToGroups: false,
       timeZone: DEFAULT_TIMEZONE,
       dayNames: {
         0: 'Sunday',
@@ -94,6 +97,7 @@ export default {
       const {
         working_hours_enabled: isEnabled = false,
         out_of_office_message: unavailableMessage,
+        out_of_office_send_to_groups: outOfOfficeSendToGroups = false,
         working_hours: timeSlots = [],
         timezone: timeZone,
       } = this.inbox;
@@ -102,6 +106,7 @@ export default {
         : defaultTimeSlot;
       this.isBusinessHoursEnabled = isEnabled;
       this.unavailableMessage = unavailableMessage || '';
+      this.outOfOfficeSendToGroups = outOfOfficeSendToGroups || false;
       this.timeSlots = slots;
       this.timeZone =
         this.timeZones.find(item => timeZone === item.value) ||
@@ -119,6 +124,7 @@ export default {
           formData: false,
           working_hours_enabled: this.isBusinessHoursEnabled,
           out_of_office_message: this.unavailableMessage,
+          out_of_office_send_to_groups: this.outOfOfficeSendToGroups,
           working_hours: timeSlotTransform(this.timeSlots),
           timezone: this.timeZone.value,
           channel: {},
@@ -154,6 +160,14 @@ export default {
           />
           <textarea v-else v-model="unavailableMessage" type="text" />
         </div>
+        <label
+          class="mt-4 flex items-center gap-2 text-body-para text-n-slate-11"
+        >
+          <Checkbox v-model="outOfOfficeSendToGroups" />
+          <span>
+            {{ $t('INBOX_MGMT.BUSINESS_HOURS.SEND_TO_GROUPS') }}
+          </span>
+        </label>
       </template>
     </SettingsToggleSection>
 

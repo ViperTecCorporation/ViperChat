@@ -584,7 +584,16 @@
       "NO_ATTRIBUTES": "Nenhum atributo adicionado ainda",
       "ADD": {
         "TITLE": "Adicionar Atributos",
-        "SEARCH_PLACEHOLDER": "Pesquisar atributos"
+        "SEARCH_PLACEHOLDER": "Pesquisar atributos",
+        "ATTRIBUTE_PLACEHOLDER": "Selecione um atributo",
+        "INBOX_PLACEHOLDER": "Selecione uma caixa de entrada",
+        "APPLY_TO_GROUPS": "Aplicar também aos grupos desta caixa",
+        "ALREADY_EXISTS": "Este atributo já está obrigatório para esta caixa.",
+        "SAVE": "Adicionar"
+      },
+      "ITEM": {
+        "LEGACY_SCOPE": "Todas as caixas",
+        "GROUPS": "Grupos"
       },
       "SAVE": {
         "SUCCESS": "Atributos obrigatórios atualizados",

@@ -169,7 +169,8 @@ export function useBulkActions() {
           const conversation = store.getters.getConversationById(id);
           const currentCustomAttributes = conversation?.custom_attributes || {};
           const { hasMissing } = checkMissingAttributes(
-            currentCustomAttributes
+            currentCustomAttributes,
+            conversation
           );
 
           if (!hasMissing) {

@@ -50,6 +50,20 @@ const handleDelete = () => {
           attribute.value
         }}</span>
       </div>
+      <div v-if="attribute.inboxName" class="w-px h-2.5 bg-n-slate-5" />
+      <div v-if="attribute.inboxName" class="flex gap-1.5 items-center">
+        <Icon icon="i-lucide-inbox" class="size-4 text-n-slate-11" />
+        <span class="text-body-para text-n-slate-11">{{
+          attribute.inboxName
+        }}</span>
+      </div>
+      <div v-if="attribute.applyToGroups" class="w-px h-2.5 bg-n-slate-5" />
+      <div v-if="attribute.applyToGroups" class="flex gap-1.5 items-center">
+        <Icon icon="i-lucide-users" class="size-4 text-n-slate-11" />
+        <span class="text-body-para text-n-slate-11">{{
+          $t('CONVERSATION_WORKFLOW.REQUIRED_ATTRIBUTES.ITEM.GROUPS')
+        }}</span>
+      </div>
     </div>
     <div class="flex gap-2 items-center">
       <Button icon="i-lucide-trash" sm slate ghost @click.stop="handleDelete" />

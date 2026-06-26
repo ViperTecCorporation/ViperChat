@@ -160,6 +160,27 @@ describe ContactInboxWithContactBuilder do
       end.not_to have_enqueued_job(Avatar::AvatarFromUrlJob)
     end
 
+    it 'does not enqueue avatar import when only signed url parameters change' do
+      original_avatar_url = 'https://cdn.example.com/profile/maria.jpg?X-Amz-Signature=old&X-Amz-Date=20260615T120000Z'
+      next_avatar_url = 'https://cdn.example.com/profile/maria.jpg?X-Amz-Signature=new&X-Amz-Date=20260615T130000Z'
+      contact.update!(
+        additional_attributes: {
+          'avatar_url_hash' => Avatar::AvatarFromUrlJob.generate_url_hash(original_avatar_url)
+        }
+      )
+
+      expect do
+        described_class.new(
+          source_id: existing_contact_inbox.source_id,
+          inbox: inbox,
+          contact_attributes: {
+            name: 'Maria',
+            avatar_url: next_avatar_url
+          }
+        ).perform
+      end.not_to have_enqueued_job(Avatar::AvatarFromUrlJob)
+    end
+
     it 'does not enqueue duplicate avatar imports while the same avatar url is already queued' do
       avatar_url = 'https://cdn.example.com/profile/maria.jpg'
 
@@ -177,6 +198,33 @@ describe ContactInboxWithContactBuilder do
       end.to have_enqueued_job(Avatar::AvatarFromUrlJob).once
 
       expect(contact.reload.additional_attributes['avatar_url_enqueued_hash']).to eq(Digest::SHA256.hexdigest(avatar_url))
+    end
+
+    it 'enqueues avatar import when the avatar metadata changes for the same url' do
+      avatar_url = 'https://cdn.example.com/profile/maria.jpg'
+      original_metadata = { etag: 'old-etag', content_length: 1234 }
+      next_metadata = { etag: 'new-etag', content_length: 4321 }
+      contact.update!(
+        additional_attributes: {
+          'avatar_url_hash' => Avatar::AvatarFromUrlJob.generate_url_hash(avatar_url, original_metadata)
+        }
+      )
+
+      expect do
+        described_class.new(
+          source_id: existing_contact_inbox.source_id,
+          inbox: inbox,
+          contact_attributes: {
+            name: 'Maria',
+            avatar_url: avatar_url,
+            avatar_metadata: next_metadata
+          }
+        ).perform
+      end.to have_enqueued_job(Avatar::AvatarFromUrlJob).with(
+        contact,
+        avatar_url,
+        { 'content_length' => '4321', 'etag' => 'new-etag' }
+      )
     end
 
     it 'clears invalid legacy email before enriching an existing contact' do

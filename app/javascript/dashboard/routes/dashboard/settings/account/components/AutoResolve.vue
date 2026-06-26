@@ -1,29 +1,37 @@
 <script setup>
-import { h, ref, watch, computed } from 'vue';
-import { useMapGetter } from 'dashboard/composables/store';
+import { h, onMounted, ref, watch, computed } from 'vue';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useAlert } from 'dashboard/composables';
 import WithLabel from 'v3/components/Form/WithLabel.vue';
 import TextArea from 'next/textarea/TextArea.vue';
 import Switch from 'next/switch/Switch.vue';
+import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import DurationInput from 'next/input/DurationInput.vue';
 import SingleSelect from 'dashboard/components-next/filter/inputs/SingleSelect.vue';
 import { DURATION_UNITS } from 'dashboard/components-next/input/constants';
 
 const { t } = useI18n();
+const store = useStore();
 const duration = ref(0);
 const unit = ref(DURATION_UNITS.MINUTES);
 const message = ref('');
 const labelToApply = ref({});
 const ignoreWaiting = ref(false);
+const autoResolveInboxes = ref([]);
 const isEnabled = ref(false);
 const isSubmitting = ref(false);
 
 const { currentAccount, updateAccount } = useAccount();
 
 const labels = useMapGetter('labels/getLabels');
+const inboxes = useMapGetter('inboxes/getInboxes');
+
+onMounted(() => {
+  store.dispatch('inboxes/get');
+});
 
 const labelOptions = computed(() =>
   labels.value?.length
@@ -42,6 +50,84 @@ const selectedLabelName = computed(() => {
   return labelToApply.value?.name ?? null;
 });
 
+const inboxOptions = computed(() =>
+  (inboxes.value || []).map(inbox => ({
+    id: Number(inbox.id),
+    name: inbox.name,
+    channelType: inbox.channel_type || inbox.channelType,
+    provider: inbox.provider || inbox.providerName || inbox.provider_name,
+  }))
+);
+
+const normalizedValue = value => (value || '').toString().toLowerCase();
+
+const isUnoapiWhatsappInbox = inbox => {
+  const channelType = normalizedValue(inbox?.channelType);
+  const provider = normalizedValue(inbox?.provider);
+
+  return channelType.includes('whatsapp') && provider.includes('uno');
+};
+
+const isInboxSelected = inboxId => {
+  return autoResolveInboxes.value.some(
+    rule => Number(rule.inbox_id) === Number(inboxId)
+  );
+};
+
+const selectedInboxRule = inboxId => {
+  return autoResolveInboxes.value.find(
+    rule => Number(rule.inbox_id) === Number(inboxId)
+  );
+};
+
+const toggleInboxSelection = inboxId => {
+  const normalizedInboxId = Number(inboxId);
+  if (isInboxSelected(normalizedInboxId)) {
+    autoResolveInboxes.value = autoResolveInboxes.value.filter(
+      rule => Number(rule.inbox_id) !== normalizedInboxId
+    );
+  } else {
+    autoResolveInboxes.value = [
+      ...autoResolveInboxes.value,
+      { inbox_id: normalizedInboxId, send_to_groups: false },
+    ];
+  }
+};
+
+const toggleInboxGroups = inboxId => {
+  autoResolveInboxes.value = autoResolveInboxes.value.map(rule => {
+    if (Number(rule.inbox_id) !== Number(inboxId)) return rule;
+
+    return {
+      ...rule,
+      send_to_groups: !rule.send_to_groups,
+    };
+  });
+};
+
+const normalizedAutoResolveInboxes = rules =>
+  (rules || [])
+    .map(rule => ({
+      inbox_id: Number(rule.inbox_id),
+      send_to_groups: Boolean(rule.send_to_groups),
+    }))
+    .filter(rule => Number.isInteger(rule.inbox_id));
+
+const autoResolveInboxPayload = computed(() =>
+  autoResolveInboxes.value.map(rule => {
+    const inbox = inboxOptions.value.find(
+      option => option.id === Number(rule.inbox_id)
+    );
+
+    return {
+      inbox_id: Number(rule.inbox_id),
+      send_to_groups: isUnoapiWhatsappInbox(inbox)
+        ? Boolean(rule.send_to_groups)
+        : false,
+    };
+  })
+);
+
 watch(
   [currentAccount, labelOptions],
   () => {
@@ -49,12 +135,15 @@ watch(
       auto_resolve_after,
       auto_resolve_message,
       auto_resolve_ignore_waiting,
+      auto_resolve_inboxes,
       auto_resolve_label,
     } = currentAccount.value?.settings || {};
 
     duration.value = auto_resolve_after;
     message.value = auto_resolve_message;
     ignoreWaiting.value = auto_resolve_ignore_waiting;
+    autoResolveInboxes.value =
+      normalizedAutoResolveInboxes(auto_resolve_inboxes);
     // find the correct label option from the list
     // the single select component expects the full label object
     // in our case, the label id and name are both the same
@@ -102,6 +191,7 @@ const handleSubmit = async () => {
     auto_resolve_after: duration.value,
     auto_resolve_message: message.value,
     auto_resolve_ignore_waiting: ignoreWaiting.value,
+    auto_resolve_inboxes: autoResolveInboxPayload.value,
     auto_resolve_label: selectedLabelName.value,
   });
 };
@@ -114,6 +204,7 @@ const handleDisable = async () => {
     auto_resolve_after: null,
     auto_resolve_message: '',
     auto_resolve_ignore_waiting: false,
+    auto_resolve_inboxes: [],
     auto_resolve_label: null,
   });
 };
@@ -181,6 +272,53 @@ const toggleAutoResolve = async () => {
                 }}
               </span>
               <Switch v-model="ignoreWaiting" />
+            </div>
+            <div class="p-3 flex flex-col gap-3">
+              <div class="flex flex-col gap-1">
+                <span>
+                  {{ t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE.INBOXES.LABEL') }}
+                </span>
+                <span class="text-xs text-n-slate-11">
+                  {{ t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE.INBOXES.HELP') }}
+                </span>
+              </div>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <div
+                  v-for="inbox in inboxOptions"
+                  :key="inbox.id"
+                  class="flex flex-col gap-2"
+                >
+                  <label
+                    class="flex items-center gap-2 text-body-para text-n-slate-11"
+                  >
+                    <Checkbox
+                      :model-value="isInboxSelected(inbox.id)"
+                      @change="toggleInboxSelection(inbox.id)"
+                    />
+                    <span>{{ inbox.name }}</span>
+                  </label>
+                  <label
+                    v-if="
+                      isInboxSelected(inbox.id) && isUnoapiWhatsappInbox(inbox)
+                    "
+                    class="ml-6 flex items-center gap-2 text-xs text-n-slate-11"
+                  >
+                    <Checkbox
+                      :model-value="
+                        Boolean(selectedInboxRule(inbox.id)?.send_to_groups)
+                      "
+                      @change="toggleInboxGroups(inbox.id)"
+                    />
+                    <span>
+                      {{
+                        t(
+                          'GENERAL_SETTINGS.FORM.AUTO_RESOLVE.SEND_TO_GROUPS.LABEL'
+                        )
+                      }}
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
             <div class="p-3 h-12 flex items-center justify-between">
               <span>

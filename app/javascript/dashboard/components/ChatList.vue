@@ -396,9 +396,7 @@ const conversationList = computed(() => {
       activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED
     ) {
       localConversationList = [...unAssignedChatsList.value(filters)];
-    } else if (
-      activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.GROUPS
-    ) {
+    } else if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.GROUPS) {
       localConversationList = [...groupChatsList.value(filters)];
     } else if (
       activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.WAITING
@@ -827,7 +825,8 @@ function handleResolveConversation(conversationId, status, snoozedUntil) {
   const conversation = getConversationById.value(conversationId);
   const currentCustomAttributes = conversation?.custom_attributes || {};
   const { hasMissing, missing } = checkMissingAttributes(
-    currentCustomAttributes
+    currentCustomAttributes,
+    conversation
   );
 
   if (hasMissing) {

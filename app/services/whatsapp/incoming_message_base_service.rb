@@ -5,6 +5,22 @@ class Whatsapp::IncomingMessageBaseService
   include ::Whatsapp::IncomingMessageServiceHelpers
   include ::Whatsapp::IncomingMessageIdentifierHelper
 
+  AVATAR_METADATA_KEYS = %i[
+    avatar_hash content_length content_md5 content_type etag file_hash file_size
+    hash last_modified picture_hash profile_picture_hash size updated_at
+  ].freeze
+
+  STATUS_ALIASES = {
+    'received' => 'delivered'
+  }.freeze
+
+  STATUS_ORDER = {
+    'progress' => -1,
+    'sent' => 0,
+    'delivered' => 1,
+    'read' => 2
+  }.freeze
+
   # rubocop:disable Style/ClassVars
   @@microsecond = 0
   # rubocop:enable Style/ClassVars
@@ -89,6 +105,7 @@ class Whatsapp::IncomingMessageBaseService
     contact_attributes = {
       name: contact_display_name(contact_params),
       avatar_url: contact_params.dig(:profile, :picture).presence,
+      avatar_metadata: avatar_metadata_from(contact_params, contact_params[:profile]),
       bsuid: contact_bsuid(contact_params),
       whatsapp_username: contact_username(contact_params)
     }.compact
@@ -125,13 +142,31 @@ class Whatsapp::IncomingMessageBaseService
       contact_attributes: {
         email: contact_params[:group_id],
         name: contact_params[:group_subject] || contact_params[:group_id],
-        avatar_url: contact_params[:group_picture].presence
+        avatar_url: contact_params[:group_picture].presence,
+        avatar_metadata: avatar_metadata_from(contact_params)
       }
     ).perform
   end
 
+  def avatar_metadata_from(*sources)
+    Array(sources).compact.each_with_object({}) do |source, result|
+      next unless source.respond_to?(:with_indifferent_access)
+
+      attrs = source.with_indifferent_access
+      [attrs[:picture_metadata], attrs[:profile_picture_metadata], attrs[:group_picture_metadata]].compact.each do |metadata|
+        result.merge!(avatar_metadata_from(metadata))
+      end
+      AVATAR_METADATA_KEYS.each do |key|
+        value = attrs[key].presence || attrs[:"picture_#{key}"].presence || attrs[:"profile_picture_#{key}"].presence
+        result[key] = value if value.present?
+      end
+    end
+  end
+
   def update_message_with_status(message, status)
-    if status[:status] == 'deleted'
+    incoming_status = normalized_message_status(status[:status])
+
+    if incoming_status == 'deleted'
       content_attributes = (message.content_attributes || {}).merge(
         'deleted' => true
       )
@@ -140,14 +175,31 @@ class Whatsapp::IncomingMessageBaseService
       message.assign_attributes(content_attributes: content_attributes)
       message.content = I18n.t('conversations.messages.deleted') unless preserve_content
     else
-      message.status = status[:status]
+      return unless should_update_message_status?(message, incoming_status)
+
+      message.status = incoming_status
     end
-    if status[:status] == 'failed' && status[:errors].present?
+    if incoming_status == 'failed' && status[:errors].present?
       error = status[:errors]&.first
       message.external_error = "#{error[:code]}: #{error[:title]}"
       message.conversation.open! unless message.conversation.open?
     end
     message.save!
+  end
+
+  def normalized_message_status(status)
+    STATUS_ALIASES.fetch(status.to_s, status.to_s)
+  end
+
+  def should_update_message_status?(message, incoming_status)
+    return true if incoming_status == 'failed'
+    return true if message.failed?
+
+    current_index = STATUS_ORDER[message.status]
+    incoming_index = STATUS_ORDER[incoming_status]
+    return true if current_index.blank? || incoming_index.blank?
+
+    incoming_index >= current_index
   end
 
   def preserve_deleted_message_content?
@@ -313,6 +365,7 @@ class Whatsapp::IncomingMessageBaseService
     contact_attributes = {
       name: contact_display_name(contact_params),
       avatar_url: contact_params.dig(:profile, :picture).presence,
+      avatar_metadata: avatar_metadata_from(contact_params, contact_params[:profile]),
       bsuid: contact_bsuid(contact_params),
       whatsapp_username: contact_username(contact_params)
     }.compact
