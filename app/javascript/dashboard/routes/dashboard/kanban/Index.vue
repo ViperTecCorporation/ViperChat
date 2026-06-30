@@ -4,6 +4,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useStore } from 'dashboard/composables/store';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import Draggable from 'vuedraggable';
 
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -314,6 +315,7 @@ const onCardDragChange = async (event, targetStage) => {
       }
     } catch (err) {
       console.error('Failed to update stage via drag:', err);
+      useAlert(err.response?.data?.error || 'Erro ao mover card');
     } finally {
       skipColumnSync = false;
     }

@@ -1,4 +1,8 @@
 module Enterprise::ConversationPolicy
+  def update?
+    show?
+  end
+
   def show?
     return false unless super
     return true unless custom_role_permissions?

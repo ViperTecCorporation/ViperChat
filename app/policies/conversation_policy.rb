@@ -7,6 +7,10 @@ class ConversationPolicy < ApplicationPolicy
     administrator?
   end
 
+  def update?
+    administrator? || agent_bot? || agent_can_view_conversation?
+  end
+
   def show?
     administrator? || agent_bot? || agent_can_view_conversation? || participant_access?
   end
