@@ -2,6 +2,8 @@ class Sla::EvaluateAppliedSlaService
   pattr_initialize [:applied_sla!]
 
   def perform
+    return unless conversation.sla_applicable?
+
     check_frt
     check_nrt
     check_rt
