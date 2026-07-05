@@ -1,5 +1,6 @@
 <script>
 import { defineAsyncComponent, ref, computed } from 'vue';
+import { toHex, mix } from 'color2k';
 
 import NextSidebar from 'next/sidebar/Sidebar.vue';
 import WootKeyShortcutModal from 'dashboard/components/widgets/modal/WootKeyShortcutModal.vue';
@@ -96,6 +97,9 @@ export default {
       } = this.uiSettings;
       return conversationDisplayType;
     },
+    activeTheme() {
+      return this.uiSettings.active_theme || 'default';
+    },
   },
   watch: {
     isSmallScreen: {
@@ -109,6 +113,32 @@ export default {
           this.updateUISettings({
             conversation_display_type: this.previouslyUsedDisplayType,
           });
+        }
+      },
+      immediate: true,
+    },
+    activeTheme: {
+      handler(theme) {
+        document.documentElement.classList.remove('brand-viper', 'brand-glow');
+        if (theme === 'viper') {
+          document.documentElement.classList.add('brand-viper');
+          this.resetCustomBrandColors();
+        } else if (theme === 'glow') {
+          document.documentElement.classList.add('brand-glow');
+          this.resetCustomBrandColors();
+        } else if (theme === 'custom') {
+          const color = this.uiSettings.custom_brand_color || '#2781f6';
+          this.applyCustomBrandColors(color);
+        } else {
+          this.resetCustomBrandColors();
+        }
+      },
+      immediate: true,
+    },
+    'uiSettings.custom_brand_color': {
+      handler(color) {
+        if (this.activeTheme === 'custom' && color) {
+          this.applyCustomBrandColors(color);
         }
       },
       immediate: true,
@@ -136,6 +166,29 @@ export default {
     },
     closeKeyShortcutModal() {
       this.showShortcutModal = false;
+    },
+    applyCustomBrandColors(hexColor) {
+      const mixWhite = weight => toHex(mix(hexColor, '#ffffff', weight));
+      const mixBlack = weight => toHex(mix(hexColor, '#0a0a0a', weight));
+      const root = document.documentElement;
+      root.style.setProperty('--blue-1', mixWhite(0.96));
+      root.style.setProperty('--blue-2', mixWhite(0.92));
+      root.style.setProperty('--blue-3', mixWhite(0.86));
+      root.style.setProperty('--blue-4', mixWhite(0.76));
+      root.style.setProperty('--blue-5', mixWhite(0.62));
+      root.style.setProperty('--blue-6', mixWhite(0.46));
+      root.style.setProperty('--blue-7', mixWhite(0.28));
+      root.style.setProperty('--blue-8', mixWhite(0.15));
+      root.style.setProperty('--blue-9', hexColor);
+      root.style.setProperty('--blue-10', mixBlack(0.15));
+      root.style.setProperty('--blue-11', mixBlack(0.35));
+      root.style.setProperty('--blue-12', mixBlack(0.55));
+    },
+    resetCustomBrandColors() {
+      const root = document.documentElement;
+      for (let i = 1; i <= 12; i++) {
+        root.style.removeProperty(`--blue-${i}`);
+      }
     },
   },
 };

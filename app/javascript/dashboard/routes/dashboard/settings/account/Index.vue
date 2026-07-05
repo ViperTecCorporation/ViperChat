@@ -13,6 +13,7 @@ import NextInput from 'next/input/Input.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import Switch from 'next/switch/Switch.vue';
+import ColorPicker from 'dashboard/components-next/colorpicker/ColorPicker.vue';
 import AccountId from './components/AccountId.vue';
 import BuildInfo from './components/BuildInfo.vue';
 import AccountDelete from './components/AccountDelete.vue';
@@ -33,6 +34,7 @@ export default {
     Switch,
     WithLabel,
     NextInput,
+    ColorPicker,
   },
   setup() {
     const { updateUISettings, uiSettings } = useUISettings();
@@ -47,6 +49,21 @@ export default {
           open_waiting_conversations_by_default: value,
         }),
     });
+    const activeTheme = computed({
+      get: () => uiSettings.value.active_theme || 'default',
+      set: value => {
+        updateUISettings({ active_theme: value });
+        if (value !== 'custom') {
+          updateUISettings({ custom_brand_color: null });
+        }
+      },
+    });
+    const customBrandColor = computed({
+      get: () => uiSettings.value.custom_brand_color || '#2781f6',
+      set: value => {
+        updateUISettings({ custom_brand_color: value, active_theme: 'custom' });
+      },
+    });
 
     return {
       updateUISettings,
@@ -55,6 +72,8 @@ export default {
       enabledLanguages,
       accountId,
       openWaitingConversationsByDefault,
+      activeTheme,
+      customBrandColor,
     };
   },
   data() {
@@ -262,6 +281,66 @@ export default {
     </div>
     <AudioTranscription v-if="showAudioTranscriptionConfig" />
     <DeletedMessageContent />
+    <SectionLayout
+      with-border
+      :title="$t('GENERAL_SETTINGS.FORM.BRAND_COLOR_SECTION.TITLE')"
+      :description="$t('GENERAL_SETTINGS.FORM.BRAND_COLOR_SECTION.NOTE')"
+    >
+      <div class="flex flex-col gap-4">
+        <div class="flex gap-4">
+          <button
+            class="flex items-center gap-2 px-4 py-3 border border-solid rounded-lg text-sm font-medium transition-all cursor-pointer"
+            :class="
+              activeTheme === 'default'
+                ? 'border-n-brand bg-n-brand/5 text-n-brand'
+                : 'border-n-weak bg-n-surface-2 text-n-slate-12 hover:border-n-strong'
+            "
+            @click="activeTheme = 'default'"
+          >
+            <span class="w-4 h-4 rounded-sm bg-[#2781f6] inline-block" />
+            {{ $t('GENERAL_SETTINGS.FORM.BRAND_COLOR_SECTION.THEME_ORIGINAL') }}
+          </button>
+          <button
+            class="flex items-center gap-2 px-4 py-3 border border-solid rounded-lg text-sm font-medium transition-all cursor-pointer"
+            :class="
+              activeTheme === 'viper'
+                ? 'border-n-brand bg-n-brand/5 text-n-brand'
+                : 'border-n-weak bg-n-surface-2 text-n-slate-12 hover:border-n-strong'
+            "
+            @click="activeTheme = 'viper'"
+          >
+            <span class="w-4 h-4 rounded-sm bg-[#6f3935] inline-block" />
+            {{ $t('GENERAL_SETTINGS.FORM.BRAND_COLOR_SECTION.THEME_VIPER') }}
+          </button>
+          <button
+            class="flex items-center gap-2 px-4 py-3 border border-solid rounded-lg text-sm font-medium transition-all cursor-pointer"
+            :class="
+              activeTheme === 'glow'
+                ? 'border-n-brand bg-n-brand/5 text-n-brand'
+                : 'border-n-weak bg-n-surface-2 text-n-slate-12 hover:border-n-strong'
+            "
+            @click="activeTheme = 'glow'"
+          >
+            <span class="w-4 h-4 rounded-sm bg-[#7c3aed] inline-block" />
+            {{ $t('GENERAL_SETTINGS.FORM.BRAND_COLOR_SECTION.THEME_GLOW') }}
+          </button>
+        </div>
+        <div class="flex items-center gap-4 mt-2">
+          <ColorPicker v-model="customBrandColor" />
+          <div class="w-40">
+            <NextInput
+              v-model="customBrandColor"
+              type="text"
+              placeholder="#2781f6"
+              class="w-full"
+            />
+          </div>
+          <span class="text-sm text-n-slate-11">
+            {{ $t('GENERAL_SETTINGS.FORM.BRAND_COLOR_SECTION.CUSTOM') }}
+          </span>
+        </div>
+      </div>
+    </SectionLayout>
     <SectionLayout
       with-border
       :title="$t('GENERAL_SETTINGS.FORM.WAITING_CONVERSATIONS_SECTION.TITLE')"

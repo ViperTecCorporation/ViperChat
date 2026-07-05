@@ -113,6 +113,14 @@
           "ERROR": "Failed to update deleted message setting"
         }
       },
+      "BRAND_COLOR_SECTION": {
+        "TITLE": "Customize Brand Color",
+        "NOTE": "Choose the color scheme for your Chatwoot interface.",
+        "THEME_ORIGINAL": "Original Blue",
+        "THEME_VIPER": "Viper Brown",
+        "THEME_GLOW": "Custom Glow",
+        "CUSTOM": "Choose your color"
+      },
       "WAITING_CONVERSATIONS_SECTION": {
         "TITLE": "Waiting conversations",
         "NOTE": "Open conversations that are waiting for a reply in the Waiting tab by default."

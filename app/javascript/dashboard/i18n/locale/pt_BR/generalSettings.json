@@ -113,6 +113,14 @@
           "ERROR": "Falha ao atualizar configuração de mensagens apagadas"
         }
       },
+      "BRAND_COLOR_SECTION": {
+        "TITLE": "Personalizar Cor da Marca",
+        "NOTE": "Escolha o esquema de cores para a interface do seu Chatwoot.",
+        "THEME_ORIGINAL": "Azul Original",
+        "THEME_VIPER": "Marrom Viper",
+        "THEME_GLOW": "Glow Personalizado",
+        "CUSTOM": "Escolha sua cor"
+      },
       "WAITING_CONVERSATIONS_SECTION": {
         "TITLE": "Conversas aguardando",
         "NOTE": "Abrir automaticamente as conversas que estão aguardando resposta na aba Aguardando."
