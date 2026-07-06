@@ -355,3 +355,5 @@ Thanks goes to all these [wonderful people](https://www.chatwoot.com/docs/contri
 ### Attachment availability (m?dias S3/CDN)
 - `ATTACHMENT_AVAILABILITY_ATTEMPTS` (padr?o: 5) ? n?mero de tentativas para confirmar que o blob foi propagado no storage antes de marcar a mensagem como `sent`.
 - `ATTACHMENT_AVAILABILITY_BASE_DELAY` (padr?o: 0.5 segundos) ? atraso inicial entre tentativas; usa backoff exponencial at? 8x.
+
+Teste de push. Commit inicial, teste.
