@@ -51,7 +51,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def set_contact
-    return if contact_params.blank?
+    return if contact_params.blank? && !outgoing_echo
 
     return set_structured_group_contact if structured_group_message?
 

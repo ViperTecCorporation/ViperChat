@@ -337,22 +337,32 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def set_contact_from_echo
-    # For echo messages, contact phone is in the 'to' field
-    phone_number = messages_data.first[:to].to_s
-    return if phone_number.blank?
+    message = messages_data.first
+    source_ids = outgoing_message_source_ids(message)
+    return if source_ids.blank?
 
-    waid = processed_waid(phone_number) || phone_number
-
-    contact_inbox = ::ContactInboxWithContactBuilder.new(
-      source_id: waid,
+    contact_inbox = ContactInboxSourceIdResolver.new(
       inbox: inbox,
-      contact_attributes: { name: "+#{phone_number}", phone_number: "+#{phone_number}" }
+      source_ids: source_ids,
+      contact_attributes: contact_attributes_from_echo(message, source_ids.first)
     ).perform
 
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
     @sender = nil
-    update_whatsapp_identifiers(source_ids: outgoing_message_source_ids(messages_data.first), phone_number: "+#{phone_number}")
+    update_whatsapp_identifiers(source_ids: source_ids, phone_number: @contact.phone_number)
+  end
+
+  def contact_attributes_from_echo(message, source_identifier)
+    contact_attributes = {
+      name: source_identifier
+    }
+    apply_phone_attributes(contact_attributes, whatsapp_phone_number(message[:to]))
+    if contact_attributes[:phone_number].present? && source_identifier == message[:to]
+      contact_attributes[:name] = contact_attributes[:phone_number]
+    end
+    contact_attributes[:bsuid] = message[:to_parent_user_id].presence || message[:to_user_id].presence
+    contact_attributes.compact
   end
 
   def set_contact_from_message
