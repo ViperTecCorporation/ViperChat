@@ -1,49 +1,36 @@
-name: Build and Push Docker Image
-
+name: Build Minha Imagem Pessoal
 on:
   push:
     branches:
-      - "**"  # Dispara o build para absolutamente todas as branches
+      - '**'        # Isso aqui diz: "Monitore QUALQUER branch que existir"
+  workflow_dispatch: # Mantém o botão manual por segurança
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+permissions:
+  contents: read
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to the Container Registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            # Cria uma tag com o nome exato da branch (ex: sua-imagem:homolog)
-            type=ref,event=branch
-            # Só atualiza a tag 'latest' se a branch atual for a 'main' ou a 'master'
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
-            # Cria uma tag curta com o código do commit (ótimo para rastrear erros)
-            type=sha,format=short
-
-      - name: Build and push Docker image
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: docker/Dockerfile # Indica que a receita está na pasta docker
           push: true
-          tags: ${{ id.meta.outputs.tags }}
-          labels: ${{ id.meta.outputs.labels }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/chatwoot:latest
