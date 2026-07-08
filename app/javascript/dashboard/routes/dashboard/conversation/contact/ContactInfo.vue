@@ -12,6 +12,7 @@ import Avatar from 'next/avatar/Avatar.vue';
 import SocialIcons from './SocialIcons.vue';
 import EditContact from './EditContact.vue';
 import ContactMergeModal from 'dashboard/modules/contact/ContactMergeModal.vue';
+import ContactReminderModal from 'dashboard/modules/contact/ContactReminderModal.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
 import ContactDeleteModal from 'dashboard/modules/contact/ContactDeleteModal.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
@@ -28,6 +29,7 @@ export default {
     ComposeConversation,
     SocialIcons,
     ContactMergeModal,
+    ContactReminderModal,
     ContactLabels,
     ContactDeleteModal,
     VoiceCallButton,
@@ -384,6 +386,21 @@ export default {
           sm
           @click="toggleEditModal"
         />
+        <ContactReminderModal
+          v-if="currentChat.id"
+          :contact-id="contact.id"
+          :conversation-id="currentChat.id"
+        >
+          <template #trigger>
+            <NextButton
+              v-tooltip.top-end="'Criar Lembrete'"
+              icon="i-ph-calendar-plus"
+              slate
+              faded
+              sm
+            />
+          </template>
+        </ContactReminderModal>
         <ContactMergeModal :primary-contact="contact">
           <template #trigger>
             <NextButton
