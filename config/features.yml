@@ -1,11 +1,19 @@
 # DO NOT change the order of features EVER
 ############################################
-# name: the name to be used internally in the code
-# display_name: the name to be used in the UI
-# enabled: whether the feature is enabled by default
-# help_url: the url to the help center article
-# chatwoot_internal: whether the feature is internal to ViperChat and should not be shown in the UI for other self hosted installations
-# deprecated: purpose of feature flag is done, no need to show it in the UI anymore
+# name:               the name to be used internally in the code
+# display_name:       the name to be used in the UI
+# enabled:            whether the feature is enabled by default
+# column:             the account bitset column used to store the flag. Defaults to feature_flags.
+#                     Use feature_flags_ext_1 for extension flags. Each bigint column supports 63 flags.
+# help_url:           the url to the help center article
+# chatwoot_internal:  whether the feature is internal to ViperChat and should not be shown in the UI for other self hosted installations
+# deprecated:         purpose of feature flag is done, no need to show it in the UI anymore
+#
+# ADDING A NEW FEATURE FLAG:
+#   - The `feature_flags` column is FULL (63/63 slots used). Do NOT add to it.
+#   - New flags MUST set `column: feature_flags_ext_1` and be appended at the end.
+#   - Bit positions are persisted per column; never reorder or remove existing
+#     entries, and never change an existing feature's `column` after release.
 - name: inbound_emails
   display_name: Inbound Emails
   enabled: true
@@ -229,51 +237,63 @@
   display_name: Assignment V2
   enabled: true
 - name: captain_document_auto_sync
+  column: feature_flags_ext_1
   display_name: Captain Document Auto Sync
   enabled: false
   premium: true
 - name: advanced_search
+  column: feature_flags_ext_1
   display_name: Advanced Search
   enabled: true
   premium: true
 - name: saml
+  column: feature_flags_ext_1
   display_name: SAML
   enabled: false
   premium: true
 - name: advanced_search_indexing
+  column: feature_flags_ext_1
   display_name: Advanced Search Indexing
   enabled: true
   premium: true
   chatwoot_internal: true
 - name: reply_mailer_migration
+  column: feature_flags_ext_1
   # This feature is temporary only to migrate reply mailer to new email builder
   # Once the migration is done, this feature can be removed
   display_name: Reply Mailer Migration
   enabled: false
   chatwoot_internal: true
 - name: quoted_email_reply
+  column: feature_flags_ext_1
   display_name: Quoted Email Reply
   enabled: false
   deprecated: true
 - name: companies
+  column: feature_flags_ext_1
   display_name: Companies
   enabled: false
   premium: true
 - name: channel_tiktok
+  column: feature_flags_ext_1
   display_name: TikTok Channel
   enabled: false
 - name: csat_review_notes
+  column: feature_flags_ext_1
   display_name: CSAT Review Notes
   enabled: true
   premium: true
 - name: captain_tasks
+  column: feature_flags_ext_1
   display_name: Captain Tasks
   enabled: true
 - name: conversation_required_attributes
+  column: feature_flags_ext_1
   display_name: Required Conversation Attributes
   enabled: false
   premium: true
 - name: advanced_assignment
+  column: feature_flags_ext_1
   display_name: Advanced Assignment
   enabled: false
   premium: true
