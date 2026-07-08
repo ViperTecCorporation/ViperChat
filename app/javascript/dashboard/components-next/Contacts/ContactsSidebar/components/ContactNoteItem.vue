@@ -1,11 +1,15 @@
 <script setup>
-import { useTemplateRef, onMounted, ref } from 'vue';
+import { useTemplateRef, onMounted, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useToggle } from '@vueuse/core';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
 const props = defineProps({
   note: {
@@ -33,8 +37,37 @@ const [isExpanded, toggleExpanded] = useToggle();
 const { t } = useI18n();
 const { formatMessage } = useMessageFormatter();
 
+const store = useStore();
+const currentChat = useMapGetter('getSelectedChat');
+const inbox = computed(() => currentChat.value?.meta?.channel);
+
+const insertIntoRichEditor = computed(() => {
+  return [INBOX_TYPES.WEB, INBOX_TYPES.EMAIL].includes(inbox.value);
+});
+
 const handleDelete = () => {
   emit('delete', props.note.id);
+};
+
+const handleUseNote = () => {
+  const conversationId = currentChat.value?.id;
+  if (!conversationId) return;
+
+  const replyType =
+    store.getters['draftMessages/getReplyEditorMode'] || 'reply';
+  const draftKey = `draft-${conversationId}-${replyType}`;
+  const draftText = store.getters['draftMessages/get'](draftKey) || '';
+
+  let valueToInsert = String(props.note.content);
+  if (draftText && !/\s$/.test(draftText)) {
+    valueToInsert = ` ${valueToInsert}`;
+  }
+
+  if (insertIntoRichEditor.value) {
+    emitter.emit(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, valueToInsert);
+  } else {
+    emitter.emit(BUS_EVENTS.INSERT_INTO_NORMAL_EDITOR, valueToInsert);
+  }
 };
 
 onMounted(() => {
@@ -71,15 +104,27 @@ onMounted(() => {
           </span>
         </div>
       </div>
-      <Button
-        v-if="allowDelete"
-        variant="faded"
-        color="ruby"
-        size="xs"
-        icon="i-lucide-trash"
-        class="opacity-0 group-hover/note:opacity-100"
-        @click="handleDelete"
-      />
+      <div class="flex items-center gap-1">
+        <Button
+          v-if="currentChat"
+          v-tooltip.top-end="t('CONTACTS_LAYOUT.SIDEBAR.NOTES.USE_NOTE')"
+          variant="faded"
+          color="blue"
+          size="xs"
+          icon="i-lucide-arrow-left-to-line"
+          class="opacity-0 group-hover/note:opacity-100"
+          @click="handleUseNote"
+        />
+        <Button
+          v-if="allowDelete"
+          variant="faded"
+          color="ruby"
+          size="xs"
+          icon="i-lucide-trash"
+          class="opacity-0 group-hover/note:opacity-100"
+          @click="handleDelete"
+        />
+      </div>
     </div>
     <p
       ref="noteContentRef"
