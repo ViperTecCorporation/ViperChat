@@ -264,11 +264,11 @@
   display_name: Reply Mailer Migration
   enabled: false
   chatwoot_internal: true
-- name: quoted_email_reply
+- name: unread_count_for_filters
   column: feature_flags_ext_1
-  display_name: Quoted Email Reply
+  display_name: Unread Count For Filters
   enabled: false
-  deprecated: true
+  chatwoot_internal: true
 - name: companies
   column: feature_flags_ext_1
   display_name: Companies
