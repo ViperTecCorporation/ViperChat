@@ -72,7 +72,16 @@
       "SAVE": "Save Reminder",
       "SUCCESS": "Reminder created successfully!",
       "ERROR": "Error creating reminder. Please try again.",
-      "VALIDATION_ERROR": "Please select a valid date and time."
+      "VALIDATION_ERROR": "Please select a valid date and time.",
+      "EDIT_TITLE": "Reschedule Reminder",
+      "JUSTIFICATION_LABEL": "Justification / Observation",
+      "JUSTIFICATION_PLACEHOLDER": "E.g. Return call or justification for rescheduling",
+      "ACTIVE_REMINDERS": "Active Reminders",
+      "ACTION": "Action",
+      "AUTO_MESSAGE": "Automatic Message",
+      "INTERNAL_ALERT": "Internal Alert",
+      "CONTENT": "Content",
+      "OBS": "Obs"
     }
   },
   "EDIT_CONTACT": {

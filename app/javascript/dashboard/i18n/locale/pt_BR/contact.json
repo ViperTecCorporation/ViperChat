@@ -72,7 +72,16 @@
       "SAVE": "Salvar Lembrete",
       "SUCCESS": "Lembrete criado com sucesso!",
       "ERROR": "Erro ao criar lembrete. Tente novamente.",
-      "VALIDATION_ERROR": "Por favor, selecione uma data e hora válidas."
+      "VALIDATION_ERROR": "Por favor, selecione uma data e hora válidas.",
+      "EDIT_TITLE": "Reagendar Lembrete",
+      "JUSTIFICATION_LABEL": "Justificativa / Observação",
+      "JUSTIFICATION_PLACEHOLDER": "Ex: Retornar ligação ou Justificativa do reagendamento",
+      "ACTIVE_REMINDERS": "Agendamentos Ativos",
+      "ACTION": "Ação",
+      "AUTO_MESSAGE": "Mensagem Automática",
+      "INTERNAL_ALERT": "Alerta Interno",
+      "CONTENT": "Conteúdo",
+      "OBS": "Obs"
     }
   },
   "EDIT_CONTACT": {

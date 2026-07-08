@@ -8,6 +8,7 @@ class CreateContactReminders < ActiveRecord::Migration[7.0]
       t.datetime :scheduled_at, null: false
       t.boolean :send_message, default: false
       t.text :message_content
+      t.text :description
       t.boolean :is_completed, default: false
 
       t.timestamps

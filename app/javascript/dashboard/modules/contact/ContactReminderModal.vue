@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -16,6 +16,10 @@ const props = defineProps({
     type: [Number, String],
     default: null,
   },
+  reminder: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['close']);
@@ -23,10 +27,15 @@ const emit = defineEmits(['close']);
 const store = useStore();
 const { t } = useI18n();
 
-const reminderTime = ref(null);
-const note = ref('');
-const sendMessage = ref(false);
-const isCreating = ref(false);
+const getInitialTime = () => {
+  return props.reminder ? new Date(props.reminder.scheduledAt * 1000) : null;
+};
+
+const reminderTime = ref(getInitialTime());
+const note = ref(props.reminder ? props.reminder.messageContent : '');
+const sendMessage = ref(props.reminder ? props.reminder.sendMessage : false);
+const description = ref(props.reminder ? props.reminder.description : '');
+const isSaving = ref(false);
 
 const lang = {
   days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
@@ -46,10 +55,18 @@ const disabledTime = date => {
 };
 
 const resetForm = () => {
-  reminderTime.value = null;
-  note.value = '';
-  sendMessage.value = false;
+  reminderTime.value = getInitialTime();
+  note.value = props.reminder ? props.reminder.messageContent : '';
+  sendMessage.value = props.reminder ? props.reminder.sendMessage : false;
+  description.value = props.reminder ? props.reminder.description : '';
 };
+
+watch(
+  () => props.reminder,
+  () => {
+    resetForm();
+  }
+);
 
 const onSubmit = async hide => {
   if (!reminderTime.value) {
@@ -57,25 +74,36 @@ const onSubmit = async hide => {
     return;
   }
 
-  isCreating.value = true;
+  isSaving.value = true;
   try {
-    await store.dispatch('contactReminders/create', {
+    const payload = {
       contactId: props.contactId,
       contact_reminder: {
         conversation_id: props.conversationId,
         scheduled_at: reminderTime.value.toISOString(),
         message_content: note.value,
         send_message: sendMessage.value,
+        description: description.value,
       },
-    });
-    useAlert(t('CONTACT_PANEL.REMINDER.SUCCESS'));
-    resetForm();
+    };
+
+    if (props.reminder) {
+      await store.dispatch('contactReminders/update', {
+        ...payload,
+        reminderId: props.reminder.id,
+      });
+      useAlert('Lembrete atualizado com sucesso!');
+    } else {
+      await store.dispatch('contactReminders/create', payload);
+      useAlert(t('CONTACT_PANEL.REMINDER.SUCCESS'));
+      resetForm();
+    }
     hide();
     emit('close');
   } catch (error) {
     useAlert(t('CONTACT_PANEL.REMINDER.ERROR'));
   } finally {
-    isCreating.value = false;
+    isSaving.value = false;
   }
 };
 </script>
@@ -92,7 +120,11 @@ const onSubmit = async hide => {
       <div class="w-full md:w-96 p-6 flex flex-col gap-4">
         <div class="flex flex-col gap-2">
           <h3 class="text-base font-medium leading-6 text-n-slate-12">
-            {{ t('CONTACT_PANEL.REMINDER.TITLE') }}
+            {{
+              reminder
+                ? t('CONTACT_PANEL.REMINDER.EDIT_TITLE')
+                : t('CONTACT_PANEL.REMINDER.TITLE')
+            }}
           </h3>
           <p class="mb-0 text-sm text-n-slate-11">
             {{ t('CONTACT_PANEL.REMINDER.DESC') }}
@@ -128,6 +160,20 @@ const onSubmit = async hide => {
             />
           </div>
 
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-n-slate-12">
+              {{ t('CONTACT_PANEL.REMINDER.JUSTIFICATION_LABEL') }}
+            </label>
+            <textarea
+              v-model="description"
+              rows="2"
+              class="w-full px-3 py-2 border rounded-md border-n-slate-3 bg-white text-n-slate-12 focus:ring-1 focus:ring-w-500 focus:border-w-500"
+              :placeholder="
+                t('CONTACT_PANEL.REMINDER.JUSTIFICATION_PLACEHOLDER')
+              "
+            />
+          </div>
+
           <div class="flex items-center gap-2">
             <input
               id="send-message-checkbox"
@@ -154,7 +200,7 @@ const onSubmit = async hide => {
             <NextButton
               type="submit"
               :label="t('CONTACT_PANEL.REMINDER.SAVE')"
-              :is-loading="isCreating"
+              :is-loading="isSaving"
             />
           </div>
         </form>

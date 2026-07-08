@@ -32,6 +32,7 @@ class Api::V1::Accounts::Contacts::ContactRemindersController < Api::V1::Account
       :scheduled_at,
       :send_message,
       :message_content,
+      :description,
       :is_completed
     ).merge({ user_id: Current.user.id })
   end

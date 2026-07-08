@@ -13,6 +13,7 @@ import SocialIcons from './SocialIcons.vue';
 import EditContact from './EditContact.vue';
 import ContactMergeModal from 'dashboard/modules/contact/ContactMergeModal.vue';
 import ContactReminderModal from 'dashboard/modules/contact/ContactReminderModal.vue';
+import ContactRemindersList from './ContactRemindersList.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
 import ContactDeleteModal from 'dashboard/modules/contact/ContactDeleteModal.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
@@ -30,6 +31,7 @@ export default {
     SocialIcons,
     ContactMergeModal,
     ContactReminderModal,
+    ContactRemindersList,
     ContactLabels,
     ContactDeleteModal,
     VoiceCallButton,
@@ -347,6 +349,7 @@ export default {
             </span>
             <ContactLabels :contact-id="contact.id" />
           </div>
+          <ContactRemindersList v-if="contact.id" :contact-id="contact.id" />
           <ContactInfoRow
             v-if="location || additionalAttributes.location"
             :value="location || additionalAttributes.location"
