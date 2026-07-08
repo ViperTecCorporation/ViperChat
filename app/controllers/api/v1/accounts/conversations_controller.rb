@@ -131,6 +131,10 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     last_incoming_message = @conversation.messages.incoming.last
     last_seen_at = last_incoming_message.created_at - 1.second if last_incoming_message.present?
     update_last_seen_on_conversation(last_seen_at, true)
+
+    # Re-open the user's notification for this conversation (mark it unread)
+    notification = current_user.notifications.where(account_id: current_account.id, primary_actor: @conversation).last
+    notification&.update(read_at: nil)
   end
 
   def custom_attributes
