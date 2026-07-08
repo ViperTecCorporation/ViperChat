@@ -79,4 +79,9 @@ export const MACRO_ACTION_TYPES = [
     label: 'SEND_WEBHOOK_EVENT',
     inputType: 'url',
   },
+  {
+    key: 'trigger_typebot',
+    label: 'TRIGGER_TYPEBOT',
+    inputType: 'typebot',
+  },
 ];

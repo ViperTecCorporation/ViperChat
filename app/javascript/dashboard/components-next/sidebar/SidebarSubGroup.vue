@@ -46,7 +46,7 @@ useEventListener(scrollableContainer, 'scroll', () => {
     v-show="isExpanded"
     :label
     :icon
-    class="my-1"
+    class="my-1 ltr:ml-3 rtl:mr-3"
   />
   <ul
     v-if="children.length"
@@ -67,6 +67,7 @@ useEventListener(scrollableContainer, 'scroll', () => {
         v-bind="child"
         :key="child.name"
         :active="activeChild?.name === child.name"
+        subgroup
       />
     </div>
     <div

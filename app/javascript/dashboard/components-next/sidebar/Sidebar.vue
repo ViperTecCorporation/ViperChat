@@ -94,12 +94,16 @@ const hasConversationUnreadCounts = computed(() => {
 const fetchConversationUnreadCounts = ([currentAccountId, isEnabled]) => {
   if (!currentAccountId) return;
 
-  if (!isEnabled) {
-    store.dispatch('conversationUnreadCounts/clear');
-    return;
-  }
+  try {
+    if (!isEnabled) {
+      store.dispatch('conversationUnreadCounts/clear');
+      return;
+    }
 
-  store.dispatch('conversationUnreadCounts/get');
+    store.dispatch('conversationUnreadCounts/get');
+  } catch {
+    // conversationUnreadCounts module not registered
+  }
 };
 
 const toggleShortcutModalFn = show => {
@@ -131,9 +135,9 @@ const {
   isCollapsed,
   setSidebarWidth,
   saveWidth,
-  snapToCollapsed,
   snapToExpanded,
-  COLLAPSED_THRESHOLD,
+  toggleCollapse,
+  MIN_WIDTH,
 } = useSidebarResize();
 
 // On mobile, sidebar is always expanded (flyout mode)
@@ -182,18 +186,12 @@ const onResizeEnd = () => {
 
   isResizing.value = false;
   Object.assign(document.body.style, { cursor: '', userSelect: '' });
-
-  // Snap to collapsed state if below threshold
-  if (sidebarWidth.value < COLLAPSED_THRESHOLD) {
-    snapToCollapsed();
-  } else {
-    saveWidth();
-  }
+  saveWidth();
 };
 
 const onResizeHandleDoubleClick = () => {
-  if (isCollapsed.value) snapToExpanded();
-  else snapToCollapsed();
+  if (sidebarWidth.value <= MIN_WIDTH) snapToExpanded();
+  else setSidebarWidth(MIN_WIDTH);
 };
 
 // Support both mouse and touch events
@@ -202,14 +200,29 @@ useEventListener(document, 'mouseup', onResizeEnd);
 useEventListener(document, 'touchmove', onResizeMove, { passive: true });
 useEventListener(document, 'touchend', onResizeEnd);
 
+useEventListener('keydown', e => {
+  if (e.key === '[' || e.key.toLowerCase() === 'm') {
+    if (!e.ctrlKey && !e.metaKey) toggleCollapse();
+  }
+});
+
 const labels = useMapGetter('labels/getLabelsOnSidebar');
-const getInboxUnreadCount = useMapGetter(
+
+const safeUnreadCountGetter = key => {
+  const source = useMapGetter(key);
+  return computed(() => {
+    const fn = source.value;
+    return (...args) => (typeof fn === 'function' ? fn(...args) : 0);
+  });
+};
+
+const getInboxUnreadCount = safeUnreadCountGetter(
   'conversationUnreadCounts/getInboxUnreadCount'
 );
-const getLabelUnreadCount = useMapGetter(
+const getLabelUnreadCount = safeUnreadCountGetter(
   'conversationUnreadCounts/getLabelUnreadCount'
 );
-const getTeamUnreadCount = useMapGetter(
+const getTeamUnreadCount = safeUnreadCountGetter(
   'conversationUnreadCounts/getTeamUnreadCount'
 );
 const teams = useMapGetter('teams/getMyTeams');
@@ -305,6 +318,27 @@ const newReportRoutes = () => [
 
 const reportRoutes = computed(() => newReportRoutes());
 
+const kanbanPipelines = computed(() => {
+  const allLabels = store.getters['labels/getLabels'] || [];
+  const configLabel = allLabels.find(l => l.title === '_kanban_config');
+  if (configLabel && configLabel.description) {
+    try {
+      const desc = configLabel.description;
+      const prefix = '[KANBAN_CONFIG]';
+      if (desc.startsWith(prefix)) {
+        const jsonStr = desc.substring(prefix.length);
+        const parsed = JSON.parse(jsonStr);
+        if (parsed && Array.isArray(parsed.pipelines)) {
+          return parsed.pipelines;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+  return [{ id: 1, name: 'Vendas' }];
+});
+
 const menuItems = computed(() => {
   return [
     {
@@ -316,6 +350,37 @@ const menuItems = computed(() => {
       getterKeys: {
         count: 'notifications/getUnreadCount',
       },
+    },
+    {
+      name: 'Kanban',
+      label: t('SIDEBAR.KANBAN'),
+      icon: 'i-lucide-columns-3',
+      activeOn: ['kanban_dashboard'],
+      children: [
+        {
+          name: 'KanbanOverview',
+          label: 'Visão geral',
+          to: accountScopedRoute('kanban_dashboard'),
+          activeOn: ['kanban_dashboard'],
+        },
+        {
+          name: 'FunnelsHeader',
+          label: 'Funis',
+          icon: h('span', { class: 'i-lucide-equal size-3' }),
+          activeOn: ['kanban_dashboard'],
+          children: kanbanPipelines.value.map(pipeline => ({
+            name: `Pipeline-${pipeline.id}`,
+            label: pipeline.name,
+            description: `Pipeline de ${pipeline.name}`,
+            pipeline: true,
+            to: {
+              name: 'kanban_dashboard',
+              query: { pipeline_id: pipeline.id },
+            },
+            activeOn: ['kanban_dashboard'],
+          })),
+        },
+      ],
     },
     {
       name: 'Conversation',
@@ -830,16 +895,23 @@ const menuItems = computed(() => {
         ],
       },
     ]"
-    class="bg-n-background flex flex-col text-sm pb-px fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 w-[200px] md:w-auto md:relative md:flex-shrink-0 md:ltr:translate-x-0 md:rtl:translate-x-0 ltr:border-r rtl:border-l border-n-weak"
+    class="bg-n-background flex flex-col text-sm pb-px fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 w-[200px] md:w-auto md:relative md:flex-shrink-0 ltr:border-r rtl:border-l border-n-weak"
     :class="[
       {
         'shadow-lg md:shadow-none': isMobileSidebarOpen,
-        'ltr:-translate-x-full rtl:translate-x-full': !isMobileSidebarOpen,
-        'transition-transform duration-200 ease-out md:transition-[width]':
-          !isResizing,
+        'transition-transform duration-200 ease-out': !isResizing && isMobile,
+        'transition-[width] duration-200 ease-out': !isResizing && !isMobile,
       },
     ]"
-    :style="isMobile ? undefined : { width: `${sidebarWidth}px` }"
+    :style="{
+      transform:
+        isMobile && !isMobileSidebarOpen
+          ? isRTL
+            ? 'translateX(100%)'
+            : 'translateX(-100%)'
+          : undefined,
+      width: !isMobile ? `${sidebarWidth}px` : undefined,
+    }"
   >
     <section
       class="grid"
@@ -857,6 +929,13 @@ const menuItems = computed(() => {
             is-collapsed
             @show-create-account-modal="emit('showCreateAccountModal')"
           />
+          <button
+            class="flex items-center justify-center size-8 rounded-lg text-n-slate-11 hover:bg-n-alpha-2"
+            title="Expandir sidebar"
+            @click="toggleCollapse"
+          >
+            <span class="i-lucide-chevron-right size-4" />
+          </button>
         </template>
         <template v-else>
           <div class="grid flex-shrink-0 place-content-center size-6">
@@ -867,10 +946,17 @@ const menuItems = computed(() => {
             class="flex-grow -mx-1 min-w-0"
             @show-create-account-modal="emit('showCreateAccountModal')"
           />
+          <button
+            class="flex-shrink-0 size-8 grid place-content-center rounded-lg text-n-slate-11 hover:bg-n-alpha-2"
+            title="Recolher sidebar"
+            @click="toggleCollapse"
+          >
+            <span class="i-lucide-chevron-left size-4" />
+          </button>
         </template>
       </div>
       <div
-        class="flex gap-2"
+        class="flex gap-2 min-w-0"
         :class="isEffectivelyCollapsed ? 'flex-col items-center' : 'px-2'"
       >
         <RouterLink

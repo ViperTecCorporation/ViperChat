@@ -28,7 +28,7 @@ import {
 const { t } = useI18n();
 const router = useRouter();
 const store = useStore();
-const { accountId, currentAccount, finishOnboarding } = useAccount();
+const { accountId, currentAccount, updateAccount } = useAccount();
 const { enabledLanguages } = useConfig();
 const currentUser = useMapGetter('getCurrentUser');
 
@@ -134,7 +134,7 @@ const populateFormFields = () => {
 
   if (!locale.value) locale.value = detectBestLocale();
   if (!website.value) {
-    website.value = attrs.website || brandInfo?.domain || '';
+    website.value = account?.domain || brandInfo?.domain || '';
   }
   if (!timezone.value) {
     timezone.value =
@@ -195,12 +195,6 @@ const handleWebsiteEnter = () => {
   websiteInput.value?.blur();
 };
 
-const normalizeWebsiteUrl = raw => {
-  const trimmed = (raw || '').trim();
-  if (!trimmed) return '';
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-};
-
 const handleSubmit = async () => {
   // Block submit while enrichment is still running so users can't bypass
   // the form with empty values — the controller would otherwise clear
@@ -217,30 +211,12 @@ const handleSubmit = async () => {
     return;
   }
 
-  // Detect which enrichable fields the user actually edited *before*
-  // normalizing — otherwise an untouched auto-filled domain
-  // (acme.com -> https://acme.com) compares unequal against the raw snapshot
-  // and gets falsely reported as changed, skewing onboarding telemetry.
-  const init = initialValues.value;
-  const enrichableFields = {
-    website: website.value,
-    company_size: companySize.value,
-    industry: industry.value,
-  };
-  const fieldsChanged = Object.entries(enrichableFields)
-    .filter(([key, val]) => val !== init[key])
-    .map(([key]) => key);
-
-  // Persist with a scheme so downstream consumers (Firecrawl, portal
-  // homepage_link) get a fully-qualified URL regardless of what the user typed.
-  website.value = normalizeWebsiteUrl(website.value);
-
   isSubmitting.value = true;
   try {
-    await finishOnboarding({
+    await updateAccount({
       name: accountName.value,
       locale: locale.value,
-      website: website.value,
+      domain: website.value,
       industry: industry.value,
       company_size: companySize.value,
       timezone: timezone.value,
@@ -248,11 +224,20 @@ const handleSubmit = async () => {
       user_role: userRole.value,
     });
 
+    const init = initialValues.value;
+    const enrichableFields = {
+      website: website.value,
+      company_size: companySize.value,
+      industry: industry.value,
+    };
+
     useTrack(ONBOARDING_EVENTS.ACCOUNT_DETAILS_COMPLETED, {
       has_enriched_data: Boolean(
         currentAccount.value?.custom_attributes?.brand_info
       ),
-      fields_changed: fieldsChanged,
+      fields_changed: Object.entries(enrichableFields)
+        .filter(([key, val]) => val !== init[key])
+        .map(([key]) => key),
       user_role: userRole.value,
       company_size: companySize.value,
       industry: industry.value,

@@ -44,16 +44,8 @@
       "SIDEBAR": {
         "TABS": {
           "ATTRIBUTES": "Attributes",
-          "CONTACTS": "Contacts",
-          "HISTORY": "History",
-          "NOTES": "Notes"
+          "CONTACTS": "Contacts"
         }
-      },
-      "HISTORY": {
-        "EMPTY": "No conversations found for this company's contacts yet."
-      },
-      "NOTES": {
-        "EMPTY": "No notes found for this company's contacts yet."
       },
       "ATTRIBUTES": {
         "SEARCH_PLACEHOLDER": "Search attributes...",

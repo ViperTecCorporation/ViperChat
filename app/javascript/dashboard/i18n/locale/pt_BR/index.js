@@ -41,6 +41,7 @@ import teamsSettings from './teamsSettings.json';
 import webphone from './webphone.json';
 import webhooks from './webhooks.json';
 import whatsappTemplates from './whatsappTemplates.json';
+import kanban from './kanban.json';
 import yearInReview from './yearInReview.json';
 
 export default {
@@ -71,6 +72,7 @@ export default {
   ...inboxMgmt,
   ...integrationApps,
   ...integrations,
+  ...kanban,
   ...labelsMgmt,
   ...login,
   ...macros,

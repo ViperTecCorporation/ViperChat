@@ -144,6 +144,7 @@
       "REMOVE_ASSIGNED_AGENT": "Remove Assigned Agent",
       "REMOVE_ASSIGNED_TEAM": "Remover Time Atribuído",
       "ADD_LABEL": "Adicionar uma Etiqueta",
+      "ADD_CONTACT_LABEL": "Adicionar Etiqueta ao Contato",
       "REMOVE_LABEL": "Remover uma Etiqueta",
       "SEND_EMAIL_TO_TEAM": "Enviar um e-mail para o Time",
       "SEND_EMAIL_TRANSCRIPT": "Enviar uma transcrição por e-mail",

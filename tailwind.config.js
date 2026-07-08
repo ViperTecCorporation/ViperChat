@@ -22,7 +22,7 @@ const defaultSansFonts = [
 const tailwindConfig = {
   darkMode: 'class',
   content: [
-    './enterprise/app/views/**/*.erb',
+    './enterprise/app/views/**/*.html.erb',
     './app/javascript/widget/**/*.vue',
     './app/javascript/v3/**/*.vue',
     './app/javascript/dashboard/**/*.vue',
@@ -34,7 +34,7 @@ const tailwindConfig = {
     './app/javascript/dashboard/composables/**/*.js',
     './app/javascript/dashboard/components-next/**/*.js',
     './app/javascript/dashboard/routes/dashboard/**/**/*.js',
-    './app/views/**/*.erb',
+    './app/views/**/*.html.erb',
   ],
   theme: {
     extend: {
@@ -48,7 +48,6 @@ const tailwindConfig = {
         440: '440',
         460: '460',
         520: '520',
-        620: '620',
       },
       typography: {
         bubble: {
@@ -106,30 +105,24 @@ const tailwindConfig = {
               textDecoration: 'underline',
             },
             ul: {
-              paddingInlineStart: '0',
-              listStylePosition: 'inside',
+              paddingInlineStart: '0.625em',
             },
             ol: {
-              paddingInlineStart: '0',
-              listStylePosition: 'inside',
+              paddingInlineStart: '0.625em',
             },
-            'ul > li': {
-              marginBlockEnd: '0.5em',
+            'ul li': {
+              margin: '0 0 0.5em 1em',
               listStyleType: 'disc',
-              paddingInlineStart: '1.5em',
-              textIndent: '-1.5em',
+              '[dir="rtl"] &': {
+                margin: '0 1em 0.5em 0',
+              },
             },
-            'ol > li': {
-              marginBlockEnd: '0.5em',
+            'ol li': {
+              margin: '0 0 0.5em 1em',
               listStyleType: 'decimal',
-              paddingInlineStart: '1.5em',
-              textIndent: '-1.5em',
-            },
-            'li > p:first-child': {
-              display: 'inline',
-            },
-            'li > *': {
-              textIndent: '0',
+              '[dir="rtl"] &': {
+                margin: '0 1em 0.5em 0',
+              },
             },
             blockquote: {
               color: 'rgb(var(--slate-11))',

@@ -1,0 +1,82 @@
+{
+  "KANBAN": {
+    "HEADER": {
+      "TITLE": "Funnels",
+      "ADD_FUNNEL": "Add Funnel",
+      "SEARCH": "Search...",
+      "ALL_AGENTS": "All agents",
+      "ALL_INBOXES": "All inboxes",
+      "VISAO_GERAL": "Overview",
+      "ADD_TASK": "Add task"
+    },
+    "CARD": {
+      "SNOOZED": "Active snooze",
+      "TIME_IN_STAGE": "Time in stage",
+      "DUE_TODAY": "Today",
+      "OVERDUE": "Overdue",
+      "NO_ASSIGNEE": "Unassigned",
+      "RESOLVED": "Resolved",
+      "PRIORITY": "Priority",
+      "PRIORITIES": {
+        "URGENT": "Urgent",
+        "HIGH": "High",
+        "MEDIUM": "Medium",
+        "LOW": "Low"
+      }
+    },
+    "SETTINGS": {
+      "TITLE": "Funnel Settings",
+      "BASIC_INFO": "Basic info",
+      "FUNNEL_NAME": "Funnel name",
+      "FUNNEL_DESC": "Description",
+      "STAGES": "Stages",
+      "ADD_STAGE": "Add stage",
+      "STAGE_NAME": "Stage name",
+      "STAGE_LABEL": "Mapped label",
+      "STAGE_COLOR": "Color",
+      "STAGE_WON": "Won Stage (Success)",
+      "STAGE_LOST": "Lost Stage (Failure)",
+      "AUTOMATIONS": "Automation",
+      "AUTOMATIONS_HELP": "For more complex custom automations, use Automation Rules",
+      "AUTO_CREATE": "Auto-create task for new conversations",
+      "AUTO_ASSIGN_AGENT": "Auto-assign unassigned tasks to online/available agents",
+      "AUTO_ASSIGN_CONV": "Auto-assign conversation to agent",
+      "AUTO_RESOLVE": "Auto-resolve conversation when completing task",
+      "AUTO_WIN": "Auto-win task when resolving conversation",
+      "SAVE": "Save changes",
+      "DELETE": "Delete funnel",
+      "DELETE_CONFIRM": "Are you sure you want to delete this funnel?",
+      "SELECT_MODEL_TITLE": "Select a template",
+      "EMPTY_FUNNEL": "Empty Funnel",
+      "EMPTY_FUNNEL_DESC": "Start from scratch with an empty funnel.",
+      "SALES_FUNNEL": "Sales Pipeline",
+      "SALES_FUNNEL_DESC": "Track your sales leads from initial contact to deal close.",
+      "SUPPORT_FUNNEL": "Support",
+      "SUPPORT_FUNNEL_DESC": "Manage support tickets from creation to resolution.",
+      "RECRUITMENT_FUNNEL": "Recruitment Pipeline",
+      "RECRUITMENT_FUNNEL_DESC": "Manage your hiring process from application to offer."
+    },
+    "SIDEBAR": {
+      "SECTION_TITLE": "Kanban",
+      "PIPELINE": "Funnel",
+      "STAGE": "Stage",
+      "DUE_DATE": "Due Date",
+      "START_DATE": "Start Date",
+      "PRIORITY": "Priority",
+      "NOT_IN_PIPELINE": "Not in funnel",
+      "ADD_TO_PIPELINE": "Add to funnel",
+      "PRIORITY_NONE": "None",
+      "AGENT": "Agent",
+      "NO_AGENT": "Unassigned",
+      "RESOLVE_CONVERSATION": "Resolve Conversation",
+      "CONVERSATION_RESOLVED": "Conversation Resolved"
+    },
+    "PAYWALL": {
+      "TITLE": "Upgrade to use Kanban",
+      "DESCRIPTION": "The Kanban feature requires a fazer.ai Chatwoot Pro subscription.",
+      "UPGRADE_PROMPT": "Subscribe to fazer.ai Chatwoot Pro to access Kanban funnels, task management, and workflow automation.",
+      "NON_ADMIN_MESSAGE": "The Kanban feature is not available on your current plan. Please reach out to your administrator to upgrade.",
+      "UPGRADE_NOW": "Upgrade now"
+    }
+  }
+}

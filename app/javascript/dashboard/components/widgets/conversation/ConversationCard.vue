@@ -177,12 +177,22 @@ watch(
           />
         </div>
       </div>
-      <h4
-        class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
-        :class="hasUnread ? 'font-semibold' : 'font-medium'"
+      <div
+        class="flex items-baseline mx-2 my-0 min-w-0 ltr:pr-16 rtl:pl-16 gap-1.5 overflow-hidden"
       >
-        {{ conversationTitle }}
-      </h4>
+        <h4
+          class="conversation--user text-sm capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap text-n-slate-12 shrink"
+          :class="hasUnread ? 'font-semibold' : 'font-medium'"
+        >
+          {{ conversationTitle }}
+        </h4>
+        <span
+          v-if="currentContact.phone_number"
+          class="text-n-slate-10 text-[11px] shrink-0 font-medium opacity-80"
+        >
+          {{ currentContact.phone_number }}
+        </span>
+      </div>
       <p
         v-if="chat.group && chat.group_contacts_count"
         class="text-n-slate-10 text-xs my-0 mx-2 leading-4 h-4 overflow-hidden text-ellipsis whitespace-nowrap"

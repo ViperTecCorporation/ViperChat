@@ -14,12 +14,22 @@ import Suspended from './suspended/Index.vue';
 import NoAccounts from './noAccounts/Index.vue';
 import OnboardingAccountDetails from './onboarding/Index.vue';
 
+const KanbanIndex = () => import('./kanban/Index.vue');
+
 export default {
   routes: [
     {
       path: frontendURL('accounts/:accountId'),
       component: AppContainer,
       children: [
+        {
+          path: frontendURL('accounts/:accountId/kanban'),
+          name: 'kanban_dashboard',
+          component: KanbanIndex,
+          meta: {
+            permissions: ['administrator', 'agent'],
+          },
+        },
         ...captainRoutes,
         ...inboxRoutes,
         ...conversation.routes,

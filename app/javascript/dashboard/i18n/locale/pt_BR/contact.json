@@ -59,6 +59,20 @@
       "CONTACT_LABELS": "Etiquetas de contato",
       "PREVIOUS_CONVERSATIONS": "Conversas anteriores",
       "NO_RECORDS_FOUND": "Nenhum atributo encontrado"
+    },
+    "REMINDER": {
+      "TITLE": "Criar Lembrete",
+      "DESC": "Escolha uma data e horário para receber um lembrete sobre este contato. Você também pode enviar uma mensagem automática.",
+      "DATE_TIME_LABEL": "Data e Hora",
+      "DATE_TIME_PLACEHOLDER": "Selecione data e hora",
+      "NOTE_LABEL": "Nota / Mensagem",
+      "NOTE_PLACEHOLDER": "Digite uma anotação ou a mensagem que será enviada",
+      "SEND_CHECKBOX": "Enviar esta mensagem para o cliente no horário agendado",
+      "CANCEL": "Cancelar",
+      "SAVE": "Salvar Lembrete",
+      "SUCCESS": "Lembrete criado com sucesso!",
+      "ERROR": "Erro ao criar lembrete. Tente novamente.",
+      "VALIDATION_ERROR": "Por favor, selecione uma data e hora válidas."
     }
   },
   "EDIT_CONTACT": {
@@ -215,7 +229,8 @@
     "ACTIONS": {
       "COPY": "Copiar atributo",
       "DELETE": "Excluir atributo",
-      "EDIT": "Alterar atributo"
+      "EDIT": "Alterar atributo",
+      "USE": "Usar atributo"
     },
     "ADD": {
       "TITLE": "Criar atributo personalizado",
@@ -581,6 +596,10 @@
         "YOU": "Você",
         "SAVE": "Salvar nota",
         "ADD_NOTE": "Adicionar nota de contato",
+        "EDIT_NOTE": "Editar nota de contato",
+        "UPDATE": "Atualizar nota",
+        "USE_NOTE": "Usar nota",
+        "COPY_NOTE": "Copiar nota",
         "EXPAND": "Expandir",
         "COLLAPSE": "Recolher",
         "NO_NOTES": "Sem notas, você pode adicionar notas a partir da página de detalhes do contato.",

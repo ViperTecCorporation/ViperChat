@@ -10,7 +10,7 @@ module Enterprise::Conversation
   end
 
   def list_of_keys
-    super + %w[sla_policy_id]
+    super + %w[sla_policy_id kanban_stage]
   end
 
   def with_captain_activity_context(reason:, reason_type:)

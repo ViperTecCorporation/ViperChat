@@ -148,7 +148,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def permitted_update_params
     # TODO: Move the other conversation attributes to this method and remove specific endpoints for each attribute
-    params.permit(:priority)
+    params.permit(:priority, :kanban_stage)
   end
 
   def attachment_params

@@ -59,6 +59,20 @@
       "CONTACT_LABELS": "Contact Labels",
       "PREVIOUS_CONVERSATIONS": "Previous Conversations",
       "NO_RECORDS_FOUND": "No attributes found"
+    },
+    "REMINDER": {
+      "TITLE": "Create Reminder",
+      "DESC": "Choose a date and time to receive a reminder about this contact. You can also send an automated message.",
+      "DATE_TIME_LABEL": "Date and Time",
+      "DATE_TIME_PLACEHOLDER": "Select date and time",
+      "NOTE_LABEL": "Note / Message",
+      "NOTE_PLACEHOLDER": "Type an annotation or the message to be sent",
+      "SEND_CHECKBOX": "Send this message to the customer at the scheduled time",
+      "CANCEL": "Cancel",
+      "SAVE": "Save Reminder",
+      "SUCCESS": "Reminder created successfully!",
+      "ERROR": "Error creating reminder. Please try again.",
+      "VALIDATION_ERROR": "Please select a valid date and time."
     }
   },
   "EDIT_CONTACT": {
@@ -215,7 +229,8 @@
     "ACTIONS": {
       "COPY": "Copy attribute",
       "DELETE": "Delete attribute",
-      "EDIT": "Edit attribute"
+      "EDIT": "Edit attribute",
+      "USE": "Use attribute"
     },
     "ADD": {
       "TITLE": "Create custom attribute",
@@ -582,6 +597,10 @@
         "YOU": "You",
         "SAVE": "Save note",
         "ADD_NOTE": "Add contact note",
+        "EDIT_NOTE": "Edit contact note",
+        "UPDATE": "Update note",
+        "USE_NOTE": "Use note",
+        "COPY_NOTE": "Copy note",
         "EXPAND": "Expand",
         "COLLAPSE": "Collapse",
         "NO_NOTES": "No notes, you can add notes from the contact details page.",
@@ -601,11 +620,8 @@
   },
   "CONTACTS_BULK_ACTIONS": {
     "ASSIGN_LABELS": "Assign Labels",
-    "REMOVE_LABELS": "Remove Labels",
     "ASSIGN_LABELS_SUCCESS": "Labels assigned successfully.",
     "ASSIGN_LABELS_FAILED": "Failed to assign labels",
-    "REMOVE_LABELS_SUCCESS": "Labels removed successfully.",
-    "REMOVE_LABELS_FAILED": "Failed to remove labels",
     "DESCRIPTION": "Select the labels you want to add to the selected contacts.",
     "NO_LABELS_FOUND": "No labels available yet.",
     "SELECTED_COUNT": "{count} selected",

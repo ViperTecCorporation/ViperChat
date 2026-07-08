@@ -124,7 +124,7 @@ const copyConversationId = async () => {
 <template>
   <div
     ref="conversationHeader"
-    class="flex flex-col gap-3 items-center justify-between flex-1 w-full min-w-0 xl:flex-row px-3 pt-3 pb-2 h-24 xl:h-12"
+    class="flex flex-col gap-3 items-center justify-between flex-1 w-full min-w-0 xl:flex-row px-3 pt-3 pb-2 h-auto min-h-[6rem] xl:min-h-[4rem]"
   >
     <div
       class="flex items-center justify-start w-full xl:w-auto max-w-full min-w-0 xl:flex-1"
@@ -140,6 +140,7 @@ const copyConversationId = async () => {
         :size="32"
         :status="currentContact.availability_status"
         hide-offline-status
+        rounded-full
       />
       <div
         class="flex flex-col items-start min-w-0 ml-2 overflow-hidden rtl:ml-0 rtl:mr-2"
@@ -160,18 +161,15 @@ const copyConversationId = async () => {
         </div>
 
         <div
-          class="flex items-center gap-1 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
+          v-if="currentContact.phone_number"
+          class="text-xs leading-tight text-n-slate-11"
         >
-          <button
-            type="button"
-            class="truncate text-label-small text-n-slate-11 hover:text-n-slate-12 !p-0 cursor-pointer"
-            @click="copyConversationId"
-          >
-            {{ `#${chat.id}` }}
-          </button>
-          <span v-if="hasMultipleInboxes">•</span>
-          <InboxName v-if="hasMultipleInboxes" :inbox="inbox" class="!mx-0" />
-          <span v-if="chat.group && chat.group_contacts_count">•</span>
+          {{ currentContact.phone_number }}
+        </div>
+        <InboxName :inbox="inbox" class="mt-0.5" />
+        <div
+          class="flex items-center gap-2 mt-0.5 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
+        >
           <span v-if="chat.group && chat.group_contacts_count">
             {{ chat.group_contacts_count }}
             {{ t('CONVERSATION.GROUP.MEMBERS') }}
@@ -186,6 +184,13 @@ const copyConversationId = async () => {
     <div
       class="flex flex-row items-center justify-start xl:justify-end flex-shrink-0 gap-2 w-full xl:w-auto header-actions-wrap"
     >
+      <button
+        type="button"
+        class="truncate text-label-small text-n-slate-11 hover:text-n-slate-12 !p-0 cursor-pointer"
+        @click="copyConversationId"
+      >
+        {{ `#${chat.id}` }}
+      </button>
       <SLACardLabel
         v-if="hasSlaPolicyId"
         :chat="chat"

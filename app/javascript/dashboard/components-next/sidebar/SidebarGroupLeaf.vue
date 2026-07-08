@@ -12,6 +12,9 @@ const props = defineProps({
   active: { type: Boolean, default: false },
   component: { type: Function, default: null },
   badgeCount: { type: [Number, String], default: 0 },
+  description: { type: String, default: '' },
+  subgroup: { type: Boolean, default: false },
+  pipeline: { type: Boolean, default: false },
 });
 
 const { resolvePermissions, resolveFeatureFlag } = useSidebarContext();
@@ -33,10 +36,15 @@ const shouldRenderComponent = computed(() => {
       :is="to ? 'router-link' : 'div'"
       :to="to"
       :title="label"
-      class="flex h-8 items-center gap-2 px-2 py-1 rounded-lg hover:bg-gradient-to-r from-transparent via-n-slate-3/70 to-n-slate-3/70 group min-w-0"
-      :class="{
-        'text-n-slate-12 bg-n-alpha-2 active': active,
-      }"
+      class="flex gap-2 px-2 py-1 rounded-lg hover:bg-gradient-to-r from-transparent via-n-slate-3/70 to-n-slate-3/70 group min-w-0"
+      :class="[
+        description
+          ? 'min-h-9 items-start'
+          : 'h-8 items-center',
+        subgroup ? 'ltr:pl-8 rtl:pr-8' : '',
+        active && pipeline ? 'text-n-slate-12 bg-slate-800 rounded-lg' : '',
+        active && !pipeline ? 'text-n-slate-12 bg-n-alpha-2 active' : '',
+      ]"
     >
       <component
         :is="component"
@@ -44,10 +52,17 @@ const shouldRenderComponent = computed(() => {
         v-bind="{ label, icon, active, badgeCount }"
       />
       <template v-else>
-        <span v-if="icon" class="size-4 grid place-content-center rounded-full">
+        <span v-if="icon" class="size-4 grid place-content-center rounded-full flex-shrink-0 mt-1">
           <Icon :icon="icon" class="size-4 inline-block" />
         </span>
-        <div class="flex-1 truncate min-w-0 text-sm">{{ label }}</div>
+        <div class="flex-1 min-w-0">
+          <div class="truncate text-sm" :class="active ? 'font-medium text-n-slate-12' : 'text-n-slate-11'">
+            {{ label }}
+          </div>
+          <div v-if="description" class="truncate text-[10px] text-n-slate-10 leading-3 mt-0.5">
+            {{ description }}
+          </div>
+        </div>
         <SidebarUnreadBadge :count="badgeCount" />
       </template>
     </component>

@@ -1,0 +1,80 @@
+{
+  "KANBAN": {
+    "HEADER": {
+      "TITLE": "Funis",
+      "ADD_FUNNEL": "Adicionar Funil",
+      "SEARCH": "Pesquisar...",
+      "ALL_AGENTS": "Todos os agentes",
+      "ALL_INBOXES": "Todas as caixas",
+      "VISAO_GERAL": "Visão geral",
+      "ADD_TASK": "Adicionar tarefa"
+    },
+    "CARD": {
+      "SNOOZED": "Soneca ativa",
+      "TIME_IN_STAGE": "Tempo na etapa",
+      "DUE_TODAY": "Hoje",
+      "OVERDUE": "Vencido",
+      "NO_ASSIGNEE": "Sem responsável",
+      "RESOLVED": "Resolvido",
+      "PRIORITY": "Prioridade",
+      "PRIORITIES": {
+        "URGENT": "Urgente",
+        "HIGH": "Alta",
+        "MEDIUM": "Média",
+        "LOW": "Baixa"
+      }
+    },
+    "SETTINGS": {
+      "TITLE": "Configurações do Funil",
+      "BASIC_INFO": "Informações básicas",
+      "FUNNEL_NAME": "Nome do funil",
+      "FUNNEL_DESC": "Descrição",
+      "STAGES": "Etapas",
+      "ADD_STAGE": "Adicionar etapa",
+      "STAGE_NAME": "Nome da etapa",
+      "STAGE_LABEL": "Etiqueta correspondente",
+      "STAGE_COLOR": "Cor",
+      "STAGE_WON": "Etapa de Ganho (Sucesso)",
+      "STAGE_LOST": "Etapa de Perda (Fracasso)",
+      "AUTOMATIONS": "Automação",
+      "AUTOMATIONS_HELP": "Para automações personalizadas mais complexas, use Regras de Automação",
+      "AUTO_CREATE": "Criar tarefa automaticamente para novas conversas",
+      "AUTO_ASSIGN_AGENT": "Atribuir tarefa automaticamente a agente online/disponível",
+      "AUTO_ASSIGN_CONV": "Atribuir conversa automaticamente a agente",
+      "AUTO_RESOLVE": "Resolver conversas automaticamente ao finalizar tarefa",
+      "AUTO_WIN": "Ganhar tarefa automaticamente ao resolver conversa",
+      "SAVE": "Salvar alterações",
+      "DELETE": "Excluir funil",
+      "DELETE_CONFIRM": "Tem certeza de que deseja excluir este funil?",
+      "SELECT_MODEL_TITLE": "Selecione um modelo",
+      "EMPTY_FUNNEL": "Funil Vazio",
+      "EMPTY_FUNNEL_DESC": "Comece do zero com um funil vazio.",
+      "SALES_FUNNEL": "Pipeline de Vendas",
+      "SALES_FUNNEL_DESC": "Acompanhe seus leads de vendas desde o contato inicial até o fechamento do negócio.",
+      "SUPPORT_FUNNEL": "Suporte",
+      "SUPPORT_FUNNEL_DESC": "Gerencie tickets de suporte desde a criação até a resolução.",
+      "RECRUITMENT_FUNNEL": "Pipeline de Recrutamento",
+      "RECRUITMENT_FUNNEL_DESC": "Gerencie seu processo de contratação desde a candidatura até a oferta."
+    },
+    "SIDEBAR": {
+      "SECTION_TITLE": "Kanban",
+      "PIPELINE": "Funil",
+      "STAGE": "Etapa",
+      "DUE_DATE": "Data de Vencimento",
+      "START_DATE": "Data de Início",
+      "PRIORITY": "Prioridade",
+      "NOT_IN_PIPELINE": "Fora do funil",
+      "ADD_TO_PIPELINE": "Adicionar ao funil",
+      "PRIORITY_NONE": "Nenhuma",
+      "RESOLVE_CONVERSATION": "Resolver Conversa",
+      "CONVERSATION_RESOLVED": "Atendimento Resolvido"
+    },
+    "PAYWALL": {
+      "TITLE": "Faça upgrade para usar o Kanban",
+      "DESCRIPTION": "O recurso Kanban requer uma assinatura Chatwoot Pro fazer.ai.",
+      "UPGRADE_PROMPT": "Assine o Chatwoot Pro fazer.ai para acessar funis Kanban, gerenciamento de tarefas e automação de fluxo de trabalho.",
+      "NON_ADMIN_MESSAGE": "O recurso Kanban não está disponível no seu plano atual. Entre em contato com o administrador para fazer o upgrade.",
+      "UPGRADE_NOW": "Fazer upgrade"
+    }
+  }
+}

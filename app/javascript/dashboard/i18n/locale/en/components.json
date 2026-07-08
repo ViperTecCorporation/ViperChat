@@ -63,7 +63,6 @@
     "CODE": "Code",
     "BULLET_LIST": "Bullet List",
     "ORDERED_LIST": "Ordered List",
-    "TABLE": "Table",
-    "IMAGE": "Image"
+    "TABLE": "Table"
   }
 }

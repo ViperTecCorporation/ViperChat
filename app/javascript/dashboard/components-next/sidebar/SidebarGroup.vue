@@ -177,15 +177,6 @@ const handleCollapsedClick = () => {
 };
 
 const toggleTrigger = () => {
-  if (
-    hasAccessibleChildren.value &&
-    !isExpanded.value &&
-    !hasActiveChild.value
-  ) {
-    // if not already expanded, navigate to the first child
-    const firstItem = accessibleItems.value[0];
-    router.push(firstItem.to);
-  }
   setExpandedItem(props.name);
 };
 
@@ -304,8 +295,9 @@ watch(
 .sidebar-group-children .child-item::before {
   content: '';
   position: absolute;
+  top: 0;
+  left: 0;
   width: 0.125rem;
-  /* 0.5px */
   height: 100%;
 }
 

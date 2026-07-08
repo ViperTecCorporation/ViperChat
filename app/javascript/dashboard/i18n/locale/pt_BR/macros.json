@@ -103,7 +103,8 @@
       "SEND_MESSAGE": "Enviar uma Mensagem",
       "CHANGE_PRIORITY": "Alterar Prioridade",
       "ADD_PRIVATE_NOTE": "Adicionar uma Nota Privada",
-      "SEND_WEBHOOK_EVENT": "Enviar evento de Webhook"
+      "SEND_WEBHOOK_EVENT": "Enviar evento de Webhook",
+      "TRIGGER_TYPEBOT": "Disparar Fluxo do Typebot"
     },
     "PRIORITY_TYPES": {
       "NONE": "Nenhuma",

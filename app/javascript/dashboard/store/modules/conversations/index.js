@@ -305,6 +305,14 @@ export const mutations = {
   },
 
   [types.ADD_CONVERSATION](_state, conversation) {
+    if (
+      !conversation ||
+      !conversation.id ||
+      conversation.id === 'null' ||
+      conversation.id === 'undefined'
+    ) {
+      return;
+    }
     const exists = _state.allConversations.some(c => c.id === conversation.id);
     if (!exists) {
       _state.allConversations.push(conversation);
@@ -318,6 +326,14 @@ export const mutations = {
   },
 
   [types.UPDATE_CONVERSATION](_state, conversation) {
+    if (
+      !conversation ||
+      !conversation.id ||
+      conversation.id === 'null' ||
+      conversation.id === 'undefined'
+    ) {
+      return;
+    }
     const { allConversations } = _state;
     const index = allConversations.findIndex(c => c.id === conversation.id);
 

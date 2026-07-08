@@ -61,6 +61,10 @@
             "CONVERSATION_RESOLVED": "Conversa resolvida"
           }
         },
+        "INBOX": {
+          "LABEL": "Caixa de Entrada",
+          "ALL": "Todas as caixas de entrada"
+        },
         "NAME": {
           "LABEL": "Nome do Webhook",
           "PLACEHOLDER": "Informe o nome do webhook"
