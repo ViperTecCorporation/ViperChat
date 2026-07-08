@@ -8,6 +8,9 @@ import { isValidURL } from '../helper/URLHelper';
 import { getRegexp } from 'shared/helpers/Validators';
 import { useVuelidate } from '@vuelidate/core';
 import { emitter } from 'shared/helpers/mitt';
+import { useMapGetter } from 'dashboard/composables/store';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { computed } from 'vue';
 
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
@@ -36,7 +39,13 @@ export default {
   },
   emits: ['update', 'delete', 'copy'],
   setup() {
-    return { v$: useVuelidate() };
+    const currentChat = useMapGetter('getSelectedChat');
+    const insertIntoRichEditor = computed(() => {
+      const inbox = currentChat.value?.meta?.channel;
+      return [INBOX_TYPES.WEB, INBOX_TYPES.EMAIL].includes(inbox);
+    });
+
+    return { v$: useVuelidate(), currentChat, insertIntoRichEditor };
   },
   data() {
     return {
@@ -199,6 +208,13 @@ export default {
     onCopy() {
       this.$emit('copy', this.value);
     },
+    handleUseAttribute() {
+      if (this.insertIntoRichEditor) {
+        emitter.emit(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, String(this.value));
+      } else {
+        emitter.emit(BUS_EVENTS.INSERT_INTO_NORMAL_EDITOR, String(this.value));
+      }
+    },
   },
 };
 </script>
@@ -293,6 +309,16 @@ export default {
         <div
           class="flex items-center max-w-[2rem] gap-1 ml-1 rtl:mr-1 rtl:ml-0"
         >
+          <NextButton
+            v-if="showActions && hasValue && currentChat"
+            v-tooltip="$t('CUSTOM_ATTRIBUTES.ACTIONS.USE')"
+            xs
+            blue
+            ghost
+            icon="i-lucide-arrow-left-to-line"
+            class="hidden group-hover:flex flex-shrink-0"
+            @click="handleUseAttribute"
+          />
           <NextButton
             v-if="showActions && hasValue"
             v-tooltip="$t('CUSTOM_ATTRIBUTES.ACTIONS.COPY')"
