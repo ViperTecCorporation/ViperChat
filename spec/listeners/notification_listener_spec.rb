@@ -96,6 +96,30 @@ describe NotificationListener do
       listener.message_created(event)
     end
 
+    it 'will mark notifications as read if the sender is a User' do
+      mark_read_service = instance_double(Notification::MarkConversationReadService)
+      allow(Notification::MarkConversationReadService).to receive(:new).and_return(mark_read_service)
+      allow(mark_read_service).to receive(:perform)
+
+      message = build(
+        :message,
+        conversation: conversation,
+        account: account,
+        content: 'hi',
+        sender: user
+      )
+
+      expect(Notification::MarkConversationReadService).to receive(:new).with(
+        user: user,
+        account: account,
+        conversation: conversation
+      )
+      expect(mark_read_service).to receive(:perform)
+
+      event = Events::Base.new(event_name, Time.zone.now, message: message)
+      listener.message_created(event)
+    end
+
     context 'when message content is empty' do
       it 'will be processed correctly' do
         builder = double

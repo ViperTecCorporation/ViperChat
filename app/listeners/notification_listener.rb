@@ -52,5 +52,13 @@ class NotificationListener < BaseListener
 
     Messages::MentionService.new(message: message).perform
     Messages::NewMessageNotificationService.new(message: message).perform
+
+    if message.sender.is_a?(User)
+      Notification::MarkConversationReadService.new(
+        user: message.sender,
+        account: message.account,
+        conversation: message.conversation
+      ).perform
+    end
   end
 end
