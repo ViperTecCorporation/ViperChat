@@ -209,10 +209,22 @@ export default {
       this.$emit('copy', this.value);
     },
     handleUseAttribute() {
+      const conversationId = this.currentChat?.id;
+      const replyType =
+        this.$store.getters['draftMessages/getReplyEditorMode'] || 'reply';
+      const draftKey = `draft-${conversationId}-${replyType}`;
+      const draftText =
+        this.$store.getters['draftMessages/get'](draftKey) || '';
+
+      let valueToInsert = String(this.value);
+      if (draftText && !/\s$/.test(draftText)) {
+        valueToInsert = ` ${valueToInsert}`;
+      }
+
       if (this.insertIntoRichEditor) {
-        emitter.emit(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, String(this.value));
+        emitter.emit(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, valueToInsert);
       } else {
-        emitter.emit(BUS_EVENTS.INSERT_INTO_NORMAL_EDITOR, String(this.value));
+        emitter.emit(BUS_EVENTS.INSERT_INTO_NORMAL_EDITOR, valueToInsert);
       }
     },
   },
