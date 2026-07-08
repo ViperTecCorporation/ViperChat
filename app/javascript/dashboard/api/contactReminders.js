@@ -1,3 +1,4 @@
+/* global axios */
 import ApiClient from './ApiClient';
 
 class ContactReminders extends ApiClient {
@@ -6,28 +7,28 @@ class ContactReminders extends ApiClient {
   }
 
   get(contactId) {
-    return this.axios.get(
-      `${this.urlPrefix}/contacts/${contactId}/contact_reminders`
+    return axios.get(
+      `${this.baseUrl()}/contacts/${contactId}/contact_reminders`
     );
   }
 
   create(contactId, data) {
-    return this.axios.post(
-      `${this.urlPrefix}/contacts/${contactId}/contact_reminders`,
+    return axios.post(
+      `${this.baseUrl()}/contacts/${contactId}/contact_reminders`,
       data
     );
   }
 
   update(contactId, reminderId, data) {
-    return this.axios.patch(
-      `${this.urlPrefix}/contacts/${contactId}/contact_reminders/${reminderId}`,
+    return axios.patch(
+      `${this.baseUrl()}/contacts/${contactId}/contact_reminders/${reminderId}`,
       data
     );
   }
 
   delete(contactId, reminderId) {
-    return this.axios.delete(
-      `${this.urlPrefix}/contacts/${contactId}/contact_reminders/${reminderId}`
+    return axios.delete(
+      `${this.baseUrl()}/contacts/${contactId}/contact_reminders/${reminderId}`
     );
   }
 }
