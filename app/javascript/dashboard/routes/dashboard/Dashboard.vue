@@ -186,7 +186,7 @@ export default {
     },
     resetCustomBrandColors() {
       const root = document.documentElement;
-      for (let i = 1; i <= 12; i++) {
+      for (let i = 1; i <= 12; i += 1) {
         root.style.removeProperty(`--blue-${i}`);
       }
     },

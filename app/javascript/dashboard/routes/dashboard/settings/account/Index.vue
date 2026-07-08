@@ -31,6 +31,7 @@ export default {
     AudioTranscription,
     DeletedMessageContent,
     SectionLayout,
+    // eslint-disable-next-line vue/no-reserved-component-names
     Switch,
     WithLabel,
     NextInput,
