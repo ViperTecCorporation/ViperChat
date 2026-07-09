@@ -52,14 +52,22 @@ export const actions = {
     }
   },
   read: async (
-    { commit },
-    { id, primaryActorType, primaryActorId, unreadCount }
+    { commit, state },
+    { primaryActorType, primaryActorId, unreadCount }
   ) => {
     commit(types.SET_NOTIFICATIONS_UI_FLAG, { isUpdating: true });
     try {
       await NotificationsAPI.read(primaryActorType, primaryActorId);
-      commit(types.SET_NOTIFICATIONS_UNREAD_COUNT, unreadCount - 1);
-      commit(types.READ_NOTIFICATION, { id, read_at: new Date() });
+      const conversationNotifications = Object.values(state.records).filter(
+        n => n.primary_actor_id === primaryActorId
+      );
+      conversationNotifications.forEach(n => {
+        commit(types.READ_NOTIFICATION, { id: n.id, read_at: new Date() });
+      });
+      commit(
+        types.SET_NOTIFICATIONS_UNREAD_COUNT,
+        unreadCount - conversationNotifications.length
+      );
       commit(types.SET_NOTIFICATIONS_UI_FLAG, { isUpdating: false });
     } catch (error) {
       commit(types.SET_NOTIFICATIONS_UI_FLAG, { isUpdating: false });

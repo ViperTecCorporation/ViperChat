@@ -94,13 +94,20 @@ describe('#actions', () => {
     it('sends correct actions if API is success', async () => {
       axios.post.mockResolvedValue({});
       await actions.read(
-        { commit },
-        { id: 1, unreadCount: 2, primaryActorId: 1 }
+        { commit, state: {
+          records: {
+            1: { id: 1, primary_actor_id: 1, read_at: null },
+            2: { id: 2, primary_actor_id: 1, read_at: null },
+            3: { id: 3, primary_actor_id: 2, read_at: null },
+          }
+        }},
+        { primaryActorType: 'Conversation', primaryActorId: 1, unreadCount: 3 }
       );
       expect(commit.mock.calls).toEqual([
         [types.SET_NOTIFICATIONS_UI_FLAG, { isUpdating: true }],
-        [types.SET_NOTIFICATIONS_UNREAD_COUNT, 1],
         [types.READ_NOTIFICATION, { id: 1, read_at: expect.any(Date) }],
+        [types.READ_NOTIFICATION, { id: 2, read_at: expect.any(Date) }],
+        [types.SET_NOTIFICATIONS_UNREAD_COUNT, 1],
         [types.SET_NOTIFICATIONS_UI_FLAG, { isUpdating: false }],
       ]);
     });
