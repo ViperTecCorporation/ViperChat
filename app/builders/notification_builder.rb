@@ -30,13 +30,44 @@ class NotificationBuilder
     # respect conversation access (inbox/team membership and custom-role permissions)
     return unless user_can_access_conversation?
 
-    user.notifications.create!(
-      notification_type: notification_type,
+    existing_notification = user.notifications.find_by(
       account: account,
       primary_actor: primary_actor,
-      # secondary_actor is secondary_actor if present, else current_user
-      secondary_actor: secondary_actor || current_user
+      read_at: nil
     )
+
+    if existing_notification.present?
+      new_type = notification_type
+      high_priority_types = %w[
+        conversation_mention
+        conversation_assignment
+        sla_missed_first_response
+        sla_missed_next_response
+        sla_missed_resolution
+      ]
+      if high_priority_types.include?(existing_notification.notification_type) && !high_priority_types.include?(notification_type)
+        new_type = existing_notification.notification_type
+      end
+
+      existing_notification.update!(
+        notification_type: new_type,
+        secondary_actor: secondary_actor || current_user,
+        last_activity_at: Time.current
+      )
+
+      # Trigger push notification delivery for the new message/activity
+      Notification::PushNotificationJob.perform_later(existing_notification) if existing_notification.user_subscribed_to_notification?('push')
+
+      existing_notification
+    else
+      user.notifications.create!(
+        notification_type: notification_type,
+        account: account,
+        primary_actor: primary_actor,
+        # secondary_actor is secondary_actor if present, else current_user
+        secondary_actor: secondary_actor || current_user
+      )
+    end
   end
 
   def user_can_access_conversation?

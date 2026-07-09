@@ -17,15 +17,15 @@ class NotificationFinder
   def unread_count
     if type_included?('read')
       # If we're including read notifications, filter to unread
-      @notifications.where(read_at: nil).count
+      @notifications.where(read_at: nil).select(:primary_actor_id).distinct.count
     else
       # Already filtered to unread notifications, just count
-      @notifications.count
+      @notifications.select(:primary_actor_id).distinct.count
     end
   end
 
   def count
-    @notifications.count
+    @notifications.select(:primary_actor_id).distinct.count
   end
 
   private
