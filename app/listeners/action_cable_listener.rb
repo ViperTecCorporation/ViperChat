@@ -1,11 +1,25 @@
 class ActionCableListener < BaseListener
   include Events::Types
 
-  def notification_created(event)
+    def notification_created(event)
     notification, account, unread_count, count = extract_notification_and_account(event)
-    tokens = [event.data[:notification].user.pubsub_token]
+
+    # Get all users who have an unread notification for this conversation
+    # They should all see it in their Inbox
+    user_ids = notification.primary_actor.notifications
+      .where(account_id: account.id, read_at: nil)
+      .distinct
+      .pluck(:user_id)
+
+    # Also include the notification recipient
+    user_ids << notification.user_id
+    user_ids.uniq!
+
+    tokens = User.where(id: user_ids).pluck(:pubsub_token).compact
+
     broadcast(account, tokens, NOTIFICATION_CREATED, { notification: notification.push_event_data, unread_count: unread_count, count: count })
-  end
+end
+nd
 
   def notification_updated(event)
     notification, account, unread_count, count = extract_notification_and_account(event)
