@@ -50,20 +50,16 @@ const isActive = computed(() => {
       props.enabledFeatures.channel_instagram && hasInstagramConfigured.value
     );
   }
-  if (key === 'voice') {
-    return true;
-  }
-  if (key === 'notifica_me') {
-    return props.enabledFeatures.channel_notifica_me;
+  if (key === 'tiktok') {
+    return props.enabledFeatures.channel_tiktok && hasTiktokConfigured.value;
   }
 
-  if (key === 'whatsapp_call') {
-    return (
-      !IS_INSTAGRAM_WHATSAPP_INBOX_CREATION_DISABLED &&
-      props.enabledFeatures.channel_voice &&
-      !!window.chatwootConfig?.whatsappAppId &&
-      window.chatwootConfig.whatsappAppId !== 'none'
-    );
+  if (key === 'voice' || key === 'whatsapp_call') {
+    return props.enabledFeatures.channel_voice;
+  }
+
+  if (key === 'notifica_me') {
+    return props.enabledFeatures.channel_notifica_me;
   }
 
   return [
