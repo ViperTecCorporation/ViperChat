@@ -128,8 +128,27 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.fetchConversationStats();
   };
 
+  onConversationRead = data => {
+    this.app.$store.dispatch('updateConversation', data);
+    this.updateNotificationUnreadCount();
+  };
+
   onConversationUnreadCountChanged = () => {
     this.throttledFetchConversationUnreadCounts();
+    this.updateNotificationUnreadCount();
+  };
+
+  updateNotificationUnreadCount = () => {
+    this.app.$store.dispatch('notifications/unReadCount');
+    if (this.isInboxRoute()) {
+      const filters = this.app.$store.getters['notifications/getNotificationFilters'];
+      this.app.$store.dispatch('notifications/index', filters);
+    }
+  };
+
+  isInboxRoute = () => {
+    const route = this.app.$route?.name;
+    return route === 'inbox_view' || route === 'notifications_index';
   };
 
   throttledFetchConversationUnreadCounts = () => {
