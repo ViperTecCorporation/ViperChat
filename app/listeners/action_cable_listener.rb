@@ -96,7 +96,7 @@ class ActionCableListener < BaseListener
 
     tokens = user_tokens(account, inbox_members)
 
-    broadcast(account, tokens, CONVERSATION_UNREAD_COUNT_CHANGED, {})
+    broadcast(account, tokens, CONVERSATION_UNREAD_COUNT_CHANGED, conversation.push_event_data)
   end
 
   def conversation_typing_on(event)

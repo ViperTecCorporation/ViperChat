@@ -133,7 +133,11 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.updateNotificationUnreadCount();
   };
 
-  onConversationUnreadCountChanged = () => {
+  onConversationUnreadCountChanged = data => {
+    // Update conversation store with new unread_count from the event
+    if (data && data.id) {
+      this.app.$store.dispatch('updateConversation', data);
+    }
     this.throttledFetchConversationUnreadCounts();
     this.updateNotificationUnreadCount();
   };
