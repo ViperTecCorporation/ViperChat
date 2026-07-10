@@ -8,7 +8,8 @@ class HookJob < MutexApplicationJob
     'dialogflow' => :process_dialogflow_integration,
     'google_translate' => :google_translate_integration,
     'leadsquared' => :process_leadsquared_integration_with_lock,
-    'linear' => :process_linear_integration
+    'linear' => :process_linear_integration,
+    'typebot' => :process_typebot_integration
   }.freeze
 
   def perform(hook, event_name, event_data = {})
@@ -48,6 +49,12 @@ class HookJob < MutexApplicationJob
     return unless ['message.created', 'message.updated'].include?(event_name)
 
     Integrations::Dialogflow::ProcessorService.new(event_name: event_name, hook: hook, event_data: event_data).perform
+  end
+
+  def process_typebot_integration(hook, event_name, event_data)
+    return unless ['message.created', 'message.updated'].include?(event_name)
+
+    Integrations::Typebot::ProcessorService.new(event_name: event_name, hook: hook, event_data: event_data).perform
   end
 
   def google_translate_integration(hook, event_name, event_data)

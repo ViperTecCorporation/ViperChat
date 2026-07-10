@@ -354,6 +354,10 @@ pt_BR:
       name: 'LeadSquared'
       short_description: 'Sincronize seus contatos e conversas com LeadSquared CRM.'
       description: 'Sincronize seus contatos e conversas com LeadSquared CRM. Essa integração cria automaticamente leads em LeadSquared quando novos contatos são adicionados, e registra a atividade de conversação para fornecer à sua equipe de vendas um contexto completo.'
+    typebot:
+      name: 'Typebot'
+      short_description: 'Integre os chatbots do Typebot às caixas de entrada do ViperChat.'
+      description: 'Conecte sua instância do Typebot para automatizar as conversas com clientes usando chatbots interativos.'
   captain:
     copilot_message_required: A mensagem é obrigatória
     copilot_error: 'Conecte com um assistente a esta caixa de entrada para usar Copilot'

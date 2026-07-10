@@ -317,3 +317,45 @@ leadsquared:
       'conversation_activity_score',
       'transcript_activity_score',
     ]
+
+typebot:
+  id: typebot
+  logo: typebot.png
+  i18n_key: typebot
+  action: /typebot
+  hook_type: inbox
+  allow_multiple_hooks: true
+  settings_json_schema:
+    {
+      'type': 'object',
+      'properties':
+        {
+          'typebot_url': { 'type': 'string' },
+          'typebot_id': { 'type': 'string' },
+          'trigger_message': { 'type': 'string' },
+        },
+      'required': ['typebot_url', 'typebot_id'],
+      'additionalProperties': false,
+    }
+  settings_form_schema:
+    [
+      {
+        'label': 'Typebot URL (API Domain)',
+        'type': 'text',
+        'name': 'typebot_url',
+        'validation': 'required|url',
+        'default': 'https://typebot.io',
+      },
+      {
+        'label': 'Typebot ID / Public ID',
+        'type': 'text',
+        'name': 'typebot_id',
+        'validation': 'required',
+      },
+      {
+        'label': 'Trigger Message (Optional)',
+        'type': 'text',
+        'name': 'trigger_message',
+      },
+    ]
+  visible_properties: ['typebot_url', 'typebot_id', 'trigger_message']

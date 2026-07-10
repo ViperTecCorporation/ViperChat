@@ -159,7 +159,8 @@
       "CHANGE_PRIORITY": "Alterar Prioridade",
       "ADD_SLA": "Adicionar SLA",
       "OPEN_CONVERSATION": "Abrir conversa",
-      "PENDING_CONVERSATION": "Marcar conversa como pendente"
+      "PENDING_CONVERSATION": "Marcar conversa como pendente",
+      "TRIGGER_TYPEBOT": "Disparar Typebot"
     },
     "MESSAGE_TYPES": {
       "INCOMING": "Mensagem Recebida",

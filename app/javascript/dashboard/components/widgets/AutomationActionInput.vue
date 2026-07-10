@@ -106,6 +106,28 @@ export default {
         this.action_params = value;
       },
     },
+    typebotUrl: {
+      get() {
+        return Array.isArray(this.action_params) ? this.action_params[0] : '';
+      },
+      set(value) {
+        const slug = Array.isArray(this.action_params)
+          ? this.action_params[1]
+          : '';
+        this.action_params = [value, slug];
+      },
+    },
+    typebotSlug: {
+      get() {
+        return Array.isArray(this.action_params) ? this.action_params[1] : '';
+      },
+      set(value) {
+        const url = Array.isArray(this.action_params)
+          ? this.action_params[0]
+          : '';
+        this.action_params = [url, value];
+      },
+    },
   },
   methods: {
     removeAction() {
@@ -169,6 +191,20 @@ export default {
             v-model="action_params"
             :initial-file-name="initialFileName"
           />
+          <div v-else-if="inputType === 'typebot'" class="flex gap-2 w-full">
+            <NextInput
+              v-model="typebotUrl"
+              type="url"
+              size="sm"
+              placeholder="Viewer URL"
+            />
+            <NextInput
+              v-model="typebotSlug"
+              type="text"
+              size="sm"
+              placeholder="Bot Slug"
+            />
+          </div>
         </template>
         <NextButton
           v-if="!isMacro"

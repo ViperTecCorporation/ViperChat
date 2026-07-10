@@ -64,4 +64,46 @@ class AutomationRules::ActionService < ActionService
       @account.increment_email_sent_count
     end
   end
+
+  def trigger_typebot(params)
+    typebot_url = params[0]
+    typebot_slug = params[1]
+
+    return if typebot_url.blank? || typebot_slug.blank?
+
+    @conversation.custom_attributes['typebot_url'] = typebot_url
+    @conversation.custom_attributes['typebot_id'] = typebot_slug
+    @conversation.custom_attributes.delete('typebot_session_id')
+    @conversation.assignee_id = nil
+    @conversation.status = :pending
+    @conversation.save!
+
+    last_message = @conversation.messages.last
+    return if last_message.blank?
+
+    virtual_hook = Struct.new(:account, :account_id, :id, :app_id, :settings).new(
+      @conversation.account, @conversation.account_id, nil, 'typebot', {
+        'typebot_url' => typebot_url,
+        'typebot_id' => typebot_slug
+      }
+    )
+
+    processor = Integrations::Typebot::ProcessorService.new(
+      event_name: 'message.created',
+      hook: virtual_hook,
+      event_data: { message: last_message }
+    )
+
+    start_response = processor.send(:start_chat)
+    return if start_response.blank? || start_response['sessionId'].blank?
+
+    @conversation.custom_attributes['typebot_session_id'] = start_response['sessionId']
+    @conversation.save!
+
+    processor.send(:process_response, last_message, {
+      messages: start_response['messages'] || [],
+      client_side_actions: start_response['clientSideActions'] || [],
+      input: start_response['input']
+    })
+  end
 end
