@@ -6,6 +6,8 @@ class Notification::MarkConversationReadService
 
     notifications.find_each do |notification|
       notification.update!(read_at: read_at)
+      # Broadcast ActionCable event for real-time Inbox sync
+      Rails.configuration.dispatcher.dispatch(NOTIFICATION_UPDATED, Time.zone.now, notification: notification)
     end
   end
 

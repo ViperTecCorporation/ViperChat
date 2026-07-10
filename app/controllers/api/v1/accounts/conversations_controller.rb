@@ -127,17 +127,30 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     update_last_seen_on_conversation(DateTime.now.utc, assignee?)
   end
 
-  def unread
+    def unread
     last_incoming_message = @conversation.messages.incoming.last
     last_seen_at = last_incoming_message.created_at - 1.second if last_incoming_message.present?
     update_last_seen_on_conversation(last_seen_at, true)
 
     # Re-open the user's notification for this conversation (mark it unread)
-    notification = current_user.notifications.where(account_id: current_account.id, primary_actor: @conversation).last
-    notification&.update(read_at: nil)
+    notification = current_user.notifications.where(account_id: current_account.id, primary_actor: @conversation, read_at: nil).last
+    if notification
+      notification.update(read_at: nil)
+    else
+      # Create notification if it doesn't exist (e.g., old conversations from before deploy)
+      last_message = @conversation.messages.incoming.last
+      if last_message
+        NotificationBuilder.new(
+          notification_type: 'assigned_conversation_new_message',
+          user: current_user,
+          account: current_account,
+          primary_actor: @conversation,
+          secondary_actor: last_message
+        ).perform
+      end
+    end
   end
-
-  def custom_attributes
+def custom_attributes
     @conversation.custom_attributes = params.permit(custom_attributes: {})[:custom_attributes]
     @conversation.save!
   end

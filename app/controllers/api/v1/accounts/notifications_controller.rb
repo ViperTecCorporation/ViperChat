@@ -12,7 +12,7 @@ class Api::V1::Accounts::NotificationsController < Api::V1::Accounts::BaseContro
     @count = notification_finder.count
   end
 
-  def read_all
+    def read_all
     # rubocop:disable Rails/SkipsModelValidations
     if @primary_actor
       current_user.notifications.where(account_id: current_account.id, primary_actor: @primary_actor, read_at: nil)
@@ -21,10 +21,18 @@ class Api::V1::Accounts::NotificationsController < Api::V1::Accounts::BaseContro
       current_user.notifications.where(account_id: current_account.id, read_at: nil).update_all(read_at: DateTime.now.utc)
     end
     # rubocop:enable Rails/SkipsModelValidations
+    # Broadcast ActionCable events for real-time Inbox sync
+    if @primary_actor
+      updated_notifications = current_user.notifications.where(account_id: current_account.id, primary_actor: @primary_actor, read_at: DateTime.now.utc)
+    else
+      updated_notifications = current_user.notifications.where(account_id: current_account.id, read_at: DateTime.now.utc)
+    end
+    updated_notifications.find_each do |notification|
+      Rails.configuration.dispatcher.dispatch(NOTIFICATION_UPDATED, Time.zone.now, notification: notification)
+    end
     head :ok
   end
-
-  def update
+def update
     @notification.update(read_at: DateTime.now.utc)
     render json: @notification
   end
