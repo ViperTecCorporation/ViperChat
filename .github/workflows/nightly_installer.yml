@@ -52,7 +52,7 @@ jobs:
         #        curl http://localhost:3000/api
 
     - name: Upload chatwoot setup log file as an artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: chatwoot-setup-log-file

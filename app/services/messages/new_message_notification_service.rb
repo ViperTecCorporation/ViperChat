@@ -10,6 +10,7 @@ class Messages::NewMessageNotificationService
       notify_inbox_members
     end
     notify_participating_users
+    notify_account_administrators
   end
 
   private
@@ -66,5 +67,22 @@ class Messages::NewMessageNotificationService
   # So we don't need to notify them again
   def already_notified?(user)
     conversation.notifications.exists?(user: user, secondary_actor: message)
+  end
+
+  def notify_account_administrators
+    account.administrators.each do |user|
+      next if user == sender
+      next if already_notified?(user)
+      next if conversation.assignee == user
+      next if conversation.inbox.members.include?(user)
+
+      NotificationBuilder.new(
+        notification_type: 'assigned_conversation_new_message',
+        user: user,
+        account: account,
+        primary_actor: message.conversation,
+        secondary_actor: message
+      ).perform
+    end
   end
 end

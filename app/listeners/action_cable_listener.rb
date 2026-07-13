@@ -19,7 +19,6 @@ class ActionCableListener < BaseListener
 
     broadcast(account, tokens, NOTIFICATION_CREATED, { notification: notification.push_event_data, unread_count: unread_count, count: count })
 end
-nd
 
   def notification_updated(event)
     notification, account, unread_count, count = extract_notification_and_account(event)
