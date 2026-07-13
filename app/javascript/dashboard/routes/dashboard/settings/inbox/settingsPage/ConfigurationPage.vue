@@ -10,7 +10,6 @@ import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TextArea from 'next/textarea/TextArea.vue';
-import WhatsappReauthorize from '../channels/whatsapp/Reauthorize.vue';
 import { sanitizeAllowedDomains } from 'dashboard/helper/URLHelper';
 import Input from 'dashboard/components-next/input/Input.vue';
 
@@ -23,7 +22,6 @@ export default {
     SmtpSettings,
     NextButton,
     TextArea,
-    WhatsappReauthorize,
     Input,
   },
   mixins: [inboxMixin],
@@ -41,7 +39,6 @@ export default {
       hmacMandatory: false,
       allowMobileWebview: false,
       whatsAppInboxAPIKey: '',
-      isRequestingReauthorization: false,
       isSyncingTemplates: false,
       allowedDomains: '',
       isUpdatingAllowedDomains: false,
@@ -74,9 +71,6 @@ export default {
   computed: {
     isEmbeddedSignupWhatsApp() {
       return this.inbox.provider_config?.source === 'embedded_signup';
-    },
-    whatsappAppId() {
-      return window.chatwootConfig?.whatsappAppId;
     },
     isForwardingEnabled() {
       return !!this.inbox.forwarding_enabled;
@@ -286,11 +280,6 @@ export default {
         useAlert(this.$t('INBOX_MGMT.EDIT.API.SUCCESS_MESSAGE'));
       } catch (error) {
         useAlert(this.$t('INBOX_MGMT.EDIT.API.ERROR_MESSAGE'));
-      }
-    },
-    async handleReconfigure() {
-      if (this.$refs.whatsappReauth) {
-        await this.$refs.whatsappReauth.requestAuthorization();
       }
     },
     async syncTemplates() {
@@ -680,22 +669,17 @@ export default {
       <!-- Embedded Signup Section -->
       <template v-if="isEmbeddedSignupWhatsApp">
         <SettingsFieldSection
-          v-if="whatsappAppId"
-          :label="
-            $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_EMBEDDED_SIGNUP_TITLE')
+          :label="$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_WEBHOOK_TITLE')"
+          :help-text="
+            $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_WEBHOOK_SUBHEADER')
           "
-          :help-text="`${$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_EMBEDDED_SIGNUP_SUBHEADER')} ${$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_EMBEDDED_SIGNUP_DESCRIPTION')}`"
         >
-          <div class="flex flex-col gap-1 items-start">
-            <NextButton @click="handleReconfigure">
-              {{ $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_RECONFIGURE_BUTTON') }}
-            </NextButton>
-          </div>
+          <woot-code :script="inbox.provider_config.webhook_verify_token" />
         </SettingsFieldSection>
       </template>
 
       <!-- Manual Setup Section -->
-      <template v-else>
+      <template v-else-if="!isEmbeddedSignupWhatsApp">
         <SettingsFieldSection
           :label="$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_WEBHOOK_TITLE')"
           :help-text="
@@ -753,12 +737,6 @@ export default {
         </NextButton>
       </SettingsFieldSection>
     </div>
-    <WhatsappReauthorize
-      v-if="isEmbeddedSignupWhatsApp"
-      ref="whatsappReauth"
-      :inbox="inbox"
-      class="hidden"
-    />
   </div>
 </template>
 

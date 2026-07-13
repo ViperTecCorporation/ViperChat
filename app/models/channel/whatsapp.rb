@@ -34,6 +34,7 @@ class Channel::Whatsapp < ApplicationRecord
   validate :validate_provider_config
 
   after_create :sync_templates
+  after_update_commit :log_credentials_transfer, if: :saved_change_to_provider_config?
   before_destroy :teardown_webhooks
   after_commit :setup_webhooks, on: :create, if: :should_auto_setup_webhooks?
   after_update_commit :enqueue_group_conversation_backfill, if: :should_backfill_group_conversations?
@@ -152,6 +153,15 @@ class Channel::Whatsapp < ApplicationRecord
     errors.add(:provider_config, e.message)
   rescue SocketError, Errno::ECONNREFUSED
     errors.add(:provider_config, 'Conection refused, verify Whatsapp Cloud API URL field')
+  end
+
+  # Logs only credential changes, so config-only saves (e.g. calling toggles) stay silent.
+  def log_credentials_transfer
+    before, after = saved_change_to_provider_config
+    keys = %w[api_key phone_number_id business_account_id]
+    return if before.nil? || before.values_at(*keys) == after.values_at(*keys)
+
+    Rails.logger.info("[WHATSAPP_MANUAL_TRANSFER] success account_id=#{account_id} channel_id=#{id}")
   end
 
   def perform_webhook_setup
