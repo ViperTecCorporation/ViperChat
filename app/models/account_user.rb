@@ -44,8 +44,16 @@ class AccountUser < ApplicationRecord
 
   def create_notification_setting
     setting = user.notification_settings.new(account_id: account.id)
-    setting.selected_email_flags = [\n      :email_conversation_assignment,\n      :email_assigned_conversation_new_message,\n      :email_participating_conversation_new_message\n    ]
-    setting.selected_push_flags = [\n      :push_conversation_assignment,\n      :push_assigned_conversation_new_message,\n      :push_participating_conversation_new_message\n    ]
+    setting.selected_email_flags = [
+      :email_conversation_assignment,
+      :email_assigned_conversation_new_message,
+      :email_participating_conversation_new_message
+    ]
+    setting.selected_push_flags = [
+      :push_conversation_assignment,
+      :push_assigned_conversation_new_message,
+      :push_participating_conversation_new_message
+    ]
     setting.save!
   end
 
