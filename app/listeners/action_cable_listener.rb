@@ -109,7 +109,7 @@ end
 
     tokens = user_tokens(account, inbox_members)
 
-    broadcast(account, tokens, CONVERSATION_UNREAD_COUNT_CHANGED, conversation.push_event_data)
+    broadcast(account, tokens, CONVERSATION_UNREAD_COUNT_CHANGED, {})
   end
 
   def conversation_typing_on(event)

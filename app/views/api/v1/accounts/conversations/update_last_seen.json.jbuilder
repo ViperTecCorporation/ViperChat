@@ -1,1 +1,1 @@
-json.partial! 'api/v1/conversations/partials/conversation', formats: [:json], conversation: @conversation
+<%# DELETED - render is handled inline in the controller %>

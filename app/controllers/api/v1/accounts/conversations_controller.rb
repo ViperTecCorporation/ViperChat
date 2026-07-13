@@ -126,6 +126,8 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     elsif should_update_last_seen?
       update_last_seen_on_conversation(DateTime.now.utc, assignee?)
     end
+
+    render json: { id: @conversation.id, agent_last_seen_at: @conversation.agent_last_seen_at }
   end
 
     def unread
