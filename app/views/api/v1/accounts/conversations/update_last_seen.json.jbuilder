@@ -1,1 +1,0 @@
-<%# DELETED - render is handled inline in the controller %>

@@ -127,7 +127,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
       update_last_seen_on_conversation(DateTime.now.utc, assignee?)
     end
 
-    render json: { id: @conversation.id, agent_last_seen_at: @conversation.agent_last_seen_at }
+    render json: { id: @conversation.id, agent_last_seen_at: @conversation.agent_last_seen_at.to_i }
   end
 
     def unread
