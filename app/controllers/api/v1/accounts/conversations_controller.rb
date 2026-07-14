@@ -133,7 +133,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
       Rails.logger.warn "[update_last_seen] Non-critical error: #{e.message}"
     end
 
-    render json: { id: @conversation.id, agent_last_seen_at: @conversation.agent_last_seen_at.to_i }
+    render json: { id: @conversation.display_id, agent_last_seen_at: @conversation.agent_last_seen_at.to_i }
   end
 
   def unread
