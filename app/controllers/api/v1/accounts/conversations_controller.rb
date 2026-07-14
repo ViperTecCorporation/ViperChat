@@ -119,21 +119,33 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # Visiting a conversation should clear any unread inbox notifications for this conversation.
     Notification::MarkConversationReadService.new(user: Current.user, account: Current.account, conversation: @conversation).perform
 
-    if assignee? && @conversation.assignee_unread_messages.any?
-      update_last_seen_on_conversation(DateTime.now.utc, true)
-    elsif !assignee? && @conversation.unread_messages.any?
-      update_last_seen_on_conversation(DateTime.now.utc, false)
-    elsif should_update_last_seen?
-      update_last_seen_on_conversation(DateTime.now.utc, assignee?)
+    begin
+      if assignee? && @conversation.assignee_unread_messages.any?
+        update_last_seen_on_conversation(DateTime.now.utc, true)
+      elsif !assignee? && @conversation.unread_messages.any?
+        update_last_seen_on_conversation(DateTime.now.utc, false)
+      elsif should_update_last_seen?
+        update_last_seen_on_conversation(DateTime.now.utc, assignee?)
+      end
+
+      ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
+    rescue StandardError => e
+      Rails.logger.warn "[update_last_seen] Non-critical error: #{e.message}"
     end
 
     render json: { id: @conversation.id, agent_last_seen_at: @conversation.agent_last_seen_at.to_i }
   end
 
-    def unread
+  def unread
     last_incoming_message = @conversation.messages.incoming.last
     last_seen_at = last_incoming_message.created_at - 1.second if last_incoming_message.present?
-    update_last_seen_on_conversation(last_seen_at, true)
+
+    begin
+      update_last_seen_on_conversation(last_seen_at, true)
+      ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
+    rescue StandardError => e
+      Rails.logger.warn "[unread] Non-critical error: #{e.message}"
+    end
 
     # Re-open the user's notification for this conversation (mark it unread)
     notification = current_user.notifications.where(account_id: current_account.id, primary_actor: @conversation, read_at: nil).last
@@ -185,15 +197,6 @@ def custom_attributes
 
     # Sync in-memory attributes so subsequent logic reads the updated values
     updates.each { |attr, value| @conversation[attr] = value }
-  rescue StandardError => e
-    Rails.logger.error "[update_last_seen_on_conversation] DB error: #{e.message}"
-  ensure
-    # Best-effort: Notifier/dispatcher can fail (e.g. Redis blip), never crash the request
-    begin
-      ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
-    rescue StandardError => e
-      Rails.logger.warn "[update_last_seen_on_conversation] Notifier error (non-critical): #{e.message}"
-    end
   end
 
   def should_update_last_seen?
