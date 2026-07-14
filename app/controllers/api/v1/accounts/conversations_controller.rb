@@ -186,7 +186,6 @@ def custom_attributes
     # Sync in-memory attributes so subsequent logic reads the updated values
     updates.each { |attr, value| @conversation[attr] = value }
 
-    UpdateLastSeenJob.perform_later(@conversation.id, Current.user, last_seen_at) if last_seen_at.present?
     ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
   end
 
