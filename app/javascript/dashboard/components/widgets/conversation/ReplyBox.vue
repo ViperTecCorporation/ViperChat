@@ -171,6 +171,7 @@ export default {
       currentUser: 'getCurrentUser',
       lastEmail: 'getLastEmailInSelectedChat',
       globalConfig: 'globalConfig/get',
+      isOnChatwootCloud: 'globalConfig/isOnChatwootCloud',
     }),
     currentContact() {
       const senderId = this.currentChat?.meta?.sender?.id;
@@ -205,6 +206,9 @@ export default {
       return this.isATwilioWhatsAppChannel && !this.isPrivate;
     },
     isPrivate() {
+      if (this.isInstagramReplyRestricted) {
+        return true;
+      }
       if (
         this.currentChat.can_reply ||
         this.isAWhatsAppChannel ||
@@ -229,10 +233,16 @@ export default {
       );
       return !!stripped.trim();
     },
+    // Instagram replies are disabled on Chatwoot Cloud during the temporary
+    // Meta platform restriction; private notes remain available.
+    isInstagramReplyRestricted() {
+      return this.isOnChatwootCloud && this.isAnInstagramChannel;
+    },
     isReplyRestricted() {
       return (
-        !this.currentChat?.can_reply &&
-        !(this.isAWhatsAppChannel || this.isAPIInbox)
+        this.isInstagramReplyRestricted ||
+        (!this.currentChat?.can_reply &&
+          !(this.isAWhatsAppChannel || this.isAPIInbox))
       );
     },
     inboxId() {
@@ -509,7 +519,10 @@ export default {
         return;
       }
 
-      if (canReply || this.isAWhatsAppChannel || this.isAPIInbox) {
+      if (
+        !this.isInstagramReplyRestricted &&
+        (canReply || this.isAWhatsAppChannel || this.isAPIInbox)
+      ) {
         this.replyType = REPLY_EDITOR_MODES.REPLY;
       } else {
         this.replyType = REPLY_EDITOR_MODES.NOTE;
@@ -1132,7 +1145,10 @@ export default {
       this.$store.dispatch('draftMessages/setReplyEditorMode', {
         mode,
       });
-      if (canReply || this.isAWhatsAppChannel || this.isAPIInbox)
+      if (
+        !this.isInstagramReplyRestricted &&
+        (canReply || this.isAWhatsAppChannel || this.isAPIInbox)
+      )
         this.replyType = mode;
       if (this.isRecordingAudio) {
         this.toggleAudioRecorder();
