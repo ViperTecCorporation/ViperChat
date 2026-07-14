@@ -185,8 +185,15 @@ def custom_attributes
 
     # Sync in-memory attributes so subsequent logic reads the updated values
     updates.each { |attr, value| @conversation[attr] = value }
-
-    ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
+  rescue StandardError => e
+    Rails.logger.error "[update_last_seen_on_conversation] DB error: #{e.message}"
+  ensure
+    # Best-effort: Notifier/dispatcher can fail (e.g. Redis blip), never crash the request
+    begin
+      ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
+    rescue StandardError => e
+      Rails.logger.warn "[update_last_seen_on_conversation] Notifier error (non-critical): #{e.message}"
+    end
   end
 
   def should_update_last_seen?
