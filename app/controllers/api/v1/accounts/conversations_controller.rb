@@ -113,47 +113,43 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def update_last_seen
-    # High-traffic accounts generate excessive DB writes when agents frequently switch between conversations.
-    # Throttle last_seen updates to once per hour when there are no unread messages to reduce DB load.
-    # Always update immediately if there are unread messages to maintain accurate read/unread state.
-    # Visiting a conversation should clear any unread inbox notifications for this conversation.
-    begin
-      # DB update FIRST — critical: must always succeed so conversation is marked as read
-      if assignee? && @conversation.assignee_unread_messages.any?
-        update_last_seen_on_conversation(DateTime.now.utc, true)
-      elsif !assignee? && @conversation.unread_messages.any?
-        update_last_seen_on_conversation(DateTime.now.utc, false)
-      elsif should_update_last_seen?
-        update_last_seen_on_conversation(DateTime.now.utc, assignee?)
-      end
-
-      # Unread count sync + inbox notifications LAST — best-effort, can fail silently
-      ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
-      ::Notification::MarkConversationReadService.new(user: Current.user, account: Current.account, conversation: @conversation).perform
-    rescue StandardError => e
-      Rails.logger.warn "[update_last_seen] Non-critical error: #{e.message}"
+    # DB update — sempre atualiza se houver unread (sem throttle), ou respeita throttle se não houver
+    if (assignee? && @conversation.assignee_unread_messages.any?) ||
+       (!assignee? && @conversation.unread_messages.any?)
+      update_last_seen_on_conversation(DateTime.now.utc, assignee?)
+    elsif should_update_last_seen?
+      update_last_seen_on_conversation(DateTime.now.utc, assignee?)
     end
 
+    # Marca notificações como lidas (rescue próprio — só DB, nunca falha por Redis)
+    ::Notification::MarkConversationReadService.new(
+      user: Current.user, account: Current.account, conversation: @conversation
+    ).perform
+
     render json: { id: @conversation.display_id, agent_last_seen_at: @conversation.agent_last_seen_at.to_i }
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.warn "[update_last_seen] DB error: #{e.message}"
+    render json: { id: @conversation.display_id, agent_last_seen_at: @conversation.agent_last_seen_at.to_i }
+  ensure
+    # Notifier em rescue isolado — Redis pode falhar, não afeta a response
+    begin
+      ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
+    rescue StandardError => e
+      Rails.logger.warn "[update_last_seen] Notifier error (non-critical): #{e.message}"
+    end
   end
 
   def unread
     last_incoming_message = @conversation.messages.incoming.last
     last_seen_at = last_incoming_message.created_at - 1.second if last_incoming_message.present?
 
-    begin
-      update_last_seen_on_conversation(last_seen_at, true)
-      ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
-    rescue StandardError => e
-      Rails.logger.warn "[unread] Non-critical error: #{e.message}"
-    end
+    update_last_seen_on_conversation(last_seen_at, true)
 
     # Re-open the user's notification for this conversation (mark it unread)
     notification = current_user.notifications.where(account_id: current_account.id, primary_actor: @conversation, read_at: nil).last
     if notification
       notification.update(read_at: nil)
     else
-      # Create notification if it doesn't exist (e.g., old conversations from before deploy)
       last_message = @conversation.messages.incoming.last
       if last_message
         NotificationBuilder.new(

@@ -29,8 +29,6 @@ export default {
     },
     openConversation(notification) {
       const {
-        primary_actor_id: primaryActorId,
-        primary_actor_type: primaryActorType,
         primary_actor: { id: conversationId },
         notification_type: notificationType,
       } = notification;
@@ -38,13 +36,8 @@ export default {
       useTrack(ACCOUNT_EVENTS.OPEN_CONVERSATION_VIA_NOTIFICATION, {
         notificationType,
       });
-      this.$store.dispatch('notifications/read', {
-        id: notification.id,
-        primaryActorId,
-        primaryActorType,
-        unreadCount: this.meta.unreadCount,
-      });
 
+      // A navegação dispara markMessagesRead → update_last_seen, que cuida de tudo
       this.$router.push(
         `/app/accounts/${this.accountId}/conversations/${conversationId}`
       );
