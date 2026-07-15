@@ -118,8 +118,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # Always update immediately if there are unread messages to maintain accurate read/unread state.
     # Visiting a conversation should clear any unread inbox notifications for this conversation.
     begin
-      Notification::MarkConversationReadService.new(user: Current.user, account: Current.account, conversation: @conversation).perform
-
+      # DB update FIRST — critical: must always succeed so conversation is marked as read
       if assignee? && @conversation.assignee_unread_messages.any?
         update_last_seen_on_conversation(DateTime.now.utc, true)
       elsif !assignee? && @conversation.unread_messages.any?
@@ -128,7 +127,9 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
         update_last_seen_on_conversation(DateTime.now.utc, assignee?)
       end
 
+      # Unread count sync + inbox notifications LAST — best-effort, can fail silently
       ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
+      ::Notification::MarkConversationReadService.new(user: Current.user, account: Current.account, conversation: @conversation).perform
     rescue StandardError => e
       Rails.logger.warn "[update_last_seen] Non-critical error: #{e.message}"
     end
