@@ -117,9 +117,9 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # Throttle last_seen updates to once per hour when there are no unread messages to reduce DB load.
     # Always update immediately if there are unread messages to maintain accurate read/unread state.
     # Visiting a conversation should clear any unread inbox notifications for this conversation.
-    Notification::MarkConversationReadService.new(user: Current.user, account: Current.account, conversation: @conversation).perform
-
     begin
+      Notification::MarkConversationReadService.new(user: Current.user, account: Current.account, conversation: @conversation).perform
+
       if assignee? && @conversation.assignee_unread_messages.any?
         update_last_seen_on_conversation(DateTime.now.utc, true)
       elsif !assignee? && @conversation.unread_messages.any?
