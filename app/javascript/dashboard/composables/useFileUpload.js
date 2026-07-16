@@ -2,6 +2,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { DirectUpload } from 'activestorage';
+import { setDirectUploadAuthHeaders } from 'dashboard/helper/directUploadsHelper';
 import { checkFileSizeLimit, resolveMaximumFileUploadSize } from 'shared/helpers/FileHelper';
 import { MAXIMUM_FILE_UPLOAD_SIZE } from 'shared/constants/messages';
 
@@ -16,7 +17,6 @@ export const useFileUpload = ({ inbox, attachFile, isPrivateNote = false }) => {
   const { t } = useI18n();
 
   const accountId = useMapGetter('getCurrentAccountId');
-  const currentUser = useMapGetter('getCurrentUser');
   const currentChat = useMapGetter('getSelectedChat');
   const globalConfig = useMapGetter('globalConfig/get');
 
@@ -58,10 +58,7 @@ export const useFileUpload = ({ inbox, attachFile, isPrivateNote = false }) => {
       `/api/v1/accounts/${accountId.value}/conversations/${currentChat.value.id}/direct_uploads`,
       {
         directUploadWillCreateBlobWithXHR: xhr => {
-          xhr.setRequestHeader(
-            'api_access_token',
-            currentUser.value.access_token
-          );
+          setDirectUploadAuthHeaders(xhr);
         },
       }
     );
