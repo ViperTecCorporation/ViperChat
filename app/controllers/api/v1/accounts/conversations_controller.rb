@@ -127,8 +127,8 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     ).perform
 
     render json: { id: @conversation.display_id, agent_last_seen_at: @conversation.agent_last_seen_at.to_i }
-  rescue ActiveRecord::ActiveRecordError => e
-    Rails.logger.warn "[update_last_seen] DB error: #{e.message}"
+  rescue StandardError => e
+    Rails.logger.warn "[update_last_seen] Non-critical error: #{e.message}"
     render json: { id: @conversation.display_id, agent_last_seen_at: @conversation.agent_last_seen_at.to_i }
   ensure
     # Notifier em rescue isolado — Redis pode falhar, não afeta a response
