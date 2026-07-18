@@ -40,6 +40,14 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    signaturePreferenceChannel: {
+      type: String,
+      default: '',
+    },
+    signatureEnabledByDefault: {
+      type: Boolean,
+      default: false,
+    },
     showFileUpload: {
       type: Boolean,
       default: false,
@@ -264,8 +272,10 @@ export default {
       );
     },
     sendWithSignature() {
-      // channelType is sourced from inboxMixin
-      return this.fetchSignatureFlagFromUISettings(this.channelType);
+      return this.fetchSignatureFlagFromUISettings(
+        this.signaturePreferenceChannel || this.channelType,
+        this.signatureEnabledByDefault
+      );
     },
     signatureToggleTooltip() {
       return this.sendWithSignature
@@ -289,7 +299,10 @@ export default {
   },
   methods: {
     toggleMessageSignature() {
-      this.setSignatureFlagForInbox(this.channelType, !this.sendWithSignature);
+      this.setSignatureFlagForInbox(
+        this.signaturePreferenceChannel || this.channelType,
+        !this.sendWithSignature
+      );
     },
     toggleInsertArticle() {
       this.$emit('toggleInsertArticle');

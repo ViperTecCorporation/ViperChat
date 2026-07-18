@@ -12,6 +12,19 @@ const CHANNEL_PRIORITY = {
   'Channel::Api': 6,
 };
 
+const normalizeProvider = value => (value || '').toString().toLowerCase();
+
+export const isUnoapiInbox = inbox => {
+  const provider = normalizeProvider(
+    inbox?.provider ||
+      inbox?.providerName ||
+      inbox?.provider_name ||
+      inbox?.channel?.provider
+  );
+
+  return ['unoapi', 'unoprovider'].includes(provider);
+};
+
 export const generateLabelForContactableInboxesList = ({
   name,
   email,

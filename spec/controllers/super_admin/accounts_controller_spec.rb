@@ -85,6 +85,26 @@ RSpec.describe 'Super Admin accounts API', type: :request do
 
   describe 'PATCH /super_admin/accounts/{account_id}' do
     context 'when it is an authenticated user' do
+      it 'applies checkbox values and preserves features omitted from the form' do
+        account.selected_feature_flags = %i[feature_agent_bots feature_conversation_unread_counts feature_integrations]
+        account.save!
+        sign_in(super_admin, scope: :super_admin)
+
+        patch "/super_admin/accounts/#{account.id}",
+              params: {
+                account: { name: account.name, locale: account.locale, status: account.status },
+                enabled_features: {
+                  feature_agent_bots: 'false',
+                  feature_integrations: 'true'
+                }
+              }
+
+        expect(response).to have_http_status(:redirect)
+        expect(account.reload).not_to be_feature_agent_bots
+        expect(account).to be_feature_integrations
+        expect(account).to be_feature_conversation_unread_counts
+      end
+
       it 'updates Captain model overrides without changing unrelated settings' do
         account.update!(
           captain_models: { 'editor' => 'gpt-4.1' },

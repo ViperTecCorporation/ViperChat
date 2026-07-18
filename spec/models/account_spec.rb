@@ -52,6 +52,24 @@ RSpec.describe Account do
   end
 
   describe 'feature flags' do
+    it 'uses config/features.yml defaults when the installation config is missing' do
+      InstallationConfig.where(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').delete_all
+
+      account = create(:account)
+
+      expect(account).to be_feature_agent_bots
+      expect(account).to be_feature_branded_email_templates
+      expect(account).not_to be_feature_integrations
+    end
+
+    it 'respects explicitly selected features when creating an account' do
+      account = build(:account)
+      account.selected_feature_flags = %i[feature_inbox_management]
+      account.save!
+
+      expect(account.selected_feature_flags).to contain_exactly(:feature_inbox_management)
+    end
+
     it 'ignores stale default features that are no longer configured' do
       InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
         value: [

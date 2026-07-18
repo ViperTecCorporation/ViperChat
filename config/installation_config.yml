@@ -310,11 +310,11 @@
 
 # ------- ViperChat Internal Config for Self Hosted ----#
 - name: INSTALLATION_PRICING_PLAN
-  value: 'community'
-  description: 'The pricing plan for the installation, retrieved from the billing API'
+  value: 'premium'
+  description: 'The fixed pricing plan for ViperChat installations'
 - name: INSTALLATION_PRICING_PLAN_QUANTITY
-  value: 0
-  description: 'The number of licenses purchased for the installation, retrieved from the billing API'
+  value: 1000000
+  description: 'The fixed license allowance for ViperChat installations'
 - name: CHATWOOT_SUPPORT_WEBSITE_TOKEN
   value:
   description: 'The ViperChat website token, used to identify the ViperChat inbox and display the "Contact Support" option on the billing page'

@@ -72,6 +72,36 @@ describe Whatsapp::SendOnWhatsappService do
         expect(message.reload.source_id).to eq('123456789')
       end
 
+      it 'sends a regular UnoAPI message without requiring a template' do
+        unoapi_channel = create(
+          :channel_whatsapp,
+          provider: 'unoapi',
+          sync_templates: false,
+          validate_provider_config: false
+        )
+        unoapi_contact_inbox = create(:contact_inbox, inbox: unoapi_channel.inbox, source_id: '5511999999999')
+        unoapi_conversation = create(
+          :conversation,
+          contact_inbox: unoapi_contact_inbox,
+          inbox: unoapi_channel.inbox
+        )
+        message = create(
+          :message,
+          message_type: :outgoing,
+          content: 'Mensagem livre',
+          conversation: unoapi_conversation,
+          account: unoapi_conversation.account
+        )
+        allow(unoapi_conversation).to receive(:can_reply?).and_return(false)
+        allow(unoapi_channel).to receive(:send_message).with('5511999999999', message).and_return('uno-message-id')
+
+        expect(unoapi_channel).not_to receive(:send_template)
+
+        described_class.new(message: message).perform
+
+        expect(message.reload.source_id).to eq('uno-message-id')
+      end
+
       it 'sends to bsuid source contact when contact has no phone number' do
         lid_contact = create(:contact, account: whatsapp_channel.account, phone_number: nil, bsuid: '123456789012345@lid')
         lid_contact_inbox = create(:contact_inbox, contact: lid_contact, inbox: whatsapp_channel.inbox, source_id: '123456789012345@lid')

@@ -321,6 +321,8 @@
   },
   "SIDEBAR": {
     "NO_ITEMS": "No items",
+    "COLLAPSE_SIDEBAR": "Collapse sidebar",
+    "EXPAND_SIDEBAR": "Expand sidebar",
     "CURRENTLY_VIEWING_ACCOUNT": "Currently viewing:",
     "SWITCH": "Switch",
     "INBOX_VIEW": "Inbox View",
@@ -332,6 +334,7 @@
     "UNATTENDED_CONVERSATIONS": "Unattended",
     "REPORTS": "Reports",
     "SETTINGS": "Settings",
+    "DASHBOARD": "Dashboard",
     "CONTACTS": "Contacts",
     "ACTIVE": "Active",
     "COMPANIES": "Companies",

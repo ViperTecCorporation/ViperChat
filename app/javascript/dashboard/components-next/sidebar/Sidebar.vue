@@ -169,6 +169,21 @@ const {
 const isEffectivelyCollapsed = computed(
   () => !isMobile.value && isCollapsed.value
 );
+const sidebarToggleLabel = computed(() =>
+  isEffectivelyCollapsed.value
+    ? t('SIDEBAR.EXPAND_SIDEBAR')
+    : t('SIDEBAR.COLLAPSE_SIDEBAR')
+);
+const sidebarToggleIcon = computed(() =>
+  isEffectivelyCollapsed.value
+    ? 'i-lucide-panel-left-open'
+    : 'i-lucide-panel-left-close'
+);
+
+const toggleSidebarWidth = () => {
+  if (isEffectivelyCollapsed.value) snapToExpanded();
+  else snapToCollapsed();
+};
 
 // Resize handle logic
 const isResizing = ref(false);
@@ -235,6 +250,7 @@ const labels = useMapGetter('labels/getLabelsOnSidebar');
 const allUnreadCount = useMapGetter(
   'conversationUnreadCounts/getAllUnreadCount'
 );
+const notificationUnreadCount = useMapGetter('notifications/getUnreadCount');
 const getInboxUnreadCount = useMapGetter(
   'conversationUnreadCounts/getInboxUnreadCount'
 );
@@ -382,16 +398,6 @@ const reportRoutes = computed(() => newReportRoutes());
 const menuItems = computed(() => {
   return [
     {
-      name: 'Inbox',
-      label: t('SIDEBAR.INBOX'),
-      icon: 'i-lucide-inbox',
-      to: accountScopedRoute('inbox_view'),
-      activeOn: ['inbox_view', 'inbox_view_conversation'],
-      getterKeys: {
-        count: 'notifications/getUnreadCount',
-      },
-    },
-    {
       name: 'Conversation',
       label: t('SIDEBAR.CONVERSATIONS'),
       icon: 'i-lucide-message-circle',
@@ -513,85 +519,6 @@ const menuItems = computed(() => {
       ],
     },
     {
-      name: 'Captain',
-      icon: 'i-woot-captain',
-      label: t('SIDEBAR.CAPTAIN'),
-      activeOn: ['captain_assistants_create_index'],
-      children: [
-        {
-          name: 'Overview',
-          label: t('SIDEBAR.CAPTAIN_OVERVIEW'),
-          activeOn: ['captain_assistants_overview_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_overview_index',
-          }),
-        },
-        {
-          name: 'FAQs',
-          label: t('SIDEBAR.CAPTAIN_RESPONSES'),
-          activeOn: [
-            'captain_assistants_responses_index',
-            'captain_assistants_responses_pending',
-          ],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_responses_index',
-          }),
-        },
-        {
-          name: 'Documents',
-          label: t('SIDEBAR.CAPTAIN_DOCUMENTS'),
-          activeOn: ['captain_assistants_documents_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_documents_index',
-          }),
-        },
-        {
-          name: 'Scenarios',
-          label: t('SIDEBAR.CAPTAIN_SCENARIOS'),
-          activeOn: ['captain_assistants_scenarios_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_scenarios_index',
-          }),
-        },
-        {
-          name: 'Playground',
-          label: t('SIDEBAR.CAPTAIN_PLAYGROUND'),
-          activeOn: ['captain_assistants_playground_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_playground_index',
-          }),
-        },
-        {
-          name: 'Inboxes',
-          label: t('SIDEBAR.CAPTAIN_INBOXES'),
-          activeOn: ['captain_assistants_inboxes_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_inboxes_index',
-          }),
-        },
-        {
-          name: 'Tools',
-          label: t('SIDEBAR.CAPTAIN_TOOLS'),
-          activeOn: ['captain_tools_index'],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_tools_index',
-          }),
-        },
-        {
-          name: 'Settings',
-          label: t('SIDEBAR.CAPTAIN_SETTINGS'),
-          activeOn: [
-            'captain_assistants_settings_index',
-            'captain_assistants_guidelines_index',
-            'captain_assistants_guardrails_index',
-          ],
-          to: accountScopedRoute('captain_assistants_index', {
-            navigationPath: 'captain_assistants_settings_index',
-          }),
-        },
-      ],
-    },
-    {
       name: 'Contacts',
       label: t('SIDEBAR.CONTACTS'),
       icon: 'i-lucide-contact',
@@ -611,6 +538,17 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.ACTIVE'),
           to: accountScopedRoute('contacts_dashboard_active'),
           activeOn: ['contacts_dashboard_active'],
+        },
+        {
+          name: 'Companies',
+          label: t('SIDEBAR.COMPANIES'),
+          icon: 'i-lucide-building-2',
+          to: accountScopedRoute(
+            'companies_dashboard_index',
+            {},
+            { page: 1, search: undefined }
+          ),
+          activeOn: ['companies_dashboard_index', 'companies_dashboard_show'],
         },
         {
           name: 'Segments',
@@ -659,23 +597,6 @@ const menuItems = computed(() => {
       ],
     },
     {
-      name: 'Companies',
-      label: t('SIDEBAR.COMPANIES'),
-      icon: 'i-lucide-building-2',
-      children: [
-        {
-          name: 'All Companies',
-          label: t('SIDEBAR.ALL_COMPANIES'),
-          to: accountScopedRoute(
-            'companies_dashboard_index',
-            {},
-            { page: 1, search: undefined }
-          ),
-          activeOn: ['companies_dashboard_index', 'companies_dashboard_show'],
-        },
-      ],
-    },
-    {
       name: 'Reports',
       label: t('SIDEBAR.REPORTS'),
       icon: 'i-lucide-chart-spline',
@@ -709,79 +630,82 @@ const menuItems = computed(() => {
       ],
     },
     {
-      name: 'Campaigns',
-      label: t('SIDEBAR.CAMPAIGNS'),
-      icon: 'i-lucide-megaphone',
-      children: [
-        {
-          name: 'Live chat',
-          label: t('SIDEBAR.LIVE_CHAT'),
-          to: accountScopedRoute('campaigns_livechat_index'),
-        },
-        {
-          name: 'SMS',
-          label: t('SIDEBAR.SMS'),
-          to: accountScopedRoute('campaigns_sms_index'),
-        },
-        {
-          name: 'WhatsApp',
-          label: t('SIDEBAR.WHATSAPP'),
-          to: accountScopedRoute('campaigns_whatsapp_index'),
-        },
-      ],
-    },
-    {
-      name: 'Portals',
-      label: t('SIDEBAR.HELP_CENTER.TITLE'),
-      icon: 'i-lucide-library-big',
-      children: [
-        {
-          name: 'Articles',
-          label: t('SIDEBAR.HELP_CENTER.ARTICLES'),
-          activeOn: [
-            'portals_articles_index',
-            'portals_articles_new',
-            'portals_articles_edit',
-          ],
-          to: accountScopedRoute('portals_index', {
-            navigationPath: 'portals_articles_index',
-          }),
-        },
-        {
-          name: 'Categories',
-          label: t('SIDEBAR.HELP_CENTER.CATEGORIES'),
-          activeOn: [
-            'portals_categories_index',
-            'portals_categories_articles_index',
-            'portals_categories_articles_edit',
-          ],
-          to: accountScopedRoute('portals_index', {
-            navigationPath: 'portals_categories_index',
-          }),
-        },
-        {
-          name: 'Locales',
-          label: t('SIDEBAR.HELP_CENTER.LOCALES'),
-          activeOn: ['portals_locales_index'],
-          to: accountScopedRoute('portals_index', {
-            navigationPath: 'portals_locales_index',
-          }),
-        },
-        {
-          name: 'Settings',
-          label: t('SIDEBAR.HELP_CENTER.SETTINGS'),
-          activeOn: ['portals_settings_index'],
-          to: accountScopedRoute('portals_index', {
-            navigationPath: 'portals_settings_index',
-          }),
-        },
-      ],
-    },
-    {
       name: 'Settings',
       label: t('SIDEBAR.SETTINGS'),
       icon: 'i-lucide-bolt',
       children: [
+        {
+          name: 'Settings Dashboard',
+          label: t('SIDEBAR.DASHBOARD'),
+          icon: 'i-lucide-layout-dashboard',
+          children: [
+            {
+              name: 'Dashboard Captain',
+              label: t('SIDEBAR.CAPTAIN'),
+              icon: 'i-woot-captain',
+              activeOn: [
+                'captain_assistants_index',
+                'captain_assistants_create_index',
+                'captain_assistants_overview_index',
+                'captain_assistants_responses_index',
+                'captain_assistants_responses_pending',
+                'captain_assistants_documents_index',
+                'captain_tools_index',
+                'captain_assistants_scenarios_index',
+                'captain_assistants_playground_index',
+                'captain_assistants_inboxes_index',
+                'captain_assistants_settings_index',
+                'captain_assistants_guidelines_index',
+                'captain_assistants_guardrails_index',
+              ],
+              to: accountScopedRoute('captain_assistants_index', {
+                navigationPath: 'captain_assistants_overview_index',
+              }),
+            },
+            {
+              name: 'Dashboard Inbox',
+              label: t('SIDEBAR.INBOX'),
+              icon: 'i-lucide-inbox',
+              to: accountScopedRoute('inbox_view'),
+              activeOn: ['inbox_view', 'inbox_view_conversation'],
+              badgeCount: notificationUnreadCount.value,
+            },
+            {
+              name: 'Dashboard Campaigns',
+              label: t('SIDEBAR.CAMPAIGNS'),
+              icon: 'i-lucide-megaphone',
+              activeOn: [
+                'campaigns_ongoing_index',
+                'campaigns_one_off_index',
+                'campaigns_livechat_index',
+                'campaigns_sms_index',
+                'campaigns_whatsapp_index',
+              ],
+              to: accountScopedRoute('campaigns_livechat_index'),
+            },
+            {
+              name: 'Dashboard Help Center',
+              label: t('SIDEBAR.HELP_CENTER.TITLE'),
+              icon: 'i-lucide-library-big',
+              activeOn: [
+                'portals_index',
+                'portals_new',
+                'portals_articles_index',
+                'portals_articles_new',
+                'portals_articles_edit',
+                'portals_categories_index',
+                'portals_categories_articles_index',
+                'portals_categories_articles_new',
+                'portals_categories_articles_edit',
+                'portals_locales_index',
+                'portals_settings_index',
+              ],
+              to: accountScopedRoute('portals_index', {
+                navigationPath: 'portals_articles_index',
+              }),
+            },
+          ],
+        },
         {
           name: 'Settings Account Settings',
           label: t('SIDEBAR.ACCOUNT_SETTINGS'),
@@ -1119,9 +1043,23 @@ const menuItems = computed(() => {
         "
       />
       <div
-        class="px-1 py-1.5 flex-shrink-0 flex w-full z-50 gap-2 items-center border-t border-n-weak shadow-[0px_-2px_4px_0px_rgba(27,28,29,0.02)]"
-        :class="isEffectivelyCollapsed ? 'justify-center' : 'justify-between'"
+        class="px-1 py-1.5 flex-shrink-0 flex flex-col w-full z-50 gap-1 border-t border-n-weak shadow-[0px_-2px_4px_0px_rgba(27,28,29,0.02)]"
       >
+        <div
+          class="hidden md:flex w-full"
+          :class="isEffectivelyCollapsed ? 'justify-center' : 'justify-end'"
+        >
+          <Button
+            v-tooltip.right="sidebarToggleLabel"
+            :aria-label="sidebarToggleLabel"
+            :icon="sidebarToggleIcon"
+            color="slate"
+            variant="ghost"
+            size="sm"
+            class="!size-8 !text-n-slate-11"
+            @click="toggleSidebarWidth"
+          />
+        </div>
         <SidebarProfileMenu
           :is-collapsed="isEffectivelyCollapsed"
           @open-key-shortcut-modal="emit('openKeyShortcutModal')"

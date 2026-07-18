@@ -1,10 +1,10 @@
 <script setup>
 import { computed } from 'vue';
 import ContactPanel from 'dashboard/routes/dashboard/conversation/ContactPanel.vue';
-import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useWindowSize } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
+import { useConversationSidepanel } from 'dashboard/composables/useConversationSidepanel';
 
 defineProps({
   currentChat: {
@@ -13,13 +13,12 @@ defineProps({
   },
 });
 
-const { uiSettings, updateUISettings } = useUISettings();
+const { isContactSidebarOpen, closeContactSidebar } =
+  useConversationSidepanel();
 const { width: windowWidth } = useWindowSize();
 
 const activeTab = computed(() => {
-  const { is_contact_sidebar_open: isContactSidebarOpen } = uiSettings.value;
-
-  if (isContactSidebarOpen) {
+  if (isContactSidebarOpen.value) {
     return 0;
   }
   return null;
@@ -30,11 +29,8 @@ const isSmallScreen = computed(
 );
 
 const closeContactPanel = () => {
-  if (isSmallScreen.value && uiSettings.value?.is_contact_sidebar_open) {
-    updateUISettings({
-      is_contact_sidebar_open: false,
-      is_copilot_panel_open: false,
-    });
+  if (isSmallScreen.value && isContactSidebarOpen.value) {
+    closeContactSidebar();
   }
 };
 </script>

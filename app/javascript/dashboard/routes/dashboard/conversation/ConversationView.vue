@@ -10,6 +10,7 @@ import CmdBarConversationSnooze from 'dashboard/routes/dashboard/commands/CmdBar
 import { emitter } from 'shared/helpers/mitt';
 import SidepanelSwitch from 'dashboard/components-next/Conversation/SidepanelSwitch.vue';
 import ConversationSidebar from 'dashboard/components/widgets/conversation/ConversationSidebar.vue';
+import { useConversationSidepanel } from 'dashboard/composables/useConversationSidepanel';
 
 export default {
   components: {
@@ -20,6 +21,7 @@ export default {
     ConversationSidebar,
   },
   beforeRouteLeave(to, from, next) {
+    this.closeContactSidebar();
     // Clear selected state if navigating away from a conversation to a route without a conversationId to prevent stale data issues
     // and resolves timing issues during navigation with conversation view and other screens
     if (this.conversationId) {
@@ -56,11 +58,15 @@ export default {
   setup() {
     const { uiSettings, updateUISettings } = useUISettings();
     const { accountId } = useAccount();
+    const { isContactSidebarOpen, closeContactSidebar } =
+      useConversationSidepanel();
 
     return {
       uiSettings,
       updateUISettings,
       accountId,
+      isContactSidebarOpen,
+      closeContactSidebar,
     };
   },
   data() {
@@ -93,17 +99,20 @@ export default {
         return false;
       }
 
-      const { is_contact_sidebar_open: isContactSidebarOpen } = this.uiSettings;
-      return isContactSidebarOpen;
+      return this.isContactSidebarOpen;
     },
   },
   watch: {
-    conversationId() {
+    conversationId(newConversationId, previousConversationId) {
+      if (newConversationId !== previousConversationId) {
+        this.closeContactSidebar();
+      }
       this.fetchConversationIfUnavailable();
     },
   },
 
   created() {
+    this.closeContactSidebar();
     // Clear selected state early if no conversation is selected
     // This prevents child components from accessing stale data
     // and resolves timing issues during navigation

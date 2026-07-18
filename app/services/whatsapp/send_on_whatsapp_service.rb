@@ -8,7 +8,7 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   def perform_reply
     return if message.message_type == :outgoing && message.source_id&.is_present? # is message send by own
 
-    should_send_template_message = template_params.present? || !message.conversation.can_reply?
+    should_send_template_message = template_params.present? || (template_required? && !message.conversation.can_reply?)
     if should_send_template_message
       send_template_message
     else
@@ -50,6 +50,10 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
 
   def template_params
     message.additional_attributes && message.additional_attributes['template_params']
+  end
+
+  def template_required?
+    channel.provider != 'unoapi'
   end
 
   def whatsapp_recipient

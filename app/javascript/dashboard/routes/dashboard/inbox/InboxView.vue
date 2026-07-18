@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue';
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useTrack } from 'dashboard/composables';
@@ -14,11 +14,14 @@ import ConversationBox from 'dashboard/components/widgets/conversation/Conversat
 import InboxEmptyState from './InboxEmptyState.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ConversationSidebar from 'dashboard/components/widgets/conversation/ConversationSidebar.vue';
+import { useConversationSidepanel } from 'dashboard/composables/useConversationSidepanel';
 
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
 const { uiSettings } = useUISettings();
+const { isContactSidebarOpen, closeContactSidebar } =
+  useConversationSidepanel();
 
 const isConversationLoading = ref(false);
 
@@ -67,11 +70,7 @@ const activeNotificationIndex = computed(() => {
 });
 
 const isContactPanelOpen = computed(() => {
-  if (currentChat.value.id) {
-    const { is_contact_sidebar_open: isContactSidebarOpen } = uiSettings.value;
-    return isContactSidebarOpen;
-  }
-  return false;
+  return !!currentChat.value.id && isContactSidebarOpen.value;
 });
 
 const findConversation = () => {
@@ -173,6 +172,7 @@ watch(
   conversationId,
   (newVal, oldVal) => {
     if (newVal !== oldVal) {
+      closeContactSidebar();
       fetchConversationById();
     }
   },
@@ -182,6 +182,8 @@ watch(
 onMounted(async () => {
   await store.dispatch('agents/get');
 });
+
+onBeforeUnmount(closeContactSidebar);
 </script>
 
 <template>

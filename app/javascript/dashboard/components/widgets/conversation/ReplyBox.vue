@@ -199,7 +199,11 @@ export default {
       const templates = this.$store.getters['inboxes/getWhatsAppTemplates'](
         this.inboxId
       );
-      return !!(templates && templates.length) && !this.isPrivate;
+      return (
+        !!(templates && templates.length) &&
+        !this.isPrivate &&
+        !this.isAUnoapiChannel
+      );
     },
     showContentTemplates() {
       return this.isATwilioWhatsAppChannel && !this.isPrivate;
@@ -400,8 +404,16 @@ export default {
     isSignatureAvailable() {
       return !!this.messageSignature;
     },
+    signaturePreferenceChannel() {
+      return this.isAUnoapiChannel
+        ? `${this.channelType} Unoapi`
+        : this.channelType;
+    },
     sendWithSignature() {
-      return this.fetchSignatureFlagFromUISettings(this.channelType);
+      return this.fetchSignatureFlagFromUISettings(
+        this.signaturePreferenceChannel,
+        this.isAUnoapiChannel
+      );
     },
     conversationId() {
       return this.currentChat.id;
@@ -1608,6 +1620,8 @@ export default {
           :variables="messageVariables"
           :signature="messageSignature"
           allow-signature
+          :signature-preference-channel="signaturePreferenceChannel"
+          :signature-enabled-by-default="isAUnoapiChannel"
           :enable-group-mentions="canUseGroupMentions"
           :group-mention-contacts="groupMentionContacts"
           :channel-type="channelType"
@@ -1684,6 +1698,8 @@ export default {
         :enable-whats-app-templates="showWhatsappTemplates"
         :enable-content-templates="showContentTemplates"
         :inbox="inbox"
+        :signature-preference-channel="signaturePreferenceChannel"
+        :signature-enabled-by-default="isAUnoapiChannel"
         :is-on-private-note="isOnPrivateNote"
         :is-recording-audio="isRecordingAudio"
         :is-send-disabled="isReplyButtonDisabled"

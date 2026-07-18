@@ -37,7 +37,7 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     permitted_params = super
     permitted_params[:limits] = normalize_limits(permitted_params[:limits])
     permitted_params[:captain_models] = permitted_params[:captain_models].to_h.compact_blank.presence if permitted_params.key?(:captain_models)
-    permitted_params[:selected_feature_flags] = params[:enabled_features].keys.map(&:to_sym) if params[:enabled_features].present?
+    permitted_params[:selected_feature_flags] = selected_feature_flags_from_form if params.key?(:enabled_features)
     permitted_params
   end
 
@@ -68,6 +68,17 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
   end
 
   private
+
+  def selected_feature_flags_from_form
+    submitted_features = params[:enabled_features].to_unsafe_h
+    editable_flags = submitted_features.keys.map(&:to_sym)
+    enabled_flags = submitted_features.filter_map do |flag, enabled|
+      flag.to_sym if ActiveModel::Type::Boolean.new.cast(enabled)
+    end
+
+    base_flags = requested_resource&.persisted? ? requested_resource.selected_feature_flags : Featurable.default_feature_flags
+    (base_flags - editable_flags + enabled_flags).uniq
+  end
 
   def normalize_limits(limits)
     limits.to_h.each_with_object({}) do |(key, value), normalized_limits|

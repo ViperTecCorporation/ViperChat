@@ -548,7 +548,20 @@
       "PREVIOUS_CONVERSATION": "Conversas anteriores",
       "MACROS": "Macros",
       "LINEAR_ISSUES": "Problemas do Linear vinculados",
-      "SHOPIFY_ORDERS": "Pedidos do Shopify"
+      "SHOPIFY_ORDERS": "Pedidos do Shopify",
+      "SHARED_FILES": "Anexos"
+    },
+    "SHARED_FILES": {
+      "EMPTY": "Nenhum anexo ainda",
+      "DOWNLOAD": "Baixar arquivo",
+      "DOWNLOAD_ERROR": "Não foi possível baixar o arquivo. Tente novamente.",
+      "MEDIA_HEADING": "Mídia",
+      "FILES_HEADING": "Arquivos",
+      "VIEW_ALL": "Ver todos",
+      "SHOW_LESS": "Mostrar menos",
+      "MORE_COUNT": "+{count}",
+      "UNTITLED_FILE": "Arquivo sem título",
+      "JUMP_TO_MESSAGE": "Ir para a mensagem"
     },
     "SHOPIFY": {
       "ORDER_ID": "Pedido #{id}",

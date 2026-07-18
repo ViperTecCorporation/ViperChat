@@ -6,6 +6,21 @@ import * as helpers from '../composeConversationHelper';
 vi.mock('dashboard/api/contacts');
 
 describe('composeConversationHelper', () => {
+  describe('isUnoapiInbox', () => {
+    it('recognizes UnoAPI provider aliases from inbox payloads', () => {
+      expect(helpers.isUnoapiInbox({ provider: 'unoapi' })).toBe(true);
+      expect(helpers.isUnoapiInbox({ providerName: 'UnoProvider' })).toBe(true);
+      expect(helpers.isUnoapiInbox({ channel: { provider: 'UNOAPI' } })).toBe(
+        true
+      );
+    });
+
+    it('does not classify official WhatsApp providers as UnoAPI', () => {
+      expect(helpers.isUnoapiInbox({ provider: 'whatsapp_cloud' })).toBe(false);
+      expect(helpers.isUnoapiInbox({ provider: 'default' })).toBe(false);
+    });
+  });
+
   describe('generateLabelForContactableInboxesList', () => {
     const contact = {
       name: 'John Doe',

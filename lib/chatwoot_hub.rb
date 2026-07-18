@@ -1,6 +1,8 @@
 # TODO: lets use HTTParty instead of RestClient
 class ChatwootHub
   DEFAULT_BASE_URL = 'https://hub.2.chatwoot.com'.freeze
+  VIPER_PRICING_PLAN = 'premium'.freeze
+  VIPER_PRICING_PLAN_QUANTITY = 1_000_000
 
   def self.base_url
     DEFAULT_BASE_URL
@@ -37,15 +39,11 @@ class ChatwootHub
   end
 
   def self.pricing_plan
-    return 'community' unless ChatwootApp.enterprise?
-
-    InstallationConfig.find_by(name: 'INSTALLATION_PRICING_PLAN')&.value || 'premium'
+    VIPER_PRICING_PLAN
   end
 
   def self.pricing_plan_quantity
-    return 0 unless ChatwootApp.enterprise?
-
-    InstallationConfig.find_by(name: 'INSTALLATION_PRICING_PLAN_QUANTITY')&.value || 10000000
+    VIPER_PRICING_PLAN_QUANTITY
   end
 
   def self.support_config

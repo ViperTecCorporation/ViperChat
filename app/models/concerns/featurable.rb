@@ -1,5 +1,6 @@
 module Featurable
   extend ActiveSupport::Concern
+  extend Featurable::Defaults
 
   DEFAULT_FEATURE_FLAG_COLUMN = 'feature_flags'.freeze
   FEATURE_FLAG_COLUMNS = [DEFAULT_FEATURE_FLAG_COLUMN, 'feature_flags_ext_1'].freeze
@@ -62,6 +63,7 @@ module Featurable
     end
 
     define_method :selected_feature_flags= do |chosen_flags|
+      @feature_flags_explicitly_selected = true
       FEATURE_FLAG_COLUMNS.each { |column| unselect_all_flags(column) }
 
       Array(chosen_flags).each do |selected_flag|
@@ -118,11 +120,9 @@ module Featurable
   private
 
   def enable_default_features
-    config = InstallationConfig.find_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS')
-    return true if config.blank?
+    return true if @feature_flags_explicitly_selected
 
-    features_to_enabled = config.value.select { |f| f[:enabled] }.pluck(:name)
-    enable_features(*features_to_enabled)
+    enable_features(*Featurable.default_feature_names)
   end
 
   def known_features(names)

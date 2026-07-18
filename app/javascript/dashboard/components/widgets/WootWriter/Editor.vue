@@ -94,6 +94,8 @@ const props = defineProps({
   // allowSignature is a kill switch, ensuring no signature methods
   // are triggered except when this flag is true
   allowSignature: { type: Boolean, default: false },
+  signaturePreferenceChannel: { type: String, default: '' },
+  signatureEnabledByDefault: { type: Boolean, default: false },
   channelType: { type: String, default: '' },
   conversationId: { type: Number, default: null },
   medium: { type: String, default: '' },
@@ -342,7 +344,10 @@ const sendWithSignature = computed(() => {
     props.channelType &&
     !props.disabled
   ) {
-    return fetchSignatureFlagFromUISettings(props.channelType);
+    return fetchSignatureFlagFromUISettings(
+      props.signaturePreferenceChannel || props.channelType,
+      props.signatureEnabledByDefault
+    );
   }
 
   return false;

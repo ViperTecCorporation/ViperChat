@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, computed, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, requiredIf } from '@vuelidate/validators';
 import { INBOX_TYPES, isVoiceCallEnabled } from 'dashboard/helper/inbox';
@@ -11,6 +11,7 @@ import {
 } from 'dashboard/helper/editorHelper';
 import {
   buildContactableInboxesList,
+  isUnoapiInbox,
   prepareNewMessagePayload,
   prepareWhatsAppMessagePayload,
 } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper.js';
@@ -87,6 +88,7 @@ const targetInboxProvider = computed(() =>
       props.targetInbox?.channel?.provider
   )
 );
+const isUnoapiProvider = computed(() => isUnoapiInbox(props.targetInbox));
 
 const targetInboxMedium = computed(() => toLower(props.targetInbox?.medium));
 const targetInboxChannelType = computed(() => toLower(inboxChannelType.value));
@@ -99,7 +101,8 @@ const inboxTypes = computed(() => ({
     targetInboxChannelType.value.includes('whatsapp') ||
     targetInboxMedium.value === 'whatsapp' ||
     targetInboxProvider.value.includes('whatsapp') ||
-    ['unoapi', 'unoprovider'].includes(targetInboxProvider.value),
+    isUnoapiProvider.value,
+  isUnoapi: isUnoapiProvider.value,
   isWebWidget: inboxChannelType.value === INBOX_TYPES.WEB,
   isApi: inboxChannelType.value === INBOX_TYPES.API,
   isEmailOrWebWidget:
@@ -141,7 +144,11 @@ const effectiveChannelType = computed(() =>
 const validationRules = computed(() => ({
   selectedContact: { required },
   targetInbox: { required },
-  message: { required: requiredIf(!inboxTypes.value.isWhatsapp) },
+  message: {
+    required: requiredIf(
+      !inboxTypes.value.isWhatsapp || inboxTypes.value.isUnoapi
+    ),
+  },
   subject: { required: requiredIf(inboxTypes.value.isEmail) },
 }));
 
@@ -328,7 +335,7 @@ const handleSendMessage = async () => {
   try {
     const success = await emit('createConversation', {
       payload: newMessagePayload(),
-      isFromWhatsApp: false,
+      isFromWhatsApp: inboxTypes.value.isUnoapi,
     });
     if (success) {
       clearForm();
@@ -368,7 +375,7 @@ const handleSendTwilioMessage = async ({ message, templateParams }) => {
 
 const shouldShowMessageEditor = computed(() => {
   return (
-    !inboxTypes.value.isWhatsapp &&
+    (!inboxTypes.value.isWhatsapp || inboxTypes.value.isUnoapi) &&
     !showNoInboxAlert.value &&
     !inboxTypes.value.isTwilioWhatsapp
   );
@@ -470,7 +477,7 @@ useKeyboardEvents({
     <ActionButtons
       v-else
       :attached-files="state.attachedFiles"
-      :is-whatsapp-inbox="inboxTypes.isWhatsapp"
+      :is-whatsapp-inbox="inboxTypes.isWhatsapp && !inboxTypes.isUnoapi"
       :is-email-or-web-widget-inbox="inboxTypes.isEmailOrWebWidget"
       :is-twilio-sms-inbox="inboxTypes.isTwilioSMS"
       :is-twilio-whats-app-inbox="inboxTypes.isTwilioWhatsapp"

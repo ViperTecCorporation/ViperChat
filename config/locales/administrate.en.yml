@@ -87,3 +87,19 @@ en:
         name: "Installation configuration"
       installation_configs:
         name: "Installation configurations"
+      access_token:
+        name: "Access token"
+      access_tokens:
+        name: "Access tokens"
+      platform_app:
+        name: "Platform app"
+      platform_apps:
+        name: "Platform apps"
+      platform_banner:
+        name: "Platform banner"
+      platform_banners:
+        name: "Platform banners"
+      account_user:
+        name: "Account user"
+      account_users:
+        name: "Account users"

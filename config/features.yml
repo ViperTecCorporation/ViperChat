@@ -45,7 +45,7 @@
   help_url: https://chwt.app/hc/help-center
 - name: agent_bots
   display_name: Agent Bots
-  enabled: false
+  enabled: true
   help_url: https://chwt.app/hc/agent-bots
 - name: macros
   display_name: Macros
@@ -77,14 +77,14 @@
   help_url: https://chwt.app/hc/canned
 - name: integrations
   display_name: Integrations
-  enabled: true
+  enabled: false
   help_url: https://chwt.app/hc/integrations
 - name: voice_recorder
   display_name: Voice Recorder
   enabled: true
 - name: report_rollup
   display_name: Report Rollup
-  enabled: false
+  enabled: true
 - name: channel_website
   display_name: Website Channel
   enabled: true
@@ -114,7 +114,7 @@
   premium: true
 - name: custom_tools
   display_name: Custom Tools
-  enabled: false
+  enabled: true
   premium: true
 - name: message_reply_to
   display_name: Message Reply To
@@ -122,7 +122,7 @@
   deprecated: true
 - name: branded_email_templates
   display_name: Branded Email Templates
-  enabled: false
+  enabled: true
 - name: inbox_view
   display_name: Inbox View
   enabled: false
@@ -139,7 +139,7 @@
   chatwoot_internal: true
 - name: linear_integration
   display_name: Linear Integration
-  enabled: false
+  enabled: true
 - name: captain_integration
   display_name: Captain
   enabled: true
@@ -179,7 +179,7 @@
   enabled: false
 - name: hide_contacts_for_agent
   display_name: Hide Contacts For Agent
-  enabled: false
+  enabled: true
 - name: hide_filters_for_agent
   display_name: Hide Filters For Agent
   enabled: false
@@ -216,7 +216,7 @@
   chatwoot_internal: true
 - name: notion_integration
   display_name: Notion Integration
-  enabled: true
+  enabled: false
 - name: captain_integration_v2
   display_name: Captain V2
   enabled: true
@@ -238,7 +238,7 @@
 - name: captain_document_auto_sync
   column: feature_flags_ext_1
   display_name: Captain Document Auto Sync
-  enabled: false
+  enabled: true
   premium: true
 - name: advanced_search
   column: feature_flags_ext_1
@@ -248,7 +248,7 @@
 - name: saml
   column: feature_flags_ext_1
   display_name: SAML
-  enabled: false
+  enabled: true
   premium: true
 - name: advanced_search_indexing
   column: feature_flags_ext_1
@@ -271,7 +271,7 @@
 - name: companies
   column: feature_flags_ext_1
   display_name: Companies
-  enabled: false
+  enabled: true
   premium: true
 - name: channel_tiktok
   column: feature_flags_ext_1
@@ -289,20 +289,20 @@
 - name: conversation_required_attributes
   column: feature_flags_ext_1
   display_name: Required Conversation Attributes
-  enabled: false
+  enabled: true
   premium: true
 - name: advanced_assignment
   column: feature_flags_ext_1
   display_name: Advanced Assignment
-  enabled: false
+  enabled: true
   premium: true
 - name: whatsapp_manual_transfer
   display_name: WhatsApp Manual Transfer
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 - name: data_import
   display_name: Data Import
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 - name: api_and_webhooks
   display_name: API and Webhooks
@@ -310,9 +310,9 @@
   column: feature_flags_ext_1
 - name: whatsapp_reconfigure
   display_name: WhatsApp Reconfigure
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 - name: whatsapp_embedded_signup_inbox_creation
   display_name: WhatsApp Embedded Signup Inbox Creation
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
