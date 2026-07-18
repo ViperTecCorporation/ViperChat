@@ -53,7 +53,7 @@ RSpec.describe Account do
 
   describe 'feature flags' do
     it 'ignores stale default features that are no longer configured' do
-      InstallationConfig.find_or_create_by!(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
+      InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
         value: [
           { 'name' => 'channel_twitter', 'enabled' => true },
           { 'name' => 'inbox_management', 'enabled' => true }
@@ -84,7 +84,7 @@ RSpec.describe Account do
   end
 
   describe 'captain defaults for new accounts' do
-    it 'does not store Captain model overrides or enable premium Captain features' do
+    it 'enables configured Captain defaults without storing model overrides' do
       InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
         value: Featurable::FEATURE_LIST,
         locked: true
@@ -92,8 +92,8 @@ RSpec.describe Account do
 
       account = create(:account)
 
-      expect(account).not_to be_feature_enabled('captain_integration')
-      expect(account).not_to be_feature_enabled('captain_integration_v2')
+      expect(account).to be_feature_enabled('captain_integration')
+      expect(account).to be_feature_enabled('captain_integration_v2')
       expect(account.captain_models).to be_nil
     end
   end
@@ -140,22 +140,39 @@ RSpec.describe Account do
     let(:account) { described_class.new(name: 'Test Account') }
 
     it 'configures the account feature flag extension column' do
+      extension_features = %i[
+        captain_document_auto_sync
+        advanced_search
+        saml
+        advanced_search_indexing
+        reply_mailer_migration
+        unread_count_for_filters
+        companies
+        channel_tiktok
+        csat_review_notes
+        captain_tasks
+        conversation_required_attributes
+        advanced_assignment
+        whatsapp_manual_transfer
+        data_import
+        api_and_webhooks
+        whatsapp_reconfigure
+        whatsapp_embedded_signup_inbox_creation
+      ]
+      expected_mapping = extension_features.each_with_index.to_h do |feature, index|
+        ["feature_#{feature}".to_sym, 1 << index]
+      end
+
       expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1')
-      expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(
-        feature_whatsapp_manual_transfer: 1,
-        feature_data_import: 1 << 1,
-        feature_api_and_webhooks: 1 << 2,
-        feature_whatsapp_reconfigure: 1 << 3,
-        feature_whatsapp_embedded_signup_inbox_creation: 1 << 4
-      )
-      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
-      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
-      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(16)
+      expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(expected_mapping)
+      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_captain_document_auto_sync]).to eq(1)
+      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1 << 12)
+      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(1 << 16)
     end
 
     it 'keeps existing feature flags on the original column' do
       expect(described_class.flag_mapping['feature_flags'][:feature_inbound_emails]).to eq(1)
-      expect(described_class.flag_mapping['feature_flags'][:feature_advanced_assignment]).to eq(1 << 62)
+      expect(described_class.flag_mapping['feature_flags'][:feature_assignment_v2]).to eq(1 << 62)
     end
 
     it 'keeps bulk selected feature assignment compatible with existing feature names' do

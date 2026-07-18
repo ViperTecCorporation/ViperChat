@@ -36,6 +36,8 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile
+          build-args: |
+            GIT_SHA=${{ github.sha }}
           platforms: ${{ matrix.platform }}
           push: false
           load: false
