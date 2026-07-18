@@ -6,8 +6,15 @@ import { computed } from 'vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
+import { useConversationSidepanel } from 'dashboard/composables/useConversationSidepanel';
 
-const { updateUISettings } = useUISettings();
+const { uiSettings, updateUISettings } = useUISettings();
+const {
+  isContactSidebarOpen,
+  openContactSidebar,
+  closeContactSidebar,
+  toggleContactSidebar,
+} = useConversationSidepanel();
 
 const currentAccountId = useMapGetter('getCurrentAccountId');
 const isFeatureEnabledonAccount = useMapGetter(
@@ -18,31 +25,27 @@ const showCopilotTab = computed(() =>
   isFeatureEnabledonAccount.value(currentAccountId.value, FEATURE_FLAGS.CAPTAIN)
 );
 
-const { uiSettings } = useUISettings();
-const isContactSidebarOpen = computed(
-  () => uiSettings.value.is_contact_sidebar_open
-);
 const isCopilotPanelOpen = computed(
   () => uiSettings.value.is_copilot_panel_open
 );
 
 const toggleConversationSidebarToggle = () => {
+  toggleContactSidebar();
   updateUISettings({
-    is_contact_sidebar_open: !isContactSidebarOpen.value,
     is_copilot_panel_open: false,
   });
 };
 
 const handleConversationSidebarToggle = () => {
+  openContactSidebar();
   updateUISettings({
-    is_contact_sidebar_open: true,
     is_copilot_panel_open: false,
   });
 };
 
 const handleCopilotSidebarToggle = () => {
+  closeContactSidebar();
   updateUISettings({
-    is_contact_sidebar_open: false,
     is_copilot_panel_open: true,
   });
 };

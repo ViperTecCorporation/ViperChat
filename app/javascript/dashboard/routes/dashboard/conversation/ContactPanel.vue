@@ -8,6 +8,7 @@ import {
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { useConversationSidepanel } from 'dashboard/composables/useConversationSidepanel';
 
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import ContactConversations from './ContactConversations.vue';
@@ -43,6 +44,7 @@ const {
   conversationSidebarItemsOrder,
   toggleSidebarUIState,
 } = useUISettings();
+const { closeContactSidebar } = useConversationSidepanel();
 
 const dragging = ref(false);
 const conversationSidebarItems = ref([]);
@@ -130,10 +132,7 @@ const onDragEnd = () => {
 };
 
 const closeContactPanel = () => {
-  updateUISettings({
-    is_contact_sidebar_open: false,
-    is_copilot_panel_open: false,
-  });
+  closeContactSidebar();
 };
 
 onMounted(() => {

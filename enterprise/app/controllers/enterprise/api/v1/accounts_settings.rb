@@ -1,4 +1,9 @@
 module Enterprise::Api::V1::AccountsSettings
+  def create
+    super
+    record_marketing_attribution
+  end
+
   private
 
   def settings_params
@@ -12,8 +17,17 @@ module Enterprise::Api::V1::AccountsSettings
     permitted_params.merge(conversation_required_attributes: required_attributes)
   end
 
+  def record_marketing_attribution
+    return if current_user.present?
+    return if @account.blank?
+
+    Internal::Accounts::MarketingAttributionService.new(account: @account, cookies: cookies).perform
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e).capture_exception
+  end
+
   def permitted_settings_attributes
-    super
+    super + [{ conversation_required_attributes: [] }]
   end
 
   def permitted_required_attribute(required_attribute)

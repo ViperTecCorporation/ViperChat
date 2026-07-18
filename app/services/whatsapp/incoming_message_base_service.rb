@@ -232,7 +232,7 @@ class Whatsapp::IncomingMessageBaseService
   def create_contact_messages(message)
     message['contacts'].each do |contact|
       # Pass source_id from parent message since contact objects don't have :id
-      create_message(contact, source_id: message[:id])
+      create_message(contact, source_id: message[:id], content_attributes_source: message)
       attach_contact(contact)
       @message.save!
     end
@@ -337,22 +337,32 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def set_contact_from_echo
-    # For echo messages, contact phone is in the 'to' field
-    phone_number = messages_data.first[:to].to_s
-    return if phone_number.blank?
+    message = messages_data.first
+    source_ids = outgoing_message_source_ids(message)
+    return if source_ids.blank?
 
-    waid = processed_waid(phone_number) || phone_number
-
-    contact_inbox = ::ContactInboxWithContactBuilder.new(
-      source_id: waid,
+    contact_inbox = ContactInboxSourceIdResolver.new(
       inbox: inbox,
-      contact_attributes: { name: "+#{phone_number}", phone_number: "+#{phone_number}" }
+      source_ids: source_ids,
+      contact_attributes: contact_attributes_from_echo(message, source_ids.first)
     ).perform
 
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
     @sender = nil
-    update_whatsapp_identifiers(source_ids: outgoing_message_source_ids(messages_data.first), phone_number: "+#{phone_number}")
+    update_whatsapp_identifiers(source_ids: source_ids, phone_number: @contact.phone_number)
+  end
+
+  def contact_attributes_from_echo(message, source_identifier)
+    contact_attributes = {
+      name: source_identifier
+    }
+    apply_phone_attributes(contact_attributes, whatsapp_phone_number(message[:to]))
+    if contact_attributes[:phone_number].present? && source_identifier == message[:to]
+      contact_attributes[:name] = contact_attributes[:phone_number]
+    end
+    contact_attributes[:bsuid] = message[:to_parent_user_id].presence || message[:to_user_id].presence
+    contact_attributes.compact
   end
 
   def set_contact_from_message
@@ -468,12 +478,9 @@ class Whatsapp::IncomingMessageBaseService
     )
   end
 
-  def create_message(message, source_id: nil)
+  def create_message(message, source_id: nil, content_attributes_source: message)
     timestamp = message[:timestamp] ? Time.at(message[:timestamp].to_i, microsecond, :microsecond, in: 'UTC') : Time.current.utc
     Rails.logger.info("[WHATSAPP] Incoming message type=#{message_type} content_type=#{message_type == 'sticker' ? 'sticker' : 'nil'} source_id=#{message[:id]}")
-    content_attrs = webhook_outgoing_message? ? { external_echo: true } : {}
-    content_attrs[:in_reply_to_external_id] = @in_reply_to_external_id if @in_reply_to_external_id.present?
-
     @message = @conversation.messages.build(
       content: message_content(message),
       account_id: @inbox.account_id,
@@ -484,7 +491,7 @@ class Whatsapp::IncomingMessageBaseService
       content_type: message_type == 'sticker' ? 'sticker' : nil,
       sender: webhook_outgoing_message? ? nil : @sender,
       source_id: (source_id || message[:id]).to_s,
-      content_attributes: content_attrs,
+      content_attributes: message_content_attributes(content_attributes_source),
       created_at: timestamp,
     )
     @message
@@ -492,6 +499,14 @@ class Whatsapp::IncomingMessageBaseService
 
   def webhook_outgoing_message?
     outgoing_echo || @message_type == :outgoing
+  end
+
+  def message_content_attributes(message)
+    content_attrs = webhook_outgoing_message? ? { external_echo: true } : {}
+    content_attrs[:in_reply_to_external_id] = @in_reply_to_external_id if @in_reply_to_external_id.present?
+    referral_content_attrs = referral_attributes(message)
+    content_attrs[:referral] = referral_content_attrs if referral_content_attrs.present?
+    content_attrs
   end
 
   def attach_contact(contact)

@@ -140,7 +140,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def destroy
     authorize @conversation, :destroy?
-    ::DeleteObjectJob.perform_later(@conversation, Current.user, request.ip)
+    ::Conversations::DeleteService.new(conversation: @conversation, user: Current.user, ip: request.ip).perform
     head :ok
   end
 
@@ -165,6 +165,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
     UpdateLastSeenJob.perform_later(@conversation.id, Current.user, last_seen_at) if last_seen_at.present?
     ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
+    ::Conversations::UnreadCounts::FilteredCountInvalidator.new(Current.account).conversation_changed!
   end
 
   def should_update_last_seen?

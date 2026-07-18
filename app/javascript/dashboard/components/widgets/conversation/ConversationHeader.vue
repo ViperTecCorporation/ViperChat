@@ -8,12 +8,12 @@ import InboxName from '../InboxName.vue';
 import MoreActions from './MoreActions.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
+import ConversationCallButton from './ConversationCallButton.vue';
 import wootConstants from 'dashboard/constants/globals';
 import { conversationListPageURL } from 'dashboard/helper/URLHelper';
 import { snoozedReopenTime } from 'dashboard/helper/snoozeHelpers';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { useI18n } from 'vue-i18n';
-import InternalVoiceCallButton from 'dashboard/components-next/InternalChat/InternalVoiceCallButton.vue';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import { useAlert } from 'dashboard/composables';
 
@@ -106,9 +106,8 @@ const hasMultipleInboxes = computed(
   () => store.getters['inboxes/getInboxes'].length > 1
 );
 
-const hasSlaPolicyId = computed(() => props.chat?.sla_policy_id);
-const isInternalChat = computed(
-  () => inbox.value?.channel_type === 'Channel::Internal'
+const hasSlaPolicyId = computed(
+  () => props.chat?.applied_sla?.id && !currentContact.value?.blocked
 );
 
 const copyConversationId = async () => {
@@ -193,10 +192,7 @@ const copyConversationId = async () => {
         :parent-width="width"
         class="hidden md:flex"
       />
-      <InternalVoiceCallButton
-        v-if="isInternalChat"
-        :conversation="currentChat"
-      />
+      <ConversationCallButton :inbox="inbox" :chat="currentChat" />
       <MoreActions :conversation-id="currentChat.id" />
     </div>
   </div>

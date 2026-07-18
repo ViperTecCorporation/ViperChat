@@ -122,4 +122,10 @@ export default {
     const urlData = endPoints('resetAccessToken');
     return axios.post(urlData.url);
   },
+  getSessions() {
+    return axios.get('/api/v1/profile/sessions');
+  },
+  revokeSession(id) {
+    return axios.delete(`/api/v1/profile/sessions/${id}`);
+  },
 };

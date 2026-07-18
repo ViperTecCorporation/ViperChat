@@ -53,6 +53,8 @@ import {
   appendSignature,
   removeSignature,
   getEffectiveChannelType,
+  getAgentVariables,
+  getContactVariables,
 } from 'dashboard/helper/editorHelper';
 import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
@@ -65,8 +67,9 @@ import { emitter } from 'shared/helpers/mitt';
 const GROUP_CONTACT_MENTION_REGEX =
   /\[@([^\]]+)\]\(mention:\/\/group[_-]contact\/(\d+)\/([^)]+)\)|mention:\/\/group[_-]contact\/(\d+)\/([^\s)]+)/g;
 
-const EmojiInput = defineAsyncComponent(
-  () => import('shared/components/emoji/EmojiInput.vue')
+const EmojiIconPicker = defineAsyncComponent(
+  () =>
+    import('dashboard/components-next/emoji-icon-picker/EmojiIconPicker.vue')
 );
 
 export default {
@@ -76,7 +79,7 @@ export default {
     AttachedContactsPreview,
     AudioRecorder,
     ReplyBoxBanner,
-    EmojiInput,
+    EmojiIconPicker,
     MessageSignatureMissingAlert,
     ReplyBottomPanel,
     ReplyEmailHead,
@@ -196,7 +199,11 @@ export default {
       const templates = this.$store.getters['inboxes/getWhatsAppTemplates'](
         this.inboxId
       );
-      return !!(templates && templates.length) && !this.isPrivate;
+      return (
+        !!(templates && templates.length) &&
+        !this.isPrivate &&
+        !this.isAUnoapiChannel
+      );
     },
     showContentTemplates() {
       return this.isATwilioWhatsAppChannel && !this.isPrivate;
@@ -397,8 +404,16 @@ export default {
     isSignatureAvailable() {
       return !!this.messageSignature;
     },
+    signaturePreferenceChannel() {
+      return this.isAUnoapiChannel
+        ? `${this.channelType} Unoapi`
+        : this.channelType;
+    },
     sendWithSignature() {
-      return this.fetchSignatureFlagFromUISettings(this.channelType);
+      return this.fetchSignatureFlagFromUISettings(
+        this.signaturePreferenceChannel,
+        this.isAUnoapiChannel
+      );
     },
     conversationId() {
       return this.currentChat.id;
@@ -410,10 +425,14 @@ export default {
       return `draft-${this.conversationIdByRoute}-${this.replyType}`;
     },
     audioRecordFormat() {
-      if (this.isAWhatsAppChannel) {
+      if (this.isAWhatsAppCloudChannel) {
         return AUDIO_FORMATS.OGG;
       }
-      if (this.isATelegramChannel || this.isANotificaMeChannel) {
+      if (
+        this.isAWhatsAppChannel ||
+        this.isATelegramChannel ||
+        this.isANotificaMeChannel
+      ) {
         return AUDIO_FORMATS.MP3;
       }
       if (this.isAPIInbox) {
@@ -427,7 +446,13 @@ export default {
         contact: this.currentContact,
         inbox: this.inbox,
       });
-      return variables;
+      // Match the backend drops: names are Ruby-capitalized and
+      // {{agent.*}} is the message sender, not the assignee.
+      return {
+        ...variables,
+        ...getContactVariables(this.currentContact),
+        ...getAgentVariables(this.currentUser),
+      };
     },
     connectedPortalSlug() {
       const { help_center: portal = {} } = this.inbox;
@@ -1540,13 +1565,15 @@ export default {
           :message="inReplyTo"
           @dismiss="resetReplyToMessage"
         />
-        <EmojiInput
+        <EmojiIconPicker
           v-if="showEmojiPicker"
           v-on-clickaway="hideEmojiPicker"
+          mode="emoji"
+          class="emoji-dialog"
           :class="{
             'emoji-dialog--expanded': isOnExpandedLayout || popOutReplyBox,
           }"
-          :on-click="addIntoEditor"
+          @select="addIntoEditor($event.value)"
         />
         <ReplyEmailHead
           v-if="showReplyHead && isDefaultEditorMode"
@@ -1593,6 +1620,8 @@ export default {
           :variables="messageVariables"
           :signature="messageSignature"
           allow-signature
+          :signature-preference-channel="signaturePreferenceChannel"
+          :signature-enabled-by-default="isAUnoapiChannel"
           :enable-group-mentions="canUseGroupMentions"
           :group-mention-contacts="groupMentionContacts"
           :channel-type="channelType"
@@ -1669,6 +1698,8 @@ export default {
         :enable-whats-app-templates="showWhatsappTemplates"
         :enable-content-templates="showContentTemplates"
         :inbox="inbox"
+        :signature-preference-channel="signaturePreferenceChannel"
+        :signature-enabled-by-default="isAUnoapiChannel"
         :is-on-private-note="isOnPrivateNote"
         :is-recording-audio="isRecordingAudio"
         :is-send-disabled="isReplyButtonDisabled"

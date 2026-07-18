@@ -46,9 +46,14 @@ const isActive = computed(() => {
       props.enabledFeatures.channel_instagram && hasInstagramConfigured.value
     );
   }
-  if (key === 'voice') {
-    return true;
+  if (key === 'tiktok') {
+    return props.enabledFeatures.channel_tiktok && hasTiktokConfigured.value;
   }
+
+  if (key === 'voice' || key === 'whatsapp_call') {
+    return props.enabledFeatures.channel_voice;
+  }
+
   if (key === 'notifica_me') {
     return props.enabledFeatures.channel_notifica_me;
   }

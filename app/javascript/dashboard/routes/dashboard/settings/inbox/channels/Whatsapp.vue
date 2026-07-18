@@ -8,10 +8,13 @@ import ThreeSixtyDialogWhatsapp from './360DialogWhatsapp.vue';
 import CloudWhatsapp from './CloudWhatsapp.vue';
 import WhatsappEmbeddedSignup from './WhatsappEmbeddedSignup.vue';
 import ChannelSelector from 'dashboard/components/ChannelSelector.vue';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const { isCloudFeatureEnabled, isOnChatwootCloud } = useAccount();
 
 const PROVIDER_TYPES = {
   WHATSAPP: 'whatsapp',
@@ -35,6 +38,17 @@ const selectedProvider = computed(() => route.query.provider);
 const showProviderSelection = computed(() => !selectedProvider.value);
 
 const showConfiguration = computed(() => Boolean(selectedProvider.value));
+
+const shouldShowWhatsappEmbeddedSignup = computed(() => {
+  return (
+    selectedProvider.value === PROVIDER_TYPES.WHATSAPP &&
+    hasWhatsappAppId.value &&
+    (!isOnChatwootCloud.value ||
+      isCloudFeatureEnabled(
+        FEATURE_FLAGS.WHATSAPP_EMBEDDED_SIGNUP_INBOX_CREATION
+      ))
+  );
+});
 
 const availableProviders = computed(() => [
   {
@@ -68,7 +82,8 @@ const selectProvider = providerValue => {
 const shouldShowCloudWhatsapp = provider => {
   return (
     provider === PROVIDER_TYPES.WHATSAPP_MANUAL ||
-    (provider === PROVIDER_TYPES.WHATSAPP && !hasWhatsappAppId.value)
+    (provider === PROVIDER_TYPES.WHATSAPP &&
+      !shouldShowWhatsappEmbeddedSignup.value)
   );
 };
 
@@ -103,12 +118,7 @@ const handleManualLinkClick = () => {
 
     <div v-else-if="showConfiguration">
       <div class="px-6 py-5 rounded-2xl border border-n-weak">
-        <!-- Show embedded signup if app ID is configured -->
-        <div
-          v-if="
-            hasWhatsappAppId && selectedProvider === PROVIDER_TYPES.WHATSAPP
-          "
-        >
+        <div v-if="shouldShowWhatsappEmbeddedSignup">
           <WhatsappEmbeddedSignup />
 
           <!-- Manual setup fallback option -->

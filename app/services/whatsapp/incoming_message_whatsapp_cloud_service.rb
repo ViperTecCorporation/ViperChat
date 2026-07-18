@@ -51,7 +51,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def set_contact
-    return if contact_params.blank?
+    return if contact_params.blank? && !outgoing_echo
 
     return set_structured_group_contact if structured_group_message?
 
@@ -85,9 +85,18 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
       inbox.channel.media_url(attachment_payload[:id]),
       headers: inbox.channel.api_headers
     )
+
     # This url response will be failure if the access token has expired.
     inbox.channel.authorization_error! if url_response.unauthorized?
-    Down.download(url_response.parsed_response['url'], headers: inbox.channel.api_headers) if url_response.success?
+
+    return unless url_response.success?
+
+    downloaded_file = Down.download(url_response.parsed_response['url'], headers: inbox.channel.api_headers)
+    # WhatsApp Cloud sends the original filename in the payload; preserve it so accented
+    # names keep their correct extension instead of relying on the mangled remote metadata.
+    filename = attachment_payload[:filename]
+    downloaded_file.define_singleton_method(:original_filename) { filename } if filename.present?
+    downloaded_file
   end
 
   def message_content(message)

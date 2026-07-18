@@ -6,6 +6,7 @@ import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import AddCannedModal from 'dashboard/routes/dashboard/settings/canned/AddCanned.vue';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import { parseAPIErrorResponse } from 'dashboard/store/utils/api';
 import { conversationUrl, frontendURL } from '../../../helper/URLHelper';
 import {
   ACCOUNT_EVENTS,
@@ -14,7 +15,8 @@ import {
 import MenuItem from '../../../components/widgets/conversation/contextMenu/menuItem.vue';
 import { useTrack } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
-import EmojiInput from 'shared/components/emoji/EmojiInput.vue';
+import EmojiPicker from 'shared/components/emoji/EmojiPicker.vue';
+import ReportCaptainMessageDialog from './ReportCaptainMessageDialog.vue';
 
 export default {
   components: {
@@ -22,7 +24,8 @@ export default {
     MenuItem,
     ContextMenu,
     NextButton,
-    EmojiInput,
+    EmojiPicker,
+    ReportCaptainMessageDialog,
   },
   props: {
     message: {
@@ -124,16 +127,20 @@ export default {
     handleClose(e) {
       this.$emit('close', e);
     },
-    handleTranslate() {
+    async handleTranslate() {
       const { locale: accountLocale } = this.getAccount(this.currentAccountId);
       const agentLocale = this.getUISettings?.locale;
       const targetLanguage = agentLocale || accountLocale || 'en';
-      this.$store.dispatch('translateMessage', {
-        conversationId: this.conversationId,
-        messageId: this.messageId,
-        targetLanguage,
-      });
-      useTrack(CONVERSATION_EVENTS.TRANSLATE_A_MESSAGE);
+      try {
+        await this.$store.dispatch('translateMessage', {
+          conversationId: this.conversationId,
+          messageId: this.messageId,
+          targetLanguage,
+        });
+        useTrack(CONVERSATION_EVENTS.TRANSLATE_A_MESSAGE);
+      } catch (error) {
+        useAlert(parseAPIErrorResponse(error));
+      }
       this.handleClose();
     },
     handleReplyTo() {
@@ -215,6 +222,10 @@ export default {
         this.isSendingReaction = false;
       }
     },
+    openReportDialog() {
+      this.handleClose();
+      this.$refs.reportDialog?.open();
+    },
   },
 };
 </script>
@@ -242,9 +253,9 @@ export default {
         <h4 class="text-base font-medium text-n-slate-12 mb-4">
           {{ $t('CONVERSATION.REACTION.TITLE') }}
         </h4>
-        <EmojiInput
+        <EmojiPicker
           class="!relative !top-0 !left-0 !right-auto !w-full max-w-sm mx-auto"
-          :on-click="handleReactionSelect"
+          @select="handleReactionSelect($event.value)"
         />
       </div>
     </woot-modal>
@@ -385,6 +396,16 @@ export default {
           variant="icon"
           @click.stop="showCannedResponseModal"
         />
+        <hr v-if="enabledOptions['report']" />
+        <MenuItem
+          v-if="enabledOptions['report']"
+          :option="{
+            icon: 'warning',
+            label: $t('CONVERSATION.CONTEXT_MENU.REPORT_MESSAGE.LABEL'),
+          }"
+          variant="icon"
+          @click.stop="openReportDialog"
+        />
         <hr v-if="enabledOptions['delete']" />
         <MenuItem
           v-if="enabledOptions['delete']"
@@ -397,6 +418,11 @@ export default {
         />
       </div>
     </ContextMenu>
+    <ReportCaptainMessageDialog
+      v-if="enabledOptions['report']"
+      ref="reportDialog"
+      :message-id="messageId"
+    />
   </div>
 </template>
 

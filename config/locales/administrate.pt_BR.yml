@@ -87,6 +87,22 @@ pt_BR:
         name: "Configuração de instalação"
       installation_configs:
         name: "Configurações de instalação"
+      access_token:
+        name: "Token de acesso"
+      access_tokens:
+        name: "Tokens de acesso"
+      platform_app:
+        name: "Aplicativo da plataforma"
+      platform_apps:
+        name: "Aplicativos da plataforma"
+      platform_banner:
+        name: "Banner da plataforma"
+      platform_banners:
+        name: "Banners da plataforma"
+      account_user:
+        name: "Usuário da conta"
+      account_users:
+        name: "Usuários da conta"
 pt-BR:
   administrate:
     search:
@@ -176,6 +192,22 @@ pt-BR:
         name: "Configuração de instalação"
       installation_configs:
         name: "Configurações de instalação"
+      access_token:
+        name: "Token de acesso"
+      access_tokens:
+        name: "Tokens de acesso"
+      platform_app:
+        name: "Aplicativo da plataforma"
+      platform_apps:
+        name: "Aplicativos da plataforma"
+      platform_banner:
+        name: "Banner da plataforma"
+      platform_banners:
+        name: "Banners da plataforma"
+      account_user:
+        name: "Usuário da conta"
+      account_users:
+        name: "Usuários da conta"
 pt:
   administrate:
     search:
@@ -265,3 +297,19 @@ pt:
         name: "Configuração de instalação"
       installation_configs:
         name: "Configurações de instalação"
+      access_token:
+        name: "Token de acesso"
+      access_tokens:
+        name: "Tokens de acesso"
+      platform_app:
+        name: "Aplicativo da plataforma"
+      platform_apps:
+        name: "Aplicativos da plataforma"
+      platform_banner:
+        name: "Banner da plataforma"
+      platform_banners:
+        name: "Banners da plataforma"
+      account_user:
+        name: "Usuário da conta"
+      account_users:
+        name: "Usuários da conta"

@@ -52,8 +52,26 @@ RSpec.describe Account do
   end
 
   describe 'feature flags' do
+    it 'uses config/features.yml defaults when the installation config is missing' do
+      InstallationConfig.where(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').delete_all
+
+      account = create(:account)
+
+      expect(account).to be_feature_agent_bots
+      expect(account).to be_feature_branded_email_templates
+      expect(account).not_to be_feature_integrations
+    end
+
+    it 'respects explicitly selected features when creating an account' do
+      account = build(:account)
+      account.selected_feature_flags = %i[feature_inbox_management]
+      account.save!
+
+      expect(account.selected_feature_flags).to contain_exactly(:feature_inbox_management)
+    end
+
     it 'ignores stale default features that are no longer configured' do
-      InstallationConfig.find_or_create_by!(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
+      InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
         value: [
           { 'name' => 'channel_twitter', 'enabled' => true },
           { 'name' => 'inbox_management', 'enabled' => true }
@@ -71,6 +89,30 @@ RSpec.describe Account do
 
       expect { account.enable_features(:channel_twitter) }.not_to raise_error
       expect { account.disable_features(:channel_twitter) }.not_to raise_error
+    end
+  end
+
+  describe '#api_and_webhooks_enabled?' do
+    it 'is enabled for self-hosted accounts regardless of the stored feature flag' do
+      account = create(:account)
+      account.disable_features!('api_and_webhooks')
+
+      expect(account.api_and_webhooks_enabled?).to be true
+    end
+  end
+
+  describe 'captain defaults for new accounts' do
+    it 'enables configured Captain defaults without storing model overrides' do
+      InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
+        value: Featurable::FEATURE_LIST,
+        locked: true
+      )
+
+      account = create(:account)
+
+      expect(account).to be_feature_enabled('captain_integration')
+      expect(account).to be_feature_enabled('captain_integration_v2')
+      expect(account.captain_models).to be_nil
     end
   end
 
@@ -109,6 +151,61 @@ RSpec.describe Account do
       store.mark_base_ready!(account.id)
       store.mark_assignment_ready!(account.id)
       store.add_base_membership(account_id: account.id, inbox_id: inbox.id, label_ids: [], conversation_id: 1)
+    end
+  end
+
+  describe 'feature flag columns' do
+    let(:account) { described_class.new(name: 'Test Account') }
+
+    it 'configures the account feature flag extension column' do
+      extension_features = %i[
+        captain_document_auto_sync
+        advanced_search
+        saml
+        advanced_search_indexing
+        reply_mailer_migration
+        unread_count_for_filters
+        companies
+        channel_tiktok
+        csat_review_notes
+        captain_tasks
+        conversation_required_attributes
+        advanced_assignment
+        whatsapp_manual_transfer
+        data_import
+        api_and_webhooks
+        whatsapp_reconfigure
+        whatsapp_embedded_signup_inbox_creation
+      ]
+      expected_mapping = extension_features.each_with_index.to_h do |feature, index|
+        ["feature_#{feature}".to_sym, 1 << index]
+      end
+
+      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1')
+      expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(expected_mapping)
+      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_captain_document_auto_sync]).to eq(1)
+      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1 << 12)
+      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(1 << 16)
+    end
+
+    it 'keeps existing feature flags on the original column' do
+      expect(described_class.flag_mapping['feature_flags'][:feature_inbound_emails]).to eq(1)
+      expect(described_class.flag_mapping['feature_flags'][:feature_assignment_v2]).to eq(1 << 62)
+    end
+
+    it 'keeps bulk selected feature assignment compatible with existing feature names' do
+      account.selected_feature_flags = [:feature_ip_lookup, :feature_assignment_v2, :feature_advanced_assignment, :feature_data_import]
+
+      expect(account).to be_feature_ip_lookup
+      expect(account).to be_feature_assignment_v2
+      expect(account).to be_feature_advanced_assignment
+      expect(account).to be_feature_data_import
+      expect(account.selected_feature_flags).to contain_exactly(
+        :feature_ip_lookup,
+        :feature_assignment_v2,
+        :feature_advanced_assignment,
+        :feature_data_import
+      )
     end
   end
 
@@ -367,6 +464,10 @@ RSpec.describe Account do
     let(:account) { create(:account) }
 
     describe 'with no saved preferences' do
+      before do
+        account.update!(captain_models: nil)
+      end
+
       it 'returns defaults from llm.yml' do
         prefs = account.captain_preferences
 
@@ -375,6 +476,13 @@ RSpec.describe Account do
         Llm::Models.feature_keys.each do |feature|
           expect(prefs[:models][feature]).to eq(Llm::Models.default_model_for(feature))
         end
+      end
+
+      it 'returns GPT-5.2 for assistant when Captain V2 is enabled' do
+        account.enable_features!('captain_integration_v2')
+
+        expect(account.captain_preferences[:models]['assistant']).to eq('gpt-5.2')
+        expect(account.reload.captain_models).to be_nil
       end
     end
 
@@ -414,6 +522,19 @@ RSpec.describe Account do
         account.captain_models = { 'editor' => 'gpt-4.1-mini', 'label_suggestion' => 'gpt-4.1-nano' }
 
         expect(account).to be_valid
+      end
+
+      it 'rejects unknown feature keys' do
+        account.captain_models = { 'unknown_feature' => 'gpt-4.1' }
+
+        expect(account).not_to be_valid
+        expect(account.errors[:captain_models]).to include("'unknown_feature' is not a known feature")
+      end
+
+      it 'removes blank model overrides before saving' do
+        account.update!(captain_models: { 'editor' => '', 'assistant' => 'gpt-5.2' })
+
+        expect(account.captain_models).to eq('assistant' => 'gpt-5.2')
       end
     end
   end

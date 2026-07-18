@@ -1,11 +1,19 @@
 # DO NOT change the order of features EVER
 ############################################
-# name: the name to be used internally in the code
-# display_name: the name to be used in the UI
-# enabled: whether the feature is enabled by default
-# help_url: the url to the help center article
-# chatwoot_internal: whether the feature is internal to ViperChat and should not be shown in the UI for other self hosted installations
-# deprecated: purpose of feature flag is done, no need to show it in the UI anymore
+# name:               the name to be used internally in the code
+# display_name:       the name to be used in the UI
+# enabled:            whether the feature is enabled by default
+# column:             the account bitset column used to store the flag. Defaults to feature_flags.
+#                     Use feature_flags_ext_1 for extension flags. Each bigint column supports 63 flags.
+# help_url:           the url to the help center article
+# chatwoot_internal:  whether the feature is internal to ViperChat and should not be shown in the UI for other self hosted installations
+# deprecated:         purpose of feature flag is done, no need to show it in the UI anymore
+#
+# ADDING A NEW FEATURE FLAG:
+#   - The `feature_flags` column is FULL (63/63 slots used). Do NOT add to it.
+#   - New flags MUST set `column: feature_flags_ext_1` and be appended at the end.
+#   - Bit positions are persisted per column; never reorder or remove existing
+#     entries, and never change an existing feature's `column` after release.
 - name: inbound_emails
   display_name: Inbound Emails
   enabled: true
@@ -37,7 +45,7 @@
   help_url: https://chwt.app/hc/help-center
 - name: agent_bots
   display_name: Agent Bots
-  enabled: false
+  enabled: true
   help_url: https://chwt.app/hc/agent-bots
 - name: macros
   display_name: Macros
@@ -69,14 +77,14 @@
   help_url: https://chwt.app/hc/canned
 - name: integrations
   display_name: Integrations
-  enabled: true
+  enabled: false
   help_url: https://chwt.app/hc/integrations
 - name: voice_recorder
   display_name: Voice Recorder
   enabled: true
 - name: report_rollup
   display_name: Report Rollup
-  enabled: false
+  enabled: true
 - name: channel_website
   display_name: Website Channel
   enabled: true
@@ -106,16 +114,15 @@
   premium: true
 - name: custom_tools
   display_name: Custom Tools
-  enabled: false
+  enabled: true
   premium: true
 - name: message_reply_to
   display_name: Message Reply To
   enabled: false
   deprecated: true
-- name: insert_article_in_reply
-  display_name: Insert Article in Reply
-  enabled: false
-  deprecated: true
+- name: branded_email_templates
+  display_name: Branded Email Templates
+  enabled: true
 - name: inbox_view
   display_name: Inbox View
   enabled: false
@@ -132,7 +139,7 @@
   chatwoot_internal: true
 - name: linear_integration
   display_name: Linear Integration
-  enabled: false
+  enabled: true
 - name: captain_integration
   display_name: Captain
   enabled: true
@@ -172,7 +179,7 @@
   enabled: false
 - name: hide_contacts_for_agent
   display_name: Hide Contacts For Agent
-  enabled: false
+  enabled: true
 - name: hide_filters_for_agent
   display_name: Hide Filters For Agent
   enabled: false
@@ -209,7 +216,7 @@
   chatwoot_internal: true
 - name: notion_integration
   display_name: Notion Integration
-  enabled: true
+  enabled: false
 - name: captain_integration_v2
   display_name: Captain V2
   enabled: true
@@ -229,52 +236,83 @@
   display_name: Assignment V2
   enabled: true
 - name: captain_document_auto_sync
+  column: feature_flags_ext_1
   display_name: Captain Document Auto Sync
-  enabled: false
+  enabled: true
   premium: true
 - name: advanced_search
+  column: feature_flags_ext_1
   display_name: Advanced Search
   enabled: true
   premium: true
-  chatwoot_internal: true
 - name: saml
+  column: feature_flags_ext_1
   display_name: SAML
-  enabled: false
+  enabled: true
   premium: true
 - name: advanced_search_indexing
+  column: feature_flags_ext_1
   display_name: Advanced Search Indexing
   enabled: true
   premium: true
   chatwoot_internal: true
 - name: reply_mailer_migration
+  column: feature_flags_ext_1
   # This feature is temporary only to migrate reply mailer to new email builder
   # Once the migration is done, this feature can be removed
   display_name: Reply Mailer Migration
   enabled: false
   chatwoot_internal: true
-- name: quoted_email_reply
-  display_name: Quoted Email Reply
+- name: unread_count_for_filters
+  column: feature_flags_ext_1
+  display_name: Unread Count For Filters
   enabled: false
-  deprecated: true
+  chatwoot_internal: true
 - name: companies
+  column: feature_flags_ext_1
   display_name: Companies
-  enabled: false
+  enabled: true
   premium: true
 - name: channel_tiktok
+  column: feature_flags_ext_1
   display_name: TikTok Channel
   enabled: false
 - name: csat_review_notes
+  column: feature_flags_ext_1
   display_name: CSAT Review Notes
   enabled: true
   premium: true
 - name: captain_tasks
+  column: feature_flags_ext_1
   display_name: Captain Tasks
   enabled: true
 - name: conversation_required_attributes
+  column: feature_flags_ext_1
   display_name: Required Conversation Attributes
-  enabled: false
+  enabled: true
   premium: true
 - name: advanced_assignment
+  column: feature_flags_ext_1
   display_name: Advanced Assignment
-  enabled: false
+  enabled: true
   premium: true
+- name: whatsapp_manual_transfer
+  display_name: WhatsApp Manual Transfer
+  enabled: true
+  column: feature_flags_ext_1
+- name: data_import
+  display_name: Data Import
+  enabled: true
+  column: feature_flags_ext_1
+- name: api_and_webhooks
+  display_name: API and Webhooks
+  enabled: true
+  column: feature_flags_ext_1
+- name: whatsapp_reconfigure
+  display_name: WhatsApp Reconfigure
+  enabled: true
+  column: feature_flags_ext_1
+- name: whatsapp_embedded_signup_inbox_creation
+  display_name: WhatsApp Embedded Signup Inbox Creation
+  enabled: true
+  column: feature_flags_ext_1

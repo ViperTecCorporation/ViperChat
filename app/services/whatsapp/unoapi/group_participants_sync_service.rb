@@ -185,7 +185,7 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
 
     unless source_id.include?('@')
       phone = normalized_phone((participant[:wa_id].presence || source_id).to_s.gsub(/\D/, ''))
-      attrs[:phone_number] = "+#{phone}" if phone.present?
+      attrs[:phone_number] = "+#{phone}" if valid_phone_identifier?(phone)
     end
 
     attrs
@@ -315,6 +315,18 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     Time.zone.parse(value.to_s)
   rescue ArgumentError, TypeError
     nil
+  end
+
+  def valid_phone_identifier?(phone)
+    phone = phone.to_s
+    return false unless phone.match?(/\A[1-9]\d{7,14}\z/)
+
+    parsed_phone = Phonelib.parse("+#{phone}")
+    parsed_phone.country != 'BR' ||
+      parsed_phone.valid? ||
+      (parsed_phone.type == :mobile && parsed_phone.local_number.scan(/\d/).join.length == 11)
+  rescue StandardError
+    false
   end
 
   def normalized_phone(phone) = phone.start_with?('55') && phone.length == 12 ? "#{phone[0..3]}9#{phone[4..]}" : phone

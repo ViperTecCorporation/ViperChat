@@ -8,6 +8,7 @@ pt_BR:
       settings: "Configurações"
       sidekiq_dashboard: "Painel do Sidekiq"
       instance_health: "Saúde da instância"
+      push_diagnostics: "Diagnóstico de push"
       agent_dashboard: "Painel do agente"
       logout: "Sair"
     dashboard:
@@ -25,6 +26,72 @@ pt_BR:
       title: "Status da instância"
       metric: "Métrica"
       value: "Valor"
+    captain_model_overrides:
+      form:
+        helper_text: "Deixe um modelo em branco para usar o padrão YAML desse recurso de IA."
+        use_default: "Usar padrão: %{model} (%{model_id})"
+      show:
+        summary: "Ver roteamento de modelos"
+        provider: "Provedor"
+        model: "Modelo"
+      sources:
+        account_override: "Substituição da conta"
+        default: "Padrão"
+      features:
+        editor: "Editor"
+        assistant: "Assistente"
+        copilot: "Copiloto"
+        label_suggestion: "Sugestão de etiquetas"
+        document_faq_generation: "Geração de FAQ de documentos"
+        conversation_faq_generation: "Geração de FAQ de conversas"
+        help_center_article_generation: "Geração de artigos da central de ajuda"
+        onboarding_content_generation: "Geração de conteúdo de integração"
+        help_center_query_translation: "Tradução de consultas da central de ajuda"
+        audio_transcription: "Transcrição de áudio"
+        help_center_search: "Pesquisa na central de ajuda"
+    push_diagnostics:
+      title: "Diagnóstico de push"
+      description: "Envie uma notificação push de teste aos dispositivos registrados de um usuário para diagnosticar problemas de entrega. Os resultados mostram a resposta bruta do FCM, Web Push ou relay para identificar exatamente o que falhou."
+      user_not_found: "Usuário não encontrado."
+      no_subscriptions_to_test: "Selecione pelo menos uma inscrição para testar."
+      no_subscriptions_to_delete: "Selecione pelo menos uma inscrição para excluir."
+      subscriptions_deleted: "%{count} inscrição(ões) excluída(s). Os dispositivos do usuário serão registrados novamente na próxima abertura do aplicativo."
+      lookup:
+        title: "1. Localizar usuário"
+        placeholder: "usuario@exemplo.com ou ID numérico"
+        submit: "Localizar"
+        not_found: "Nenhum usuário encontrado para \"%{query}\"."
+        accounts: "Contas"
+      subscriptions:
+        title: "2. Selecionar inscrições (%{count})"
+        warning: "Atenção: isso envia um push real para cada dispositivo selecionado. Use somente ao diagnosticar um problema relatado."
+        empty: "Este usuário não possui inscrições de push registradas."
+      notification:
+        title: "Título"
+        body: "Mensagem"
+        customer_warning: "O cliente verá este texto como uma notificação push real no dispositivo."
+      table:
+        type: "Tipo"
+        device_endpoint: "Dispositivo / endpoint"
+        push_token: "Token de push"
+        device_details: "Detalhes do dispositivo"
+        created: "Criado em"
+        updated: "Última atualização"
+        status: "Status"
+        details: "Detalhes"
+      actions:
+        send: "Enviar push de teste aos selecionados"
+        delete: "Excluir inscrições selecionadas"
+        delete_confirm: "Excluir as inscrições selecionadas? O usuário não receberá pushes nesses dispositivos até que o aplicativo os registre novamente."
+      results:
+        title: "3. Resultados"
+        subscription_id: "ID da inscrição"
+        device: "Dispositivo"
+      statuses:
+        success: "Sucesso"
+        failure: "Falha"
+        skipped: "Ignorado"
+      time_ago: "há %{time}"
     settings:
       title: "Configurações"
       subtitle: "Atualize as configurações da instância e acesse o portal de cobrança"
@@ -75,6 +142,7 @@ pt-BR:
       settings: "Configurações"
       sidekiq_dashboard: "Painel do Sidekiq"
       instance_health: "Saúde da instância"
+      push_diagnostics: "Diagnóstico de push"
       agent_dashboard: "Painel do agente"
       logout: "Sair"
     dashboard:
@@ -92,6 +160,72 @@ pt-BR:
       title: "Status da instância"
       metric: "Métrica"
       value: "Valor"
+    captain_model_overrides:
+      form:
+        helper_text: "Deixe um modelo em branco para usar o padrão YAML desse recurso de IA."
+        use_default: "Usar padrão: %{model} (%{model_id})"
+      show:
+        summary: "Ver roteamento de modelos"
+        provider: "Provedor"
+        model: "Modelo"
+      sources:
+        account_override: "Substituição da conta"
+        default: "Padrão"
+      features:
+        editor: "Editor"
+        assistant: "Assistente"
+        copilot: "Copiloto"
+        label_suggestion: "Sugestão de etiquetas"
+        document_faq_generation: "Geração de FAQ de documentos"
+        conversation_faq_generation: "Geração de FAQ de conversas"
+        help_center_article_generation: "Geração de artigos da central de ajuda"
+        onboarding_content_generation: "Geração de conteúdo de integração"
+        help_center_query_translation: "Tradução de consultas da central de ajuda"
+        audio_transcription: "Transcrição de áudio"
+        help_center_search: "Pesquisa na central de ajuda"
+    push_diagnostics:
+      title: "Diagnóstico de push"
+      description: "Envie uma notificação push de teste aos dispositivos registrados de um usuário para diagnosticar problemas de entrega. Os resultados mostram a resposta bruta do FCM, Web Push ou relay para identificar exatamente o que falhou."
+      user_not_found: "Usuário não encontrado."
+      no_subscriptions_to_test: "Selecione pelo menos uma inscrição para testar."
+      no_subscriptions_to_delete: "Selecione pelo menos uma inscrição para excluir."
+      subscriptions_deleted: "%{count} inscrição(ões) excluída(s). Os dispositivos do usuário serão registrados novamente na próxima abertura do aplicativo."
+      lookup:
+        title: "1. Localizar usuário"
+        placeholder: "usuario@exemplo.com ou ID numérico"
+        submit: "Localizar"
+        not_found: "Nenhum usuário encontrado para \"%{query}\"."
+        accounts: "Contas"
+      subscriptions:
+        title: "2. Selecionar inscrições (%{count})"
+        warning: "Atenção: isso envia um push real para cada dispositivo selecionado. Use somente ao diagnosticar um problema relatado."
+        empty: "Este usuário não possui inscrições de push registradas."
+      notification:
+        title: "Título"
+        body: "Mensagem"
+        customer_warning: "O cliente verá este texto como uma notificação push real no dispositivo."
+      table:
+        type: "Tipo"
+        device_endpoint: "Dispositivo / endpoint"
+        push_token: "Token de push"
+        device_details: "Detalhes do dispositivo"
+        created: "Criado em"
+        updated: "Última atualização"
+        status: "Status"
+        details: "Detalhes"
+      actions:
+        send: "Enviar push de teste aos selecionados"
+        delete: "Excluir inscrições selecionadas"
+        delete_confirm: "Excluir as inscrições selecionadas? O usuário não receberá pushes nesses dispositivos até que o aplicativo os registre novamente."
+      results:
+        title: "3. Resultados"
+        subscription_id: "ID da inscrição"
+        device: "Dispositivo"
+      statuses:
+        success: "Sucesso"
+        failure: "Falha"
+        skipped: "Ignorado"
+      time_ago: "há %{time}"
     settings:
       title: "Configurações"
       subtitle: "Atualize as configurações da instância e acesse o portal de cobrança"
@@ -142,6 +276,7 @@ pt:
       settings: "Configurações"
       sidekiq_dashboard: "Painel do Sidekiq"
       instance_health: "Saúde da instância"
+      push_diagnostics: "Diagnóstico de push"
       agent_dashboard: "Painel do agente"
       logout: "Sair"
     dashboard:
@@ -159,6 +294,72 @@ pt:
       title: "Status da instância"
       metric: "Métrica"
       value: "Valor"
+    captain_model_overrides:
+      form:
+        helper_text: "Deixe um modelo em branco para usar o padrão YAML desse recurso de IA."
+        use_default: "Usar padrão: %{model} (%{model_id})"
+      show:
+        summary: "Ver roteamento de modelos"
+        provider: "Provedor"
+        model: "Modelo"
+      sources:
+        account_override: "Substituição da conta"
+        default: "Padrão"
+      features:
+        editor: "Editor"
+        assistant: "Assistente"
+        copilot: "Copiloto"
+        label_suggestion: "Sugestão de etiquetas"
+        document_faq_generation: "Geração de FAQ de documentos"
+        conversation_faq_generation: "Geração de FAQ de conversas"
+        help_center_article_generation: "Geração de artigos da central de ajuda"
+        onboarding_content_generation: "Geração de conteúdo de integração"
+        help_center_query_translation: "Tradução de consultas da central de ajuda"
+        audio_transcription: "Transcrição de áudio"
+        help_center_search: "Pesquisa na central de ajuda"
+    push_diagnostics:
+      title: "Diagnóstico de push"
+      description: "Envie uma notificação push de teste aos dispositivos registrados de um usuário para diagnosticar problemas de entrega. Os resultados mostram a resposta bruta do FCM, Web Push ou relay para identificar exatamente o que falhou."
+      user_not_found: "Usuário não encontrado."
+      no_subscriptions_to_test: "Selecione pelo menos uma inscrição para testar."
+      no_subscriptions_to_delete: "Selecione pelo menos uma inscrição para excluir."
+      subscriptions_deleted: "%{count} inscrição(ões) excluída(s). Os dispositivos do usuário serão registrados novamente na próxima abertura do aplicativo."
+      lookup:
+        title: "1. Localizar usuário"
+        placeholder: "usuario@exemplo.com ou ID numérico"
+        submit: "Localizar"
+        not_found: "Nenhum usuário encontrado para \"%{query}\"."
+        accounts: "Contas"
+      subscriptions:
+        title: "2. Selecionar inscrições (%{count})"
+        warning: "Atenção: isso envia um push real para cada dispositivo selecionado. Use somente ao diagnosticar um problema relatado."
+        empty: "Este usuário não possui inscrições de push registradas."
+      notification:
+        title: "Título"
+        body: "Mensagem"
+        customer_warning: "O cliente verá este texto como uma notificação push real no dispositivo."
+      table:
+        type: "Tipo"
+        device_endpoint: "Dispositivo / endpoint"
+        push_token: "Token de push"
+        device_details: "Detalhes do dispositivo"
+        created: "Criado em"
+        updated: "Última atualização"
+        status: "Status"
+        details: "Detalhes"
+      actions:
+        send: "Enviar push de teste aos selecionados"
+        delete: "Excluir inscrições selecionadas"
+        delete_confirm: "Excluir as inscrições selecionadas? O usuário não receberá pushes nesses dispositivos até que o aplicativo os registre novamente."
+      results:
+        title: "3. Resultados"
+        subscription_id: "ID da inscrição"
+        device: "Dispositivo"
+      statuses:
+        success: "Sucesso"
+        failure: "Falha"
+        skipped: "Ignorado"
+      time_ago: "há %{time}"
     settings:
       title: "Configurações"
       subtitle: "Atualize as configurações da instância e acesse o portal de cobrança"
@@ -208,6 +409,7 @@ en:
       settings: "Settings"
       sidekiq_dashboard: "Sidekiq Dashboard"
       instance_health: "Instance Health"
+      push_diagnostics: "Push Diagnostics"
       agent_dashboard: "Agent Dashboard"
       logout: "Logout"
     dashboard:
@@ -225,6 +427,72 @@ en:
       title: "Instance Status"
       metric: "Metric"
       value: "Value"
+    captain_model_overrides:
+      form:
+        helper_text: "Leave a model blank to use the YAML default for that AI feature."
+        use_default: "Use default: %{model} (%{model_id})"
+      show:
+        summary: "View model routing"
+        provider: "Provider"
+        model: "Model"
+      sources:
+        account_override: "Account override"
+        default: "Default"
+      features:
+        editor: "Editor"
+        assistant: "Assistant"
+        copilot: "Copilot"
+        label_suggestion: "Label suggestion"
+        document_faq_generation: "Document FAQ generation"
+        conversation_faq_generation: "Conversation FAQ generation"
+        help_center_article_generation: "Help center article generation"
+        onboarding_content_generation: "Onboarding content generation"
+        help_center_query_translation: "Help center query translation"
+        audio_transcription: "Audio transcription"
+        help_center_search: "Help center search"
+    push_diagnostics:
+      title: "Push Diagnostics"
+      description: "Send a test push notification to a specific user's registered devices to diagnose delivery issues. Results show the raw FCM, Web Push, or relay response so you can see exactly what failed."
+      user_not_found: "User not found."
+      no_subscriptions_to_test: "Select at least one subscription to test."
+      no_subscriptions_to_delete: "Select at least one subscription to delete."
+      subscriptions_deleted: "Deleted %{count} subscription(s). The user's device(s) will re-register on next app launch."
+      lookup:
+        title: "1. Look up user"
+        placeholder: "user@example.com or numeric user ID"
+        submit: "Look up"
+        not_found: "No user found for \"%{query}\"."
+        accounts: "Accounts"
+      subscriptions:
+        title: "2. Select subscriptions (%{count})"
+        warning: "Warning: This sends a real push to every selected device. Use only when diagnosing a reported issue."
+        empty: "This user has no push subscriptions registered."
+      notification:
+        title: "Title"
+        body: "Body"
+        customer_warning: "Customers will see this text as a real push notification on their device."
+      table:
+        type: "Type"
+        device_endpoint: "Device / endpoint"
+        push_token: "Push token"
+        device_details: "Device details"
+        created: "Created"
+        updated: "Last updated"
+        status: "Status"
+        details: "Details"
+      actions:
+        send: "Send Test Push to Selected"
+        delete: "Delete Selected Subscriptions"
+        delete_confirm: "Delete the selected subscription(s)? The user won't receive pushes on those devices until their app re-registers."
+      results:
+        title: "3. Results"
+        subscription_id: "Sub ID"
+        device: "Device"
+      statuses:
+        success: "Success"
+        failure: "Failure"
+        skipped: "Skipped"
+      time_ago: "%{time} ago"
     settings:
       title: "Settings"
       subtitle: "Update your instance settings, access billing portal"

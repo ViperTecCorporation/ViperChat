@@ -309,6 +309,8 @@
   },
   "SIDEBAR": {
     "NO_ITEMS": "Nenhum item",
+    "COLLAPSE_SIDEBAR": "Recolher barra lateral",
+    "EXPAND_SIDEBAR": "Expandir barra lateral",
     "CURRENTLY_VIEWING_ACCOUNT": "Visualização atual:",
     "SWITCH": "Trocar",
     "INBOX_VIEW": "Caixa de entrada",
@@ -320,12 +322,14 @@
     "UNATTENDED_CONVERSATIONS": "Não atendidas",
     "REPORTS": "Relatórios",
     "SETTINGS": "Configurações",
+    "DASHBOARD": "Dashboard",
     "CONTACTS": "Contatos",
     "ACTIVE": "Ativo",
     "COMPANIES": "Empresas",
     "ALL_COMPANIES": "Todas as empresas",
     "CAPTAIN": "Capitão",
     "CAPTAIN_ASSISTANTS": "Assistentes",
+    "CAPTAIN_OVERVIEW": "Visão geral",
     "CAPTAIN_DOCUMENTS": "Documentos",
     "CAPTAIN_RESPONSES": "FAQs",
     "CAPTAIN_TOOLS": "Ferramentas",
@@ -341,6 +345,7 @@
     "NOTIFICATIONS": "Notificações",
     "CANNED_RESPONSES": "Respostas Prontas",
     "INTEGRATIONS": "Integrações",
+    "DATA": "Dados",
     "PROFILE_SETTINGS": "Configurações do Perfil",
     "ACCOUNT_SETTINGS": "Conta",
     "APPLICATIONS": "Aplicações",
@@ -391,6 +396,21 @@
       "TEXT": "Marcar offline automaticamente",
       "INFO_TEXT": "Deixe o sistema marcar você automaticamente quando você não estiver usando o app ou o painel de controle.",
       "INFO_SHORT": "Marcar off-line automaticamente quando não estiver usando o aplicativo."
+    },
+    "SORT_TOOLTIP": "Ordenar",
+    "SORT_BY": "Ordenar por",
+    "SORT_GROUPS": {
+      "CREATED": "Ordenar por data de criação",
+      "ALPHABETICAL": "Ordenar alfabeticamente",
+      "UNREAD_COUNT": "Ordenar por não lidas"
+    },
+    "SORT_OPTIONS": {
+      "CREATED_DESC": "Mais recentes primeiro",
+      "CREATED_ASC": "Mais antigas primeiro",
+      "ALPHABETICAL_ASC": "Crescente (A - Z)",
+      "ALPHABETICAL_DESC": "Decrescente (Z - A)",
+      "UNREAD_COUNT_DESC": "Mais não lidas primeiro",
+      "UNREAD_COUNT_ASC": "Menos não lidas primeiro"
     },
     "DOCS": "Ler documentos",
     "SECURITY": "Segurança",
@@ -514,7 +534,7 @@
       "SSO_URL": {
         "LABEL": "SSO URL",
         "HELP": "A URL para onde as solicitações de autenticação SAML serão enviadas",
-        "PLACEHOLDER": "https://your-idp.com/saml/sso"
+        "PLACEHOLDER": "https://sso.example.com/saml/sso"
       },
       "CERTIFICATE": {
         "LABEL": "Certificado de assinatura no formato PEM",
@@ -534,7 +554,7 @@
       "IDP_ENTITY_ID": {
         "LABEL": "ID da Entidade do Provedor de Identidade",
         "HELP": "Identificador exclusivo do seu provedor de identidade (geralmente encontrado na configuração do IdP)",
-        "PLACEHOLDER": "https://seu-idp.com/saml"
+        "PLACEHOLDER": "https://sso.example.com/saml"
       },
       "UPDATE_BUTTON": "Atualizar configurações de SAML",
       "API": {

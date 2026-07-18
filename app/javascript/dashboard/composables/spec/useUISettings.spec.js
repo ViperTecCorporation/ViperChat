@@ -114,6 +114,21 @@ describe('useUISettings', () => {
     expect(fetchSignatureFlagFromUISettings('email')).toBe(undefined);
   });
 
+  it('uses the signature default only when no preference was saved', () => {
+    const { fetchSignatureFlagFromUISettings } = useUISettings();
+    const settingKey = 'channel_whatsapp_unoapi_signature_enabled';
+
+    expect(
+      fetchSignatureFlagFromUISettings('Channel::Whatsapp Unoapi', true)
+    ).toBe(true);
+
+    getUISettingsMock.value[settingKey] = false;
+    expect(
+      fetchSignatureFlagFromUISettings('Channel::Whatsapp Unoapi', true)
+    ).toBe(false);
+    delete getUISettingsMock.value[settingKey];
+  });
+
   it('sets quoted reply flag for inbox correctly', () => {
     const { setQuotedReplyFlagForInbox } = useUISettings();
     setQuotedReplyFlagForInbox('Channel::Email', false);

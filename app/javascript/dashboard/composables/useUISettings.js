@@ -101,11 +101,17 @@ const setQuotedReplyFlagForInbox = (channelType, value, updateUISettings) => {
  * @param {Object} uiSettings - Reactive UI settings object.
  * @returns {boolean} The value of the signature enabled flag.
  */
-const fetchSignatureFlagFromUISettings = (channelType, uiSettings) => {
-  if (!channelType) return false;
+const fetchSignatureFlagFromUISettings = (
+  channelType,
+  uiSettings,
+  defaultValue
+) => {
+  if (!channelType) return defaultValue ?? false;
 
   const slugifiedChannel = slugifyChannel(channelType);
-  return uiSettings.value[`${slugifiedChannel}_signature_enabled`];
+  return (
+    uiSettings.value[`${slugifiedChannel}_signature_enabled`] ?? defaultValue
+  );
 };
 
 const fetchQuotedReplyFlagFromUISettings = (channelType, uiSettings) => {
@@ -160,8 +166,8 @@ export function useUISettings() {
       toggleSidebarUIState(key, uiSettings, updateUISettings),
     setSignatureFlagForInbox: (channelType, value) =>
       setSignatureFlagForInbox(channelType, value, updateUISettings),
-    fetchSignatureFlagFromUISettings: channelType =>
-      fetchSignatureFlagFromUISettings(channelType, uiSettings),
+    fetchSignatureFlagFromUISettings: (channelType, defaultValue) =>
+      fetchSignatureFlagFromUISettings(channelType, uiSettings, defaultValue),
     setQuotedReplyFlagForInbox: (channelType, value) =>
       setQuotedReplyFlagForInbox(channelType, value, updateUISettings),
     fetchQuotedReplyFlagFromUISettings: channelType =>

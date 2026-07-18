@@ -1,22 +1,10 @@
 module Featurable
   extend ActiveSupport::Concern
+  extend Featurable::Defaults
 
-  module SelectedFeatureFlagsOverride
-    def selected_feature_flags
-      FEATURE_NAMES.select { |flag| public_send("#{flag}?") }
-    end
-
-    def selected_feature_flags=(flags)
-      feature_names = FEATURE_LIST.pluck('name')
-      disable_features(*feature_names)
-
-      Array(flags).map(&:to_sym).each do |flag|
-        next unless FEATURE_NAMES.include?(flag)
-
-        public_send("#{flag}=", true)
-      end
-    end
-  end
+  DEFAULT_FEATURE_FLAG_COLUMN = 'feature_flags'.freeze
+  FEATURE_FLAG_COLUMNS = [DEFAULT_FEATURE_FLAG_COLUMN, 'feature_flags_ext_1'].freeze
+  MAX_FEATURES_PER_COLUMN = 63
 
   QUERY_MODE = {
     flag_query_mode: :bit_operator,
@@ -24,23 +12,65 @@ module Featurable
   }.freeze
 
   FEATURE_LIST = YAML.safe_load(Rails.root.join('config/features.yml').read).freeze
-  MAX_FLAGS_PER_COLUMN = 63
 
-  FEATURE_NAMES = FEATURE_LIST.map { |feature| "feature_#{feature['name']}".to_sym }.freeze
+  def self.feature_flag_mappings_for(feature_list)
+    features_by_column = feature_list.group_by { |feature| feature['column'].presence || DEFAULT_FEATURE_FLAG_COLUMN }
 
-  PRIMARY_FEATURES = FEATURE_NAMES.first(MAX_FLAGS_PER_COLUMN)
-  SECONDARY_FEATURES = FEATURE_NAMES.drop(MAX_FLAGS_PER_COLUMN)
+    mappings = FEATURE_FLAG_COLUMNS.index_with do |column|
+      features = features_by_column.delete(column) || []
+      validate_feature_count!(column, features)
 
-  PRIMARY_FLAGS = PRIMARY_FEATURES.each_with_index.to_h { |name, index| [index + 1, name] }.freeze
-  SECONDARY_FLAGS = SECONDARY_FEATURES.each_with_index.to_h { |name, index| [index + 1, name] }.freeze
+      features.each_with_index.to_h do |feature, index|
+        [index + 1, "feature_#{feature['name']}".to_sym]
+      end
+    end
+
+    validate_feature_columns!(features_by_column)
+    mappings
+  end
+
+  def self.validate_feature_count!(column, features)
+    return if features.size <= MAX_FEATURES_PER_COLUMN
+
+    raise ArgumentError, "Account feature flag column #{column} supports up to #{MAX_FEATURES_PER_COLUMN} features"
+  end
+
+  def self.validate_feature_columns!(features_by_column)
+    return if features_by_column.blank?
+
+    invalid_columns = features_by_column.keys.join(', ')
+    raise ArgumentError, "Unknown account feature flag column: #{invalid_columns}"
+  end
+
+  FEATURES_BY_COLUMN = feature_flag_mappings_for(FEATURE_LIST).freeze
+  FEATURE_NAMES = FEATURES_BY_COLUMN.values.flat_map(&:values).freeze
 
   included do
     include FlagShihTzu
-    has_flags PRIMARY_FLAGS.merge(column: 'feature_flags').merge(QUERY_MODE)
-    has_flags SECONDARY_FLAGS.merge(column: 'feature_flags_2').merge(QUERY_MODE) if SECONDARY_FLAGS.any?
+
+    FEATURE_FLAG_COLUMNS.each do |column|
+      has_flags FEATURES_BY_COLUMN.fetch(column).merge(column: column).merge(QUERY_MODE)
+    end
 
     before_create :enable_default_features
-    prepend SelectedFeatureFlagsOverride
+
+    define_method :all_feature_flags do
+      FEATURE_FLAG_COLUMNS.flat_map { |column| all_flags(column) }
+    end
+
+    define_method :selected_feature_flags do
+      FEATURE_FLAG_COLUMNS.flat_map { |column| selected_flags(column) }
+    end
+
+    define_method :selected_feature_flags= do |chosen_flags|
+      @feature_flags_explicitly_selected = true
+      FEATURE_FLAG_COLUMNS.each { |column| unselect_all_flags(column) }
+
+      Array(chosen_flags).each do |selected_flag|
+        flag = selected_flag.to_sym
+        enable_flag(flag) if FEATURE_NAMES.include?(flag)
+      end
+    end
   end
 
   def enable_features(*names)
@@ -90,11 +120,9 @@ module Featurable
   private
 
   def enable_default_features
-    config = InstallationConfig.find_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS')
-    return true if config.blank?
+    return true if @feature_flags_explicitly_selected
 
-    features_to_enabled = config.value.select { |f| f[:enabled] }.pluck(:name)
-    enable_features(*features_to_enabled)
+    enable_features(*Featurable.default_feature_names)
   end
 
   def known_features(names)

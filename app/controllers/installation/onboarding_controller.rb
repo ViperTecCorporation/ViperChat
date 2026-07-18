@@ -9,10 +9,12 @@ class Installation::OnboardingController < ApplicationController
         account_name: onboarding_params.dig(:user, :company),
         user_full_name: onboarding_params.dig(:user, :name),
         email: onboarding_params.dig(:user, :email),
-        user_password: params.dig(:user, :password),
+        user_password: onboarding_params.dig(:user, :password),
         super_admin: true,
         confirmed: true
       ).perform
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to '/', flash: { error: e.record.errors.full_messages.to_sentence } and return
     rescue StandardError => e
       redirect_to '/', flash: { error: e.message } and return
     end
@@ -23,7 +25,7 @@ class Installation::OnboardingController < ApplicationController
   private
 
   def onboarding_params
-    params.permit(:subscribe_to_updates, user: [:name, :company, :email])
+    params.permit(:authenticity_token, :subscribe_to_updates, user: [:name, :company, :email, :password])
   end
 
   def finish_onboarding

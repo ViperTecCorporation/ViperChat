@@ -119,6 +119,41 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
       end
     end
 
+    context 'when document attachment includes an accented filename' do
+      let(:document_params) do
+        {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                contacts: [{ profile: { name: 'Sojan Jose' }, wa_id: '2423423243' }],
+                messages: [{
+                  from: '2423423243',
+                  document: {
+                    id: 'b1c68f38-8734-4ad3-b4a1-ef0c10d683',
+                    mime_type: 'application/pdf',
+                    filename: 'Currículum café.pdf',
+                    caption: 'My résumé'
+                  },
+                  timestamp: '1664799904', type: 'document'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+      end
+
+      it 'preserves the original filename from the payload' do
+        stub_media_url_request
+        stub_sample_png_request
+        described_class.new(inbox: whatsapp_channel.inbox, params: document_params).perform
+
+        attachment = whatsapp_channel.inbox.messages.first.attachments.first
+        expect(attachment.file.filename.to_s).to eq('Currículum café.pdf')
+      end
+    end
+
     context 'when invalid attachment message params' do
       let(:error_params) do
         {
@@ -293,6 +328,93 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(message.sender).to be_nil
         expect(message.status).to eq('delivered')
         expect(message.content_attributes['external_echo']).to be true
+      end
+    end
+
+    context 'when webhook payload contains an SMB message echo' do
+      it 'creates an outgoing message and updates contact BSUID from to_user_id' do
+        echo_params = {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              field: 'smb_message_echoes',
+              value: {
+                metadata: {
+                  display_phone_number: whatsapp_channel.phone_number.delete('+'),
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                contacts: [{ wa_id: '558181829525', user_id: 'BR.1597711494623173' }],
+                message_echoes: [{
+                  from: whatsapp_channel.phone_number.delete('+'),
+                  to: '558181829525',
+                  to_user_id: 'BR.1597711494623173',
+                  id: "wamid.SMB_ECHO_MESSAGE_ID_#{SecureRandom.hex(8)}",
+                  text: { body: 'Mensagem enviada pelo aparelho' },
+                  timestamp: '1783370084',
+                  type: 'text'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
+
+        contact = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: '558181829525').contact
+        bsuid_contact_inbox = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: 'BR.1597711494623173')
+        message = whatsapp_channel.inbox.messages.last
+
+        expect(contact.bsuid).to eq('BR.1597711494623173')
+        expect(bsuid_contact_inbox.contact).to eq(contact)
+        expect(message).to have_attributes(
+          content: 'Mensagem enviada pelo aparelho',
+          message_type: 'outgoing',
+          status: 'delivered',
+          sender: nil
+        )
+        expect(message.conversation.contact).to eq(contact)
+        expect(message.content_attributes['external_echo']).to be true
+      end
+
+      it 'creates a conversation when the SMB echo has only to_user_id' do
+        echo_params = {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              field: 'smb_message_echoes',
+              value: {
+                metadata: {
+                  display_phone_number: whatsapp_channel.phone_number.delete('+'),
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                message_echoes: [{
+                  from: whatsapp_channel.phone_number.delete('+'),
+                  to: '',
+                  to_user_id: 'BR.1597711494623173',
+                  id: "wamid.SMB_ECHO_BSUID_ONLY_#{SecureRandom.hex(8)}",
+                  text: { body: 'Mensagem enviada pelo aparelho' },
+                  timestamp: '1783370084',
+                  type: 'text'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
+
+        contact_inbox = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: 'BR.1597711494623173')
+        message = whatsapp_channel.inbox.messages.last
+
+        expect(contact_inbox.contact).to have_attributes(
+          name: 'BR.1597711494623173',
+          phone_number: nil,
+          bsuid: 'BR.1597711494623173'
+        )
+        expect(message.content).to eq('Mensagem enviada pelo aparelho')
+        expect(message.conversation.contact_inbox).to eq(contact_inbox)
       end
     end
 

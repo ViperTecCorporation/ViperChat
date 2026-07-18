@@ -1,5 +1,9 @@
 <script>
+import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
+import { useWhatsappEmbeddedSignup } from 'dashboard/composables/useWhatsappEmbeddedSignup';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import whatsappChannel from 'dashboard/api/channel/whatsappChannel';
 import inboxMixin from 'shared/mixins/inboxMixin';
 import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFieldSection.vue';
 import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsToggleSection.vue';
@@ -10,7 +14,6 @@ import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TextArea from 'next/textarea/TextArea.vue';
-import WhatsappReauthorize from '../channels/whatsapp/Reauthorize.vue';
 import { sanitizeAllowedDomains } from 'dashboard/helper/URLHelper';
 import Input from 'dashboard/components-next/input/Input.vue';
 
@@ -23,7 +26,6 @@ export default {
     SmtpSettings,
     NextButton,
     TextArea,
-    WhatsappReauthorize,
     Input,
   },
   mixins: [inboxMixin],
@@ -34,14 +36,14 @@ export default {
     },
   },
   setup() {
-    return { v$: useVuelidate() };
+    const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
+    return { v$: useVuelidate(), runEmbeddedSignup };
   },
   data() {
     return {
       hmacMandatory: false,
       allowMobileWebview: false,
       whatsAppInboxAPIKey: '',
-      isRequestingReauthorization: false,
       isSyncingTemplates: false,
       allowedDomains: '',
       isUpdatingAllowedDomains: false,
@@ -66,17 +68,28 @@ export default {
         jwtTtl: '3600',
       },
       isSettingDefaults: false,
+      isReconfiguring: false,
     };
   },
   validations: {
     whatsAppInboxAPIKey: { required },
   },
   computed: {
+    ...mapGetters({
+      accountId: 'getCurrentAccountId',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+    }),
     isEmbeddedSignupWhatsApp() {
       return this.inbox.provider_config?.source === 'embedded_signup';
     },
-    whatsappAppId() {
-      return window.chatwootConfig?.whatsappAppId;
+    showWhatsAppReconfigure() {
+      return (
+        this.isEmbeddedSignupWhatsApp &&
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.WHATSAPP_RECONFIGURE
+        )
+      );
     },
     isForwardingEnabled() {
       return !!this.inbox.forwarding_enabled;
@@ -288,9 +301,26 @@ export default {
         useAlert(this.$t('INBOX_MGMT.EDIT.API.ERROR_MESSAGE'));
       }
     },
-    async handleReconfigure() {
-      if (this.$refs.whatsappReauth) {
-        await this.$refs.whatsappReauth.requestAuthorization();
+    async reconfigureWhatsApp() {
+      this.isReconfiguring = true;
+      try {
+        const credentials = await this.runEmbeddedSignup();
+        // User dismissed the Meta popup without completing signup.
+        if (!credentials) return;
+
+        await whatsappChannel.reauthorizeWhatsApp({
+          inboxId: this.inbox.id,
+          ...credentials,
+        });
+        useAlert(
+          this.$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_RECONFIGURE_SUCCESS')
+        );
+      } catch (error) {
+        useAlert(
+          this.$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_RECONFIGURE_ERROR')
+        );
+      } finally {
+        this.isReconfiguring = false;
       }
     },
     async syncTemplates() {
@@ -680,22 +710,34 @@ export default {
       <!-- Embedded Signup Section -->
       <template v-if="isEmbeddedSignupWhatsApp">
         <SettingsFieldSection
-          v-if="whatsappAppId"
+          :label="$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_WEBHOOK_TITLE')"
+          :help-text="
+            $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_WEBHOOK_SUBHEADER')
+          "
+        >
+          <woot-code :script="inbox.provider_config.webhook_verify_token" />
+        </SettingsFieldSection>
+        <SettingsFieldSection
+          v-if="showWhatsAppReconfigure"
           :label="
             $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_EMBEDDED_SIGNUP_TITLE')
           "
-          :help-text="`${$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_EMBEDDED_SIGNUP_SUBHEADER')} ${$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_EMBEDDED_SIGNUP_DESCRIPTION')}`"
+          :help-text="
+            $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_EMBEDDED_SIGNUP_DESCRIPTION')
+          "
         >
-          <div class="flex flex-col gap-1 items-start">
-            <NextButton @click="handleReconfigure">
-              {{ $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_RECONFIGURE_BUTTON') }}
-            </NextButton>
-          </div>
+          <NextButton
+            :is-loading="isReconfiguring"
+            :disabled="isReconfiguring"
+            @click="reconfigureWhatsApp"
+          >
+            {{ $t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_RECONFIGURE_BUTTON') }}
+          </NextButton>
         </SettingsFieldSection>
       </template>
 
       <!-- Manual Setup Section -->
-      <template v-else>
+      <template v-else-if="!isEmbeddedSignupWhatsApp">
         <SettingsFieldSection
           :label="$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_WEBHOOK_TITLE')"
           :help-text="
@@ -753,12 +795,6 @@ export default {
         </NextButton>
       </SettingsFieldSection>
     </div>
-    <WhatsappReauthorize
-      v-if="isEmbeddedSignupWhatsApp"
-      ref="whatsappReauth"
-      :inbox="inbox"
-      class="hidden"
-    />
   </div>
 </template>
 

@@ -484,6 +484,60 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
     )
   end
 
+  it 'does not assign invalid short phone numbers to participants' do
+    stub_request(:get, participants_url).to_return(
+      status: 200,
+      body: {
+        participants: [
+          {
+            jid: '123@s.whatsapp.net',
+            wa_id: '123',
+            user_id: '11343495192601@lid',
+            name: 'Participante sem telefone valido'
+          }
+        ]
+      }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+
+    expect(service.perform).to eq(:ok)
+
+    contact = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: '123').contact
+    expect(contact.phone_number).to be_nil
+    expect(contact.bsuid).to eq('11343495192601@lid')
+    expect(conversation.group_contacts.find_by!(contact: contact).metadata).to include(
+      'wa_id' => '123',
+      'user_id' => '11343495192601@lid'
+    )
+  end
+
+  it 'does not assign phone numbers rejected by the contact e164 validation' do
+    stub_request(:get, participants_url).to_return(
+      status: 200,
+      body: {
+        participants: [
+          {
+            jid: '558005910375@s.whatsapp.net',
+            wa_id: '558005910375',
+            user_id: '171154765537482@lid',
+            name: 'Participante com telefone invalido'
+          }
+        ]
+      }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+
+    expect(service.perform).to eq(:ok)
+
+    contact = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: '558005910375').contact
+    expect(contact.phone_number).to be_nil
+    expect(contact.bsuid).to eq('171154765537482@lid')
+    expect(conversation.group_contacts.find_by!(contact: contact).metadata).to include(
+      'wa_id' => '558005910375',
+      'user_id' => '171154765537482@lid'
+    )
+  end
+
   it 'removes group contacts that are no longer returned by Uno API' do
     stale_contact = create(:contact, account: whatsapp_channel.account, name: 'Membro removido')
     stale_contact.update_columns(phone_number: '+5566996222471') # rubocop:disable Rails/SkipsModelValidations

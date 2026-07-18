@@ -1,6 +1,16 @@
 require 'rails_helper'
 
 describe ChatwootHub do
+  describe '.pricing_plan' do
+    it 'always uses the Viper premium plan without consulting the edition or Hub state' do
+      allow(ChatwootApp).to receive(:enterprise?).and_return(false)
+      create(:installation_config, name: 'INSTALLATION_PRICING_PLAN', value: 'community')
+
+      expect(described_class.pricing_plan).to eq('premium')
+      expect(described_class.pricing_plan_quantity).to eq(1_000_000)
+    end
+  end
+
   describe '.base_url' do
     it 'uses the static hub url' do
       expect(described_class::DEFAULT_BASE_URL).to eq('https://hub.2.chatwoot.com')

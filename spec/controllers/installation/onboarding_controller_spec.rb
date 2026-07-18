@@ -53,6 +53,21 @@ RSpec.describe 'Installation::Onboarding API', type: :request do
     end
 
     context 'when onboarding successfull' do
+      it 'passes the permitted password to the account builder' do
+        post '/installation/onboarding', params: {
+          user: { name: 'Test User', company: 'Test Company', email: 'test@example.com', password: 'Password123!' }
+        }
+
+        expect(AccountBuilder).to have_received(:new).with(
+          account_name: 'Test Company',
+          user_full_name: 'Test User',
+          email: 'test@example.com',
+          user_password: 'Password123!',
+          super_admin: true,
+          confirmed: true
+        )
+      end
+
       it 'deletes the redis key' do
         post '/installation/onboarding', params: { user: {} }
         expect(Redis::Alfred.get(Redis::Alfred::CHATWOOT_INSTALLATION_ONBOARDING)).to be_nil
@@ -74,6 +89,16 @@ RSpec.describe 'Installation::Onboarding API', type: :request do
         allow(AccountBuilder).to receive(:new).and_raise('error')
         post '/installation/onboarding', params: { user: {} }
         expect(Redis::Alfred.get(Redis::Alfred::CHATWOOT_INSTALLATION_ONBOARDING)).not_to be_nil
+      end
+
+      it 'shows the record validation details' do
+        invalid_user = User.new
+        invalid_user.errors.add(:password, 'não atende aos requisitos')
+        allow(account_builder).to receive(:perform).and_raise(ActiveRecord::RecordInvalid.new(invalid_user))
+
+        post '/installation/onboarding', params: { user: {} }
+
+        expect(flash[:error]).to eq('Senha não atende aos requisitos')
       end
     end
   end

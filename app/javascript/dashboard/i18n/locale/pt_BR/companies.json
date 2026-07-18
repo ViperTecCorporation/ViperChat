@@ -6,7 +6,8 @@
       "OPTIONS": {
         "NAME": "Nome",
         "DOMAIN": "Domínio",
-        "CREATED_AT": "Criado em",
+        "CREATED_AT": "Criada em",
+        "LAST_ACTIVITY_AT": "Última atividade",
         "CONTACTS_COUNT": "Quantidade de contatos"
       }
     },
@@ -21,6 +22,125 @@
     "LOADING": "Carregando empresas...",
     "UNNAMED": "Empresa sem nome",
     "CONTACTS_COUNT": "{n} contato | {n} contatos",
+    "ACTIONS": {
+      "CREATE": "Adicionar empresa"
+    },
+    "SELECTOR": {
+      "PLACEHOLDER": "Selecionar empresa",
+      "CREATE_OPTION": "Adicionar \"{name}\""
+    },
+    "CREATE": {
+      "TITLE": "Adicionar dados da empresa",
+      "ACTIONS": {
+        "SAVE": "Adicionar empresa"
+      },
+      "MESSAGES": {
+        "SUCCESS": "Empresa criada.",
+        "ERROR": "Não foi possível criar a empresa."
+      }
+    },
+    "DETAIL": {
+      "LOADING": "Carregando dados da empresa...",
+      "EMPTY_STATE": {
+        "TITLE": "Empresa não encontrada",
+        "SUBTITLE": "Esta empresa pode ter sido removida ou não está mais disponível nesta conta."
+      },
+      "SIDEBAR": {
+        "TABS": {
+          "ATTRIBUTES": "Atributos",
+          "CONTACTS": "Contatos",
+          "HISTORY": "Histórico",
+          "NOTES": "Notas"
+        }
+      },
+      "HISTORY": {
+        "EMPTY": "Ainda não há conversas para os contatos desta empresa."
+      },
+      "NOTES": {
+        "EMPTY": "Ainda não há notas para os contatos desta empresa."
+      },
+      "ATTRIBUTES": {
+        "SEARCH_PLACEHOLDER": "Pesquisar atributos...",
+        "EMPTY_STATE": "Ainda não existem atributos personalizados de empresa configurados.",
+        "NO_ATTRIBUTES": "Nenhum atributo correspondente encontrado.",
+        "UNUSED_ATTRIBUTES": "{count} atributo não utilizado | {count} atributos não utilizados",
+        "MESSAGES": {
+          "UPDATE_SUCCESS": "Atributo da empresa atualizado.",
+          "UPDATE_ERROR": "Não foi possível atualizar o atributo da empresa.",
+          "DELETE_SUCCESS": "Atributo da empresa removido.",
+          "DELETE_ERROR": "Não foi possível remover o atributo da empresa."
+        }
+      },
+      "CONTACTS": {
+        "LOADING": "Carregando contatos...",
+        "EMPTY": "Nenhum contato está vinculado a esta empresa.",
+        "UNNAMED_CONTACT": "Contato sem nome",
+        "ACTIONS": {
+          "ADD": "Adicionar contato",
+          "REMOVE": "Remover contato"
+        },
+        "DIALOGS": {
+          "ADD": {
+            "DESCRIPTION": "Pesquise um contato existente e vincule-o a esta empresa.",
+            "SEARCH_PLACEHOLDER": "Pesquisar contatos...",
+            "INITIAL": "Comece a digitar para pesquisar contatos.",
+            "EMPTY": "Nenhum contato encontrado.",
+            "CONFIRM_TITLE": "Vincular contato",
+            "CONFIRM_DESCRIPTION": "Confirme a empresa e o contato antes de vinculá-los.",
+            "COMPANY_LABEL": "Empresa",
+            "CONTACT_LABEL": "Contato",
+            "CURRENT_COMPANY": "Atualmente vinculado a {companyName}",
+            "ADD": "Vincular contato",
+            "CANCEL": "Cancelar"
+          }
+        },
+        "MESSAGES": {
+          "ADD_SUCCESS": "Contato vinculado à empresa.",
+          "ADD_ERROR": "Não foi possível vincular o contato à empresa.",
+          "REASSIGN_SUCCESS": "Contato transferido para a empresa.",
+          "REASSIGN_ERROR": "Não foi possível transferir o contato para a empresa.",
+          "REMOVE_SUCCESS": "Contato removido da empresa.",
+          "REMOVE_ERROR": "Não foi possível remover o contato da empresa."
+        }
+      },
+      "AVATAR": {
+        "UPDATING": "Atualizando avatar da empresa...",
+        "UPLOAD_SUCCESS": "Avatar da empresa atualizado.",
+        "UPLOAD_ERROR": "Não foi possível atualizar o avatar da empresa.",
+        "DELETE_SUCCESS": "Avatar da empresa removido.",
+        "DELETE_ERROR": "Não foi possível remover o avatar da empresa."
+      },
+      "PROFILE": {
+        "TITLE": "Editar dados da empresa",
+        "CREATED_AT": "Criada em {date}",
+        "LAST_ACTIVE": "Última atividade em {date}",
+        "DESCRIPTION_PLACEHOLDER": "Adicione uma breve descrição para esta empresa",
+        "ACTIONS": {
+          "SAVE": "Atualizar empresa"
+        },
+        "MESSAGES": {
+          "UPDATE_SUCCESS": "Empresa atualizada.",
+          "UPDATE_ERROR": "Não foi possível atualizar a empresa."
+        },
+        "FIELDS": {
+          "NAME": "Nome",
+          "DOMAIN": "Domínio"
+        }
+      },
+      "DELETE": {
+        "SECTION_TITLE": "Zona de perigo",
+        "SECTION_DESCRIPTION": "Exclua esta empresa e desvincule seus contatos. Os contatos permanecerão na conta.",
+        "BUTTON": "Excluir empresa",
+        "TITLE": "Excluir empresa?",
+        "DESCRIPTION": "A empresa será removida e todos os contatos associados serão desvinculados. Os contatos serão preservados.",
+        "DESCRIPTION_WITH_NAME": "A empresa {companyName} será removida e todos os contatos associados serão desvinculados. Os contatos serão preservados.",
+        "CONFIRM": "Excluir empresa",
+        "MESSAGES": {
+          "SUCCESS": "Empresa excluída.",
+          "ERROR": "Não foi possível excluir a empresa."
+        }
+      }
+    },
     "EMPTY_STATE": {
       "TITLE": "Nenhuma empresa encontrada"
     }

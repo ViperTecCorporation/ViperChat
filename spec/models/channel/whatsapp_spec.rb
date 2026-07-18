@@ -42,7 +42,17 @@ RSpec.describe Channel::Whatsapp do
                    body: { data: [{
                      id: '123456789', name: 'test_template'
                    }] }.to_json)
+      stub_request(:get, 'https://graph.facebook.com/v14.0//phone_numbers?fields=id&limit=100&access_token=test_key')
+        .to_return(status: 200, body: { data: [{ id: 'random_id' }] }.to_json, headers: { 'Content-Type' => 'application/json' })
       expect(channel.save).to be(true)
+    end
+
+    it 'validates false when phone number id is wrong' do
+      stub_request(:get, 'https://graph.facebook.com/v14.0//message_templates?access_token=test_key')
+        .to_return(status: 200, body: { data: [] }.to_json)
+      stub_request(:get, 'https://graph.facebook.com/v14.0//phone_numbers?fields=id&limit=100&access_token=test_key')
+        .to_return(status: 200, body: { data: [{ id: 'another_phone_id' }] }.to_json, headers: { 'Content-Type' => 'application/json' })
+      expect(channel.save).to be(false)
     end
   end
 
@@ -249,6 +259,24 @@ RSpec.describe Channel::Whatsapp do
       expect do
         channel.update!(provider_config: channel.provider_config.merge('send_profile_picture' => true))
       end.not_to have_enqueued_job(Whatsapp::GroupConversationBackfillJob)
+    end
+  end
+
+  describe '#inbound_calls_enabled?' do
+    let(:account) { create(:account) }
+
+    it 'returns true by default when nothing has been toggled' do
+      channel = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud',
+                                          validate_provider_config: false, sync_templates: false)
+      expect(channel.inbound_calls_enabled?).to be true
+    end
+
+    it 'returns false only when explicitly disabled in provider_config' do
+      channel = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud',
+                                          validate_provider_config: false, sync_templates: false)
+      channel.update!(provider_config: channel.provider_config.merge('inbound_calls_enabled' => false))
+
+      expect(channel.inbound_calls_enabled?).to be false
     end
   end
 end

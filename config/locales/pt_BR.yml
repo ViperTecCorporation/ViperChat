@@ -18,6 +18,14 @@
 #available at https://guides.rubyonrails.org/i18n.html.
 pt_BR:
   hello: 'Olá, mundo'
+  activerecord:
+    attributes:
+      user:
+        password: Senha
+        password_confirmation: Confirmação da senha
+    errors:
+      messages:
+        record_invalid: 'Falha na validação: %{errors}'
   inbox:
     reauthorization:
       success: 'Canal reautenticado com sucesso'

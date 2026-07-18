@@ -341,3 +341,5 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     duplicate_contact_inbox.destroy!
   end
 end
+
+Api::V1::Accounts::ContactsController.prepend_mod_with('Api::V1::Accounts::ContactsController')

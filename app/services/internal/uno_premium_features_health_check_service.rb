@@ -2,57 +2,18 @@
 
 class Internal::UnoPremiumFeaturesHealthCheckService
   EXPECTED_ENABLED_FEATURES = %w[
-    agent_conversation_viewed
-    agent_management
-    automations
-    crm
-    crm_integration
-    campaigns
-    canned_responses
-    channel_api
-    channel_notifica_me
-    channel_whatsapp
-    chatwoot_v4
-    custom_attributes
-    custom_reply_domain
-    custom_reply_email
     disable_branding
-    disable_whatsapp_messaging_window
-    channel_email
-    email_continuity_on_api_channel
-    channel_facebook
-    help_center
-    ip_lookup
-    inbound_emails
-    inbox_management
-    channel_instagram
-    integrations
-    labels
-    macros
-    reports
-    team_management
-    voice_recorder
-    channel_website
-    whatsapp_campaign
-    send_agent_name_in_whatsapp_message
-    captain_integration
-    captain_integration_v2
-    custom_roles
     audit_logs
     sla
+    custom_roles
+    captain_integration
+    captain_integration_v2
+    captain_document_auto_sync
+    csat_review_notes
+    conversation_required_attributes
   ].freeze
 
-  EXPECTED_DISABLED_FEATURES = %w[
-    read_message
-    saml
-    linear_integration
-    hide_all_chats_for_agent
-    hide_filters_for_agent
-    hide_contacts_for_agent
-    hide_unassigned_for_agent
-    agent_bots
-    auto_resolve_conversations
-  ].freeze
+  EXPECTED_DISABLED_FEATURES = [].freeze
 
   Result = Struct.new(:errors, keyword_init: true) do
     def ok?
