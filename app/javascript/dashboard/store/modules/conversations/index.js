@@ -346,7 +346,12 @@ export const mutations = {
       }
 
       const { messages, ...updates } = conversation;
-      allConversations[index] = { ...selectedConversation, ...updates };
+      const updated = { ...selectedConversation, ...updates };
+      _state.allConversations = [
+        ..._state.allConversations.slice(0, index),
+        updated,
+        ..._state.allConversations.slice(index + 1),
+      ];
       if (_state.selectedChatId === conversation.id) {
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
       }

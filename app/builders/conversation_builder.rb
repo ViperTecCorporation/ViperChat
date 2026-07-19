@@ -14,7 +14,9 @@ class ConversationBuilder
   end
 
   def create_new_conversation
-    ::Conversation.create!(conversation_params)
+    conversation = ::Conversation.create!(conversation_params)
+    auto_assign_kanban_stage(conversation)
+    conversation
   end
 
   def conversation_params
@@ -36,5 +38,29 @@ class ConversationBuilder
       assignee_id: params[:assignee_id],
       team_id: params[:team_id]
     }.merge(status)
+  end
+
+  def auto_assign_kanban_stage(conversation)
+    label = conversation.account.labels.find_by(title: '_kanban_config')
+    return unless label&.description&.start_with?('[KANBAN_CONFIG]')
+
+    config = JSON.parse(label.description.delete_prefix('[KANBAN_CONFIG]'))
+    pipelines = config['pipelines']
+    return unless pipelines.is_a?(Array)
+
+    pipelines.each do |pipeline|
+      next unless pipeline.dig('automations', 'auto_create')
+
+      inboxes = pipeline['inboxes'] || []
+      next if inboxes.any? && !inboxes.include?(conversation.inbox_id)
+
+      stages = pipeline['stages'] || []
+      next if stages.empty?
+
+      conversation.update!(kanban_stage: stages.first['id'])
+      break
+    end
+  rescue JSON::ParserError
+    nil
   end
 end

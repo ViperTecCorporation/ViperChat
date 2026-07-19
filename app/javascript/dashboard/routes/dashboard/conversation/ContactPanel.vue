@@ -25,6 +25,7 @@ import ShopifyOrdersList from 'dashboard/components/widgets/conversation/Shopify
 import SidebarActionsHeader from 'dashboard/components-next/SidebarActionsHeader.vue';
 import LinearIssuesList from 'dashboard/components/widgets/conversation/linear/IssuesList.vue';
 import LinearSetupCTA from 'dashboard/components/widgets/conversation/linear/LinearSetupCTA.vue';
+import ConversationSidebarKanban from '../../components/widgets/conversation/ConversationSidebarKanban.vue';
 
 const props = defineProps({
   conversationId: {
@@ -189,6 +190,28 @@ onMounted(() => {
               <ConversationAction
                 :conversation-id="conversationId"
                 :inbox-id="inboxId"
+              />
+            </AccordionItem>
+          </div>
+          <div
+            v-else-if="
+              shouldShowSidebarItem(element) &&
+              element.name === 'kanban_pipeline'
+            "
+          >
+            <AccordionItem
+              :title="
+                $t('KANBAN.SIDEBAR.SECTION_TITLE')
+              "
+              :is-open="isContactSidebarItemOpen('is_kanban_pipeline_open')"
+              compact
+              @toggle="
+                value =>
+                  toggleSidebarUIState('is_kanban_pipeline_open', value)
+              "
+            >
+              <ConversationSidebarKanban
+                :conversation-id="conversationId"
               />
             </AccordionItem>
           </div>

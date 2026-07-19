@@ -458,13 +458,13 @@ onUnmounted(() => {
             {{ props.conversation.meta?.sender?.name || 'Cliente' }}
           </span>
 
-          <!-- Channel Pill (lowercase and dot badge, Image 1 Style) -->
+          <!-- Channel Pill (icon + name) -->
           <div v-if="channelMeta" class="flex items-center gap-1 mt-0.5">
             <span
               :class="channelMeta.color"
-              class="flex items-center gap-1 text-[10px] font-semibold opacity-85"
+              class="flex items-center gap-1.5 text-[10px] font-semibold opacity-85"
             >
-              <span class="size-1.5 rounded-full bg-current shrink-0" />
+              <Icon :icon="channelMeta.icon" class="size-3 shrink-0" />
               <span>{{ channelMeta.name.toLowerCase() }}</span>
             </span>
           </div>
@@ -479,7 +479,11 @@ onUnmounted(() => {
         >
           <Thumbnail
             v-if="props.conversation.meta?.assignee"
-            :src="props.conversation.meta?.assignee?.thumbnail"
+            :src="
+              props.conversation.meta?.assignee?.thumbnail ||
+              props.conversation.meta?.assignee?.avatar_url ||
+              ''
+            "
             :username="props.conversation.meta?.assignee?.name || 'Agente'"
             size="22px"
             class="shrink-0 ring-2 ring-slate-950 rounded-full"
@@ -488,10 +492,10 @@ onUnmounted(() => {
           <!-- Unassigned Placeholder -->
           <div
             v-else
-            class="size-[22px] rounded-full bg-slate-950 flex items-center justify-center border border-dashed border-slate-800 shrink-0 cursor-pointer hover:border-slate-600 transition-colors"
+            class="size-[22px] rounded-full bg-slate-950 flex items-center justify-center border border-dashed border-slate-700 shrink-0 cursor-pointer hover:border-slate-500 transition-colors"
             :title="t('KANBAN.CARD.NO_ASSIGNEE')"
           >
-            <Icon icon="i-lucide-user" class="text-slate-600 size-2.5" />
+            <Icon icon="i-lucide-user-round" class="text-slate-600 size-3" />
           </div>
         </div>
 
