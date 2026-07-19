@@ -25,7 +25,7 @@ import ShopifyOrdersList from 'dashboard/components/widgets/conversation/Shopify
 import SidebarActionsHeader from 'dashboard/components-next/SidebarActionsHeader.vue';
 import LinearIssuesList from 'dashboard/components/widgets/conversation/linear/IssuesList.vue';
 import LinearSetupCTA from 'dashboard/components/widgets/conversation/linear/LinearSetupCTA.vue';
-import ConversationSidebarKanban from '../../components/widgets/conversation/ConversationSidebarKanban.vue';
+import ConversationSidebarKanban from 'dashboard/components/widgets/conversation/ConversationSidebarKanban.vue';
 
 const props = defineProps({
   conversationId: {
