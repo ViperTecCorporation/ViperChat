@@ -214,28 +214,43 @@ const userPermissions = computed(() => {
 });
 
 const assigneeTabItems = computed(() => {
-  return filterItemsByPermission(
+  const items = filterItemsByPermission(
     ASSIGNEE_TYPE_TAB_PERMISSIONS,
     userPermissions.value,
     item => item.permissions
-  )
-    .filter(({ key }) => {
-      if (!isWaitingConversationsDefaultEnabled.value && key === 'waiting') {
-        return false;
-      }
-      if (hideAllChatsForAgents.value && key === 'all') {
-        return false;
-      }
-      if (hideUnassignedForAgents.value && key === 'unassigned') {
-        return false;
-      }
-      return true;
-    })
-    .map(({ key, count: countKey }) => ({
+  ).filter(({ key }) => {
+    if (!isWaitingConversationsDefaultEnabled.value && key === 'waiting') {
+      return false;
+    }
+    if (hideAllChatsForAgents.value && key === 'all') {
+      return false;
+    }
+    if (hideUnassignedForAgents.value && key === 'unassigned') {
+      return false;
+    }
+    return true;
+  });
+
+  if (isWaitingConversationsDefaultEnabled.value) {
+    const all = items.find(i => i.key === 'all');
+    const waiting = items.find(i => i.key === 'waiting');
+    const rest = items.filter(i => i.key !== 'all' && i.key !== 'waiting');
+    const reordered = [];
+    if (all) reordered.push(all);
+    if (waiting) reordered.push(waiting);
+    reordered.push(...rest);
+    return reordered.map(({ key, count: countKey }) => ({
       key,
       name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
       count: conversationStats.value[countKey] || 0,
     }));
+  }
+
+  return items.map(({ key, count: countKey }) => ({
+    key,
+    name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
+    count: conversationStats.value[countKey] || 0,
+  }));
 });
 
 const showAssigneeInConversationCard = computed(() => {

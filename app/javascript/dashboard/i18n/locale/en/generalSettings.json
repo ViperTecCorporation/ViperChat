@@ -122,8 +122,8 @@
         "CUSTOM": "Choose your color"
       },
       "WAITING_CONVERSATIONS_SECTION": {
-        "TITLE": "Waiting conversations",
-        "NOTE": "Open conversations that are waiting for a reply in the Waiting tab by default."
+        "TITLE": "Enable Unattended tab in the top bar",
+        "NOTE": "Shows conversations waiting for a reply in the top bar and reorganizes the priority tab order."
       },
       "AUTO_RESOLVE_DURATION": {
         "LABEL": "Inactivity duration for resolution",

@@ -122,8 +122,8 @@
         "CUSTOM": "Escolha sua cor"
       },
       "WAITING_CONVERSATIONS_SECTION": {
-        "TITLE": "Conversas aguardando",
-        "NOTE": "Abrir automaticamente as conversas que estão aguardando resposta na aba Aguardando."
+        "TITLE": "Habilitar aba de Não Atendidas na barra superior",
+        "NOTE": "Exibe as conversas que estão aguardando resposta na barra superior e reorganiza a ordem das abas prioritárias."
       },
       "AUTO_RESOLVE_DURATION": {
         "LABEL": "Tempo de inatividade para resolução",
