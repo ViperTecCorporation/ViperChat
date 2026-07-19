@@ -5,6 +5,7 @@ import { useStore } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
 
 const props = defineProps({
@@ -69,14 +70,14 @@ onMounted(() => {
     agents.value = Array.isArray(props.pipeline.agents)
       ? [...props.pipeline.agents]
       : [];
+    const rawAutomations = props.pipeline.automations || {};
     automations.value = {
-      auto_create: false,
-      auto_create_skip_agent: false,
-      auto_assign_agent: false,
-      auto_assign_conversation: false,
-      auto_resolve_on_won_lost: false,
-      auto_win_on_resolve: false,
-      ...(props.pipeline.automations || {}),
+      auto_create: !!rawAutomations.auto_create,
+      auto_create_skip_agent: !!rawAutomations.auto_create_skip_agent,
+      auto_assign_agent: !!rawAutomations.auto_assign_agent,
+      auto_assign_conversation: !!rawAutomations.auto_assign_conversation,
+      auto_resolve_on_won_lost: !!rawAutomations.auto_resolve_on_won_lost,
+      auto_win_on_resolve: !!rawAutomations.auto_win_on_resolve,
     };
   } else {
     // New pipeline
@@ -550,19 +551,7 @@ const handleSave = () => {
               <div
                 class="flex items-start gap-4 p-4 rounded-xl border border-slate-800 bg-slate-950/20"
               >
-                <!-- Toggle Switch -->
-                <label
-                  class="relative inline-flex items-center cursor-pointer mt-0.5 shrink-0"
-                >
-                  <input
-                    v-model="automations.auto_create"
-                    type="checkbox"
-                    class="sr-only peer"
-                  />
-                  <div
-                    class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"
-                  />
-                </label>
+                <Switch v-model="automations.auto_create" />
                 <div class="space-y-1.5 flex-1 min-w-0">
                   <label
                     class="text-sm font-medium text-slate-200 cursor-pointer block"
@@ -631,18 +620,7 @@ const handleSave = () => {
               <div
                 class="flex items-start gap-4 p-4 rounded-xl border border-slate-800 bg-slate-950/20"
               >
-                <label
-                  class="relative inline-flex items-center cursor-pointer mt-0.5 shrink-0"
-                >
-                  <input
-                    v-model="automations.auto_create_skip_agent"
-                    type="checkbox"
-                    class="sr-only peer"
-                  />
-                  <div
-                    class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"
-                  />
-                </label>
+                <Switch v-model="automations.auto_create_skip_agent" />
                 <div class="space-y-1.5 flex-1 min-w-0">
                   <label
                     class="text-sm font-medium text-slate-200 cursor-pointer block"
@@ -659,18 +637,7 @@ const handleSave = () => {
               <div
                 class="flex items-start gap-4 p-4 rounded-xl border border-slate-800 bg-slate-950/20"
               >
-                <label
-                  class="relative inline-flex items-center cursor-pointer mt-0.5 shrink-0"
-                >
-                  <input
-                    v-model="automations.auto_assign_agent"
-                    type="checkbox"
-                    class="sr-only peer"
-                  />
-                  <div
-                    class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"
-                  />
-                </label>
+                <Switch v-model="automations.auto_assign_agent" />
                 <div class="space-y-1.5 flex-1 min-w-0">
                   <label
                     class="text-sm font-medium text-slate-200 cursor-pointer block"
@@ -756,19 +723,7 @@ const handleSave = () => {
               <div
                 class="flex items-start gap-4 p-4 rounded-xl border border-slate-800 bg-slate-950/20"
               >
-                <!-- Toggle Switch -->
-                <label
-                  class="relative inline-flex items-center cursor-pointer mt-0.5 shrink-0"
-                >
-                  <input
-                    v-model="automations.auto_assign_conversation"
-                    type="checkbox"
-                    class="sr-only peer"
-                  />
-                  <div
-                    class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"
-                  />
-                </label>
+                <Switch v-model="automations.auto_assign_conversation" />
                 <div class="space-y-1.5 flex-1 min-w-0">
                   <label
                     class="text-sm font-medium text-slate-200 cursor-pointer block"
@@ -785,19 +740,7 @@ const handleSave = () => {
               <div
                 class="flex items-start gap-4 p-4 rounded-xl border border-slate-800 bg-slate-950/20"
               >
-                <!-- Toggle Switch -->
-                <label
-                  class="relative inline-flex items-center cursor-pointer mt-0.5 shrink-0"
-                >
-                  <input
-                    v-model="automations.auto_resolve_on_won_lost"
-                    type="checkbox"
-                    class="sr-only peer"
-                  />
-                  <div
-                    class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"
-                  />
-                </label>
+                <Switch v-model="automations.auto_resolve_on_won_lost" />
                 <div class="space-y-1.5 flex-1 min-w-0">
                   <label
                     class="text-sm font-medium text-slate-200 cursor-pointer block"
@@ -814,19 +757,7 @@ const handleSave = () => {
               <div
                 class="flex items-start gap-4 p-4 rounded-xl border border-slate-800 bg-slate-950/20"
               >
-                <!-- Toggle Switch -->
-                <label
-                  class="relative inline-flex items-center cursor-pointer mt-0.5 shrink-0"
-                >
-                  <input
-                    v-model="automations.auto_win_on_resolve"
-                    type="checkbox"
-                    class="sr-only peer"
-                  />
-                  <div
-                    class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"
-                  />
-                </label>
+                <Switch v-model="automations.auto_win_on_resolve" />
                 <div class="space-y-1.5 flex-1 min-w-0">
                   <label
                     class="text-sm font-medium text-slate-200 cursor-pointer block"
