@@ -25,6 +25,10 @@ export default {
       type: Function,
       default: () => {},
     },
+    onSchedule: {
+      type: Function,
+      default: () => {},
+    },
     sendButtonText: {
       type: String,
       default: '',
@@ -251,7 +255,7 @@ export default {
     },
     showMessageSignatureButton() {
       if (this.isEditorDisabled) return false;
-      return !this.isOnPrivateNote;
+      return !this.isOnPrivateNote && !this.isAUnoapiChannel;
     },
     showEmojiButton() {
       return !this.isEditorDisabled && !this.hideEmojiAndStickerButtons;
@@ -272,6 +276,8 @@ export default {
       );
     },
     sendWithSignature() {
+      if (this.isAUnoapiChannel) return false;
+
       return this.fetchSignatureFlagFromUISettings(
         this.signaturePreferenceChannel || this.channelType,
         this.signatureEnabledByDefault
@@ -452,7 +458,18 @@ export default {
     </div>
     <div class="right-wrap">
       <NextButton
-        :label="sendButtonText"
+        v-if="!isNote && inbox.channel_type === 'Channel::Whatsapp'"
+        icon="i-lucide-calendar-clock"
+        sm
+        slate
+        faded
+        :disabled="isSendDisabled"
+        @click="onSchedule"
+      />
+      <NextButton
+        v-tooltip.top-end="sendButtonText"
+        icon="i-lucide-send"
+        :aria-label="sendButtonText"
         type="submit"
         sm
         :color="isNote ? 'amber' : 'blue'"
@@ -470,7 +487,7 @@ export default {
 }
 
 .right-wrap {
-  @apply flex;
+  @apply flex gap-2;
 }
 
 :deep(.file-uploads) {

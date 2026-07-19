@@ -29,6 +29,16 @@ class NotificationSetting < ApplicationRecord
 
   EMAIL_NOTIFICATION_FLAGS = ::Notification::NOTIFICATION_TYPES.transform_keys { |key| "email_#{key}".to_sym }.invert.freeze
   PUSH_NOTIFICATION_FLAGS = ::Notification::NOTIFICATION_TYPES.transform_keys { |key| "push_#{key}".to_sym }.invert.freeze
+  DEFAULT_EMAIL_FLAGS = [].freeze
+  DEFAULT_PUSH_FLAGS = %i[
+    push_conversation_assignment
+    push_conversation_mention
+    push_assigned_conversation_new_message
+    push_participating_conversation_new_message
+    push_sla_missed_first_response
+    push_sla_missed_next_response
+    push_sla_missed_resolution
+  ].freeze
 
   has_flags EMAIL_NOTIFICATION_FLAGS.merge(column: 'email_flags').merge(DEFAULT_QUERY_SETTING)
   has_flags PUSH_NOTIFICATION_FLAGS.merge(column: 'push_flags').merge(DEFAULT_QUERY_SETTING)

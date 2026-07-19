@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_18_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_19_000001) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1397,6 +1397,59 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_18_000000) do
     t.index ["account_id", "metric", "date"], name: "index_rollup_timeseries"
   end
 
+  create_table "scheduled_message_items", force: :cascade do |t|
+    t.bigint "scheduled_message_id", null: false
+    t.bigint "message_id"
+    t.integer "position", null: false
+    t.integer "status", default: 0, null: false
+    t.text "content"
+    t.string "content_type", default: "text", null: false
+    t.jsonb "content_attributes", default: {}, null: false
+    t.jsonb "attachment_blob_ids", default: [], null: false
+    t.boolean "voice_message", default: false, null: false
+    t.text "error_message"
+    t.datetime "dispatched_at"
+    t.datetime "sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_scheduled_message_items_on_message_id"
+    t.index ["scheduled_message_id", "position"], name: "idx_scheduled_message_items_position", unique: true
+    t.index ["scheduled_message_id"], name: "index_scheduled_message_items_on_scheduled_message_id"
+  end
+
+  create_table "scheduled_messages", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "target_conversation_id"
+    t.bigint "contact_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "label_id", null: false
+    t.bigint "created_by_id", null: false
+    t.bigint "sender_id", null: false
+    t.bigint "message_id"
+    t.datetime "scheduled_at", null: false
+    t.integer "status", default: 0, null: false
+    t.text "reason"
+    t.text "content"
+    t.string "content_type"
+    t.jsonb "content_attributes", default: {}, null: false
+    t.jsonb "attachment_blob_ids", default: [], null: false
+    t.text "error_message"
+    t.datetime "sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "scheduled_at", "status"], name: "idx_on_account_id_scheduled_at_status_49ac97f35a"
+    t.index ["account_id"], name: "index_scheduled_messages_on_account_id"
+    t.index ["contact_id"], name: "index_scheduled_messages_on_contact_id"
+    t.index ["conversation_id"], name: "index_scheduled_messages_on_conversation_id"
+    t.index ["created_by_id"], name: "index_scheduled_messages_on_created_by_id"
+    t.index ["inbox_id"], name: "index_scheduled_messages_on_inbox_id"
+    t.index ["label_id"], name: "index_scheduled_messages_on_label_id"
+    t.index ["message_id"], name: "index_scheduled_messages_on_message_id"
+    t.index ["sender_id"], name: "index_scheduled_messages_on_sender_id"
+    t.index ["target_conversation_id"], name: "index_scheduled_messages_on_target_conversation_id"
+  end
+
   create_table "sla_events", force: :cascade do |t|
     t.bigint "applied_sla_id", null: false
     t.bigint "conversation_id", null: false
@@ -1585,6 +1638,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_18_000000) do
   add_foreign_key "group_contacts", "contacts", on_delete: :cascade
   add_foreign_key "group_contacts", "conversations", on_delete: :cascade
   add_foreign_key "inboxes", "portals"
+  add_foreign_key "scheduled_message_items", "messages"
+  add_foreign_key "scheduled_message_items", "scheduled_messages"
+  add_foreign_key "scheduled_messages", "accounts"
+  add_foreign_key "scheduled_messages", "contacts"
+  add_foreign_key "scheduled_messages", "conversations"
+  add_foreign_key "scheduled_messages", "conversations", column: "target_conversation_id"
+  add_foreign_key "scheduled_messages", "inboxes"
+  add_foreign_key "scheduled_messages", "labels"
+  add_foreign_key "scheduled_messages", "messages"
+  add_foreign_key "scheduled_messages", "users", column: "created_by_id"
+  add_foreign_key "scheduled_messages", "users", column: "sender_id"
   add_foreign_key "user_sessions", "users"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").

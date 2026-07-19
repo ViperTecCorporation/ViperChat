@@ -136,6 +136,7 @@ Rails.application.routes.draw do
             post :duplicate, on: :member
           end
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
+          resources :scheduled_messages, only: [:index, :create, :update, :destroy]
           resources :whatsapp_stickers, only: [:index, :create, :destroy] do
             delete :bulk_destroy, on: :collection
           end

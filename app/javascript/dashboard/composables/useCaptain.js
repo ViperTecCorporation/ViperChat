@@ -16,7 +16,8 @@ import { CAPTAIN_ERROR_TYPES } from 'dashboard/composables/captain/constants';
 export function useCaptain() {
   const store = useStore();
   const { t } = useI18n();
-  const { isCloudFeatureEnabled, currentAccount } = useAccount();
+  const { isCloudFeatureEnabled, isOnChatwootCloud, currentAccount } =
+    useAccount();
   const { isEnterprise } = useConfig();
   const uiFlags = useMapGetter('accounts/getUIFlags');
   const currentChat = useMapGetter('getSelectedChat');
@@ -58,7 +59,7 @@ export function useCaptain() {
   const isFetchingLimits = computed(() => uiFlags.value.isFetchingLimits);
 
   const fetchLimits = () => {
-    if (isEnterprise) {
+    if (isEnterprise && isOnChatwootCloud.value) {
       store.dispatch('accounts/limits');
     }
   };

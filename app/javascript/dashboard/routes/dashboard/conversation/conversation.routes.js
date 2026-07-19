@@ -2,6 +2,7 @@
 import { frontendURL } from '../../../helper/URLHelper';
 import store from '../../../store';
 import ConversationView from './ConversationView.vue';
+import ScheduledMessages from './ScheduledMessages.vue';
 
 const CONVERSATION_PERMISSIONS = [
   'administrator',
@@ -44,6 +45,12 @@ const redirectFolderConversationIfUnavailable = async (to, _from, next) => {
 
 export default {
   routes: [
+    {
+      path: frontendURL('accounts/:accountId/conversations/scheduled'),
+      name: 'scheduled_messages',
+      meta: { permissions: CONVERSATION_PERMISSIONS },
+      component: ScheduledMessages,
+    },
     {
       path: frontendURL('accounts/:accountId/dashboard'),
       name: 'home',
