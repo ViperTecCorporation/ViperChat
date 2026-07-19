@@ -346,37 +346,6 @@ const menuItems = computed(() => {
       },
     },
     {
-      name: 'Kanban',
-      label: t('SIDEBAR.KANBAN'),
-      icon: 'i-lucide-columns-3',
-      activeOn: ['kanban_dashboard'],
-      children: [
-        {
-          name: 'KanbanOverview',
-          label: 'Visão geral',
-          to: accountScopedRoute('kanban_dashboard'),
-          activeOn: ['kanban_dashboard'],
-        },
-        {
-          name: 'FunnelsHeader',
-          label: 'Funis',
-          icon: h('span', { class: 'i-lucide-equal size-3' }),
-          activeOn: ['kanban_dashboard'],
-          children: kanbanPipelines.value.map(pipeline => ({
-            name: `Pipeline-${pipeline.id}`,
-            label: pipeline.name,
-            description: `Pipeline de ${pipeline.name}`,
-            pipeline: true,
-            to: {
-              name: 'kanban_dashboard',
-              query: { pipeline_id: pipeline.id },
-            },
-            activeOn: ['kanban_dashboard'],
-          })),
-        },
-      ],
-    },
-    {
       name: 'Conversation',
       label: t('SIDEBAR.CONVERSATIONS'),
       icon: 'i-lucide-message-circle',
@@ -464,6 +433,37 @@ const menuItems = computed(() => {
             to: accountScopedRoute('label_conversations', {
               label: label.title,
             }),
+          })),
+        },
+      ],
+    },
+    {
+      name: 'Kanban',
+      label: t('SIDEBAR.KANBAN'),
+      icon: 'i-lucide-columns-3',
+      activeOn: ['kanban_dashboard'],
+      children: [
+        {
+          name: 'KanbanOverview',
+          label: 'Visão geral',
+          to: accountScopedRoute('kanban_dashboard'),
+          activeOn: ['kanban_dashboard'],
+        },
+        {
+          name: 'FunnelsHeader',
+          label: 'Funis',
+          icon: h('span', { class: 'i-lucide-equal size-3' }),
+          activeOn: ['kanban_dashboard'],
+          children: kanbanPipelines.value.map(pipeline => ({
+            name: `Pipeline-${pipeline.id}`,
+            label: pipeline.name,
+            description: `Pipeline de ${pipeline.name}`,
+            pipeline: true,
+            to: {
+              name: 'kanban_dashboard',
+              query: { pipeline_id: pipeline.id },
+            },
+            activeOn: ['kanban_dashboard'],
           })),
         },
       ],
