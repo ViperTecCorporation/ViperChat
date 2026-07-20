@@ -1,10 +1,15 @@
 <script setup>
-import { computed, h } from 'vue';
+import { computed, h, onMounted, ref } from 'vue';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import wootConstants from 'dashboard/constants/globals';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
+import {
+  hasPushPermissions,
+  requestPushPermissions,
+  verifyServiceWorkerExistence,
+} from 'dashboard/helper/pushHelper';
 
 import {
   DropdownContainer,
@@ -21,6 +26,7 @@ const store = useStore();
 const currentUserAvailability = useMapGetter('getCurrentUserAvailability');
 const currentAccountId = useMapGetter('getCurrentAccountId');
 const currentUserAutoOffline = useMapGetter('getCurrentUserAutoOffline');
+const browserPushEnabled = ref(false);
 
 const { isImpersonating } = useImpersonation();
 
@@ -59,6 +65,55 @@ const autoOfflineToggle = computed({
   },
 });
 
+const hasPushAPISupport =
+  'Notification' in window &&
+  'serviceWorker' in navigator &&
+  'PushManager' in window;
+
+const refreshBrowserPushStatus = () => {
+  if (!hasPushAPISupport || !hasPushPermissions()) {
+    browserPushEnabled.value = false;
+    return;
+  }
+
+  verifyServiceWorkerExistence(registration => {
+    registration.pushManager
+      .getSubscription()
+      .then(subscription => {
+        browserPushEnabled.value = Boolean(subscription);
+      })
+      .catch(() => {
+        browserPushEnabled.value = false;
+      });
+  });
+};
+
+const disableBrowserPush = () => {
+  browserPushEnabled.value = false;
+  verifyServiceWorkerExistence(registration => {
+    registration.pushManager
+      .getSubscription()
+      .then(subscription => subscription?.unsubscribe())
+      .catch(() => {});
+  });
+};
+
+const browserPushToggle = computed({
+  get: () => browserPushEnabled.value,
+  set: enabled => {
+    if (!enabled) {
+      disableBrowserPush();
+      return;
+    }
+
+    requestPushPermissions({
+      onSuccess: () => {
+        browserPushEnabled.value = true;
+      },
+    });
+  },
+});
+
 function changeAvailabilityStatus(availability) {
   if (isImpersonating.value) {
     useAlert(t('PROFILE_SETTINGS.FORM.AVAILABILITY.IMPERSONATING_ERROR'));
@@ -73,6 +128,8 @@ function changeAvailabilityStatus(availability) {
     useAlert(t('PROFILE_SETTINGS.FORM.AVAILABILITY.SET_AVAILABILITY_ERROR'));
   }
 }
+
+onMounted(refreshBrowserPushStatus);
 </script>
 
 <template>
@@ -113,6 +170,16 @@ function changeAvailabilityStatus(availability) {
             />
           </DropdownBody>
         </DropdownContainer>
+      </DropdownItem>
+      <DropdownItem v-if="hasPushAPISupport" preserve-open>
+        <div class="flex flex-grow items-center min-w-0 gap-2">
+          <Icon
+            icon="i-lucide-bell"
+            class="flex-shrink-0 size-4 text-n-slate-11"
+          />
+          {{ $t('SIDEBAR.PUSH_NOTIFICATIONS') }}
+        </div>
+        <ToggleSwitch v-model="browserPushToggle" />
       </DropdownItem>
       <DropdownItem>
         <div class="flex-grow min-w-0">

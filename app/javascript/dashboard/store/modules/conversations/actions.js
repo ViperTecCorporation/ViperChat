@@ -426,6 +426,7 @@ const actions = {
         ...response.data,
         status: MESSAGE_STATUS.SENT,
       });
+      commit(types.SET_AGENT_ACTIVITY_TIMESTAMP, { conversationId });
       if (response.data.conversation) {
         commit(types.UPDATE_CONVERSATION, {
           ...response.data.conversation,

@@ -25,6 +25,10 @@ class SendReplyJob < ApplicationJob
     return unless service_class
 
     service_class.new(message: message).perform
+    ScheduledMessages::DeliveryStatusJob.perform_later(message.id) if ScheduledMessageItem.exists?(message_id: message.id)
+  rescue StandardError => e
+    ScheduledMessages::DeliveryStatusService.new(message).failed(e) if message
+    raise
   end
 
   private

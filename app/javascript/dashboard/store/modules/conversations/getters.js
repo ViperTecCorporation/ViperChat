@@ -131,7 +131,20 @@ const getters = {
     return _state.allConversations.filter(conversation => {
       const isWaiting = !!conversation.waiting_since;
       const shouldFilter = applyPageFilters(conversation, activeFilters);
-      return isWaiting && shouldFilter;
+      if (!isWaiting || !shouldFilter) return false;
+
+      const lastActivity = _state.agentActivityTimestamps[conversation.id];
+      if (lastActivity) {
+        const waitingSinceMs = conversation.waiting_since * 1000;
+        if (
+          waitingSinceMs > lastActivity &&
+          Date.now() - waitingSinceMs < 12000
+        ) {
+          return false;
+        }
+      }
+
+      return true;
     });
   },
   getAllStatusChats: (_state, _, __, rootGetters) => activeFilters => {

@@ -213,6 +213,20 @@ const userPermissions = computed(() => {
   return getUserPermissions(currentUser.value, currentAccountId.value);
 });
 
+const filteredWaitingCount = computed(() => {
+  const filters = {
+    assigneeType: wootConstants.ASSIGNEE_TYPE.WAITING,
+    status: activeStatus.value,
+    sortBy: activeSortBy.value,
+    page: 1,
+    inboxId: props.conversationInbox || undefined,
+    labels: props.label ? [props.label] : undefined,
+    teamId: props.teamId || undefined,
+    conversationType: props.conversationType || undefined,
+  };
+  return waitingChatsList.value(filters).length;
+});
+
 const assigneeTabItems = computed(() => {
   const items = filterItemsByPermission(
     ASSIGNEE_TYPE_TAB_PERMISSIONS,
@@ -231,6 +245,11 @@ const assigneeTabItems = computed(() => {
     return true;
   });
 
+  const getCount = (key, countKey) =>
+    key === 'waiting'
+      ? filteredWaitingCount.value
+      : conversationStats.value[countKey] || 0;
+
   if (isWaitingConversationsDefaultEnabled.value) {
     const all = items.find(i => i.key === 'all');
     const waiting = items.find(i => i.key === 'waiting');
@@ -242,14 +261,14 @@ const assigneeTabItems = computed(() => {
     return reordered.map(({ key, count: countKey }) => ({
       key,
       name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
-      count: conversationStats.value[countKey] || 0,
+      count: getCount(key, countKey),
     }));
   }
 
   return items.map(({ key, count: countKey }) => ({
     key,
     name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
-    count: conversationStats.value[countKey] || 0,
+    count: getCount(key, countKey),
   }));
 });
 

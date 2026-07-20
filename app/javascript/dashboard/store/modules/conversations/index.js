@@ -2,7 +2,7 @@ import types from '../../mutation-types';
 import getters, { getSelectedChatConversation } from './getters';
 import actions from './actions';
 import { findPendingMessageIndex } from './helpers';
-import { MESSAGE_STATUS } from 'shared/constants/messages';
+import { MESSAGE_STATUS, MESSAGE_TYPE } from 'shared/constants/messages';
 import wootConstants from 'dashboard/constants/globals';
 import { BUS_EVENTS } from '../../../../shared/constants/busEvents';
 import { emitter } from 'shared/helpers/mitt';
@@ -24,6 +24,7 @@ const state = {
   syncConversationsMessages: {},
   conversationFilters: {},
   copilotAssistant: {},
+  agentActivityTimestamps: {},
 };
 
 const getConversationById = _state => conversationId => {
@@ -112,7 +113,12 @@ export const mutations = {
   [types.SET_CURRENT_CHAT_WINDOW](_state, activeChat) {
     if (activeChat) {
       _state.selectedChatId = activeChat.id;
+      _state.agentActivityTimestamps[activeChat.id] = Date.now();
     }
+  },
+
+  [types.SET_AGENT_ACTIVITY_TIMESTAMP](_state, { conversationId }) {
+    _state.agentActivityTimestamps[conversationId] = Date.now();
   },
 
   [types.ASSIGN_AGENT](_state, { conversationId, assignee }) {
@@ -296,8 +302,12 @@ export const mutations = {
     } else {
       chat.messages.push(message);
       chat.timestamp = message.created_at;
+      chat.last_activity_at = message.created_at;
       const { conversation: { unread_count: unreadCount = 0 } = {} } = message;
       chat.unread_count = unreadCount;
+      if (message.message_type !== MESSAGE_TYPE.ACTIVITY) {
+        chat.last_non_activity_message = message;
+      }
       if (selectedChatId === conversationId) {
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
       }

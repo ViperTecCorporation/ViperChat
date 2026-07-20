@@ -1,5 +1,6 @@
 <script>
 import { defineAsyncComponent, useTemplateRef } from 'vue';
+import { DirectUpload } from 'activestorage';
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -11,6 +12,9 @@ import AttachmentPreview from 'dashboard/components/widgets/AttachmentsPreview.v
 import ReplyTopPanel from 'dashboard/components/widgets/WootWriter/ReplyTopPanel.vue';
 import ReplyEmailHead from './ReplyEmailHead.vue';
 import ReplyBottomPanel from 'dashboard/components/widgets/WootWriter/ReplyBottomPanel.vue';
+import Modal from 'dashboard/components/Modal.vue';
+import NextButton from 'dashboard/components-next/button/Button.vue';
+import LabelDropdown from 'shared/components/ui/label/LabelDropdown.vue';
 import CopilotReplyBottomPanel from 'dashboard/components/widgets/WootWriter/CopilotReplyBottomPanel.vue';
 import ArticleSearchPopover from 'dashboard/routes/dashboard/helpcenter/components/ArticleSearch/SearchPopover.vue';
 import CopilotEditorSection from './CopilotEditorSection.vue';
@@ -23,6 +27,8 @@ import ContactAttachmentModal from 'dashboard/components-next/Conversation/Conta
 import { REPLY_EDITOR_MODES } from 'dashboard/components/widgets/WootWriter/constants';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import AudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder.vue';
+import ScheduledMessageSequenceEditor from 'dashboard/routes/dashboard/conversation/components/ScheduledMessageSequenceEditor.vue';
+import { setDirectUploadAuthHeaders } from 'dashboard/helper/directUploadsHelper';
 import { AUDIO_FORMATS } from 'shared/constants/messages';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { CMD_AI_ASSIST } from 'dashboard/helper/commandbar/events';
@@ -33,10 +39,16 @@ import {
 import WhatsappTemplates from './WhatsappTemplates/Modal.vue';
 import ContentTemplates from './ContentTemplates/ContentTemplatesModal.vue';
 import conversationApi from 'dashboard/api/inbox/conversation';
+import scheduledMessagesApi from 'dashboard/api/scheduledMessages';
 import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
-import { trimContent, debounce, getRecipients } from '@chatwoot/utils';
+import {
+  trimContent,
+  debounce,
+  getRecipients,
+  getAllowedFileTypesByChannel,
+} from '@chatwoot/utils';
 import wootConstants from 'dashboard/constants/globals';
 import {
   extractQuotedEmailText,
@@ -56,7 +68,10 @@ import {
 } from 'dashboard/helper/editorHelper';
 import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
-import { isFileTypeAllowedForChannel } from 'shared/helpers/FileHelper';
+import {
+  checkFileSizeLimit,
+  isFileTypeAllowedForChannel,
+} from 'shared/helpers/FileHelper';
 
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
@@ -78,6 +93,9 @@ export default {
     ReplyBoxBanner,
     EmojiInput,
     MessageSignatureMissingAlert,
+    Modal,
+    NextButton,
+    LabelDropdown,
     ReplyBottomPanel,
     ReplyEmailHead,
     ReplyToMessage,
@@ -87,6 +105,7 @@ export default {
     WhatsappTemplates,
     WootMessageEditor,
     QuotedEmailPreview,
+    ScheduledMessageSequenceEditor,
     StickerPickerDialog,
     CopilotEditorSection,
     CopilotReplyBottomPanel,
@@ -145,6 +164,21 @@ export default {
       showContentTemplatesModal: false,
       showContactAttachmentModal: false,
       showStickerPicker: false,
+      showScheduleModal: false,
+      scheduledAt: '',
+      scheduledLabelId: '',
+      scheduledReason: '',
+      scheduledSenderId: '',
+      showScheduleLabelDropdown: false,
+      scheduledItems: [],
+      scheduleUploadCount: 0,
+      scheduleCopy: {
+        dateTime: 'Data e hora',
+        label: 'Etiqueta',
+        agent: 'Operador',
+        reason: 'Motivo',
+        optional: '(opcional)',
+      },
       updateEditorSelectionWith: '',
       undefinedVariableMessage: '',
       showMentions: false,
@@ -168,11 +202,42 @@ export default {
       currentUser: 'getCurrentUser',
       lastEmail: 'getLastEmailInSelectedChat',
       globalConfig: 'globalConfig/get',
+      accountLabels: 'labels/getLabels',
     }),
     currentContact() {
       const senderId = this.currentChat?.meta?.sender?.id;
       if (!senderId) return {};
       return this.$store.getters['contacts/getContact'](senderId);
+    },
+    isAdministrator() {
+      const account = this.currentUser.accounts?.find(
+        item => item.id === this.currentChat.account_id
+      );
+      return account?.role === 'administrator';
+    },
+    scheduleAgents() {
+      return this.$store.getters['agents/getAgents'] || [];
+    },
+    selectedScheduleLabel() {
+      return this.accountLabels.find(
+        label => label.id === Number(this.scheduledLabelId)
+      );
+    },
+    scheduleAllowedFileTypes() {
+      return getAllowedFileTypesByChannel({
+        channelType: this.inbox?.channel_type,
+        medium: this.inbox?.medium,
+      });
+    },
+    isScheduleValid() {
+      return (
+        this.scheduledItems.length >= 1 &&
+        this.scheduledItems.length <= 5 &&
+        this.scheduledItems.every(
+          item => item.content?.trim() || item.attachments?.length
+        ) &&
+        this.scheduleUploadCount === 0
+      );
     },
     canUseGroupMentions() {
       return (
@@ -398,7 +463,12 @@ export default {
       return !!this.messageSignature;
     },
     sendWithSignature() {
-      return this.fetchSignatureFlagFromUISettings(this.channelType);
+      if (this.isAUnoapiChannel) return false;
+
+      return this.fetchSignatureFlagFromUISettings(
+        this.signaturePreferenceChannel,
+        false
+      );
     },
     conversationId() {
       return this.currentChat.id;
@@ -544,6 +614,7 @@ export default {
     // working even if the editor is focussed.
     document.addEventListener('paste', this.onPaste);
     document.addEventListener('keydown', this.handleKeyEvents);
+    document.addEventListener('keydown', this.handleScheduleShortcut);
     this.setCCAndToEmailsFromLastChat();
     this.doAutoSaveDraft = debounce(
       () => {
@@ -570,6 +641,7 @@ export default {
     clearTimeout(this.groupMentionFetchTimeout);
     document.removeEventListener('paste', this.onPaste);
     document.removeEventListener('keydown', this.handleKeyEvents);
+    document.removeEventListener('keydown', this.handleScheduleShortcut);
     emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
     emitter.off(BUS_EVENTS.INSERT_INTO_NORMAL_EDITOR, this.addIntoEditor);
     emitter.off(
@@ -579,6 +651,16 @@ export default {
     emitter.off(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   methods: {
+    handleScheduleShortcut(event) {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === 's' &&
+        this.inbox?.channel_type === 'Channel::Whatsapp'
+      ) {
+        event.preventDefault();
+        if (!this.isReplyButtonDisabled) this.openScheduleModal();
+      }
+    },
     groupMentionSearchTerm(message = this.message) {
       const match = message.match(/(?:^|\s)@([^\s@]*)$/);
       return match ? match[1] : '';
@@ -932,6 +1014,116 @@ export default {
         inboxId: this.inboxId,
       });
       this.showStickerPicker = true;
+    },
+    openScheduleModal() {
+      this.scheduledAt = this.toDatetimeLocal(new Date(Date.now() + 300000));
+      this.scheduledLabelId = '';
+      this.scheduledReason = '';
+      this.scheduledSenderId = this.currentUser.id;
+      this.showScheduleLabelDropdown = false;
+      this.scheduleUploadCount = 0;
+      this.scheduledItems = [
+        {
+          content: this.message,
+          content_type: 'text',
+          content_attributes: {},
+          voice_message: this.attachedFiles.some(file => file?.isRecordedAudio),
+          attachments: this.attachedFiles
+            .map(file => ({
+              signedId:
+                file?.blobSignedId || file?.blob?.signed_id || file?.signed_id,
+              name: file?.resource?.filename || file?.name || 'Anexo',
+              voiceMessage: Boolean(file?.isRecordedAudio),
+            }))
+            .filter(file => file.signedId),
+        },
+      ];
+      this.showScheduleModal = true;
+    },
+    selectScheduleLabel(label) {
+      this.scheduledLabelId = label.id;
+      this.showScheduleLabelDropdown = false;
+    },
+    toDatetimeLocal(date) {
+      const timezoneOffset = date.getTimezoneOffset() * 60000;
+      return new Date(date.getTime() - timezoneOffset)
+        .toISOString()
+        .slice(0, 16);
+    },
+    async createScheduledMessage() {
+      if (!this.scheduledLabelId || !this.scheduledAt || !this.isScheduleValid)
+        return;
+      try {
+        await scheduledMessagesApi.create({
+          scheduled_message: {
+            scheduled_at: new Date(this.scheduledAt).toISOString(),
+            label_id: this.scheduledLabelId,
+            reason: this.scheduledReason,
+            sender_id: this.scheduledSenderId,
+            messages: this.scheduledItems.map(item => ({
+              content: item.content,
+              content_type: item.content_type || 'text',
+              content_attributes: item.content_attributes || {},
+              voice_message: Boolean(item.voice_message),
+              attachment_blob_ids: item.attachments.map(
+                attachment => attachment.signedId
+              ),
+            })),
+          },
+          conversation_id: this.currentChat.id,
+        });
+        this.clearMessage();
+        this.attachedFiles = [];
+        this.showScheduleModal = false;
+        useAlert('Mensagem agendada');
+      } catch (error) {
+        useAlert(
+          error?.response?.data?.error || 'Não foi possível agendar a mensagem'
+        );
+      }
+    },
+    onScheduleFileUpload({ index, file, voiceMessage }) {
+      if (!file?.file) return;
+      const maxSizeMB = this.maxSizeFor(file.file.type);
+      if (!checkFileSizeLimit(file, maxSizeMB)) {
+        this.alertOverLimit(maxSizeMB);
+        return;
+      }
+
+      this.scheduleUploadCount += 1;
+      const upload = new DirectUpload(
+        file.file,
+        `/api/v1/accounts/${this.accountId}/conversations/${this.currentChat.id}/direct_uploads`,
+        {
+          directUploadWillCreateBlobWithXHR: xhr => {
+            setDirectUploadAuthHeaders(xhr);
+          },
+        }
+      );
+      upload.create((error, blob) => {
+        this.scheduleUploadCount -= 1;
+        if (error) {
+          useAlert(error);
+          return;
+        }
+        const item = this.scheduledItems[index];
+        if (!item) return;
+        const attachment = {
+          signedId: blob.signed_id,
+          name: blob.filename || file.name,
+          voiceMessage,
+        };
+        const attachments = [...item.attachments, attachment];
+        this.scheduledItems = this.scheduledItems.map((current, itemIndex) =>
+          itemIndex === index
+            ? {
+                ...current,
+                attachments,
+                voice_message: current.voice_message || Boolean(voiceMessage),
+              }
+            : current
+        );
+      });
     },
     hideStickerPickerModal() {
       // eslint-disable-next-line no-console
@@ -1592,7 +1784,8 @@ export default {
           enable-variables
           :variables="messageVariables"
           :signature="messageSignature"
-          allow-signature
+          :allow-signature="!isAUnoapiChannel"
+          :signature-preference-channel="signaturePreferenceChannel"
           :enable-group-mentions="canUseGroupMentions"
           :group-mention-contacts="groupMentionContacts"
           :channel-type="channelType"
@@ -1669,6 +1862,7 @@ export default {
         :enable-whats-app-templates="showWhatsappTemplates"
         :enable-content-templates="showContentTemplates"
         :inbox="inbox"
+        :signature-preference-channel="signaturePreferenceChannel"
         :is-on-private-note="isOnPrivateNote"
         :is-recording-audio="isRecordingAudio"
         :is-send-disabled="isReplyButtonDisabled"
@@ -1676,6 +1870,7 @@ export default {
         :is-editor-disabled="isEditorDisabled"
         :on-file-upload="onFileUpload"
         :on-send="onSendReply"
+        :on-schedule="openScheduleModal"
         :conversation-type="conversationType"
         :recording-audio-duration-text="recordingAudioDurationText"
         :recording-audio-state="recordingAudioState"
@@ -1706,6 +1901,129 @@ export default {
       @on-send="onSendWhatsAppReply"
       @cancel="hideWhatsappTemplatesModal"
     />
+    <Modal
+      v-model:show="showScheduleModal"
+      :on-close="() => (showScheduleModal = false)"
+    >
+      <woot-modal-header
+        header-title="Agendar mensagem"
+        header-content="Escolha quando esta mensagem WhatsApp será enviada."
+      />
+      <form
+        class="flex flex-col gap-5 p-8 pt-4 max-h-[78vh] overflow-y-auto"
+        @submit.prevent="createScheduledMessage"
+      >
+        <label
+          class="flex flex-col gap-1.5 text-sm font-medium text-n-slate-12"
+        >
+          {{ scheduleCopy.dateTime }}
+          <input
+            v-model="scheduledAt"
+            :min="toDatetimeLocal(new Date())"
+            type="datetime-local"
+            required
+            class="w-full h-10 px-3 rounded-lg border border-n-weak bg-n-alpha-2 text-n-slate-12 outline-none focus:border-n-brand"
+          />
+        </label>
+        <div class="flex flex-col gap-1.5 text-sm font-medium text-n-slate-12">
+          {{ scheduleCopy.label }}
+          <div class="relative">
+            <button
+              type="button"
+              class="flex items-center justify-between w-full h-10 gap-2 px-3 text-left rounded-lg border border-n-weak bg-n-alpha-2 text-n-slate-12 hover:bg-n-alpha-3"
+              @click="showScheduleLabelDropdown = !showScheduleLabelDropdown"
+            >
+              <span class="flex items-center gap-2 min-w-0">
+                <span
+                  v-if="selectedScheduleLabel"
+                  class="flex-shrink-0 rounded-sm size-2"
+                  :style="{ backgroundColor: selectedScheduleLabel.color }"
+                />
+                <span class="truncate">
+                  {{ selectedScheduleLabel?.title || 'Selecione uma etiqueta' }}
+                </span>
+              </span>
+              <span class="i-lucide-chevron-down size-4 text-n-slate-10" />
+            </button>
+            <div
+              v-if="showScheduleLabelDropdown"
+              v-on-clickaway="() => (showScheduleLabelDropdown = false)"
+              class="absolute z-50 w-full p-3 mt-1 rounded-lg border shadow-lg border-n-weak bg-n-solid-2"
+            >
+              <LabelDropdown
+                :account-labels="accountLabels"
+                :selected-labels="
+                  selectedScheduleLabel ? [selectedScheduleLabel.title] : []
+                "
+                :allow-creation="isAdministrator"
+                @add="selectScheduleLabel"
+                @remove="scheduledLabelId = ''"
+              />
+            </div>
+          </div>
+        </div>
+        <label
+          v-if="isAdministrator"
+          class="flex flex-col gap-1.5 text-sm font-medium text-n-slate-12"
+        >
+          {{ scheduleCopy.agent }}
+          <select
+            v-model="scheduledSenderId"
+            class="w-full h-10 px-3 rounded-lg border border-n-weak bg-n-alpha-2 text-n-slate-12 outline-none focus:border-n-brand"
+          >
+            <option
+              v-for="agent in scheduleAgents"
+              :key="agent.id"
+              :value="agent.id"
+            >
+              {{ agent.name }}
+            </option>
+          </select>
+        </label>
+        <label
+          class="flex flex-col gap-1.5 text-sm font-medium text-n-slate-12"
+        >
+          {{ scheduleCopy.reason }}
+          <span class="font-normal text-n-slate-11">
+            {{ scheduleCopy.optional }}
+          </span>
+          <textarea
+            v-model="scheduledReason"
+            rows="3"
+            class="w-full px-3 py-2 rounded-lg border resize-none border-n-weak bg-n-alpha-2 text-n-slate-12 outline-none focus:border-n-brand"
+          />
+        </label>
+        <ScheduledMessageSequenceEditor
+          v-model="scheduledItems"
+          rich-editor
+          :audio-record-format="audioRecordFormat"
+          :allowed-file-types="scheduleAllowedFileTypes"
+          :conversation-id="conversationId"
+          :channel-type="channelType"
+          :medium="inbox.medium"
+          :variables="messageVariables"
+          :uploading="scheduleUploadCount > 0"
+          @upload="onScheduleFileUpload"
+        />
+        <div class="flex justify-end gap-2 pt-1">
+          <NextButton
+            type="button"
+            variant="ghost"
+            color="slate"
+            size="sm"
+            label="Cancelar"
+            @click="showScheduleModal = false"
+          />
+          <NextButton
+            type="submit"
+            color="blue"
+            size="sm"
+            label="Agendar mensagem"
+            :disabled="!scheduledAt || !scheduledLabelId || !isScheduleValid"
+          />
+        </div>
+      </form>
+    </Modal>
 
     <StickerPickerDialog
       v-if="showStickerPicker"

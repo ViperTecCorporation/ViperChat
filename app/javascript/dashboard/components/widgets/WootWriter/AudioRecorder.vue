@@ -28,6 +28,7 @@ const isRecording = ref(false);
 const isPlaying = ref(false);
 const hasRecording = ref(false);
 const recordedAudioUrl = ref(null);
+let isUnmounting = false;
 
 const formatTimeProgress = time => {
   const duration = intervalToDuration({ start: 0, end: time });
@@ -97,7 +98,14 @@ const initWaveSurfer = () => {
       });
       if (recordedAudioUrl.value) URL.revokeObjectURL(recordedAudioUrl.value);
       recordedAudioUrl.value = URL.createObjectURL(audioBlob);
-      wavesurfer.value.load(recordedAudioUrl.value);
+      wavesurfer.value.load(recordedAudioUrl.value).catch(error => {
+        // WaveSurfer aborts an in-flight load when the recorder is removed.
+        // That is expected while closing the composer/modal and must not become
+        // an unhandled promise rejection in the browser.
+        if (error?.name !== 'AbortError' && !isUnmounting) {
+          emit('recordError', { error });
+        }
+      });
       emit('finishRecord', {
         name: file.name,
         type: file.type,
@@ -143,12 +151,15 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  isUnmounting = true;
+  if (wavesurfer.value) {
+    wavesurfer.value.destroy();
+    wavesurfer.value = null;
+    record.value = null;
+  }
   if (recordedAudioUrl.value) {
     URL.revokeObjectURL(recordedAudioUrl.value);
     recordedAudioUrl.value = null;
-  }
-  if (wavesurfer.value) {
-    wavesurfer.value.destroy();
   }
 });
 

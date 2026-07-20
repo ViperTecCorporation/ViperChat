@@ -11,6 +11,25 @@ export default defineConfig({
     port: 3036,
     strictPort: true,
     allowedHosts: true,
+    watch: {
+      usePolling: true,
+      interval: 2500,
+      awaitWriteFinish: {
+        stabilityThreshold: 1000,
+        pollInterval: 250,
+      },
+      ignored: [
+        '**/.git/**',
+        '**/node_modules/**',
+        '**/log/**',
+        '**/tmp/**',
+        '**/storage/**',
+        '**/coverage/**',
+        '**/public/packs/**',
+        '**/spec/**',
+        '**/vendor/**',
+      ],
+    },
   },
   css: {
     preprocessorOptions: {
