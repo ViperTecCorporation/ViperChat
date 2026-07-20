@@ -516,6 +516,13 @@ const menuItems = computed(() => {
             }),
           })),
         },
+        {
+          name: 'Scheduled messages',
+          label: 'Agendamentos',
+          icon: 'i-lucide-calendar-clock',
+          to: accountScopedRoute('scheduled_messages'),
+          activeOn: ['scheduled_messages'],
+        },
       ],
     },
     {

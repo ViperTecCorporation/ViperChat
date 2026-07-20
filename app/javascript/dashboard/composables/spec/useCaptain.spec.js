@@ -49,6 +49,7 @@ describe('useCaptain', () => {
     useI18n.mockReturnValue({ t: vi.fn() });
     useAccount.mockReturnValue({
       isCloudFeatureEnabled: vi.fn().mockReturnValue(true),
+      isOnChatwootCloud: { value: false },
       currentAccount: { value: { limits: { captain: {} } } },
     });
     useConfig.mockReturnValue({
@@ -64,6 +65,29 @@ describe('useCaptain', () => {
     expect(captainTasksEnabled.value).toBe(true);
     expect(currentChat.value).toEqual({ id: '123' });
     expect(draftMessage.value).toBe('Draft message');
+  });
+
+  it('does not fetch cloud limits on a self-hosted enterprise installation', () => {
+    useConfig.mockReturnValue({ isEnterprise: true });
+
+    const { fetchLimits } = useCaptain();
+    fetchLimits();
+
+    expect(mockStore.dispatch).not.toHaveBeenCalledWith('accounts/limits');
+  });
+
+  it('fetches limits on a cloud enterprise installation', () => {
+    useConfig.mockReturnValue({ isEnterprise: true });
+    useAccount.mockReturnValue({
+      isCloudFeatureEnabled: vi.fn().mockReturnValue(true),
+      isOnChatwootCloud: { value: true },
+      currentAccount: { value: { limits: { captain: {} } } },
+    });
+
+    const { fetchLimits } = useCaptain();
+    fetchLimits();
+
+    expect(mockStore.dispatch).toHaveBeenCalledWith('accounts/limits');
   });
 
   it('rewrites content', async () => {
