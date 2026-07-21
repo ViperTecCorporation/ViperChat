@@ -43,10 +43,6 @@ class ScheduledMessage < ApplicationRecord
     errors.add(:scheduled_at, 'must be in the future') if scheduled_at && scheduled_at <= Time.current
   end
 
-  def whatsapp_inbox
-    errors.add(:inbox, 'must be a WhatsApp inbox') if inbox && !inbox.whatsapp?
-  end
-
   def account_consistency
     records = [conversation, contact, inbox, label].compact
     errors.add(:base, 'all records must belong to the account') if records.any? { |record| record.account_id != account_id }
