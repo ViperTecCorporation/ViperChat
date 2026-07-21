@@ -36,7 +36,7 @@ class ScheduledMessages::DeliveryStatusService
   end
 
   def complete_schedule(schedule)
-    schedule.target_conversation.add_labels([schedule.label.title])
+    schedule.target_conversation.add_labels([schedule.label.title]) if schedule.label
     schedule.update!(status: :sent, sent_at: Time.current, error_message: nil)
   end
 

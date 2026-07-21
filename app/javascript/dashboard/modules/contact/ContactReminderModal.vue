@@ -107,9 +107,10 @@ const onSubmit = async hide => {
     hide();
     emit('close');
   } catch (error) {
-    useAlert(
-      error?.response?.data?.error || 'Erro ao criar agendamento. Tente novamente.'
-    );
+    const serverError = error?.response?.data?.error;
+    const details = error?.response?.data?.errors;
+    const message = serverError || (details ? details.join(', ') : null) || 'Erro ao criar agendamento. Tente novamente.';
+    useAlert(message);
   } finally {
     isSaving.value = false;
   }

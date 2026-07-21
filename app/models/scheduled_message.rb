@@ -16,7 +16,6 @@ class ScheduledMessage < ApplicationRecord
 
   validates :scheduled_at, presence: true
   validate :scheduled_at_must_be_in_the_future, if: :scheduled?
-  validate :whatsapp_inbox
   validate :account_consistency
   validate :items_count_within_limit
   validates_associated :items
