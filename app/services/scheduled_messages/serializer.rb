@@ -9,7 +9,7 @@ class ScheduledMessages::Serializer
     base_attributes.merge(
       conversation_id: @message.conversation.display_id,
       target_conversation_id: @message.target_conversation&.display_id,
-      label: @message.label.slice(:id, :title, :color),
+      label: @message.label&.slice(:id, :title, :color),
       contact: contact,
       inbox: @message.inbox.slice(:id, :name),
       messages: serialized_items,
