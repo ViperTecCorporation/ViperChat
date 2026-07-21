@@ -255,7 +255,10 @@ const weekLabel = computed(() => {
 
 const columns = computed(() => {
   const map = new Map();
-  dayItems.value.forEach(item => map.set(item.label.id, item.label));
+  dayItems.value.forEach(item => {
+    const label = item.label || { id: 'none', title: 'Sem etiqueta', color: '#6366f1' };
+    map.set(label.id, label);
+  });
   return [...map.values()];
 });
 
@@ -414,9 +417,10 @@ const moveWeek = offset => {
 const itemsAt = (time, labelId) =>
   dayItems.value.filter(item => {
     const date = new Date(item.scheduled_at);
+    const itemLabelId = item.label?.id || 'none';
     return (
       `${pad(date.getHours())}:${pad(date.getMinutes())}` === time &&
-      item.label.id === labelId
+      itemLabelId === labelId
     );
   });
 
@@ -449,7 +453,7 @@ const resetEditForm = (item, retry = false) => {
   const scheduledDate =
     retry || currentSchedule <= new Date() ? minimumDate : currentSchedule;
   editForm.scheduledAt = toDatetimeLocal(scheduledDate);
-  editForm.labelId = item.label.id;
+  editForm.labelId = item.label?.id || '';
   editForm.reason = item.reason || '';
   editForm.senderId = item.sender.id;
   editForm.messages = (

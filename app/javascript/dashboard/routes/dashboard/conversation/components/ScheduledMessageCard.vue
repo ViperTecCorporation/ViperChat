@@ -152,10 +152,11 @@ const handleAction = ({ action }) => {
     <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
       <div class="flex items-center min-w-0 gap-1.5 text-xs text-n-slate-11">
         <span
+          v-if="item.label"
           class="rounded-sm size-2 shrink-0"
           :style="{ backgroundColor: item.label.color }"
         />
-        <span class="truncate">{{ item.label.title }}</span>
+        <span class="truncate">{{ item.label?.title || 'Sem etiqueta' }}</span>
         <Icon icon="i-lucide-user-round" class="size-3.5 shrink-0" />
         <span class="truncate">{{ item.sender.name }}</span>
         <span
