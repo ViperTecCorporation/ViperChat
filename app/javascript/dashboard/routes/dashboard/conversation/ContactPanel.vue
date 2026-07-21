@@ -1,5 +1,6 @@
 <script setup>
 import { computed, watch, onMounted, ref } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import {
   useMapGetter,
   useFunctionGetter,
@@ -77,6 +78,8 @@ const isLinearConnected = computed(
 );
 
 const store = useStore();
+const router = useRouter();
+const route = useRoute();
 const currentChat = useMapGetter('getSelectedChat');
 const conversationId = computed(() => props.conversationId);
 const conversationMetadataGetter = useMapGetter(
@@ -214,6 +217,39 @@ onMounted(() => {
                 :conversation-id="conversationId"
               />
             </AccordionItem>
+          </div>
+          <div
+            v-else-if="
+              shouldShowSidebarItem(element) &&
+              element.name === 'scheduled_messages'
+            "
+          >
+            <button
+              type="button"
+              class="flex items-center w-full gap-2 px-4 py-2.5 text-sm rounded-lg text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2"
+              @click="
+                router.push({
+                  name: 'scheduled_messages',
+                  params: { accountId: route.params.accountId },
+                })
+              "
+            >
+              <span class="flex items-center justify-center size-5">
+                <svg
+                  class="size-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+                  />
+                  <path d="M12 8v4l2 2" />
+                </svg>
+              </span>
+              <span>Agendamentos</span>
+            </button>
           </div>
           <div
             v-else-if="
