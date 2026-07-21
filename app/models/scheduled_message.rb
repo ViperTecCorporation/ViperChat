@@ -6,7 +6,7 @@ class ScheduledMessage < ApplicationRecord
   belongs_to :target_conversation, class_name: 'Conversation', optional: true
   belongs_to :contact
   belongs_to :inbox
-  belongs_to :label
+  belongs_to :label, optional: true
   belongs_to :created_by, class_name: 'User'
   belongs_to :sender, class_name: 'User'
   belongs_to :message, optional: true

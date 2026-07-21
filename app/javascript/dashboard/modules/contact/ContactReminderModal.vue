@@ -67,30 +67,33 @@ watch(
 );
 
 const onSubmit = async hide => {
-  if (!scheduledAt.value || !selectedLabelId.value) {
-    useAlert('Por favor, selecione uma data/hora e uma etiqueta.');
+  if (!scheduledAt.value) {
+    useAlert('Por favor, selecione uma data/hora.');
     return;
   }
 
   isSaving.value = true;
   try {
+    const scheduledMessage = {
+      scheduled_at: new Date(scheduledAt.value).toISOString(),
+      reason: description.value,
+      sender_id: store.getters.getCurrentUser.id,
+      messages: [
+        {
+          content: note.value,
+          content_type: 'text',
+          content_attributes: {},
+          voice_message: false,
+          attachment_blob_ids: [],
+        },
+      ],
+    };
+    if (selectedLabelId.value) {
+      scheduledMessage.label_id = selectedLabelId.value;
+    }
     const payload = {
       conversation_id: props.conversationId,
-      scheduled_message: {
-        scheduled_at: new Date(scheduledAt.value).toISOString(),
-        label_id: selectedLabelId.value,
-        reason: description.value,
-        sender_id: store.getters.getCurrentUser.id,
-        messages: [
-          {
-            content: note.value,
-            content_type: 'text',
-            content_attributes: {},
-            voice_message: false,
-            attachment_blob_ids: [],
-          },
-        ],
-      },
+      scheduled_message: scheduledMessage,
     };
 
     if (props.reminder) {
@@ -168,7 +171,7 @@ const onSubmit = async hide => {
             <textarea
               v-model="note"
               rows="3"
-              class="w-full px-3 py-2 border rounded-md border-n-slate-3 bg-white text-n-slate-12 focus:ring-1 focus:ring-w-500 focus:border-w-500"
+              class="w-full px-3 py-2 border rounded-lg resize-y border-white/10 bg-white/5 backdrop-blur-md text-white placeholder-white/50 focus:ring-1 focus:ring-w-500 focus:border-w-500"
               placeholder="Digite a mensagem que será enviada"
             />
           </div>
@@ -180,7 +183,7 @@ const onSubmit = async hide => {
             <textarea
               v-model="description"
               rows="2"
-              class="w-full px-3 py-2 border rounded-md border-n-slate-3 bg-white text-n-slate-12 focus:ring-1 focus:ring-w-500 focus:border-w-500"
+              class="w-full px-3 py-2 border rounded-lg resize-y border-white/10 bg-white/5 backdrop-blur-md text-white placeholder-white/50 focus:ring-1 focus:ring-w-500 focus:border-w-500"
               placeholder="Ex: Retornar ligação ou motivo do agendamento"
             />
           </div>

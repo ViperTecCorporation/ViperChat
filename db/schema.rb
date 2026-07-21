@@ -1272,7 +1272,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_19_000001) do
     t.bigint "target_conversation_id"
     t.bigint "contact_id", null: false
     t.bigint "inbox_id", null: false
-    t.bigint "label_id", null: false
+    t.bigint "label_id"
     t.bigint "created_by_id", null: false
     t.bigint "sender_id", null: false
     t.bigint "message_id"
