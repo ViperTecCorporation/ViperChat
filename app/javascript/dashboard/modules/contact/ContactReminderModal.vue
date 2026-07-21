@@ -1,11 +1,12 @@
 <script setup>
-import { ref, watch } from 'vue';
-import { useStore } from 'vuex';
+import { ref, computed, watch } from 'vue';
+import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Popover from 'dashboard/components-next/popover/Popover.vue';
-import DatePicker from 'vue-datepicker-next';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import Select from 'dashboard/components-next/select/Select.vue';
+import scheduledMessagesApi from 'dashboard/api/scheduledMessages';
 
 const props = defineProps({
   contactId: {
@@ -26,39 +27,36 @@ const emit = defineEmits(['close']);
 
 const store = useStore();
 const { t } = useI18n();
+const labels = useMapGetter('labels/getLabels');
 
-const getInitialTime = () => {
-  return props.reminder ? new Date(props.reminder.scheduledAt * 1000) : null;
+const toDatetimeLocal = date => {
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 };
 
-const reminderTime = ref(getInitialTime());
+const getInitialTime = () => {
+  return props.reminder ? toDatetimeLocal(new Date(props.reminder.scheduledAt * 1000)) : toDatetimeLocal(new Date(Date.now() + 3600000));
+};
+
+const scheduledAt = ref(getInitialTime());
 const note = ref(props.reminder ? props.reminder.messageContent : '');
 const sendMessage = ref(props.reminder ? props.reminder.sendMessage : false);
 const description = ref(props.reminder ? props.reminder.description : '');
+const selectedLabelId = ref(props.reminder ? props.reminder.labelId : '');
 const isSaving = ref(false);
 
-const lang = {
-  days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-  yearFormat: 'YYYY',
-  monthFormat: 'MMMM',
-};
+const labelOptions = computed(() =>
+  (labels.value || []).map(label => ({ value: label.id, label: label.title }))
+);
 
-const disabledDate = date => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
-};
-
-const disabledTime = date => {
-  const now = new Date();
-  return date < now;
-};
+const minDatetime = computed(() => toDatetimeLocal(new Date(Date.now() + 300000)));
 
 const resetForm = () => {
-  reminderTime.value = getInitialTime();
+  scheduledAt.value = getInitialTime();
   note.value = props.reminder ? props.reminder.messageContent : '';
   sendMessage.value = props.reminder ? props.reminder.sendMessage : false;
   description.value = props.reminder ? props.reminder.description : '';
+  selectedLabelId.value = props.reminder ? props.reminder.labelId : '';
 };
 
 watch(
@@ -69,39 +67,46 @@ watch(
 );
 
 const onSubmit = async hide => {
-  if (!reminderTime.value) {
-    useAlert(t('CONTACT_PANEL.REMINDER.VALIDATION_ERROR'));
+  if (!scheduledAt.value || !selectedLabelId.value) {
+    useAlert('Por favor, selecione uma data/hora e uma etiqueta.');
     return;
   }
 
   isSaving.value = true;
   try {
     const payload = {
-      contactId: props.contactId,
-      contact_reminder: {
-        conversation_id: props.conversationId,
-        scheduled_at: reminderTime.value.toISOString(),
-        message_content: note.value,
-        send_message: sendMessage.value,
-        description: description.value,
+      conversation_id: props.conversationId,
+      scheduled_message: {
+        scheduled_at: new Date(scheduledAt.value).toISOString(),
+        label_id: selectedLabelId.value,
+        reason: description.value,
+        sender_id: store.getters.getCurrentUser.id,
+        messages: [
+          {
+            content: note.value,
+            content_type: 'text',
+            content_attributes: {},
+            voice_message: false,
+            attachment_blob_ids: [],
+          },
+        ],
       },
     };
 
     if (props.reminder) {
-      await store.dispatch('contactReminders/update', {
-        ...payload,
-        reminderId: props.reminder.id,
-      });
-      useAlert('Lembrete atualizado com sucesso!');
+      await scheduledMessagesApi.update(props.reminder.id, payload);
+      useAlert('Agendamento atualizado com sucesso!');
     } else {
-      await store.dispatch('contactReminders/create', payload);
-      useAlert(t('CONTACT_PANEL.REMINDER.SUCCESS'));
+      await scheduledMessagesApi.create(payload);
+      useAlert('Agendamento criado com sucesso!');
       resetForm();
     }
     hide();
     emit('close');
   } catch (error) {
-    useAlert(t('CONTACT_PANEL.REMINDER.ERROR'));
+    useAlert(
+      error?.response?.data?.error || 'Erro ao criar agendamento. Tente novamente.'
+    );
   } finally {
     isSaving.value = false;
   }
@@ -122,55 +127,61 @@ const onSubmit = async hide => {
           <h3 class="text-base font-medium leading-6 text-n-slate-12">
             {{
               reminder
-                ? t('CONTACT_PANEL.REMINDER.EDIT_TITLE')
-                : t('CONTACT_PANEL.REMINDER.TITLE')
+                ? 'Reagendar Agendamento'
+                : 'Criar Agendamento'
             }}
           </h3>
           <p class="mb-0 text-sm text-n-slate-11">
-            {{ t('CONTACT_PANEL.REMINDER.DESC') }}
+            Agende uma mensagem para este contato.
           </p>
         </div>
 
         <form class="flex flex-col gap-4" @submit.prevent="onSubmit(hide)">
           <div class="flex flex-col gap-1">
             <label class="text-sm font-medium text-n-slate-12">
-              {{ t('CONTACT_PANEL.REMINDER.DATE_TIME_LABEL') }}
+              Data e Hora
             </label>
-            <DatePicker
-              v-model:value="reminderTime"
-              type="datetime"
-              input-class="mx-input"
-              :lang="lang"
-              :disabled-date="disabledDate"
-              :disabled-time="disabledTime"
-              :placeholder="t('CONTACT_PANEL.REMINDER.DATE_TIME_PLACEHOLDER')"
+            <input
+              v-model="scheduledAt"
+              type="datetime-local"
+              class="w-full px-3 py-2 border rounded-md border-n-weak bg-n-alpha-2 text-n-slate-12 focus:ring-1 focus:ring-w-500 focus:border-w-500"
+              :min="minDatetime"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-n-slate-12">
+              Etiqueta
+            </label>
+            <Select
+              v-model="selectedLabelId"
+              :options="labelOptions"
+              placeholder="Selecione uma etiqueta"
               class="w-full"
             />
           </div>
 
           <div class="flex flex-col gap-1">
             <label class="text-sm font-medium text-n-slate-12">
-              {{ t('CONTACT_PANEL.REMINDER.NOTE_LABEL') }}
+              Nota / Mensagem
             </label>
             <textarea
               v-model="note"
               rows="3"
               class="w-full px-3 py-2 border rounded-md border-n-slate-3 bg-white text-n-slate-12 focus:ring-1 focus:ring-w-500 focus:border-w-500"
-              :placeholder="t('CONTACT_PANEL.REMINDER.NOTE_PLACEHOLDER')"
+              placeholder="Digite a mensagem que será enviada"
             />
           </div>
 
           <div class="flex flex-col gap-1">
             <label class="text-sm font-medium text-n-slate-12">
-              {{ t('CONTACT_PANEL.REMINDER.JUSTIFICATION_LABEL') }}
+              Justificativa / Observação
             </label>
             <textarea
               v-model="description"
               rows="2"
               class="w-full px-3 py-2 border rounded-md border-n-slate-3 bg-white text-n-slate-12 focus:ring-1 focus:ring-w-500 focus:border-w-500"
-              :placeholder="
-                t('CONTACT_PANEL.REMINDER.JUSTIFICATION_PLACEHOLDER')
-              "
+              placeholder="Ex: Retornar ligação ou motivo do agendamento"
             />
           </div>
 
@@ -185,7 +196,7 @@ const onSubmit = async hide => {
               for="send-message-checkbox"
               class="text-sm text-n-slate-11 cursor-pointer"
             >
-              {{ t('CONTACT_PANEL.REMINDER.SEND_CHECKBOX') }}
+              Enviar esta mensagem para o cliente no horário agendado
             </label>
           </div>
 
@@ -194,12 +205,12 @@ const onSubmit = async hide => {
               faded
               slate
               type="reset"
-              :label="t('CONTACT_PANEL.REMINDER.CANCEL')"
+              label="Cancelar"
               @click.prevent="hide"
             />
             <NextButton
               type="submit"
-              :label="t('CONTACT_PANEL.REMINDER.SAVE')"
+              :label="reminder ? 'Atualizar' : 'Criar Agendamento'"
               :is-loading="isSaving"
             />
           </div>

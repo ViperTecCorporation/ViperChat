@@ -396,8 +396,8 @@ export default {
         >
           <template #trigger>
             <NextButton
-              v-tooltip.top-end="'Criar Lembrete'"
-              icon="i-ph-calendar-plus"
+              v-tooltip.top-end="'Criar Agendamento'"
+              icon="i-lucide-calendar-clock"
               slate
               faded
               sm
