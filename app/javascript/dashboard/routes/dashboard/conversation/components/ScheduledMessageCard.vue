@@ -53,18 +53,17 @@ const menuItems = computed(() => {
     },
   ];
 
-  if (
-    !props.item.can_manage ||
-    ['sent', 'cancelled'].includes(props.item.status)
-  ) {
+  if (!props.item.can_manage) {
     return items;
   }
 
-  items.push({
-    label: 'Editar',
-    action: 'edit',
-    icon: 'i-lucide-pencil',
-  });
+  if (['scheduled', 'failed'].includes(props.item.status)) {
+    items.push({
+      label: 'Editar',
+      action: 'edit',
+      icon: 'i-lucide-pencil',
+    });
+  }
 
   if (props.item.status === 'failed') {
     items.push({

@@ -37,11 +37,6 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
 
   def destroy
     authorize_owner_or_admin!
-    unless @scheduled_message.scheduled? || @scheduled_message.failed?
-      return render json: { error: 'Only pending or failed schedules can be cancelled' },
-                    status: :unprocessable_entity
-    end
-
     @scheduled_message.cancelled!
     head :no_content
   end

@@ -541,7 +541,7 @@ const selectConversation = ({ conversation }) => {
 };
 
 const saveEdit = async () => {
-  if (!editForm.scheduledAt || !editForm.labelId) return;
+  if (!editForm.scheduledAt) return;
   if (editMode.value === 'create' && !selectedConversation.value) return;
   isSaving.value = true;
   try {
@@ -1093,7 +1093,6 @@ onBeforeUnmount(() => {
       :is-loading="isSaving"
       :disable-confirm-button="
         !editForm.scheduledAt ||
-        !editForm.labelId ||
         isUploading ||
         !messagesValid ||
         (editMode === 'create' && !selectedConversation)
