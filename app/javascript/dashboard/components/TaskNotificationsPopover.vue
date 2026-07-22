@@ -39,6 +39,14 @@ const unreadCount = computed(() => {
     : '99+';
 });
 
+const contactName = notification => {
+  try {
+    return notification.primary_actor?.meta?.sender?.name || notification.primary_actor?.meta?.sender?.phone_number || '';
+  } catch {
+    return '';
+  }
+};
+
 const formatTimeAgo = dateStr => {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -212,9 +220,9 @@ onBeforeUnmount(() => {
             >
               <div class="flex flex-col flex-1 min-w-0 gap-0.5">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="text-sm font-medium truncate text-n-slate-12">
-                    {{ notification.push_message_title || 'Notificação' }}
-                  </span>
+                <span class="text-sm font-medium truncate text-n-slate-12">
+                  {{ contactName(notification) || notification.push_message_title || 'Notificação' }}
+                </span>
                   <span class="text-xs shrink-0 text-n-slate-10">
                     {{ formatTimeAgo(notification.created_at) }}
                   </span>
@@ -247,9 +255,9 @@ onBeforeUnmount(() => {
             >
               <div class="flex flex-col flex-1 min-w-0 gap-0.5">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="text-sm font-medium truncate text-n-slate-12">
-                    {{ notification.push_message_title || 'Menção' }}
-                  </span>
+                <span class="text-sm font-medium truncate text-n-slate-12">
+                  {{ contactName(notification) || notification.push_message_title || 'Menção' }}
+                </span>
                   <span class="text-xs shrink-0 text-n-slate-10">
                     {{ formatTimeAgo(notification.created_at) }}
                   </span>
