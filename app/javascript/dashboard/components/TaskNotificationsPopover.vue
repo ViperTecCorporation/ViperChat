@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import NotificationsAPI from 'dashboard/api/notifications';
@@ -15,6 +15,22 @@ const messages = ref([]);
 const mentions = ref([]);
 const isLoading = ref(false);
 const popoverRef = ref(null);
+const buttonRef = ref(null);
+const popupRef = ref(null);
+const popupStyle = ref({});
+
+const updatePopupPosition = () => {
+  if (!buttonRef.value) return;
+  const rect = buttonRef.value.getBoundingClientRect();
+  popupStyle.value = {
+    position: 'fixed',
+    top: `${rect.bottom + 8}px`,
+    right: `${window.innerWidth - rect.right}px`,
+    zIndex: 9999,
+    width: '20rem',
+    maxHeight: 'calc(100vh - 80px)',
+  };
+};
 
 const unreadCount = computed(() => {
   if (!notificationMeta.value?.unreadCount) return '';
@@ -58,6 +74,8 @@ const fetchNotifications = async () => {
 const toggle = async () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
+    await nextTick();
+    updatePopupPosition();
     await fetchNotifications();
   }
 };
@@ -92,7 +110,7 @@ const markTaskDone = async (event, notification) => {
 };
 
 const handleClickOutside = event => {
-  if (popoverRef.value && !popoverRef.value.contains(event.target)) {
+  if (popoverRef.value && !popoverRef.value.contains(event.target) && !popupRef.value?.contains(event.target)) {
     close();
   }
 };
@@ -109,6 +127,7 @@ onBeforeUnmount(() => {
 <template>
   <div ref="popoverRef" class="relative">
     <button
+      ref="buttonRef"
       class="relative flex items-center justify-center rounded-lg size-7 text-n-slate-11 hover:bg-n-alpha-2"
       :title="$t('SIDEBAR.NOTIFICATIONS')"
       @click="toggle"
@@ -122,9 +141,12 @@ onBeforeUnmount(() => {
       </span>
     </button>
 
+    <Teleport to="body">
     <div
       v-if="isOpen"
-      class="absolute z-50 w-80 ltr:right-0 rtl:left-0 mt-2 bg-n-background border border-n-weak rounded-xl shadow-lg"
+      ref="popupRef"
+      :style="popupStyle"
+      class="bg-n-background border border-n-weak rounded-xl shadow-lg overflow-y-auto"
     >
       <div v-if="isLoading" class="flex items-center justify-center py-10">
         <span class="i-lucide-loader-2 size-5 animate-spin text-n-slate-10" />
@@ -244,5 +266,6 @@ onBeforeUnmount(() => {
         </template>
       </template>
     </div>
+    </Teleport>
   </div>
 </template>
