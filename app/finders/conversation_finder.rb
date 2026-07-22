@@ -281,7 +281,8 @@ class ConversationFinder
     if params[:updated_within].present?
       @conversations.where('conversations.updated_at > ?', Time.zone.now - params[:updated_within].to_i.seconds)
     else
-      @conversations.page(current_page).per(ENV.fetch('CONVERSATION_RESULTS_PER_PAGE', '25').to_i)
+      per_page = params[:per_page].present? ? params[:per_page].to_i : ENV.fetch('CONVERSATION_RESULTS_PER_PAGE', '25').to_i
+      @conversations.page(current_page).per(per_page)
     end
   end
 end

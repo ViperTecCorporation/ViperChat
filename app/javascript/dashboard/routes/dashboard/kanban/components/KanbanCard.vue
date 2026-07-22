@@ -26,7 +26,7 @@ const emit = defineEmits([
 ]);
 
 const { t } = useI18n();
-const store = ref(useStore());
+const store = useStore();
 
 // Hover state
 const isHovered = ref(false);
@@ -36,7 +36,7 @@ const showMoreMenu = ref(false);
 const showDateEditor = ref(false);
 const editingDateValue = ref('');
 
-const allAgents = computed(() => store.value.getters['agents/getAgents'] || []);
+const allAgents = computed(() => store.getters['agents/getAgents'] || []);
 
 const filteredAgents = computed(() => {
   if (props.pipelineAgents.length > 0) {
@@ -127,7 +127,7 @@ const timeBadge = computed(() => {
 });
 
 const formattedTimestamp = computed(() => {
-  const timeVal = props.conversation.created_at || props.conversation.timestamp;
+  const timeVal = props.conversation.last_activity_at || props.conversation.timestamp;
   if (!timeVal) return null;
   const date = new Date(timeVal * 1000 || timeVal);
   const now = new Date();
@@ -147,10 +147,18 @@ const formattedTimestamp = computed(() => {
   };
 });
 
+const messageCount = computed(() => {
+  return props.conversation.message_count || props.conversation.unread_count || 0;
+});
+
+const teamName = computed(() => {
+  return props.conversation.meta?.team?.name || null;
+});
+
 // Inbox & Channel Helpers
 const inboxId = computed(() => props.conversation.inbox_id);
 const inbox = computed(() => {
-  return store.value.getters['inboxes/getInbox'](inboxId.value) || {};
+  return store.getters['inboxes/getInbox'](inboxId.value) || {};
 });
 
 const channelType = computed(() => {
@@ -258,48 +266,8 @@ const urgencyMeta = computed(() => {
   };
 });
 
-// Channel Style Metas
-const channelMeta = computed(() => {
-  const ch = channelType.value;
-  if (ch.includes('whatsapp')) {
-    return {
-      icon: 'i-lucide-phone',
-      color: 'text-emerald-500',
-      name: 'WhatsApp',
-    };
-  }
-  if (ch.includes('email')) {
-    return { icon: 'i-lucide-mail', color: 'text-cyan-500', name: 'E-mail' };
-  }
-  if (ch.includes('instagram')) {
-    return {
-      icon: 'i-lucide-instagram',
-      color: 'text-pink-500',
-      name: 'Instagram',
-    };
-  }
-  if (ch.includes('facebook')) {
-    return {
-      icon: 'i-lucide-facebook',
-      color: 'text-blue-600',
-      name: 'Facebook',
-    };
-  }
-  if (ch.includes('twitter')) {
-    return { icon: 'i-lucide-twitter', color: 'text-sky-400', name: 'Twitter' };
-  }
-  if (ch.includes('telegram')) {
-    return { icon: 'i-lucide-send', color: 'text-sky-500', name: 'Telegram' };
-  }
-  if (ch.includes('tiktok')) {
-    return {
-      icon: 'i-lucide-music',
-      color: 'text-pink-400',
-      name: 'TikTok',
-    };
-  }
-  return { icon: 'i-lucide-globe', color: 'text-slate-400', name: 'Web Chat' };
-});
+import { getChannelMeta } from 'dashboard/helper/channelMeta';
+const channelMeta = computed(() => getChannelMeta(channelType.value));
 
 // Last message content
 const messageSnippet = computed(() => {
@@ -336,7 +304,7 @@ const handleRemovePipeline = e => {
 const updatePriority = async p => {
   showPriorityPopover.value = false;
   try {
-    await store.value.dispatch('conversations/assignPriority', {
+    await store.dispatch('conversations/assignPriority', {
       conversationId: props.conversation.id,
       priority: p,
     });
@@ -368,7 +336,7 @@ const saveDate = async () => {
     delete currentCustomAttributes.due_date;
   }
   try {
-    await store.value.dispatch('conversations/updateCustomAttributes', {
+    await store.dispatch('conversations/updateCustomAttributes', {
       conversationId: props.conversation.id,
       customAttributes: currentCustomAttributes,
     });
@@ -543,7 +511,7 @@ onUnmounted(() => {
     <div
       class="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-800/40 pl-4"
     >
-      <!-- Left side: Due Date / Priority Badge / Inbox Badge -->
+      <!-- Left side: Due Date / Priority / Inbox / Message Count / Team -->
       <div class="flex items-center gap-1.5 min-w-0">
         <!-- Inbox Badge -->
         <span
@@ -552,6 +520,25 @@ onUnmounted(() => {
           :title="inbox.name"
         >
           {{ inbox.name }}
+        </span>
+
+        <!-- Message Count Badge -->
+        <span
+          v-if="messageCount > 0"
+          class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-950/60 border border-slate-800/60 text-slate-400 shrink-0"
+          :title="`${messageCount} mensagens`"
+        >
+          <Icon icon="i-lucide-message-circle" class="size-3" />
+          {{ messageCount }}
+        </span>
+
+        <!-- Team Badge -->
+        <span
+          v-if="teamName"
+          class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shrink-0"
+          :title="`Time: ${teamName}`"
+        >
+          {{ teamName }}
         </span>
 
         <!-- Due Date Badges -->
@@ -606,10 +593,11 @@ onUnmounted(() => {
         </span>
       </div>
 
-      <!-- Right side: Clock/Calendar Timestamp (Image 1 Style) -->
+      <!-- Right side: Last activity timestamp -->
       <div
         v-if="formattedTimestamp"
         class="flex items-center gap-1 text-[10px] font-semibold text-slate-500 shrink-0"
+        title="Última atividade"
       >
         <Icon :icon="formattedTimestamp.icon" class="size-3" />
         <span>{{ formattedTimestamp.text }}</span>

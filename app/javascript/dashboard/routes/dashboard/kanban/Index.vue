@@ -1,6 +1,6 @@
 <script setup>
 /* eslint-disable no-console, no-restricted-globals, no-alert */
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useStore } from 'dashboard/composables/store';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -32,6 +32,7 @@ const searchQuery = ref('');
 const pipelineSearchQuery = ref('');
 const filterAgentId = ref('');
 const filterInboxId = ref('');
+const filterPriority = ref('');
 const sortBy = ref('newest');
 const showSortDropdown = ref(false);
 const showSortLabel = ref('Mais recente');
@@ -150,45 +151,46 @@ const getPipelineUniqueInboxes = pipeline => {
   return Array.from(inboxesMap.values());
 };
 
-const getInboxChannelMeta = inbox => {
-  const ch = (inbox.channel_type || '').toLowerCase();
-  if (ch.includes('whatsapp'))
-    return {
-      icon: 'i-lucide-phone',
-      color: 'text-emerald-500',
-      name: 'WhatsApp',
-    };
-  if (ch.includes('email'))
-    return { icon: 'i-lucide-mail', color: 'text-cyan-500', name: 'E-mail' };
-  if (ch.includes('instagram'))
-    return {
-      icon: 'i-lucide-instagram',
-      color: 'text-pink-500',
-      name: 'Instagram',
-    };
-  if (ch.includes('facebook'))
-    return {
-      icon: 'i-lucide-facebook',
-      color: 'text-blue-600',
-      name: 'Facebook',
-    };
-  if (ch.includes('twitter'))
-    return { icon: 'i-lucide-twitter', color: 'text-sky-400', name: 'Twitter' };
-  if (ch.includes('telegram'))
-    return { icon: 'i-lucide-send', color: 'text-sky-500', name: 'Telegram' };
-  return { icon: 'i-lucide-globe', color: 'text-slate-400', name: 'Web Chat' };
-};
+import { getChannelMeta } from 'dashboard/helper/channelMeta';
+import { KanbanAutomations } from './helpers/kanbanAutomations';
+const getInboxChannelMeta = inbox => getChannelMeta(inbox.channel_type);
+
+// Dashboard KPI computed
+const pipelineStats = computed(() => {
+  if (!activePipeline.value) return null;
+  const stageIds = activePipeline.value.stages.map(s => s.id);
+  const convs = allConversations.value.filter(c =>
+    c.kanban_stage && stageIds.includes(c.kanban_stage)
+  );
+  const total = convs.length;
+  const open = convs.filter(c => c.status === 'open').length;
+  const resolved = convs.filter(c => c.status === 'resolved').length;
+
+  const stageDistribution = activePipeline.value.stages.map(stage => {
+    const count = convs.filter(c => c.kanban_stage === stage.id).length;
+    return { stage, count, percentage: total > 0 ? (count / total) * 100 : 0 };
+  });
+
+  return { total, open, resolved, stageDistribution };
+});
+
+const isLoadingConversations = ref(false);
 
 const fetchAllConversationsForKanban = async () => {
+  isLoadingConversations.value = true;
   try {
-    const { data } = await conversationApi.get({ status: 'all', page: 1 });
+    const { data } = await conversationApi.get({ status: 'all', page: 1, perPage: 500 });
     if (data?.data?.payload) {
       store.commit('conversations/SET_ALL_CONVERSATION', data.data.payload);
     }
   } catch {
     store.dispatch('conversations/fetchAllConversations');
+  } finally {
+    isLoadingConversations.value = false;
   }
 };
+
+let unsubscribeAutomations = null;
 
 onMounted(() => {
   fetchAllConversationsForKanban();
@@ -197,6 +199,14 @@ onMounted(() => {
   store.dispatch('agents/get');
 
   loadKanbanConfig();
+  unsubscribeAutomations = KanbanAutomations.register(store);
+});
+
+onBeforeUnmount(() => {
+  if (unsubscribeAutomations) {
+    unsubscribeAutomations();
+    unsubscribeAutomations = null;
+  }
 });
 
 // Filtered conversations based on Search, Agent, and Inbox select
@@ -226,6 +236,11 @@ const filteredConversations = computed(() => {
   if (filterInboxId.value) {
     const inboxIdNum = Number(filterInboxId.value);
     chats = chats.filter(c => c.inbox_id === inboxIdNum);
+  }
+
+  // 4. Priority Filter
+  if (filterPriority.value) {
+    chats = chats.filter(c => c.priority === filterPriority.value);
   }
 
   return chats;
@@ -776,6 +791,30 @@ const importOpenConversations = async () => {
             </span>
           </div>
 
+          <!-- Filter Priority -->
+          <div class="relative">
+            <select
+              v-model="filterPriority"
+              class="pl-7 pr-7 py-1.5 rounded-xl border border-slate-850 bg-slate-900 text-slate-300 text-xs font-semibold outline-none cursor-pointer focus:border-blue-500 appearance-none min-w-[120px]"
+            >
+              <option value="">Todas prioridades</option>
+              <option value="urgent">Urgente</option>
+              <option value="high">Alta</option>
+              <option value="medium">Média</option>
+              <option value="low">Baixa</option>
+            </select>
+            <span
+              class="absolute left-2.5 top-2 text-slate-500 pointer-events-none"
+            >
+              <Icon icon="i-lucide-flag" class="size-3.5" />
+            </span>
+            <span
+              class="absolute right-2.5 top-2.5 text-slate-500 pointer-events-none"
+            >
+              <Icon icon="i-lucide-chevron-down" class="size-3" />
+            </span>
+          </div>
+
           <!-- Order Icon with dropdown -->
           <div class="relative">
             <button
@@ -839,6 +878,60 @@ const importOpenConversations = async () => {
           </Button>
         </div>
       </header>
+
+      <!-- KPI Dashboard Bar -->
+      <div
+        v-if="pipelineStats"
+        class="flex items-center gap-5 px-6 py-2.5 bg-slate-900/40 border-b border-slate-900/60 shrink-0"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total</span>
+          <span class="text-sm font-bold text-slate-100">{{ pipelineStats.total }}</span>
+        </div>
+        <div class="w-px h-4 bg-slate-800" />
+        <div class="flex items-center gap-2">
+          <span class="size-2 rounded-full bg-emerald-500" />
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Abertos</span>
+          <span class="text-sm font-bold text-emerald-400">{{ pipelineStats.open }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="size-2 rounded-full bg-slate-600" />
+          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Resolvidos</span>
+          <span class="text-sm font-bold text-slate-400">{{ pipelineStats.resolved }}</span>
+        </div>
+        <div class="w-px h-4 bg-slate-800" />
+        <!-- Per-stage distribution bar -->
+        <div class="flex-1 flex items-center gap-1 max-w-md">
+          <div
+            class="flex-1 flex items-center h-2 bg-slate-800 rounded-full overflow-hidden"
+          >
+            <div
+              v-for="item in pipelineStats.stageDistribution"
+              :key="item.stage.id"
+              v-tooltip="`${item.stage.title}: ${item.count} (${item.percentage.toFixed(0)}%)`"
+              class="h-full transition-all duration-300"
+              :style="{
+                width: item.percentage + '%',
+                backgroundColor: item.stage.color || '#3b82f6',
+              }"
+            />
+          </div>
+          <div class="flex items-center gap-1.5 ml-2">
+            <span
+              v-for="item in pipelineStats.stageDistribution"
+              :key="item.stage.id"
+              class="flex items-center gap-1 text-[9px] font-semibold text-slate-500"
+            >
+              <span
+                class="size-1.5 rounded-full"
+                :style="{ backgroundColor: item.stage.color || '#3b82f6' }"
+              />
+              <span class="hidden sm:inline">{{ item.stage.title }}</span>
+              <span>{{ item.count }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
 
       <!-- Draggable Stage Board Columns -->
       <main class="flex-grow flex gap-4 p-5 overflow-x-auto overflow-y-hidden">

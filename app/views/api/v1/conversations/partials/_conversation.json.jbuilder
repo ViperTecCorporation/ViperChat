@@ -81,6 +81,7 @@ json.updated_at conversation.updated_at.to_f
 json.timestamp conversation.last_activity_at.to_i
 json.first_reply_created_at conversation.first_reply_created_at.to_i
 json.unread_count conversation.unread_incoming_messages.count
+json.message_count conversation.messages.size
 json.last_non_activity_message conversation.messages.where(account_id: conversation.account_id).non_activity_messages.includes([{ attachments: [{ file_attachment: [:blob] }] }]).first.try(:push_event_data)
 json.last_activity_at conversation.last_activity_at.to_i
 json.priority conversation.priority

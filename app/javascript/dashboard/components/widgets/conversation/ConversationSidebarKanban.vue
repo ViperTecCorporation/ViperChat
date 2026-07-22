@@ -15,7 +15,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const store = ref(useStore());
+const store = useStore();
 
 const fullConfig = ref({ pipelines: [] });
 const activePipelineId = ref(null);
@@ -23,7 +23,7 @@ const activeStageId = ref(null);
 const stageDropdownOpen = ref(false);
 
 const conversation = computed(() => {
-  return store.value.getters.getConversationById(props.conversationId) || {};
+  return store.getters.getConversationById(props.conversationId) || {};
 });
 
 const detectConversationPipeline = () => {
@@ -60,7 +60,7 @@ const currentStage = computed(() => {
 
 const loadPipelineConfig = async () => {
   try {
-    const { config } = await KanbanConfigHelper.loadConfig(store.value);
+    const { config } = await KanbanConfigHelper.loadConfig(store);
     fullConfig.value = config;
     detectConversationPipeline();
   } catch (err) {
@@ -79,6 +79,10 @@ watch(
   }
 );
 
+watch(conversation, () => {
+  detectConversationPipeline();
+}, { deep: true });
+
 const onPipelineChange = () => {
   activeStageId.value = null;
 };
@@ -89,11 +93,12 @@ const selectStage = async stage => {
   activeStageId.value = stage ? stage.id : null;
 
   try {
-    await ConversationApi.update(props.conversationId, {
+    const conversationId = Number(props.conversationId);
+    await ConversationApi.update(conversationId, {
       kanban_stage: stage ? stage.id : null,
     });
-    store.value.dispatch('updateConversation', {
-      id: props.conversationId,
+    store.dispatch('updateConversation', {
+      id: conversationId,
       kanban_stage: stage ? stage.id : null,
     });
 
@@ -110,7 +115,7 @@ const handleStageAutomations = async stage => {
 
   if (automations.auto_resolve_on_won_lost && (stage.is_won || stage.is_lost)) {
     try {
-      await store.value.dispatch('conversations/toggleStatus', {
+      await store.dispatch('conversations/toggleStatus', {
         conversationId: props.conversationId,
         status: 'resolved',
       });
@@ -121,7 +126,7 @@ const handleStageAutomations = async stage => {
 
   if (automations.auto_assign_agent && !conversation.value.meta?.assignee) {
     const agentsList = activePipeline.value.agents || [];
-    const allAgents = store.value.getters['agents/getAgents'] || [];
+    const allAgents = store.getters['agents/getAgents'] || [];
 
     const onlineAgents = allAgents.filter(
       a => a.availability_status === 'online'
@@ -135,7 +140,7 @@ const handleStageAutomations = async stage => {
       const agentToAssign =
         eligibleAgents[Math.floor(Math.random() * eligibleAgents.length)];
       try {
-        await store.value.dispatch('conversations/assignAgent', {
+        await store.dispatch('conversations/assignAgent', {
           conversationId: props.conversationId,
           agentId: agentToAssign.id,
         });
@@ -148,7 +153,7 @@ const handleStageAutomations = async stage => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 py-2 px-1 text-slate-200">
+  <div v-if="fullConfig.pipelines.length > 0" class="flex flex-col gap-3 py-2 px-1 text-slate-200">
     <div class="flex flex-col gap-1">
       <label
         class="text-[10px] uppercase font-bold tracking-wider text-slate-500"
