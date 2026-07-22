@@ -12,6 +12,7 @@ const notificationMeta = useMapGetter('notifications/getMeta');
 const isOpen = ref(false);
 const tasks = ref([]);
 const messages = ref([]);
+const mentions = ref([]);
 const isLoading = ref(false);
 const popoverRef = ref(null);
 
@@ -33,16 +34,22 @@ const formatTimeAgo = dateStr => {
   return `${days}d`;
 };
 
+const mentionTypes = ['conversation_mention'];
+const messageTypes = ['conversation_creation', 'assigned_conversation_new_message', 'participating_conversation_new_message'];
+const taskType = 'scheduled_task_due';
+
 const fetchNotifications = async () => {
   isLoading.value = true;
   try {
     const { data } = await NotificationsAPI.get({ page: 1 });
     const all = data?.data?.payload || [];
-    tasks.value = all.filter(n => n.notification_type === 'scheduled_task_due');
-    messages.value = all.filter(n => n.notification_type !== 'scheduled_task_due');
+    tasks.value = all.filter(n => n.notification_type === taskType);
+    messages.value = all.filter(n => messageTypes.includes(n.notification_type));
+    mentions.value = all.filter(n => mentionTypes.includes(n.notification_type));
   } catch {
     tasks.value = [];
     messages.value = [];
+    mentions.value = [];
   } finally {
     isLoading.value = false;
   }
@@ -124,16 +131,15 @@ onBeforeUnmount(() => {
       </div>
 
       <template v-else>
-        <!-- Tarefas Vencidas -->
-        <div class="px-4 py-3 text-sm font-medium text-n-slate-12 border-b border-n-weak">
-          Tarefas Vencidas
+        <div v-if="!tasks.length && !messages.length && !mentions.length" class="px-4 py-6 text-sm text-center text-n-slate-10">
+          Nenhuma notificação
         </div>
 
-        <div v-if="!tasks.length" class="px-4 py-6 text-sm text-center text-n-slate-10">
-          Nenhuma tarefa vencida
-        </div>
-
-        <div v-else class="max-h-48 overflow-y-auto">
+        <template v-if="tasks.length">
+          <div class="px-4 py-3 text-sm font-medium text-n-slate-12 border-b border-n-weak">
+            📌 Tarefas Vencidas
+          </div>
+          <div class="max-h-48 overflow-y-auto">
           <div
             v-for="notification in tasks"
             :key="notification.id"
@@ -165,42 +171,77 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
+        </template>
 
         <!-- Divisória -->
-        <div
-          v-if="messages.length"
-          class="flex items-center gap-3 px-4 py-2"
-        >
-          <span class="text-xs font-medium text-n-slate-10">Notificações</span>
-          <span class="flex-1 h-px bg-n-weak" />
-        </div>
+        <div v-if="tasks.length" class="h-px bg-n-weak" />
 
-        <!-- Notificações de Mensagens -->
-        <div v-if="messages.length" class="max-h-48 overflow-y-auto">
-          <div
-            v-for="notification in messages"
-            :key="notification.id"
-            class="flex items-start gap-2 px-4 py-3 border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors cursor-pointer"
-            @click="openConversation(notification)"
-          >
-            <div class="flex flex-col flex-1 min-w-0 gap-0.5">
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-sm font-medium truncate text-n-slate-12">
-                  {{ notification.push_message_title || 'Notificação' }}
-                </span>
-                <span class="text-xs shrink-0 text-n-slate-10">
-                  {{ formatTimeAgo(notification.created_at) }}
-                </span>
+        <!-- Mensagens -->
+        <template v-if="messages.length">
+          <div class="px-4 py-2.5 text-xs font-medium text-n-slate-10 border-b border-n-weak">
+            💬 Mensagens
+          </div>
+          <div class="max-h-48 overflow-y-auto">
+            <div
+              v-for="notification in messages"
+              :key="notification.id"
+              class="flex items-start gap-2 px-4 py-3 border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors cursor-pointer"
+              @click="openConversation(notification)"
+            >
+              <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-medium truncate text-n-slate-12">
+                    {{ notification.push_message_title || 'Notificação' }}
+                  </span>
+                  <span class="text-xs shrink-0 text-n-slate-10">
+                    {{ formatTimeAgo(notification.created_at) }}
+                  </span>
+                </div>
+                <p
+                  v-if="notification.push_message_body"
+                  class="mb-0 text-xs line-clamp-2 text-n-slate-11"
+                >
+                  {{ notification.push_message_body }}
+                </p>
               </div>
-              <p
-                v-if="notification.push_message_body"
-                class="mb-0 text-xs line-clamp-2 text-n-slate-11"
-              >
-                {{ notification.push_message_body }}
-              </p>
             </div>
           </div>
-        </div>
+        </template>
+
+        <!-- Divisória -->
+        <div v-if="messages.length && mentions.length" class="h-px bg-n-weak" />
+
+        <!-- Menções -->
+        <template v-if="mentions.length">
+          <div class="px-4 py-2.5 text-xs font-medium text-n-slate-10 border-b border-n-weak">
+            @ Menções
+          </div>
+          <div class="max-h-48 overflow-y-auto">
+            <div
+              v-for="notification in mentions"
+              :key="notification.id"
+              class="flex items-start gap-2 px-4 py-3 border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors cursor-pointer"
+              @click="openConversation(notification)"
+            >
+              <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-medium truncate text-n-slate-12">
+                    {{ notification.push_message_title || 'Menção' }}
+                  </span>
+                  <span class="text-xs shrink-0 text-n-slate-10">
+                    {{ formatTimeAgo(notification.created_at) }}
+                  </span>
+                </div>
+                <p
+                  v-if="notification.push_message_body"
+                  class="mb-0 text-xs line-clamp-2 text-n-slate-11"
+                >
+                  {{ notification.push_message_body }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </template>
       </template>
     </div>
   </div>
