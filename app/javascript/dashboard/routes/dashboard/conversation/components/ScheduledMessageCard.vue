@@ -57,13 +57,11 @@ const menuItems = computed(() => {
     return items;
   }
 
-  if (['scheduled', 'failed'].includes(props.item.status)) {
-    items.push({
-      label: 'Editar',
-      action: 'edit',
-      icon: 'i-lucide-pencil',
-    });
-  }
+  items.push({
+    label: 'Editar',
+    action: 'edit',
+    icon: 'i-lucide-pencil',
+  });
 
   if (props.item.status === 'failed') {
     items.push({

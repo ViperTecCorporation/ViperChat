@@ -133,7 +133,7 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
   end
 
   def editable?
-    @scheduled_message.scheduled? || @scheduled_message.failed?
+    !@scheduled_message.sending?
   end
 
   def render_uneditable
