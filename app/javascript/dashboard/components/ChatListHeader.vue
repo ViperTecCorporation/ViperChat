@@ -7,6 +7,7 @@ import wootConstants from 'dashboard/constants/globals';
 import ConversationBasicFilter from './widgets/conversation/ConversationBasicFilter.vue';
 import SwitchLayout from 'dashboard/routes/dashboard/conversation/search/SwitchLayout.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import TaskNotificationsPopover from './TaskNotificationsPopover.vue';
 
 const props = defineProps({
   pageTitle: { type: String, required: true },
@@ -87,6 +88,7 @@ const toggleConversationLayout = () => {
       </span>
     </div>
     <div v-if="!hasHideFiltersForAgents" class="flex items-center gap-1">
+      <TaskNotificationsPopover />
       <template v-if="hasAppliedFilters && !hasActiveFolders">
         <div class="relative">
           <NextButton

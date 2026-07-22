@@ -24,7 +24,6 @@ import CreateGroupModal from './CreateGroupModal.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import ComposeInternalChat from 'dashboard/components-next/InternalChat/ComposeInternalChat.vue';
-import SidebarNotificationBell from './SidebarNotificationBell.vue';
 
 const props = defineProps({
   isMobileSidebarOpen: {
@@ -38,7 +37,6 @@ const emit = defineEmits([
   'openKeyShortcutModal',
   'showCreateAccountModal',
   'closeMobileSidebar',
-  'openNotificationPanel',
 ]);
 
 const { accountScopedRoute, isOnChatwootCloud } = useAccount();
@@ -932,9 +930,6 @@ const menuItems = computed(() => {
             is-collapsed
             @show-create-account-modal="emit('showCreateAccountModal')"
           />
-          <SidebarNotificationBell
-            @open-notification-panel="emit('openNotificationPanel')"
-          />
           <button
             class="flex items-center justify-center size-8 rounded-lg text-n-slate-11 hover:bg-n-alpha-2"
             :title="$t('SIDEBAR.EXPAND')"
@@ -951,9 +946,6 @@ const menuItems = computed(() => {
           <SidebarAccountSwitcher
             class="flex-grow -mx-1 min-w-0"
             @show-create-account-modal="emit('showCreateAccountModal')"
-          />
-          <SidebarNotificationBell
-            @open-notification-panel="emit('openNotificationPanel')"
           />
           <button
             class="flex-shrink-0 size-8 grid place-content-center rounded-lg text-n-slate-11 hover:bg-n-alpha-2"
