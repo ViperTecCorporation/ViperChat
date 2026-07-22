@@ -17,10 +17,12 @@ class ScheduledMessage < ApplicationRecord
   validates :scheduled_at, presence: true
   validate :scheduled_at_must_be_in_the_future, if: :scheduled?
   validate :account_consistency
-  validate :items_count_within_limit
-  validates_associated :items
+  validate :items_count_within_limit, unless: :is_task?
+  validates_associated :items, unless: :is_task?
 
   scope :due, -> { scheduled.where(scheduled_at: ..Time.current) }
+  scope :due_tasks, -> { scheduled.where(is_task: true, scheduled_at: ..Time.current) }
+  scope :due_messages, -> { scheduled.where(is_task: false, scheduled_at: ..Time.current) }
 
   def ensure_legacy_item!
     return if items.exists?

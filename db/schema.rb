@@ -1283,6 +1283,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_19_000001) do
     t.string "content_type"
     t.jsonb "content_attributes", default: {}, null: false
     t.jsonb "attachment_blob_ids", default: [], null: false
+    t.boolean "is_task", default: false, null: false
     t.text "error_message"
     t.datetime "sent_at"
     t.datetime "created_at", null: false

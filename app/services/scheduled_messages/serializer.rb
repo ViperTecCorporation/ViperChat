@@ -33,7 +33,7 @@ class ScheduledMessages::Serializer
   def base_attributes
     @message.as_json(
       only: [:id, :scheduled_at, :status, :reason, :content, :content_type, :content_attributes,
-             :attachment_blob_ids, :error_message]
+             :attachment_blob_ids, :error_message, :is_task]
     )
   end
 

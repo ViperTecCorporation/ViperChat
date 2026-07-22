@@ -179,6 +179,7 @@ const onSubmit = async hide => {
       scheduled_at: new Date(scheduledAt.value).toISOString(),
       reason: description.value,
       sender_id: store.getters.getCurrentUser.id,
+      is_task: !sendMessage.value,
     };
 
     if (sendMessage.value) {

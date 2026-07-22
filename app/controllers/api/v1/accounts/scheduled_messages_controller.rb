@@ -48,7 +48,7 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
   end
 
   def permitted_params
-    params.require(:scheduled_message).permit(:scheduled_at, :label_id, :reason, :content, :content_type, :sender_id,
+    params.require(:scheduled_message).permit(:scheduled_at, :label_id, :reason, :content, :content_type, :sender_id, :is_task,
                                               content_attributes: {}, attachment_blob_ids: [],
                                               messages: [:content, :content_type, :voice_message,
                                                          { content_attributes: {}, attachment_blob_ids: [] }])
