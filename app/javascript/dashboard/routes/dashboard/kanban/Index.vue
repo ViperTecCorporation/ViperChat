@@ -16,7 +16,7 @@ import KanbanCard from './components/KanbanCard.vue';
 import PipelineSettingsModal from './components/PipelineSettingsModal.vue';
 
 // Config Storage Helper
-import ConversationApi from 'dashboard/api/conversations';
+import conversationApi from 'dashboard/api/inbox/conversation';
 import { KanbanConfigHelper } from './helpers/kanbanConfig';
 
 const { t } = useI18n();
@@ -179,9 +179,19 @@ const getInboxChannelMeta = inbox => {
   return { icon: 'i-lucide-globe', color: 'text-slate-400', name: 'Web Chat' };
 };
 
+const fetchAllConversationsForKanban = async () => {
+  try {
+    const { data } = await conversationApi.get({ status: 'all', page: 1 });
+    if (data?.data?.payload) {
+      store.commit('conversations/SET_ALL_CONVERSATION', data.data.payload);
+    }
+  } catch {
+    store.dispatch('conversations/fetchAllConversations');
+  }
+};
+
 onMounted(() => {
-  // Ensure Chatwoot memory is populated
-  store.dispatch('conversations/fetchAllConversations');
+  fetchAllConversationsForKanban();
   store.dispatch('labels/get');
   store.dispatch('inboxes/get');
   store.dispatch('agents/get');
