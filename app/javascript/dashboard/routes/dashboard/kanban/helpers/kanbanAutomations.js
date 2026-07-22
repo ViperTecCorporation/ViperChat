@@ -43,14 +43,6 @@ export const KanbanAutomations = {
         if (isAgentFirstMsg && pipeline.automations?.auto_create_skip_agent)
           continue;
 
-        const inboxFilter = pipeline.inboxes || [];
-        if (
-          inboxFilter.length > 0 &&
-          !inboxFilter.includes(conversation.inbox_id)
-        ) {
-          continue;
-        }
-
         const stageIds = pipeline.stages.map(s => s.id);
         const hasStage =
           conversation.kanban_stage &&

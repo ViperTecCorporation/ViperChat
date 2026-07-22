@@ -4,6 +4,7 @@ import { computed, ref, onMounted, watch } from 'vue';
 import { useStore } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
+import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { KanbanConfigHelper } from '../../../routes/dashboard/kanban/helpers/kanbanConfig';
 import ConversationApi from '../../../api/conversations';
 
@@ -181,8 +182,21 @@ const handleStageAutomations = async stage => {
       >
         {{ t('KANBAN.SIDEBAR.STAGE') }}
       </label>
+
+      <!-- No stage selected: show call-to-action button -->
+      <button
+        v-if="!activeStageId"
+        type="button"
+        class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 border-dashed border-blue-500/40 bg-blue-500/5 text-blue-400 text-xs font-bold hover:bg-blue-500/10 hover:border-blue-500/60 transition-all"
+        @click="selectStage(activePipeline.stages[0]); stageDropdownOpen = false"
+      >
+        <Icon icon="i-lucide-plus-circle" class="size-4" />
+        Adicionar ao Funil
+      </button>
+
       <div v-on-click-outside="(stageDropdownOpen = false)" class="relative">
         <button
+          v-if="activeStageId"
           type="button"
           class="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-950 text-xs text-slate-200 hover:border-slate-700 transition-all"
           @click="stageDropdownOpen = !stageDropdownOpen"
@@ -193,16 +207,12 @@ const handleStageAutomations = async stage => {
             :style="{ backgroundColor: currentStage.color || '#3b82f6' }"
           />
           <span class="flex-1 text-left truncate">
-            {{
-              currentStage
-                ? currentStage.title
-                : t('KANBAN.SIDEBAR.NOT_IN_PIPELINE')
-            }}
+            {{ currentStage.title }}
           </span>
           <div class="i-lucide-chevron-down size-3 text-slate-400 shrink-0" />
         </button>
         <div
-          v-if="stageDropdownOpen"
+          v-if="stageDropdownOpen && activeStageId"
           class="absolute z-50 mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 shadow-xl overflow-hidden"
         >
           <button
@@ -214,7 +224,7 @@ const handleStageAutomations = async stage => {
               stageDropdownOpen = false;
             "
           >
-            {{ t('KANBAN.SIDEBAR.NOT_IN_PIPELINE') }}
+            Remover do funil
           </button>
           <button
             v-for="stage in activePipeline.stages"

@@ -22,6 +22,9 @@ class Conversations::EventDataPresenter < SimpleDelegator
       first_reply_created_at: first_reply_created_at,
       priority: priority,
       waiting_since: waiting_since.to_i,
+      kanban_stage: kanban_stage,
+      funnel_id: funnel_id,
+      stage_id: stage_id,
       **push_timestamps
     }
   end
@@ -29,6 +32,24 @@ class Conversations::EventDataPresenter < SimpleDelegator
   # Like #push_data but with message text normalized for external integrations (webhooks).
   def webhook_data
     push_data.merge(messages: webhook_push_messages)
+  end
+
+  def funnel_id
+    return unless kanban_stage
+
+    config_label = account.labels.find_by(title: '_kanban_config')
+    return unless config_label&.description&.start_with?('[KANBAN_CONFIG]')
+
+    config = JSON.parse(config_label.description.delete_prefix('[KANBAN_CONFIG]'))
+    pipelines = config['pipelines'] || []
+    pipeline = pipelines.find { |p| p['stages']&.any? { |s| s['id'] == kanban_stage } }
+    pipeline&.dig('id')
+  rescue JSON::ParserError
+    nil
+  end
+
+  def stage_id
+    kanban_stage
   end
 
   private

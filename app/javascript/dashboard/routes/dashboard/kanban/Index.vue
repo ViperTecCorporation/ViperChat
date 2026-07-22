@@ -509,13 +509,10 @@ const importOpenConversations = async () => {
   if (!activePipeline.value) return;
 
   const stageIds = activePipeline.value.stages.map(s => s.id);
-  const inboxFilter = activePipeline.value.inboxes || [];
 
   const eligible = allConversations.value.filter(c => {
     if (c.status === 'resolved') return false;
     if (c.kanban_stage && stageIds.includes(c.kanban_stage)) return false;
-    if (inboxFilter.length > 0 && !inboxFilter.includes(c.inbox_id))
-      return false;
     return true;
   });
 

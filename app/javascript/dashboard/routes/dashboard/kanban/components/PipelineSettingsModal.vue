@@ -559,61 +559,9 @@ const handleSave = () => {
                     {{ t('KANBAN.SETTINGS.AUTO_CREATE') }}
                   </label>
                   <p class="text-xs text-slate-500">
-                    Novas conversas serão colocadas automaticamente na primeira
-                    etapa do funil.
+                    Novas conversas de todas as caixas de entrada serão
+                    colocadas automaticamente na primeira etapa do funil.
                   </p>
-
-                  <!-- Inbox Selector as Chips -->
-                  <div v-if="automations.auto_create" class="space-y-2 pt-2">
-                    <label
-                      class="text-[10px] uppercase font-bold tracking-wider text-slate-500 block"
-                    >
-                      Filtrar por caixas de entrada (todas se vazio):
-                    </label>
-                    <!-- Selected inbox chips -->
-                    <div
-                      v-if="inboxes.length > 0"
-                      class="flex flex-wrap gap-1.5 mb-2"
-                    >
-                      <div
-                        v-for="inboxId in inboxes"
-                        :key="inboxId"
-                        class="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-semibold"
-                      >
-                        <Icon icon="i-lucide-inbox" class="size-3 shrink-0" />
-                        <span class="truncate max-w-[80px]">{{
-                          allInboxes.find(i => i.id === inboxId)?.name ||
-                          inboxId
-                        }}</span>
-                        <button
-                          type="button"
-                          class="ml-0.5 hover:text-blue-300 transition-colors"
-                          @click="toggleInbox(inboxId)"
-                        >
-                          <Icon icon="i-lucide-x" class="size-3" />
-                        </button>
-                      </div>
-                    </div>
-                    <!-- Inbox selector buttons -->
-                    <div
-                      class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1 border border-slate-850 rounded bg-slate-900"
-                    >
-                      <button
-                        v-for="inbox in allInboxes"
-                        :key="inbox.id"
-                        type="button"
-                        class="px-2 py-0.5 rounded text-[10px] font-semibold border transition-all"
-                        :class="
-                          inboxes.includes(inbox.id)
-                            ? 'border-blue-500/30 bg-blue-500/10 text-blue-400'
-                            : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
-                        "
-                        @click="toggleInbox(inbox.id)"
-                      >
-                        {{ inbox.name }}
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
 
