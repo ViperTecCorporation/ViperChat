@@ -155,6 +155,11 @@ const { isAnInternalChannel, isAWhatsAppChannel, isATwilioWhatsAppChannel } =
   useInbox(props.inboxId);
 const inboxGetter = useMapGetter('inboxes/getInbox');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
+const isUnoapiInbox = computed(
+  () =>
+    inbox.value.channel_type === 'Channel::Whatsapp' &&
+    inbox.value.provider === 'unoapi'
+);
 const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
 
@@ -489,7 +494,16 @@ const contextMenuEnabledOptions = computed(() => {
       !isFailedOrProcessing &&
       !isMessageDeleted.value,
     cannedResponse: isOutgoing && hasText && !isMessageDeleted.value,
-    edit: false,
+    edit:
+      isUnoapiInbox.value &&
+      isOutgoing &&
+      hasText &&
+      !hasAttachments &&
+      !!props.sourceId &&
+      !props.private &&
+      props.contentType === CONTENT_TYPES.TEXT &&
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
     copyLink: !isFailedOrProcessing,
     translate: !isFailedOrProcessing && !isMessageDeleted.value && hasText,
     replyTo:
@@ -558,7 +572,9 @@ const messageAttachments = computed(() => {
 });
 
 const shouldShowDeletedMediaNotice = computed(() => {
-  return isDeletedContentPreserved.value && componentToRender.value !== TextBubble;
+  return (
+    isDeletedContentPreserved.value && componentToRender.value !== TextBubble
+  );
 });
 
 const longPressStartPoint = ref(null);
