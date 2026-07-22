@@ -3,13 +3,15 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import NotificationsAPI from 'dashboard/api/notifications';
+import { useAlert } from 'dashboard/composables';
 
 const router = useRouter();
 const store = useStore();
 const notificationMeta = useMapGetter('notifications/getMeta');
 
 const isOpen = ref(false);
-const notifications = ref([]);
+const tasks = ref([]);
+const messages = ref([]);
 const isLoading = ref(false);
 const popoverRef = ref(null);
 
@@ -31,16 +33,16 @@ const formatTimeAgo = dateStr => {
   return `${days}d`;
 };
 
-const fetchTaskNotifications = async () => {
+const fetchNotifications = async () => {
   isLoading.value = true;
   try {
-    const { data } = await NotificationsAPI.get({
-      type: 'scheduled_task_due',
-      page: 1,
-    });
-    notifications.value = data?.data?.payload || [];
+    const { data } = await NotificationsAPI.get({ page: 1 });
+    const all = data?.data?.payload || [];
+    tasks.value = all.filter(n => n.notification_type === 'scheduled_task_due');
+    messages.value = all.filter(n => n.notification_type !== 'scheduled_task_due');
   } catch {
-    notifications.value = [];
+    tasks.value = [];
+    messages.value = [];
   } finally {
     isLoading.value = false;
   }
@@ -49,7 +51,7 @@ const fetchTaskNotifications = async () => {
 const toggle = async () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
-    await fetchTaskNotifications();
+    await fetchNotifications();
   }
 };
 
@@ -68,6 +70,18 @@ const openConversation = notification => {
     });
   }
   close();
+};
+
+const markTaskDone = async (event, notification) => {
+  event.stopPropagation();
+  try {
+    await NotificationsAPI.delete(notification.id);
+    tasks.value = tasks.value.filter(n => n.id !== notification.id);
+    store.dispatch('notifications/unReadCount');
+    useAlert('Tarefa concluída');
+  } catch {
+    useAlert('Erro ao concluir tarefa');
+  }
 };
 
 const handleClickOutside = event => {
@@ -103,46 +117,91 @@ onBeforeUnmount(() => {
 
     <div
       v-if="isOpen"
-      class="absolute z-50 w-80 mt-2 ltr:right-0 rtl:left-0 bg-n-background border border-n-weak rounded-xl shadow-lg overflow-hidden"
+      class="absolute z-50 w-80 ltr:right-0 rtl:left-0 mt-2 bg-n-background border border-n-weak rounded-xl shadow-lg"
     >
-      <div class="px-4 py-3 text-sm font-medium border-b border-n-weak text-n-slate-12">
-        Tarefas vencidas
-      </div>
-
-      <div v-if="isLoading" class="flex items-center justify-center py-8">
+      <div v-if="isLoading" class="flex items-center justify-center py-10">
         <span class="i-lucide-loader-2 size-5 animate-spin text-n-slate-10" />
       </div>
 
-      <div
-        v-else-if="!notifications.length"
-        class="py-8 text-sm text-center text-n-slate-10"
-      >
-        Nenhuma tarefa vencida
-      </div>
+      <template v-else>
+        <!-- Tarefas Vencidas -->
+        <div class="px-4 py-3 text-sm font-medium text-n-slate-12 border-b border-n-weak">
+          Tarefas Vencidas
+        </div>
 
-      <div v-else class="max-h-80 overflow-y-auto">
-        <button
-          v-for="notification in notifications"
-          :key="notification.id"
-          class="flex flex-col w-full gap-1 px-4 py-3 text-start border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors"
-          @click="openConversation(notification)"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-medium truncate text-n-slate-12">
-              {{ notification.push_message_title || 'Tarefa' }}
-            </span>
-            <span class="text-xs shrink-0 text-n-slate-10">
-              {{ formatTimeAgo(notification.created_at) }}
-            </span>
-          </div>
-          <p
-            v-if="notification.push_message_body"
-            class="mb-0 text-xs line-clamp-2 text-n-slate-11"
+        <div v-if="!tasks.length" class="px-4 py-6 text-sm text-center text-n-slate-10">
+          Nenhuma tarefa vencida
+        </div>
+
+        <div v-else class="max-h-48 overflow-y-auto">
+          <div
+            v-for="notification in tasks"
+            :key="notification.id"
+            class="flex items-start gap-2 px-4 py-3 border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors cursor-pointer"
+            @click="openConversation(notification)"
           >
-            {{ notification.push_message_body }}
-          </p>
-        </button>
-      </div>
+            <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sm font-medium truncate text-n-slate-12">
+                  {{ notification.push_message_title || 'Tarefa' }}
+                </span>
+                <span class="text-xs shrink-0 text-n-slate-10">
+                  {{ formatTimeAgo(notification.created_at) }}
+                </span>
+              </div>
+              <p
+                v-if="notification.push_message_body"
+                class="mb-0 text-xs line-clamp-2 text-n-slate-11"
+              >
+                {{ notification.push_message_body }}
+              </p>
+            </div>
+            <button
+              class="flex items-center justify-center shrink-0 size-6 rounded-md text-n-slate-10 hover:text-n-teal-11 hover:bg-n-teal-3 transition-colors"
+              :title="'Concluir'"
+              @click="markTaskDone($event, notification)"
+            >
+              <span class="i-lucide-check size-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Divisória -->
+        <div
+          v-if="messages.length"
+          class="flex items-center gap-3 px-4 py-2"
+        >
+          <span class="text-xs font-medium text-n-slate-10">Notificações</span>
+          <span class="flex-1 h-px bg-n-weak" />
+        </div>
+
+        <!-- Notificações de Mensagens -->
+        <div v-if="messages.length" class="max-h-48 overflow-y-auto">
+          <div
+            v-for="notification in messages"
+            :key="notification.id"
+            class="flex items-start gap-2 px-4 py-3 border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors cursor-pointer"
+            @click="openConversation(notification)"
+          >
+            <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sm font-medium truncate text-n-slate-12">
+                  {{ notification.push_message_title || 'Notificação' }}
+                </span>
+                <span class="text-xs shrink-0 text-n-slate-10">
+                  {{ formatTimeAgo(notification.created_at) }}
+                </span>
+              </div>
+              <p
+                v-if="notification.push_message_body"
+                class="mb-0 text-xs line-clamp-2 text-n-slate-11"
+              >
+                {{ notification.push_message_body }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
