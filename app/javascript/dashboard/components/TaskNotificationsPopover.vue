@@ -47,6 +47,14 @@ const contactName = notification => {
   }
 };
 
+const contactThumbnail = notification => {
+  try {
+    return notification.primary_actor?.meta?.sender?.thumbnail || '';
+  } catch {
+    return '';
+  }
+};
+
 const formatTimeAgo = dateStr => {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -173,10 +181,18 @@ onBeforeUnmount(() => {
           <div
             v-for="notification in tasks"
             :key="notification.id"
-            class="flex items-start gap-2 px-4 py-3 border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors cursor-pointer"
-            @click="openConversation(notification)"
-          >
-            <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+              class="flex items-start gap-2 px-4 py-3 border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors cursor-pointer"
+              @click="openConversation(notification)"
+            >
+              <img
+                v-if="contactThumbnail(notification)"
+                :src="contactThumbnail(notification)"
+                class="rounded-full size-7 shrink-0 object-cover mt-0.5"
+              />
+              <div v-else class="flex items-center justify-center rounded-full size-7 shrink-0 mt-0.5 bg-n-slate-4 text-n-slate-11 text-xs font-medium">
+                {{ (contactName(notification) || '?')[0] }}
+              </div>
+              <div class="flex flex-col flex-1 min-w-0 gap-0.5">
               <div class="flex items-center justify-between gap-2">
                 <span class="text-sm font-medium truncate text-n-slate-12">
                   {{ notification.push_message_title || 'Tarefa' }}
@@ -218,6 +234,14 @@ onBeforeUnmount(() => {
               class="flex items-start gap-2 px-4 py-3 border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors cursor-pointer"
               @click="openConversation(notification)"
             >
+              <img
+                v-if="contactThumbnail(notification)"
+                :src="contactThumbnail(notification)"
+                class="rounded-full size-7 shrink-0 object-cover mt-0.5"
+              />
+              <div v-else class="flex items-center justify-center rounded-full size-7 shrink-0 mt-0.5 bg-n-slate-4 text-n-slate-11 text-xs font-medium">
+                {{ (contactName(notification) || '?')[0] }}
+              </div>
               <div class="flex flex-col flex-1 min-w-0 gap-0.5">
                 <div class="flex items-center justify-between gap-2">
                 <span class="text-sm font-medium truncate text-n-slate-12">
@@ -253,6 +277,14 @@ onBeforeUnmount(() => {
               class="flex items-start gap-2 px-4 py-3 border-b border-n-weak last:border-b-0 hover:bg-n-alpha-2 transition-colors cursor-pointer"
               @click="openConversation(notification)"
             >
+              <img
+                v-if="contactThumbnail(notification)"
+                :src="contactThumbnail(notification)"
+                class="rounded-full size-7 shrink-0 object-cover mt-0.5"
+              />
+              <div v-else class="flex items-center justify-center rounded-full size-7 shrink-0 mt-0.5 bg-n-slate-4 text-n-slate-11 text-xs font-medium">
+                {{ (contactName(notification) || '?')[0] }}
+              </div>
               <div class="flex flex-col flex-1 min-w-0 gap-0.5">
                 <div class="flex items-center justify-between gap-2">
                 <span class="text-sm font-medium truncate text-n-slate-12">
