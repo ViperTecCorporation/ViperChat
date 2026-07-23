@@ -3,6 +3,13 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
 
   private
 
+  def process_content(message)
+    content = message_content(message)
+    response = get_response(conversation.contact_inbox.source_id, content) if content.present?
+    process_response(message, response) if response.present?
+    conversation.save!
+  end
+
   def get_response(_session_id, message_content)
     session_id = conversation.custom_attributes['typebot_session_id']
     last_msg_id = conversation.custom_attributes['typebot_last_message_id']
@@ -16,32 +23,29 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
     client_side_actions = []
     input_data = nil
 
-    if session_id.blank?
-      start_response = start_chat
-      if start_response && start_response['sessionId']
-        session_id = start_response['sessionId']
-        conversation.custom_attributes['typebot_session_id'] = session_id
-        conversation.custom_attributes['typebot_waiting_for_input'] = start_response['input'].present?
-        conversation.custom_attributes['typebot_last_message_id'] = current_msg&.id
-        conversation.save!
-
-        typebot_messages.concat(start_response['messages'] || [])
-        client_side_actions.concat(start_response['clientSideActions'] || [])
-        input_data = start_response['input']
-      end
-    elsif session_id.present? && message_content.present?
+    if session_id.present? && message_content.present?
       continue_response = continue_chat(session_id, message_content)
       if continue_response
         typebot_messages.concat(continue_response['messages'] || [])
         client_side_actions.concat(continue_response['clientSideActions'] || [])
         input_data = continue_response['input']
       end
+    elsif session_id.blank?
+      start_response = start_chat
+      if start_response && start_response['sessionId']
+        conversation.custom_attributes['typebot_session_id'] = start_response['sessionId']
+        conversation.custom_attributes['typebot_waiting_for_input'] = start_response['input'].present?
+        typebot_messages.concat(start_response['messages'] || [])
+        client_side_actions.concat(start_response['clientSideActions'] || [])
+        input_data = start_response['input']
+      end
     end
 
     if current_msg.present?
       conversation.custom_attributes['typebot_last_message_id'] = current_msg.id
-      conversation.save!
     end
+
+    Rails.logger.info "[Typebot] session_id=#{session_id || conversation.custom_attributes['typebot_session_id']} messages=#{typebot_messages.size} input=#{input_data.present?}"
 
     {
       messages: typebot_messages,
@@ -59,13 +63,7 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
     input = response[:input]
     was_waiting = conversation.custom_attributes['typebot_waiting_for_input']
 
-    if input.present?
-      conversation.custom_attributes['typebot_waiting_for_input'] = true
-      conversation.save!
-    else
-      conversation.custom_attributes['typebot_waiting_for_input'] = false
-      conversation.save!
-    end
+    conversation.custom_attributes['typebot_waiting_for_input'] = input.present?
 
     (response[:messages] || []).each_with_index do |typebot_msg, index|
       sleep(0.5) if index.positive?
@@ -130,13 +128,33 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
 
     begin
       uri = URI.parse(url)
-      uri.open(read_timeout: 10, open_timeout: 5) do |file|
-        filename = File.basename(uri.path.presence || "media.#{file_type}")
-        content_type = file.content_type.presence || "image/png"
-        attachment.file.attach(io: file, filename: filename, content_type: content_type)
-        attachment.extension = File.extname(filename).delete_prefix('.')
+      content_type = nil
+      filename = "media.#{file_type}"
+      io_data = nil
+
+      Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
+        req = Net::HTTP::Get.new(uri.request_uri, 'User-Agent' => 'Chatwoot/1.0')
+        http.request(req) do |resp|
+          content_type = resp.content_type
+          disposition = resp['Content-Disposition']
+          if disposition && disposition =~ /filename=(?:"|)([^"]+)/
+            filename = Regexp.last_match(1)
+          elsif uri.path.present?
+            basename = File.basename(uri.path)
+            filename = basename.presence || filename
+          end
+          io_data = resp.body
+        end
       end
-      attachment.save!
+
+      if io_data
+        stringio = StringIO.new(io_data)
+        attachment.file.attach(io: stringio, filename: filename, content_type: content_type || "image/png")
+        attachment.extension = File.extname(filename).delete_prefix('.')
+        attachment.save!
+      else
+        raise 'Empty response body'
+      end
     rescue StandardError => e
       Rails.logger.error "Typebot: failed to download #{url}: #{e.message}"
       attachment.file_type = file_type
