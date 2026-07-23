@@ -61,14 +61,12 @@ class Attachment < ApplicationRecord
 
   # NOTE: for External services use this methods since redirect doesn't work effectively in a lot of cases
   def download_url
-    return external_url.presence if external_url.present?
-
     ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
     if file.attached?
       url = file.blob.url
       return url if url.present? && url.match?(/\Ahttps?:\/\//)
     end
-    ''
+    external_url.presence || ''
   end
 
   def thumb_url
