@@ -5,6 +5,13 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
 
   def get_response(_session_id, message_content)
     session_id = conversation.custom_attributes['typebot_session_id']
+    last_msg_id = conversation.custom_attributes['typebot_last_message_id']
+    current_msg = event_data[:message]
+
+    if current_msg.present? && last_msg_id.present? && last_msg_id.to_s == current_msg.id.to_s
+      return { messages: [], client_side_actions: [], input: nil }
+    end
+
     typebot_messages = []
     client_side_actions = []
     input_data = nil
@@ -15,6 +22,7 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
         session_id = start_response['sessionId']
         conversation.custom_attributes['typebot_session_id'] = session_id
         conversation.custom_attributes['typebot_waiting_for_input'] = start_response['input'].present?
+        conversation.custom_attributes['typebot_last_message_id'] = current_msg&.id
         conversation.save!
 
         typebot_messages.concat(start_response['messages'] || [])
@@ -26,8 +34,13 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
       if continue_response
         typebot_messages.concat(continue_response['messages'] || [])
         client_side_actions.concat(continue_response['clientSideActions'] || [])
-        input_data = continue_response['input'] || input_data
+        input_data = continue_response['input']
       end
+    end
+
+    if current_msg.present?
+      conversation.custom_attributes['typebot_last_message_id'] = current_msg.id
+      conversation.save!
     end
 
     {
@@ -44,36 +57,35 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
     return if response.blank?
 
     input = response[:input]
+    was_waiting = conversation.custom_attributes['typebot_waiting_for_input']
+
+    if input.present?
+      conversation.custom_attributes['typebot_waiting_for_input'] = true
+      conversation.save!
+    else
+      conversation.custom_attributes['typebot_waiting_for_input'] = false
+      conversation.save!
+    end
 
     (response[:messages] || []).each_with_index do |typebot_msg, index|
       sleep(0.5) if index.positive?
       process_typebot_message(message, typebot_msg)
     end
 
-    if input.present?
-      waiting_for_input = conversation.custom_attributes['typebot_waiting_for_input']
-      conversation.custom_attributes['typebot_waiting_for_input'] = true
-      conversation.save!
-
-      # Só cria input_select se for do tipo choice e não estava já esperando input
-      if input['type']&.include?('choice') && input['options'].is_a?(Array) && !waiting_for_input
-        items = input['options'].map do |option|
-          {
-            title: option['value'] || option['label'] || option['id'],
-            value: option['value'] || option['label'] || option['id']
-          }
-        end
-        if items.present?
-          create_conversation(message, {
-            content: 'Select an option',
-            content_type: 'input_select',
-            content_attributes: { items: items }
-          })
-        end
+    if input.present? && input['type']&.include?('choice') && input['options'].is_a?(Array) && !was_waiting
+      items = input['options'].map do |option|
+        {
+          title: option['value'] || option['label'] || option['id'],
+          value: option['value'] || option['label'] || option['id']
+        }
       end
-    else
-      conversation.custom_attributes['typebot_waiting_for_input'] = false
-      conversation.save!
+      if items.present?
+        create_conversation(message, {
+          content: 'Select an option',
+          content_type: 'input_select',
+          content_attributes: { items: items }
+        })
+      end
     end
 
     should_handoff = false
@@ -122,6 +134,7 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
         filename = File.basename(uri.path.presence || "media.#{file_type}")
         content_type = file.content_type.presence || "image/png"
         attachment.file.attach(io: file, filename: filename, content_type: content_type)
+        attachment.extension = File.extname(filename).delete_prefix('.')
       end
       attachment.save!
     rescue StandardError => e
