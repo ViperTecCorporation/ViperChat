@@ -7,6 +7,10 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
     content = message_content(message)
     response = get_response(conversation.contact_inbox.source_id, content) if content.present?
     process_response(message, response) if response.present?
+  rescue StandardError => e
+    Rails.logger.error "Typebot process_content error: #{e.message}"
+    raise
+  ensure
     conversation.save!
   end
 
