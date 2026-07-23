@@ -151,6 +151,7 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
         stringio = StringIO.new(io_data)
         attachment.file.attach(io: stringio, filename: filename, content_type: content_type || "image/png")
         attachment.extension = File.extname(filename).delete_prefix('.')
+        attachment.external_url = url
         attachment.save!
       else
         raise 'Empty response body'
