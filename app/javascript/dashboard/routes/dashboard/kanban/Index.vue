@@ -17,6 +17,7 @@ import PipelineSettingsModal from './components/PipelineSettingsModal.vue';
 
 // Config Storage Helper
 import conversationApi from 'dashboard/api/inbox/conversation';
+import ConversationApi from 'dashboard/api/conversations';
 import { KanbanConfigHelper } from './helpers/kanbanConfig';
 
 const { t } = useI18n();
