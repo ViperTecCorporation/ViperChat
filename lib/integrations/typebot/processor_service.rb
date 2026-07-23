@@ -14,15 +14,14 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
       if start_response && start_response['sessionId']
         session_id = start_response['sessionId']
         conversation.custom_attributes['typebot_session_id'] = session_id
+        conversation.custom_attributes['typebot_waiting_for_input'] = start_response['input'].present?
         conversation.save!
 
         typebot_messages.concat(start_response['messages'] || [])
         client_side_actions.concat(start_response['clientSideActions'] || [])
         input_data = start_response['input']
       end
-    end
-
-    if session_id.present? && message_content.present?
+    elsif session_id.present? && message_content.present?
       continue_response = continue_chat(session_id, message_content)
       if continue_response
         typebot_messages.concat(continue_response['messages'] || [])
@@ -44,26 +43,37 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
   def process_response(message, response)
     return if response.blank?
 
+    input = response[:input]
+
     (response[:messages] || []).each_with_index do |typebot_msg, index|
       sleep(0.5) if index.positive?
       process_typebot_message(message, typebot_msg)
     end
 
-    input = response[:input]
-    if input.present? && input['type']&.include?('choice') && input['options'].is_a?(Array)
-      items = input['options'].map do |option|
-        {
-          title: option['value'] || option['label'] || option['id'],
-          value: option['value'] || option['label'] || option['id']
-        }
+    if input.present?
+      waiting_for_input = conversation.custom_attributes['typebot_waiting_for_input']
+      conversation.custom_attributes['typebot_waiting_for_input'] = true
+      conversation.save!
+
+      # Só cria input_select se for do tipo choice e não estava já esperando input
+      if input['type']&.include?('choice') && input['options'].is_a?(Array) && !waiting_for_input
+        items = input['options'].map do |option|
+          {
+            title: option['value'] || option['label'] || option['id'],
+            value: option['value'] || option['label'] || option['id']
+          }
+        end
+        if items.present?
+          create_conversation(message, {
+            content: 'Select an option',
+            content_type: 'input_select',
+            content_attributes: { items: items }
+          })
+        end
       end
-      if items.present?
-        create_conversation(message, {
-          content: 'Select an option',
-          content_type: 'input_select',
-          content_attributes: { items: items }
-        })
-      end
+    else
+      conversation.custom_attributes['typebot_waiting_for_input'] = false
+      conversation.save!
     end
 
     should_handoff = false
@@ -85,12 +95,10 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
       url = extract_url(typebot_msg)
       return if url.blank?
 
-      msg = create_conversation(source_message, { content: '' })
-      msg.attachments.create!(
-        account_id: msg.account_id,
-        external_url: url,
-        file_type: type
-      )
+      original_content = extract_text(typebot_msg)
+      msg = create_conversation(source_message, { content: original_content || '' })
+
+      create_attachment_with_file(msg, url, type)
     else
       url = extract_url(typebot_msg)
       if url.present?
@@ -99,6 +107,28 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
         text = extract_text(typebot_msg)
         create_conversation(source_message, { content: text }) if text.present?
       end
+    end
+  end
+
+  def create_attachment_with_file(message, url, file_type)
+    attachment = message.attachments.new(
+      account_id: message.account_id,
+      file_type: file_type
+    )
+
+    begin
+      uri = URI.parse(url)
+      uri.open(read_timeout: 10, open_timeout: 5) do |file|
+        filename = File.basename(uri.path.presence || "media.#{file_type}")
+        content_type = file.content_type.presence || "image/png"
+        attachment.file.attach(io: file, filename: filename, content_type: content_type)
+      end
+      attachment.save!
+    rescue StandardError => e
+      Rails.logger.error "Typebot: failed to download #{url}: #{e.message}"
+      attachment.file_type = file_type
+      attachment.external_url = url
+      attachment.save!
     end
   end
 
