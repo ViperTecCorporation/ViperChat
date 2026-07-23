@@ -390,6 +390,7 @@ const onCardDragChange = async (event, targetStage) => {
 
 // Navigation to conversation detail
 const openConversation = conversationId => {
+  if (!conversationId) return;
   router.push({
     name: 'inbox_conversation',
     params: {

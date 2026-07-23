@@ -395,7 +395,7 @@ onUnmounted(() => {
     "
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
-    @click="emit('click', props.conversation.id)"
+    @click="props.conversation?.id ? emit('click', props.conversation.id) : null"
   >
     <!-- Drag Indicator (grip dots, top-left) -->
     <div
