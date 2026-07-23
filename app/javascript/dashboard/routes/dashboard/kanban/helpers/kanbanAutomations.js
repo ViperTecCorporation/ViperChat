@@ -2,6 +2,43 @@
 import { KanbanConfigHelper } from './kanbanConfig';
 import ConversationApi from 'dashboard/api/conversations';
 
+export const triggerStageTypebot = async (conversation, stage) => {
+  if (!conversation || !stage) return;
+  const typebotUrl = stage.typebot_url || '';
+  const typebotId = stage.typebot_id || '';
+  if (!typebotUrl || !typebotId) return;
+
+  const baseUrl = typebotUrl.replace(/\/+$/, '');
+  const contact = conversation.meta?.sender || {};
+
+  try {
+    const response = await fetch(
+      `${baseUrl}/api/v1/typebots/${typebotId}/startChat`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prefilledVariables: {
+            name: contact.name || '',
+            email: contact.email || '',
+            phone_number: contact.phone_number || '',
+            conversation_id: String(conversation.display_id || conversation.id),
+            inbox_id: String(conversation.inbox_id || ''),
+          },
+        }),
+      }
+    );
+    if (!response.ok) {
+      console.error(
+        `Typebot trigger failed: ${response.status} for stage ${stage.id}`,
+        await response.text().catch(() => '')
+      );
+    }
+  } catch (err) {
+    console.error(`Typebot trigger error for stage ${stage.id}:`, err);
+  }
+};
+
 const assignOnlineAgent = async (store, conversationId, pipeline) => {
   const agentsList = pipeline.agents || [];
   const allAgents = store.getters['agents/getAgents'] || [];
@@ -50,6 +87,9 @@ export const KanbanAutomations = {
 
         if (!hasStage && pipeline.stages.length > 0) {
           const firstStage = pipeline.stages[0];
+
+          // Dispara Typebot antes do update para não depender da migration
+          triggerStageTypebot(conversation, firstStage);
 
           try {
             await ConversationApi.update(conversation.id, {

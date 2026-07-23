@@ -170,6 +170,8 @@ const addStage = () => {
     id: newId,
     title: `Etapa ${stages.value.length + 1}`,
     color: '#3b82f6',
+    typebot_url: '',
+    typebot_id: '',
   });
 };
 
@@ -480,10 +482,41 @@ const handleSave = () => {
                         type="color"
                         class="w-8 h-8 rounded border border-slate-700 bg-slate-900 cursor-pointer overflow-hidden p-0"
                       />
-                      <span
-                        class="text-xs text-slate-400 font-mono uppercase"
-                        >{{ stage.color }}</span>
+                      <span class="text-xs text-slate-400 font-mono uppercase">
+                        {{ stage.color }}</span>
                     </div>
+                  </div>
+                  <!-- Typebot Integration -->
+                  <div class="sm:col-span-2 space-y-2 pt-1">
+                    <div class="flex items-center gap-2">
+                      <Icon
+                        icon="i-lucide-bot"
+                        class="size-3.5 text-blue-400"
+                      />
+                      <span
+                        class="text-[10px] uppercase font-bold tracking-wider text-slate-500"
+                      >
+                        Typebot
+                      </span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        v-model="stage.typebot_url"
+                        type="url"
+                        placeholder="URL do Typebot (ex: https://typebot.io)"
+                        class="w-full px-3 py-1.5 rounded-md border border-slate-700 bg-slate-900 text-slate-200 text-xs focus:border-blue-500 outline-none font-mono"
+                      />
+                      <input
+                        v-model="stage.typebot_id"
+                        type="text"
+                        placeholder="ID Público do Typebot"
+                        class="w-full px-3 py-1.5 rounded-md border border-slate-700 bg-slate-900 text-slate-200 text-xs focus:border-blue-500 outline-none font-mono"
+                      />
+                    </div>
+                    <p class="text-[9px] text-slate-500">
+                      Ao mover um lead para esta etapa, iniciará automaticamente
+                      o Typebot com os dados do contato.
+                    </p>
                   </div>
                 </div>
 

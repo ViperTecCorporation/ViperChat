@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { KanbanConfigHelper } from '../../../routes/dashboard/kanban/helpers/kanbanConfig';
+import { triggerStageTypebot } from '../../../routes/dashboard/kanban/helpers/kanbanAutomations';
 import ConversationApi from '../../../api/conversations';
 
 const props = defineProps({
@@ -80,9 +81,13 @@ watch(
   }
 );
 
-watch(conversation, () => {
-  detectConversationPipeline();
-}, { deep: true });
+watch(
+  conversation,
+  () => {
+    detectConversationPipeline();
+  },
+  { deep: true }
+);
 
 const onPipelineChange = () => {
   activeStageId.value = null;
@@ -92,6 +97,11 @@ const selectStage = async stage => {
   if (!activePipeline.value) return;
 
   activeStageId.value = stage ? stage.id : null;
+
+  // Dispara Typebot antes do update para não depender da migration
+  if (stage) {
+    triggerStageTypebot(conversation.value, stage);
+  }
 
   try {
     const conversationId = Number(props.conversationId);
@@ -154,7 +164,10 @@ const handleStageAutomations = async stage => {
 </script>
 
 <template>
-  <div v-if="fullConfig.pipelines.length > 0" class="flex flex-col gap-3 py-2 px-1 text-slate-200">
+  <div
+    v-if="fullConfig.pipelines.length > 0"
+    class="flex flex-col gap-3 py-2 px-1 text-slate-200"
+  >
     <div class="flex flex-col gap-1">
       <label
         class="text-[10px] uppercase font-bold tracking-wider text-slate-500"
@@ -188,13 +201,19 @@ const handleStageAutomations = async stage => {
         v-if="!activeStageId"
         type="button"
         class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 border-dashed border-blue-500/40 bg-blue-500/5 text-blue-400 text-xs font-bold hover:bg-blue-500/10 hover:border-blue-500/60 transition-all"
-        @click="selectStage(activePipeline.stages[0]); stageDropdownOpen = false"
+        @click="
+          selectStage(activePipeline.stages[0]);
+          stageDropdownOpen = false;
+        "
       >
         <Icon icon="i-lucide-plus-circle" class="size-4" />
         Adicionar ao Funil
       </button>
 
-      <div v-on-click-outside="() => (stageDropdownOpen = false)" class="relative">
+      <div
+        v-on-click-outside="() => (stageDropdownOpen = false)"
+        class="relative"
+      >
         <button
           v-if="activeStageId"
           type="button"

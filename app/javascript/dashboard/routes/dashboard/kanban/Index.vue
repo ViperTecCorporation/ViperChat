@@ -153,15 +153,18 @@ const getPipelineUniqueInboxes = pipeline => {
 };
 
 import { getChannelMeta } from 'dashboard/helper/channelMeta';
-import { KanbanAutomations } from './helpers/kanbanAutomations';
+import {
+  KanbanAutomations,
+  triggerStageTypebot,
+} from './helpers/kanbanAutomations';
 const getInboxChannelMeta = inbox => getChannelMeta(inbox.channel_type);
 
 // Dashboard KPI computed
 const pipelineStats = computed(() => {
   if (!activePipeline.value) return null;
   const stageIds = activePipeline.value.stages.map(s => s.id);
-  const convs = allConversations.value.filter(c =>
-    c.kanban_stage && stageIds.includes(c.kanban_stage)
+  const convs = allConversations.value.filter(
+    c => c.kanban_stage && stageIds.includes(c.kanban_stage)
   );
   const total = convs.length;
   const open = convs.filter(c => c.status === 'open').length;
@@ -180,7 +183,11 @@ const isLoadingConversations = ref(false);
 const fetchAllConversationsForKanban = async () => {
   isLoadingConversations.value = true;
   try {
-    const { data } = await conversationApi.get({ status: 'all', page: 1, perPage: 500 });
+    const { data } = await conversationApi.get({
+      status: 'all',
+      page: 1,
+      perPage: 500,
+    });
     if (data?.data?.payload) {
       store.commit('conversations/SET_ALL_CONVERSATION', data.data.payload);
     }
@@ -318,13 +325,29 @@ watch(
 // Drag visual feedback — SortableJS classList.add doesn't support space-separated classes
 const onDragStart = event => {
   if (event.item) {
-    event.item.classList.add('scale-105', 'rotate-1', 'opacity-90', 'shadow-2xl', 'rounded-xl', 'z-50', 'cursor-grabbing');
+    event.item.classList.add(
+      'scale-105',
+      'rotate-1',
+      'opacity-90',
+      'shadow-2xl',
+      'rounded-xl',
+      'z-50',
+      'cursor-grabbing'
+    );
   }
 };
 
 const onDragEnd = event => {
   if (event.item) {
-    event.item.classList.remove('scale-105', 'rotate-1', 'opacity-90', 'shadow-2xl', 'rounded-xl', 'z-50', 'cursor-grabbing');
+    event.item.classList.remove(
+      'scale-105',
+      'rotate-1',
+      'opacity-90',
+      'shadow-2xl',
+      'rounded-xl',
+      'z-50',
+      'cursor-grabbing'
+    );
   }
 };
 
@@ -334,6 +357,10 @@ const onCardDragChange = async (event, targetStage) => {
     const conversation = event.added.element;
 
     skipColumnSync = true;
+
+    // Dispara Typebot antes do update para não depender da migration
+    triggerStageTypebot(conversation, targetStage);
+
     try {
       await ConversationApi.update(conversation.id, {
         kanban_stage: targetStage.id,
@@ -896,19 +923,31 @@ const importOpenConversations = async () => {
         class="flex items-center gap-5 px-6 py-2.5 bg-slate-900/40 border-b border-slate-900/60 shrink-0"
       >
         <div class="flex items-center gap-2">
-          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total</span>
-          <span class="text-sm font-bold text-slate-100">{{ pipelineStats.total }}</span>
+          <span
+            class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider"
+            >Total</span>
+          <span class="text-sm font-bold text-slate-100">{{
+            pipelineStats.total
+          }}</span>
         </div>
         <div class="w-px h-4 bg-slate-800" />
         <div class="flex items-center gap-2">
           <span class="size-2 rounded-full bg-emerald-500" />
-          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Abertos</span>
-          <span class="text-sm font-bold text-emerald-400">{{ pipelineStats.open }}</span>
+          <span
+            class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider"
+            >Abertos</span>
+          <span class="text-sm font-bold text-emerald-400">{{
+            pipelineStats.open
+          }}</span>
         </div>
         <div class="flex items-center gap-2">
           <span class="size-2 rounded-full bg-slate-600" />
-          <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Resolvidos</span>
-          <span class="text-sm font-bold text-slate-400">{{ pipelineStats.resolved }}</span>
+          <span
+            class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider"
+            >Resolvidos</span>
+          <span class="text-sm font-bold text-slate-400">{{
+            pipelineStats.resolved
+          }}</span>
         </div>
         <div class="w-px h-4 bg-slate-800" />
         <!-- Per-stage distribution bar -->
@@ -919,7 +958,9 @@ const importOpenConversations = async () => {
             <div
               v-for="item in pipelineStats.stageDistribution"
               :key="item.stage.id"
-              v-tooltip="`${item.stage.title}: ${item.count} (${item.percentage.toFixed(0)}%)`"
+              v-tooltip="
+                `${item.stage.title}: ${item.count} (${item.percentage.toFixed(0)}%)`
+              "
               class="h-full transition-all duration-300"
               :style="{
                 width: item.percentage + '%',
@@ -1052,9 +1093,7 @@ const importOpenConversations = async () => {
                   <span class="text-xs font-semibold truncate">{{
                     conv.meta?.sender?.name || 'Cliente'
                   }}</span>
-                  <span class="text-[9px] text-slate-500 font-mono"
-                    >#{{ conv.display_id || conv.id }}</span
-                  >
+                  <span class="text-[9px] text-slate-500 font-mono">#{{ conv.display_id || conv.id }}</span>
                 </div>
               </button>
 

@@ -44,9 +44,9 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
   def process_response(message, response)
     return if response.blank?
 
-    (response[:messages] || []).each do |typebot_msg|
-      content_params = generate_content_params(typebot_msg)
-      create_conversation(message, content_params) if content_params.present?
+    (response[:messages] || []).each_with_index do |typebot_msg, index|
+      sleep(0.5) if index.positive?
+      process_typebot_message(message, typebot_msg)
     end
 
     input = response[:input]
@@ -72,6 +72,34 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
     end
 
     process_action(message, 'handoff') if should_handoff
+  end
+
+  def process_typebot_message(source_message, typebot_msg)
+    type = typebot_msg['type']
+
+    case type
+    when 'text'
+      text = extract_text(typebot_msg)
+      create_conversation(source_message, { content: text }) if text.present?
+    when 'image', 'video', 'audio'
+      url = extract_url(typebot_msg)
+      return if url.blank?
+
+      msg = create_conversation(source_message, { content: '' })
+      msg.attachments.create!(
+        account_id: msg.account_id,
+        external_url: url,
+        file_type: type
+      )
+    else
+      url = extract_url(typebot_msg)
+      if url.present?
+        create_conversation(source_message, { content: "[Attachment](#{url})" })
+      else
+        text = extract_text(typebot_msg)
+        create_conversation(source_message, { content: text }) if text.present?
+      end
+    end
   end
 
   def create_conversation(message, content_params)
@@ -142,39 +170,33 @@ class Integrations::Typebot::ProcessorService < Integrations::BotProcessorServic
     end
   end
 
-  def generate_content_params(typebot_msg)
-    type = typebot_msg['type']
-    case type
-    when 'text'
-      text = extract_text(typebot_msg)
-      { content: text } if text.present?
-    when 'image'
-      url = extract_url(typebot_msg)
-      { content: "![Image](#{url})" } if url.present?
-    when 'video'
-      url = extract_url(typebot_msg)
-      { content: "[Video](#{url})" } if url.present?
-    when 'audio'
-      url = extract_url(typebot_msg)
-      { content: "[Audio](#{url})" } if url.present?
-    else
-      url = extract_url(typebot_msg)
-      if url.present?
-        { content: "[Attachment](#{url})" }
-      else
-        text = extract_text(typebot_msg)
-        { content: text } if text.present?
-      end
-    end
-  end
-
   def extract_text(message)
     if message['content'].is_a?(Hash)
-      message['content']['html'] || message['content']['text']
+      if message['content']['richText'].is_a?(Array)
+        extract_richtext(message['content']['richText'])
+      else
+        message['content']['html'] || message['content']['text']
+      end
     elsif message['content'].is_a?(String)
       message['content']
     else
       message['text']
+    end
+  end
+
+  def extract_richtext(children)
+    children.map { |node| extract_node_text(node) }.compact.join("\n")
+  end
+
+  def extract_node_text(node)
+    if node['text'].present?
+      node['text']
+    elsif node['children'].is_a?(Array)
+      node['children'].map { |child| extract_node_text(child) }.compact.join('')
+    elsif node['url'].present?
+      node['url']
+    else
+      ''
     end
   end
 
