@@ -194,7 +194,7 @@ const handleStageAutomations = async stage => {
         Adicionar ao Funil
       </button>
 
-      <div v-on-click-outside="(stageDropdownOpen = false)" class="relative">
+      <div v-on-click-outside="() => (stageDropdownOpen = false)" class="relative">
         <button
           v-if="activeStageId"
           type="button"

@@ -314,6 +314,19 @@ watch(
   { deep: true, immediate: true }
 );
 
+// Drag visual feedback — SortableJS classList.add doesn't support space-separated classes
+const onDragStart = event => {
+  if (event.item) {
+    event.item.classList.add('scale-105', 'rotate-1', 'opacity-90', 'shadow-2xl', 'rounded-xl', 'z-50', 'cursor-grabbing');
+  }
+};
+
+const onDragEnd = event => {
+  if (event.item) {
+    event.item.classList.remove('scale-105', 'rotate-1', 'opacity-90', 'shadow-2xl', 'rounded-xl', 'z-50', 'cursor-grabbing');
+  }
+};
+
 // Drag and drop changes handler
 const onCardDragChange = async (event, targetStage) => {
   if (event.added) {
@@ -978,10 +991,10 @@ const importOpenConversations = async () => {
               group="kanban-conversations"
               item-key="id"
               animation="200"
-              ghost-class="bg-slate-950/40 border-dashed border-slate-700 opacity-60 scale-[0.98] rounded-xl"
-              drag-class="scale-105 rotate-1 opacity-90 shadow-2xl rounded-xl z-50 cursor-grabbing"
               class="flex flex-col gap-3.5 min-h-[300px] h-full"
               @change="onCardDragChange($event, stage)"
+              @start="onDragStart"
+              @end="onDragEnd"
             >
               <template #item="{ element }">
                 <KanbanCard
