@@ -15,7 +15,7 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
     ensure_sender_allowed!(sender)
     scheduled_message = build_scheduled_message(conversation, sender)
     scheduled_message.transaction do
-      build_items(scheduled_message)
+      build_items(scheduled_message) unless scheduled_message.is_task?
       scheduled_message.save!
       attach_item_files!(scheduled_message)
     end
@@ -91,6 +91,8 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
   end
 
   def sync_legacy_fields!(scheduled_message)
+    return if scheduled_message.is_task?
+
     first_item = scheduled_message.items.first
     return unless first_item
 
