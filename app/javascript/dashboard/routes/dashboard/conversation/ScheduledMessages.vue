@@ -103,6 +103,7 @@ const editForm = reactive({
   labelId: '',
   reason: '',
   senderId: '',
+  isTask: false,
   messages: [],
 });
 
@@ -455,13 +456,15 @@ const resetEditForm = (item, retry = false) => {
   editForm.scheduledAt = toDatetimeLocal(scheduledDate);
   editForm.labelId = item.label?.id || '';
   editForm.reason = item.reason || '';
+  editForm.isTask = item.is_task || false;
   editForm.senderId = item.sender.id;
+  const taskContent = item.is_task ? (item.reason || item.content || '') : null;
   editForm.messages = (
     item.messages?.length
       ? item.messages
       : [
           {
-            content: item.content || '',
+            content: taskContent || item.content || '',
             content_type: item.content_type || 'text',
             content_attributes: item.content_attributes || {},
             voice_message: false,
@@ -470,7 +473,7 @@ const resetEditForm = (item, retry = false) => {
         ]
   ).map(message => ({
     id: message.id,
-    content: message.content || '',
+    content: message.content || (item.is_task ? (item.reason || '') : ''),
     content_type: message.content_type || 'text',
     content_attributes: message.content_attributes || {},
     voice_message: Boolean(message.voice_message),
@@ -499,6 +502,7 @@ const openCreate = async () => {
   editForm.scheduledAt = toDatetimeLocal(new Date(Date.now() + 300000));
   editForm.labelId = labels.value[0]?.id || '';
   editForm.reason = '';
+  editForm.isTask = false;
   editForm.senderId = currentUser.value.id;
   editForm.messages = [
     {
@@ -545,11 +549,13 @@ const saveEdit = async () => {
   if (editMode.value === 'create' && !selectedConversation.value) return;
   isSaving.value = true;
   try {
+    const firstMessageContent = editForm.messages[0]?.content || '';
     const scheduledMessage = {
       scheduled_at: new Date(editForm.scheduledAt).toISOString(),
       label_id: editForm.labelId,
-      reason: editForm.reason,
+      reason: editForm.isTask ? (editForm.reason || firstMessageContent) : editForm.reason,
       sender_id: editForm.senderId,
+      is_task: editForm.isTask,
       messages: editForm.messages.map(message => ({
         content: message.content,
         content_type: message.content_type || 'text',
@@ -1094,7 +1100,7 @@ onBeforeUnmount(() => {
       :disable-confirm-button="
         !editForm.scheduledAt ||
         isUploading ||
-        !messagesValid ||
+        (!editForm.isTask && !messagesValid) ||
         (editMode === 'create' && !selectedConversation)
       "
       @confirm="saveEdit"
@@ -1187,6 +1193,20 @@ onBeforeUnmount(() => {
             class="!w-full [&_select]:w-full"
           />
         </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <input
+          id="is-task-checkbox"
+          v-model="editForm.isTask"
+          type="checkbox"
+          class="w-4 h-4 rounded text-n-brand border-n-weak"
+        />
+        <label
+          for="is-task-checkbox"
+          class="text-sm text-n-slate-11 cursor-pointer"
+        >
+          Apenas tarefa (não enviar mensagem)
+        </label>
       </div>
       <TextArea
         v-model="editForm.reason"

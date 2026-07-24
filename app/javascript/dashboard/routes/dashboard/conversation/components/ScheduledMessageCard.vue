@@ -22,11 +22,17 @@ const statusConfig = {
   cancelled: { label: 'Cancelado', className: 'text-n-slate-11 bg-n-alpha-2' },
 };
 
-const status = computed(
-  () => statusConfig[props.item.status] || statusConfig.scheduled
-);
+const status = computed(() => {
+  if (props.item.is_task) {
+    return { label: 'Tarefa', className: 'text-n-violet-11 bg-n-violet-3' };
+  }
+  return statusConfig[props.item.status] || statusConfig.scheduled;
+});
 
 const preview = computed(() => {
+  if (props.item.is_task) {
+    return props.item.reason || props.item.content || 'Tarefa';
+  }
   const messages = props.item.messages || [];
   if (messages.length > 1) {
     return messages
@@ -131,7 +137,7 @@ const handleAction = ({ action }) => {
     </p>
 
     <div
-      v-if="item.reason"
+      v-if="item.reason && !item.is_task"
       class="flex gap-2 p-2 text-xs rounded-lg bg-n-alpha-2 text-n-slate-11"
     >
       <Icon icon="i-lucide-notebook-pen" class="mt-0.5 size-3.5 shrink-0" />

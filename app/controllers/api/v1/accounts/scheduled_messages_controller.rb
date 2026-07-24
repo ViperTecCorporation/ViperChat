@@ -122,16 +122,20 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
   end
 
   def build_scheduled_message(conversation, sender)
-    current_account.scheduled_messages.new(
-      schedule_attributes.merge(
-        scheduled_at: account_time_zone.parse(permitted_params[:scheduled_at]),
-        conversation: conversation,
-        contact: conversation.contact,
-        inbox: conversation.inbox,
-        created_by: current_user,
-        sender: sender
-      )
+    attrs = schedule_attributes.merge(
+      scheduled_at: account_time_zone.parse(permitted_params[:scheduled_at]),
+      conversation: conversation,
+      contact: conversation.contact,
+      inbox: conversation.inbox,
+      created_by: current_user,
+      sender: sender
     )
+    if attrs[:is_task]
+      task_text = extract_task_text
+      attrs[:reason] = task_text if task_text.present? && attrs[:reason].blank?
+      attrs[:content] = task_text if task_text.present? && attrs[:content].blank?
+    end
+    current_account.scheduled_messages.new(attrs)
   end
 
   def editable?
@@ -149,7 +153,19 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
       attributes[:status] = :scheduled
       attributes[:error_message] = nil
     end
+    if attributes[:is_task]
+      task_text = extract_task_text
+      attributes[:reason] = task_text if task_text.present?
+      attributes[:content] = task_text if task_text.present?
+    end
     attributes
+  end
+
+  def extract_task_text
+    message = permitted_messages&.first
+    return message[:content] if message&.dig(:content).present?
+
+    permitted_params[:content]
   end
 
   def replace_items!

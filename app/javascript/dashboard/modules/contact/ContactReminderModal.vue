@@ -40,7 +40,9 @@ const toDatetimeLocal = date => {
 };
 
 const getInitialTime = () => {
-  return props.reminder ? toDatetimeLocal(new Date(props.reminder.scheduledAt * 1000)) : toDatetimeLocal(new Date(Date.now() + 3600000));
+  return props.reminder
+    ? toDatetimeLocal(new Date(props.reminder.scheduledAt * 1000))
+    : toDatetimeLocal(new Date(Date.now() + 3600000));
 };
 
 const scheduledAt = ref(getInitialTime());
@@ -85,12 +87,12 @@ const messagesValid = computed(
   () =>
     messages.value.length >= 1 &&
     messages.value.length <= 5 &&
-    messages.value.every(
-      msg => msg.content?.trim() || msg.attachments?.length
-    )
+    messages.value.every(msg => msg.content?.trim() || msg.attachments?.length)
 );
 
-const minDatetime = computed(() => toDatetimeLocal(new Date(Date.now() + 300000)));
+const minDatetime = computed(() =>
+  toDatetimeLocal(new Date(Date.now() + 300000))
+);
 
 const resetForm = () => {
   scheduledAt.value = getInitialTime();
@@ -175,24 +177,28 @@ const onSubmit = async hide => {
 
   isSaving.value = true;
   try {
+    const firstMessageContent = messages.value[0]?.content || '';
+    const taskReason = !sendMessage.value
+      ? description.value
+        ? `${firstMessageContent}\n\n${description.value}`
+        : firstMessageContent
+      : description.value;
     const scheduledMessage = {
       scheduled_at: new Date(scheduledAt.value).toISOString(),
-      reason: description.value,
+      reason: taskReason,
       sender_id: store.getters.getCurrentUser.id,
       is_task: !sendMessage.value,
     };
 
-    if (sendMessage.value) {
-      scheduledMessage.messages = messages.value.map(msg => ({
-        content: msg.content,
-        content_type: msg.content_type || 'text',
-        content_attributes: msg.content_attributes || {},
-        voice_message: Boolean(msg.voice_message),
-        attachment_blob_ids: (msg.attachments || []).map(
-          attachment => attachment.signedId
-        ),
-      }));
-    }
+    scheduledMessage.messages = messages.value.map(msg => ({
+      content: msg.content,
+      content_type: msg.content_type || 'text',
+      content_attributes: msg.content_attributes || {},
+      voice_message: Boolean(msg.voice_message),
+      attachment_blob_ids: (msg.attachments || []).map(
+        attachment => attachment.signedId
+      ),
+    }));
 
     if (selectedLabelId.value) {
       scheduledMessage.label_id = selectedLabelId.value;
@@ -215,7 +221,10 @@ const onSubmit = async hide => {
   } catch (error) {
     const serverError = error?.response?.data?.error;
     const details = error?.response?.data?.errors;
-    const message = serverError || (details ? details.join(', ') : null) || 'Erro ao criar agendamento. Tente novamente.';
+    const message =
+      serverError ||
+      (details ? details.join(', ') : null) ||
+      'Erro ao criar agendamento. Tente novamente.';
     useAlert(message);
   } finally {
     isSaving.value = false;
@@ -235,11 +244,7 @@ const onSubmit = async hide => {
       <div class="w-full md:w-[32rem] p-6 flex flex-col gap-4">
         <div class="flex flex-col gap-2">
           <h3 class="text-base font-medium leading-6 text-n-slate-12">
-            {{
-              reminder
-                ? 'Reagendar Agendamento'
-                : 'Criar Agendamento'
-            }}
+            {{ reminder ? 'Reagendar Agendamento' : 'Criar Agendamento' }}
           </h3>
           <p class="mb-0 text-sm text-n-slate-11">
             Agende uma mensagem para este contato.
