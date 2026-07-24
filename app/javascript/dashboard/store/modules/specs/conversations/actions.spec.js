@@ -547,6 +547,18 @@ describe('#deleteMessage', () => {
     });
   });
 
+  describe('#removeConversationFromList', () => {
+    it('removes only local state without calling the delete API', () => {
+      actions.removeConversationFromList({ commit, dispatch }, 1);
+
+      expect(commit.mock.calls).toEqual([[types.DELETE_CONVERSATION, 1]]);
+      expect(dispatch.mock.calls).toEqual([
+        ['conversationStats/get', {}, { root: true }],
+      ]);
+      expect(axios.delete).not.toHaveBeenCalled();
+    });
+  });
+
   describe('#updateCustomAttributes', () => {
     it('update conversation custom attributes', async () => {
       axios.post.mockResolvedValue({

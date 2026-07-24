@@ -8,7 +8,7 @@ class Api::V1::Accounts::Conversations::GroupInviteLinkController < Api::V1::Acc
       @conversation.update!(group_invite_link: parsed_invite_link(response))
       render :show
     else
-      render json: { error: provider_error(response, 'Provider failed to fetch invite link') }, status: :unprocessable_entity
+      render json: { error: provider_error(response, 'Provider failed to fetch invite link') }, status: provider_failure_status(response)
     end
   end
 
@@ -18,7 +18,7 @@ class Api::V1::Accounts::Conversations::GroupInviteLinkController < Api::V1::Acc
       @conversation.update!(group_invite_link: parsed_invite_link(response))
       render :show
     else
-      render json: { error: provider_error(response, 'Provider failed to reset invite link') }, status: :unprocessable_entity
+      render json: { error: provider_error(response, 'Provider failed to reset invite link') }, status: provider_failure_status(response)
     end
   end
 
@@ -38,6 +38,13 @@ class Api::V1::Accounts::Conversations::GroupInviteLinkController < Api::V1::Acc
   end
 
   def provider_error(response, fallback)
-    response.parsed_response.try(:[], 'error') || fallback
+    payload = response.parsed_response
+    payload = payload.with_indifferent_access if payload.respond_to?(:with_indifferent_access)
+    payload.try(:[], :error) || fallback
+  end
+
+  def provider_failure_status(response)
+    status = response.code.to_i
+    status.between?(400, 599) ? status : :unprocessable_entity
   end
 end

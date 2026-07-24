@@ -166,8 +166,9 @@ Rails.application.routes.draw do
               resources :forwards, only: [:create]
               resources :group_contacts, only: [:index, :create] do
                 delete :destroy, on: :collection
+                patch :update, on: :collection
               end
-              resource :group, only: [:show, :update], controller: :group do
+              resource :group, only: [:show, :update, :destroy], controller: :group do
                 post :sync
                 resource :invite_link, only: [:show], controller: :group_invite_link do
                   post :reset

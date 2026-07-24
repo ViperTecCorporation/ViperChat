@@ -142,6 +142,19 @@ class ConversationApi extends ApiClient {
     });
   }
 
+  updateGroupContactRoles({
+    conversationId,
+    action,
+    participants,
+    confirmedSelfDemote = false,
+  }) {
+    return axios.patch(`${this.url}/${conversationId}/group_contacts`, {
+      action,
+      participants,
+      confirmed_self_demote: confirmedSelfDemote,
+    });
+  }
+
   createGroup({
     inboxId,
     subject,
@@ -164,6 +177,10 @@ class ConversationApi extends ApiClient {
 
   updateGroup({ conversationId, ...params }) {
     return axios.patch(`${this.url}/${conversationId}/group`, params);
+  }
+
+  leaveGroup(conversationId) {
+    return axios.delete(`${this.url}/${conversationId}/group`);
   }
 
   syncGroup(conversationId) {

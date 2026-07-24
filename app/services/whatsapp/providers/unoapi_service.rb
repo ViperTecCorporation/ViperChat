@@ -42,14 +42,21 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
     HTTParty.get(unoapi_group_path(group_id), headers: api_headers)
   end
 
-  def update_group(group_id:, subject: nil, description: nil, picture_url: nil)
+  def update_group(group_id:, subject: nil, description: nil, picture_url: nil, announcement: nil, locked: nil, join_approval_mode: nil)
     payload = {
       subject: subject,
       description: description,
-      picture: picture_url.present? ? { url: picture_url } : nil
+      picture: picture_url.present? ? { url: picture_url } : nil,
+      announcement: announcement,
+      locked: locked,
+      join_approval_mode: join_approval_mode
     }.compact
 
     HTTParty.patch(unoapi_group_path(group_id), headers: api_headers, body: payload.to_json)
+  end
+
+  def leave_group(group_id)
+    HTTParty.delete(unoapi_group_path(group_id), headers: api_headers)
   end
 
   def group_invite_link(group_id)
@@ -73,6 +80,14 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
       "#{unoapi_group_path(group_id)}/participants",
       headers: api_headers,
       body: { participants: participants }.to_json
+    )
+  end
+
+  def update_group_participant_roles(group_id:, action:, participants:)
+    HTTParty.patch(
+      "#{unoapi_group_path(group_id)}/participants",
+      headers: api_headers,
+      body: { action: action, participants: participants }.to_json
     )
   end
 

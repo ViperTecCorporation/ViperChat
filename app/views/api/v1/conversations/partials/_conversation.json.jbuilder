@@ -34,6 +34,8 @@ json.group_picture conversation.additional_attributes&.dig('group_picture').pres
 json.group_description conversation.group_description
 json.group_invite_link conversation.group_invite_link
 json.group_join_approval_mode conversation.group_join_approval_mode
+json.group_announcement conversation.additional_attributes&.fetch('group_announcement', false) if conversation.group?
+json.group_locked conversation.additional_attributes&.fetch('group_locked', false) if conversation.group?
 json.group_suspended conversation.group_suspended
 json.group_created_at_external conversation.group_created_at_external
 json.group_contacts_synced_at conversation.group_contacts_synced_at

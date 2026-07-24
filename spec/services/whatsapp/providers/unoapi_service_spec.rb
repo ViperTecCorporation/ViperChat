@@ -48,7 +48,16 @@ describe Whatsapp::Providers::UnoapiService do
 
   it 'updates a group through the Uno v15 group endpoint' do
     stub = stub_request(:patch, 'https://uno.example.com/v15.0/556600000000/groups/120363040468224422%40g.us')
-           .with(body: { subject: 'Novo nome', description: 'Nova descricao', picture: { url: 'https://cdn.example.com/group.jpg' } }.to_json)
+           .with(
+             body: {
+               subject: 'Novo nome',
+               description: 'Nova descricao',
+               picture: { url: 'https://cdn.example.com/group.jpg' },
+               announcement: true,
+               locked: false,
+               join_approval_mode: 'approval_required'
+             }.to_json
+           )
            .to_return(status: 200, body: { updated: true }.to_json, headers: { 'Content-Type' => 'application/json' })
 
     expect(
@@ -56,17 +65,41 @@ describe Whatsapp::Providers::UnoapiService do
         group_id: '120363040468224422@g.us',
         subject: 'Novo nome',
         description: 'Nova descricao',
-        picture_url: 'https://cdn.example.com/group.jpg'
+        picture_url: 'https://cdn.example.com/group.jpg',
+        announcement: true,
+        locked: false,
+        join_approval_mode: 'approval_required'
       )
     ).to be_success
     expect(stub).to have_been_requested
   end
 
+  it 'leaves a group through the Uno v15 group endpoint without a request body' do
+    stub = stub_request(:delete, 'https://uno.example.com/v15.0/556600000000/groups/120363040468224422%40g.us')
+           .with { |request| request.body.blank? }
+           .to_return(
+             status: 200,
+             body: { group_id: '120363040468224422@g.us', deleted: true }.to_json,
+             headers: { 'Content-Type' => 'application/json' }
+           )
+
+    expect(service.leave_group('120363040468224422@g.us')).to be_success
+    expect(stub).to have_been_requested
+  end
+
   it 'fetches and resets group invite link through the Uno v15 group endpoint' do
     get_stub = stub_request(:get, 'https://uno.example.com/v15.0/556600000000/groups/120363040468224422%40g.us/invite_link')
-               .to_return(status: 200, body: { invite_link: 'https://chat.whatsapp.com/old123' }.to_json, headers: { 'Content-Type' => 'application/json' })
+               .to_return(
+                 status: 200,
+                 body: { invite_link: 'https://chat.whatsapp.com/old123' }.to_json,
+                 headers: { 'Content-Type' => 'application/json' }
+               )
     reset_stub = stub_request(:post, 'https://uno.example.com/v15.0/556600000000/groups/120363040468224422%40g.us/invite_link')
-                 .to_return(status: 200, body: { invite_link: 'https://chat.whatsapp.com/new456' }.to_json, headers: { 'Content-Type' => 'application/json' })
+                 .to_return(
+                   status: 200,
+                   body: { invite_link: 'https://chat.whatsapp.com/new456' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' }
+                 )
 
     expect(service.group_invite_link('120363040468224422@g.us')).to be_success
     expect(service.reset_group_invite_link('120363040468224422@g.us')).to be_success
@@ -87,6 +120,30 @@ describe Whatsapp::Providers::UnoapiService do
     expect(service.remove_group_participants(group_id: '120363040468224422@g.us', participants: participants)).to be_success
     expect(add_stub).to have_been_requested
     expect(remove_stub).to have_been_requested
+  end
+
+  it 'promotes group participants through the Uno v15 participant endpoint' do
+    participants = [{ user_id: '123456789012345@lid', wa_id: '556699999999' }]
+    stub = stub_request(:patch, 'https://uno.example.com/v15.0/556600000000/groups/120363040468224422%40g.us/participants')
+           .with(body: { action: 'promote', participants: participants }.to_json)
+           .to_return(
+             status: 200,
+             body: {
+               group_id: '120363040468224422@g.us',
+               promoted: ['123456789012345@lid'],
+               failed: []
+             }.to_json,
+             headers: { 'Content-Type' => 'application/json' }
+           )
+
+    response = service.update_group_participant_roles(
+      group_id: '120363040468224422@g.us',
+      action: 'promote',
+      participants: participants
+    )
+
+    expect(response).to be_success
+    expect(stub).to have_been_requested
   end
 
   it 'fetches group join requests from the Uno v15 group endpoint' do
