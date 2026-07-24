@@ -257,7 +257,11 @@ const weekLabel = computed(() => {
 const columns = computed(() => {
   const map = new Map();
   dayItems.value.forEach(item => {
-    const label = item.label || { id: 'none', title: 'Sem etiqueta', color: '#6366f1' };
+    const label = item.label || {
+      id: 'none',
+      title: 'Sem etiqueta',
+      color: '#6366f1',
+    };
     map.set(label.id, label);
   });
   return [...map.values()];
@@ -458,7 +462,7 @@ const resetEditForm = (item, retry = false) => {
   editForm.reason = item.reason || '';
   editForm.isTask = item.is_task || false;
   editForm.senderId = item.sender.id;
-  const taskContent = item.is_task ? (item.reason || item.content || '') : null;
+  const taskContent = item.is_task ? item.reason || item.content || '' : null;
   editForm.messages = (
     item.messages?.length
       ? item.messages
@@ -473,7 +477,7 @@ const resetEditForm = (item, retry = false) => {
         ]
   ).map(message => ({
     id: message.id,
-    content: message.content || (item.is_task ? (item.reason || '') : ''),
+    content: message.content || (item.is_task ? item.reason || '' : ''),
     content_type: message.content_type || 'text',
     content_attributes: message.content_attributes || {},
     voice_message: Boolean(message.voice_message),
@@ -553,7 +557,9 @@ const saveEdit = async () => {
     const scheduledMessage = {
       scheduled_at: new Date(editForm.scheduledAt).toISOString(),
       label_id: editForm.labelId,
-      reason: editForm.isTask ? (editForm.reason || firstMessageContent) : editForm.reason,
+      reason: editForm.isTask
+        ? editForm.reason || firstMessageContent
+        : editForm.reason,
       sender_id: editForm.senderId,
       is_task: editForm.isTask,
       messages: editForm.messages.map(message => ({
@@ -615,6 +621,21 @@ const remove = async () => {
   } catch (error) {
     useAlert(
       error?.response?.data?.error || 'Não foi possível cancelar o agendamento'
+    );
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+const completeTask = async item => {
+  isSaving.value = true;
+  try {
+    await scheduledMessagesApi.delete(item.id);
+    useAlert('Tarefa concluída');
+    await refresh();
+  } catch (error) {
+    useAlert(
+      error?.response?.data?.error || 'Não foi possível concluir a tarefa'
     );
   } finally {
     isSaving.value = false;
@@ -1007,6 +1028,7 @@ onBeforeUnmount(() => {
                   @edit="openEdit($event)"
                   @retry="openEdit($event, true)"
                   @delete="askDelete"
+                  @complete="completeTask"
                 />
               </div>
             </template>
@@ -1064,6 +1086,7 @@ onBeforeUnmount(() => {
                   @edit="openEdit($event)"
                   @retry="openEdit($event, true)"
                   @delete="askDelete"
+                  @complete="completeTask"
                 />
               </div>
             </div>

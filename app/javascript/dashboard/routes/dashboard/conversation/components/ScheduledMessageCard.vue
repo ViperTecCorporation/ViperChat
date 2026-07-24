@@ -10,7 +10,7 @@ const props = defineProps({
   item: { type: Object, required: true },
 });
 
-const emit = defineEmits(['edit', 'delete', 'retry', 'open']);
+const emit = defineEmits(['edit', 'delete', 'retry', 'open', 'complete']);
 
 const showMenu = ref(false);
 
@@ -69,6 +69,14 @@ const menuItems = computed(() => {
     icon: 'i-lucide-pencil',
   });
 
+  if (props.item.is_task && props.item.status !== 'cancelled') {
+    items.push({
+      label: 'Concluir',
+      action: 'complete',
+      icon: 'i-lucide-check-circle',
+    });
+  }
+
   if (props.item.status === 'failed') {
     items.push({
       label: 'Reagendar',
@@ -91,6 +99,7 @@ const handleAction = ({ action }) => {
   if (action === 'delete') emit('delete', props.item);
   if (action === 'retry') emit('retry', props.item);
   if (action === 'open') emit('open', props.item);
+  if (action === 'complete') emit('complete', props.item);
 };
 </script>
 
