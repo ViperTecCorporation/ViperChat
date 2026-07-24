@@ -24,6 +24,19 @@ class ScheduledMessage < ApplicationRecord
   scope :due_tasks, -> { scheduled.where(is_task: true, scheduled_at: ..Time.current) }
   scope :due_messages, -> { scheduled.where(is_task: false, scheduled_at: ..Time.current) }
 
+  def push_event_data
+    {
+      id: id,
+      reason: reason,
+      content: content,
+      is_task: is_task,
+      scheduled_at: scheduled_at,
+      status: status,
+      conversation_id: conversation.display_id,
+      account_id: account_id
+    }
+  end
+
   def ensure_legacy_item!
     return if items.exists?
 
