@@ -21,4 +21,12 @@ RSpec.describe RoomChannel do
     expect(subscription).to have_stream_for(user.pubsub_token)
     expect(subscription).to have_stream_for("account_#{account.id}")
   end
+
+  it 'uses the active user account when a reconnect omits account_id' do
+    subscribe(user_id: user.id, pubsub_token: user.pubsub_token)
+
+    expect(subscription).to be_confirmed
+    expect(subscription).to have_stream_for(user.pubsub_token)
+    expect(subscription).to have_stream_for("account_#{account.id}")
+  end
 end

@@ -118,5 +118,61 @@ RSpec.describe 'Conversation Group API', type: :request do
         I18n.t('conversations.activity.whatsapp.group_session_removed')
       )
     end
+
+    it 'queues local conversation and attachment deletion only after the provider confirms leaving' do
+      provider_response = instance_double(HTTParty::Response, success?: true)
+      allow(provider_service).to receive(:leave_group).and_return(provider_response)
+
+      expect do
+        delete path,
+               params: { delete_conversation: true },
+               headers: agent.create_new_auth_token,
+               as: :json
+      end.to have_enqueued_job(Conversations::DeleteWithAttachmentsJob).with(conversation, agent, '127.0.0.1')
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'preserves the local conversation when leaving fails' do
+      provider_response = instance_double(
+        HTTParty::Response,
+        success?: false,
+        code: 500,
+        parsed_response: { 'error' => 'provider rejected leave' }
+      )
+      allow(provider_service).to receive(:leave_group).and_return(provider_response)
+
+      expect do
+        delete path,
+               params: { delete_conversation: true },
+               headers: agent.create_new_auth_token,
+               as: :json
+      end.not_to have_enqueued_job(Conversations::DeleteWithAttachmentsJob)
+
+      expect(response).to have_http_status(:internal_server_error)
+      expect(conversation.reload.additional_attributes['group_session_removed_at']).to be_nil
+    end
+  end
+
+  it 'queues deletion after a status sync confirms that a timed-out leave succeeded' do
+    sync_service = instance_double(Whatsapp::Unoapi::GroupParticipantsSyncService)
+    allow(Whatsapp::Unoapi::GroupParticipantsSyncService).to receive(:new).and_return(sync_service)
+    allow(sync_service).to receive(:perform) do
+      conversation.update!(
+        additional_attributes: conversation.additional_attributes.to_h.merge(
+          'group_session_removed_at' => Time.current.iso8601
+        )
+      )
+      :ok
+    end
+
+    expect do
+      post "#{path}/sync",
+           params: { delete_conversation: true },
+           headers: agent.create_new_auth_token,
+           as: :json
+    end.to have_enqueued_job(Conversations::DeleteWithAttachmentsJob).with(conversation, agent, '127.0.0.1')
+
+    expect(response).to have_http_status(:ok)
   end
 end

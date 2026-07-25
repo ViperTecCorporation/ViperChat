@@ -52,6 +52,7 @@ export default {
   data() {
     return {
       latestChatwootVersion: null,
+      actionCable: null,
       reconnectService: null,
     };
   },
@@ -70,9 +71,9 @@ export default {
   watch: {
     currentAccountId: {
       immediate: true,
-      handler() {
-        if (this.currentAccountId) {
-          this.initializeAccount();
+      handler(accountId) {
+        if (accountId) {
+          this.initializeAccount(accountId);
         }
       },
     },
@@ -86,6 +87,9 @@ export default {
     );
   },
   unmounted() {
+    if (this.actionCable) {
+      this.actionCable.disconnect();
+    }
     if (this.reconnectService) {
       this.reconnectService.disconnect();
     }
@@ -103,19 +107,30 @@ export default {
         this.$root.$i18n.locale = locale;
       }
     },
-    async initializeAccount() {
+    async initializeAccount(accountId) {
       await this.$store.dispatch('accounts/get');
+
+      if (accountId !== this.currentAccountId) {
+        return;
+      }
+
       this.$store.dispatch('setActiveAccount', {
-        accountId: this.currentAccountId,
+        accountId,
       });
-      const account = this.getAccount(this.currentAccountId);
+      const account = this.getAccount(accountId);
       const { locale, latest_chatwoot_version: latestChatwootVersion } =
         account;
       const { pubsub_token: pubsubToken } = this.currentUser || {};
       // If user locale is set, use it; otherwise use account locale
       this.setLocale(this.uiSettings?.locale || locale);
       this.latestChatwootVersion = latestChatwootVersion;
-      vueActionCable.init(this.store, pubsubToken);
+      if (this.actionCable) {
+        this.actionCable.disconnect();
+      }
+      this.actionCable = vueActionCable.init(this.store, pubsubToken);
+      if (this.reconnectService) {
+        this.reconnectService.disconnect();
+      }
       this.reconnectService = new ReconnectService(this.store, this.router);
       window.reconnectService = this.reconnectService;
 

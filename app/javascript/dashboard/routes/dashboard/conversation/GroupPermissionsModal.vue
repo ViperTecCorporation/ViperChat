@@ -42,6 +42,7 @@ const isSaving = ref(false);
 const isLeaving = ref(false);
 const isVerifyingLeave = ref(false);
 const leaveStateUnverified = ref(false);
+const deleteConversationOnLeave = ref(false);
 const leaveConfirmation = ref(null);
 
 const resetState = () => {
@@ -101,7 +102,9 @@ const verifyLeaveState = async () => {
 
   isVerifyingLeave.value = true;
   try {
-    const { data } = await conversationApi.syncGroup(props.conversationId);
+    const { data } = await conversationApi.syncGroup(props.conversationId, {
+      deleteConversation: deleteConversationOnLeave.value,
+    });
     if (sessionWasRemoved(data)) {
       completeLeave(data);
       return;
@@ -127,12 +130,15 @@ const leaveGroup = async () => {
     return;
   }
 
+  deleteConversationOnLeave.value = false;
   const confirmed = await leaveConfirmation.value.showConfirmation();
   if (!confirmed) return;
 
   isLeaving.value = true;
   try {
-    const { data } = await conversationApi.leaveGroup(props.conversationId);
+    const { data } = await conversationApi.leaveGroup(props.conversationId, {
+      deleteConversation: deleteConversationOnLeave.value,
+    });
     completeLeave(data);
   } catch (error) {
     if (isTimeoutError(error)) {
@@ -305,5 +311,19 @@ watch(
     :description="$t('CONVERSATION.GROUP.LEAVE_CONFIRM_DESCRIPTION')"
     :confirm-label="$t('CONVERSATION.GROUP.LEAVE_CONFIRM')"
     :cancel-label="$t('CONVERSATION.GROUP.CANCEL')"
-  />
+  >
+    <label
+      class="mx-6 flex cursor-pointer items-start gap-3 rounded-lg border border-n-ruby-5 bg-n-ruby-2 p-3"
+    >
+      <Checkbox v-model="deleteConversationOnLeave" class="mt-0.5" />
+      <span class="min-w-0">
+        <span class="block text-sm font-medium text-n-ruby-11">
+          {{ $t('CONVERSATION.GROUP.LEAVE_DELETE_CONVERSATION') }}
+        </span>
+        <span class="block text-xs text-n-slate-10">
+          {{ $t('CONVERSATION.GROUP.LEAVE_DELETE_CONVERSATION_HELP') }}
+        </span>
+      </span>
+    </label>
+  </ConfirmationModal>
 </template>

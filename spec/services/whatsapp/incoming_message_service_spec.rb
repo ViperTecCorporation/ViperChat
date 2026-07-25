@@ -86,6 +86,16 @@ describe Whatsapp::IncomingMessageService do
         described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
         expect(whatsapp_channel.inbox.messages.count).to eq(1)
       end
+
+      it 'accepts the same provider message id in different inboxes' do
+        other_channel = create(:channel_whatsapp, sync_templates: false)
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        described_class.new(inbox: other_channel.inbox, params: params).perform
+
+        expect(whatsapp_channel.inbox.messages.where(source_id: params[:messages].first[:id]).count).to eq(1)
+        expect(other_channel.inbox.messages.where(source_id: params[:messages].first[:id]).count).to eq(1)
+      end
     end
 
     context 'when unsupported message types' do
@@ -515,13 +525,15 @@ describe Whatsapp::IncomingMessageService do
                                     ] }] }.with_indifferent_access
 
         # Simulate another worker holding the lock
-        lock = Whatsapp::MessageDedupLock.new('wamid.SDFADSf23sfasdafasdfa')
+        dedup_id = "#{whatsapp_channel.inbox.id}:wamid.SDFADSf23sfasdafasdfa"
+        lock = Whatsapp::MessageDedupLock.new(dedup_id)
         expect(lock.acquire!).to be_truthy
 
+        message_count = whatsapp_channel.inbox.messages.count
         described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
-        expect(whatsapp_channel.inbox.messages.count).to eq(0)
+        expect(whatsapp_channel.inbox.messages.count).to eq(message_count)
       ensure
-        key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: 'wamid.SDFADSf23sfasdafasdfa')
+        key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: dedup_id)
         Redis::Alfred.delete(key)
       end
     end

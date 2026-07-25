@@ -80,6 +80,8 @@
       "LEAVE_CONFIRM_TITLE": "Sair do grupo?",
       "LEAVE_CONFIRM_DESCRIPTION": "A sessão conectada será removida deste grupo e deixará de receber novas mensagens. Essa ação não pode ser desfeita pelo ViperChat.",
       "LEAVE_CONFIRM": "Sair do grupo",
+      "LEAVE_DELETE_CONVERSATION": "Apagar a conversa e as mídias armazenadas",
+      "LEAVE_DELETE_CONVERSATION_HELP": "Remove permanentemente o histórico local e os arquivos do S3 após a saída ser confirmada. Se não marcar agora, esta opção não ficará disponível depois que o grupo sair da lista.",
       "LEAVE_SUCCESS": "A sessão saiu do grupo",
       "LEAVE_ERROR": "Não foi possível sair do grupo",
       "LEAVE_TIMEOUT_VERIFYING": "A resposta demorou. O ViperChat está verificando o estado do grupo sem repetir a saída.",
