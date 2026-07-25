@@ -215,12 +215,12 @@ module Whatsapp::IncomingMessageServiceHelpers
   def find_message_by_source_id(source_id)
     return unless source_id
 
-    @message = Message.find_by(source_id: source_id)
+    @message = inbox.messages.find_by(source_id: source_id)
   end
 
   def lock_message_source_id!
     return false if messages_data.blank?
 
-    Whatsapp::MessageDedupLock.new(messages_data.first[:id]).acquire!
+    Whatsapp::MessageDedupLock.new("#{inbox.id}:#{messages_data.first[:id]}").acquire!
   end
 end

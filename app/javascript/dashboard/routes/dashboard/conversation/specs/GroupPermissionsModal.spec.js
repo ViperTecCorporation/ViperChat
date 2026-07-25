@@ -143,7 +143,31 @@ describe('GroupPermissionsModal', () => {
     wrapper.findComponent(ConfirmationModal).vm.confirm();
     await flushPromises();
 
-    expect(mocks.leaveGroup).toHaveBeenCalledWith(42);
+    expect(mocks.leaveGroup).toHaveBeenCalledWith(42, {
+      deleteConversation: false,
+    });
+  });
+
+  it('requests local conversation and media deletion when selected', async () => {
+    mocks.leaveGroup.mockResolvedValue({
+      data: { id: 42, group_session_admin: false },
+    });
+    const wrapper = mountModal({ isSessionAdmin: false });
+
+    const leaveButton = wrapper
+      .findAll('button')
+      .find(button => button.text().includes('CONVERSATION.GROUP.LEAVE'));
+    await leaveButton.trigger('click');
+    await nextTick();
+
+    const confirmation = wrapper.findComponent(ConfirmationModal);
+    await confirmation.find('input[type="checkbox"]').setValue(true);
+    confirmation.vm.confirm();
+    await flushPromises();
+
+    expect(mocks.leaveGroup).toHaveBeenCalledWith(42, {
+      deleteConversation: true,
+    });
   });
 
   it('checks group state without repeating leave after a timeout', async () => {
@@ -163,11 +187,15 @@ describe('GroupPermissionsModal', () => {
       .find(button => button.text().includes('CONVERSATION.GROUP.LEAVE'));
     await leaveButton.trigger('click');
     await nextTick();
-    wrapper.findComponent(ConfirmationModal).vm.confirm();
+    const confirmation = wrapper.findComponent(ConfirmationModal);
+    await confirmation.find('input[type="checkbox"]').setValue(true);
+    confirmation.vm.confirm();
     await flushPromises();
 
     expect(mocks.leaveGroup).toHaveBeenCalledTimes(1);
-    expect(mocks.syncGroup).toHaveBeenCalledWith(42);
+    expect(mocks.syncGroup).toHaveBeenCalledWith(42, {
+      deleteConversation: true,
+    });
     expect(wrapper.emitted('groupLeft')).toHaveLength(1);
   });
 });

@@ -75,10 +75,13 @@ class Whatsapp::UnoapiWebhookSetupService
     provider_config = whatsapp_channel.provider_config
     callback_url = webhook_callback_url(phone_number)
     send_transcribe_audio = provider_config.key?('send_transcribe_audio') ? provider_config['send_transcribe_audio'] : true
+    connection_type = provider_config['connection_type']
+    connection_type = 'qrcode' unless %w[qrcode pairing_code].include?(connection_type)
     label = "#{whatsapp_channel.inbox.name} - account #{whatsapp_channel.account_id}"
 
     {
       autoConnect: true,
+      connectionType: connection_type,
       useRedis: true,
       useS3: true,
       ignoreGroupMessages: provider_config['ignore_group_messages'],
@@ -91,12 +94,12 @@ class Whatsapp::UnoapiWebhookSetupService
       ignoreOwnMessages: provider_config['ignore_own_messages'],
       ignoreYourselfMessages: provider_config['ignore_yourself_messages'],
       sendConnectionStatus: provider_config['send_connection_status'],
-      markOnlineOnConnect: provider_config['mark_online_on_connect'],
+      markOnlineOnConnect: provider_config.fetch('mark_online_on_connect', false),
       notifyFailedMessages: provider_config['notify_failed_messages'],
       composingMessage: provider_config['composing_message'],
       sendTranscribeAudio: send_transcribe_audio,
       readOnReceipt: provider_config['read_on_receipt'],
-      readOnReply: provider_config['read_on_reply'],
+      readOnReply: provider_config.fetch('read_on_reply', true),
       openaiApiKey: '',
       openaiApiTranscribeModel: 'whisper-1',
       groqApiKey: provider_config['groq_api_key'],

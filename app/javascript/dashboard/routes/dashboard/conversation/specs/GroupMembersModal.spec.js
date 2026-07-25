@@ -188,4 +188,33 @@ describe('GroupMembersModal', () => {
     expect(mocks.useAlert).toHaveBeenCalledTimes(1);
     expect(mocks.fetchGroupContacts).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps a successful role change when the provider response is contradictory and the refresh fails', async () => {
+    mocks.updateGroupContactRoles.mockResolvedValue({
+      data: {
+        promoted: ['123456789012345@lid'],
+        failed: [
+          {
+            wa_id: '556699999999',
+            error: 'provider_error',
+          },
+        ],
+      },
+    });
+    const wrapper = await mountModal();
+    mocks.fetchGroupContacts.mockRejectedValueOnce(
+      new Error('members refresh failed')
+    );
+
+    await wrapper
+      .find('[aria-label="CONVERSATION.GROUP.PROMOTE_ADMIN"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(mocks.useAlert).toHaveBeenCalledTimes(1);
+    expect(mocks.useAlert).toHaveBeenCalledWith(
+      'CONVERSATION.GROUP.PROMOTE_SUCCESS'
+    );
+    expect(wrapper.emitted('memberRoleUpdated')).toHaveLength(1);
+  });
 });

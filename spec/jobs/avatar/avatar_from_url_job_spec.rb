@@ -30,6 +30,15 @@ RSpec.describe Avatar::AvatarFromUrlJob do
       .not_to eq(described_class.generate_url_hash(avatar_url, next_metadata))
   end
 
+  it 'generates the same hash when only volatile metadata changes for the same etag' do
+    avatar_url = 'https://cdn.example.com/profile/maria.jpg'
+    original_metadata = { etag: 'same-etag', content_length: 1234, last_modified: '2026-07-20T10:00:00Z' }
+    next_metadata = { etag: 'same-etag', content_length: 1234, last_modified: '2026-07-25T10:00:00Z' }
+
+    expect(described_class.generate_url_hash(avatar_url, original_metadata))
+      .to eq(described_class.generate_url_hash(avatar_url, next_metadata))
+  end
+
   it 'reads remote avatar metadata with a ranged GET request' do
     stub_request(:get, valid_url)
       .with(headers: { 'Range' => 'bytes=0-0' })
@@ -100,6 +109,56 @@ RSpec.describe Avatar::AvatarFromUrlJob do
       )
     end
 
+    it 'enqueues newer metadata even during the rate limit window' do
+      original_metadata = { etag: 'old-etag', last_modified: '2026-07-25T09:00:00Z' }
+      next_metadata = { etag: 'new-etag', last_modified: '2026-07-25T10:00:00Z' }
+      avatarable.update!(
+        additional_attributes: {
+          'last_avatar_sync_at' => 30.seconds.ago.iso8601,
+          'avatar_url_hash' => described_class.generate_url_hash(valid_url, original_metadata),
+          'avatar_url_signature_metadata' => original_metadata
+        }
+      )
+
+      expect do
+        described_class.enqueue_if_needed(avatarable, valid_url, next_metadata)
+      end.to have_enqueued_job(described_class).with(
+        avatarable,
+        valid_url,
+        { 'etag' => 'new-etag', 'last_modified' => '2026-07-25T10:00:00Z' }
+      )
+    end
+
+    it 'does not enqueue an avatar older than the stored metadata' do
+      current_metadata = { etag: 'current-etag', last_modified: '2026-07-25T10:00:00Z' }
+      stale_metadata = { etag: 'stale-etag', last_modified: '2026-07-21T10:00:00Z' }
+      avatarable.update!(
+        additional_attributes: {
+          'avatar_url_hash' => described_class.generate_url_hash(valid_url, current_metadata),
+          'avatar_url_signature_metadata' => current_metadata
+        }
+      )
+
+      expect(described_class.enqueue_if_needed(avatarable, valid_url, stale_metadata)).to be false
+    end
+
+    it 'does not attach an avatar when a newer job has replaced its reservation' do
+      stale_metadata = { etag: 'stale-etag', last_modified: '2026-07-21T10:00:00Z' }
+      current_metadata = { etag: 'current-etag', last_modified: '2026-07-25T10:00:00Z' }
+      avatarable.update!(
+        additional_attributes: {
+          'avatar_url_enqueued_hash' => described_class.generate_url_hash(valid_url, current_metadata),
+          'avatar_url_signature_metadata' => current_metadata
+        }
+      )
+
+      described_class.perform_now(avatarable, valid_url, stale_metadata)
+
+      expect(avatarable.reload.avatar).not_to be_attached
+      expect(avatarable.additional_attributes['avatar_url_enqueued_hash'])
+        .to eq(described_class.generate_url_hash(valid_url, current_metadata))
+    end
+
     it 'attaches webp avatars and updates sync attributes' do
       webp_url = 'https://example.com/avatar.webp'
 
@@ -156,7 +215,8 @@ RSpec.describe Avatar::AvatarFromUrlJob do
 
     it 'returns early when rate limited' do
       ts = 30.seconds.ago.iso8601
-      avatarable.update(additional_attributes: { 'last_avatar_sync_at' => ts })
+      original_hash = described_class.generate_url_hash('https://example.com/original.png')
+      avatarable.update(additional_attributes: { 'last_avatar_sync_at' => ts, 'avatar_url_hash' => original_hash })
 
       stub_request(:get, valid_url)
         .to_return(
@@ -168,10 +228,8 @@ RSpec.describe Avatar::AvatarFromUrlJob do
       described_class.perform_now(avatarable, valid_url)
       avatarable.reload
       expect(avatarable.avatar).not_to be_attached
-      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_present
-      expect(Time.zone.parse(avatarable.additional_attributes['last_avatar_sync_at']))
-        .to be > Time.zone.parse(ts)
-      expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(valid_url))
+      expect(avatarable.additional_attributes['last_avatar_sync_at']).to eq(ts)
+      expect(avatarable.additional_attributes['avatar_url_hash']).to eq(original_hash)
       expect(WebMock).not_to have_requested(:get, valid_url)
     end
 
@@ -193,16 +251,16 @@ RSpec.describe Avatar::AvatarFromUrlJob do
       expect(WebMock).not_to have_requested(:get, valid_url)
     end
 
-    it 'updates sync attributes even when URL is invalid' do
+    it 'does not update sync attributes when URL is invalid' do
       invalid_url = 'invalid_url'
       described_class.perform_now(avatarable, invalid_url)
       avatarable.reload
       expect(avatarable.avatar).not_to be_attached
-      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_present
-      expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(invalid_url))
+      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_nil
+      expect(avatarable.additional_attributes['avatar_url_hash']).to be_nil
     end
 
-    it 'updates sync attributes when file download is valid but content type is unsupported' do
+    it 'does not update sync attributes when the content type is unsupported' do
       stub_request(:get, valid_url)
         .to_return(
           status: 200,
@@ -214,11 +272,11 @@ RSpec.describe Avatar::AvatarFromUrlJob do
       avatarable.reload
 
       expect(avatarable.avatar).not_to be_attached
-      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_present
-      expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(valid_url))
+      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_nil
+      expect(avatarable.additional_attributes['avatar_url_hash']).to be_nil
     end
 
-    it 'updates sync attributes when the avatar URL is blocked by SSRF protection' do
+    it 'does not update sync attributes when the avatar URL is blocked by SSRF protection' do
       blocked_url = 'http://127.0.0.1/avatar.png'
 
       expect do
@@ -227,8 +285,8 @@ RSpec.describe Avatar::AvatarFromUrlJob do
 
       avatarable.reload
       expect(avatarable.avatar).not_to be_attached
-      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_present
-      expect(avatarable.additional_attributes['avatar_url_hash']).to eq(Digest::SHA256.hexdigest(blocked_url))
+      expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_nil
+      expect(avatarable.additional_attributes['avatar_url_hash']).to be_nil
     end
   end
 

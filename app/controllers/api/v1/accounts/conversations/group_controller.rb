@@ -28,6 +28,7 @@ class Api::V1::Accounts::Conversations::GroupController < Api::V1::Accounts::Con
 
     if response.success?
       mark_session_as_removed
+      schedule_local_conversation_deletion if delete_conversation?
       render :show
     else
       render json: { error: provider_error(response, 'Provider failed to leave group') }, status: provider_failure_status(response)
@@ -36,7 +37,10 @@ class Api::V1::Accounts::Conversations::GroupController < Api::V1::Accounts::Con
 
   def sync
     result = Whatsapp::Unoapi::GroupParticipantsSyncService.new(inbox: @conversation.inbox, conversation: @conversation).perform
-    return render :show if result == :ok
+    if result == :ok
+      schedule_local_conversation_deletion if delete_conversation? && session_removed?
+      return render :show
+    end
 
     render json: { error: result }, status: :unprocessable_entity
   end
@@ -100,6 +104,18 @@ class Api::V1::Accounts::Conversations::GroupController < Api::V1::Accounts::Con
     end
     additional_attributes['group_session_removed_at'] = Time.current.iso8601
     @conversation.update!(group_session_admin: false, additional_attributes: additional_attributes)
+  end
+
+  def delete_conversation?
+    ActiveModel::Type::Boolean.new.cast(params[:delete_conversation])
+  end
+
+  def session_removed?
+    @conversation.reload.additional_attributes.to_h['group_session_removed_at'].present?
+  end
+
+  def schedule_local_conversation_deletion
+    Conversations::DeleteWithAttachmentsJob.perform_later(@conversation, Current.user, request.ip)
   end
 
   def group_picture_url

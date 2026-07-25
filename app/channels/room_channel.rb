@@ -62,7 +62,8 @@ class RoomChannel < ApplicationCable::Channel
     @current_account ||= if @current_user.is_a? Contact
                            @current_user.account
                          else
-                           @current_user.accounts.find(params[:account_id])
+                           account_id = params[:account_id].presence || @current_user.active_account_user&.account_id
+                           @current_user.accounts.find(account_id)
                          end
   end
 end

@@ -179,12 +179,16 @@ class ConversationApi extends ApiClient {
     return axios.patch(`${this.url}/${conversationId}/group`, params);
   }
 
-  leaveGroup(conversationId) {
-    return axios.delete(`${this.url}/${conversationId}/group`);
+  leaveGroup(conversationId, { deleteConversation = false } = {}) {
+    return axios.delete(`${this.url}/${conversationId}/group`, {
+      data: { delete_conversation: deleteConversation },
+    });
   }
 
-  syncGroup(conversationId) {
-    return axios.post(`${this.url}/${conversationId}/group/sync`);
+  syncGroup(conversationId, { deleteConversation = false } = {}) {
+    return axios.post(`${this.url}/${conversationId}/group/sync`, {
+      delete_conversation: deleteConversation,
+    });
   }
 
   fetchGroupInviteLink(conversationId) {

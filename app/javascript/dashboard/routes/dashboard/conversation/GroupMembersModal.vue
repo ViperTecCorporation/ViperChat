@@ -228,15 +228,21 @@ const updateMemberRole = async member => {
       participants: [participant],
       confirmedSelfDemote: isSelfDemote,
     });
-    Array(data.failed || []).forEach(failed => {
-      useAlert(failedParticipantMessage(failed));
-    });
-
     const successful =
       data[action === 'promote' ? 'promoted' : 'demoted'] || [];
-    if (!successful.length) return;
+    if (!successful.length) {
+      Array(data.failed || []).forEach(failed => {
+        useAlert(failedParticipantMessage(failed));
+      });
+      return;
+    }
 
-    await fetchMembers(1);
+    try {
+      await fetchMembers(1);
+    } catch {
+      // The role change already succeeded. Let the parent refresh retry
+      // without reporting the completed operation as failed.
+    }
     emit('memberRoleUpdated');
     useAlert(
       action === 'promote'

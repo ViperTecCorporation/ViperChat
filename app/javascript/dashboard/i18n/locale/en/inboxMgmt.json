@@ -341,6 +341,12 @@
         "WHATSAPP_UPDATE_AND_CONNECT": {
           "LABEL": "Update and Connect"
         },
+        "CONNECTION_TYPE": {
+          "LABEL": "Connection type",
+          "QRCODE": "QR Code",
+          "PAIRING_CODE": "Pairing code",
+          "ERROR": "Select a valid connection type."
+        },
         "SEND_TRANSCRIBE_AUDIO": {
           "LABEL": "Send audio transcription",
           "PLACEHOLDER": "Check to send audio transcription.",
@@ -612,6 +618,7 @@
       "NOTIFICA_ME_CHANNEL": {
         "TITLE": "NotificaMe Channel",
         "DESC": "Integrate with NotificaMe Hub.",
+        "SIGN_UP": "🚀 Click here to create a NotificaMeHub account 🚀",
         "CHANNEL_NAME": {
           "LABEL": "Channel Name",
           "PLACEHOLDER": "Please enter a channel name",

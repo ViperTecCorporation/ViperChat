@@ -80,6 +80,8 @@
       "LEAVE_CONFIRM_TITLE": "Leave group?",
       "LEAVE_CONFIRM_DESCRIPTION": "The connected session will be removed from this group and will stop receiving new messages. This action cannot be undone by ViperChat.",
       "LEAVE_CONFIRM": "Leave group",
+      "LEAVE_DELETE_CONVERSATION": "Delete the conversation and stored media",
+      "LEAVE_DELETE_CONVERSATION_HELP": "Permanently removes the local history and S3 files after the leave is confirmed. If left unchecked, this option will no longer be available after the group leaves the list.",
       "LEAVE_SUCCESS": "The session left the group",
       "LEAVE_ERROR": "Could not leave the group",
       "LEAVE_TIMEOUT_VERIFYING": "The response timed out. ViperChat is checking the group state without repeating the leave request.",
