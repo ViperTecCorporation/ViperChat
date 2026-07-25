@@ -22,7 +22,7 @@ class Channel::Whatsapp < ApplicationRecord
   include Reauthorizable
 
   self.table_name = 'channel_whatsapp'
-  EDITABLE_ATTRS = [:phone_number, :provider, { provider_config: {} }].freeze
+  EDITABLE_ATTRS = [:phone_number, :provider, :contact_sync_enabled, { provider_config: {} }].freeze
 
   # default at the moment is 360dialog lets change later.
   PROVIDERS = %w[default whatsapp_cloud unoapi].freeze
@@ -38,6 +38,7 @@ class Channel::Whatsapp < ApplicationRecord
   before_destroy :teardown_webhooks
   after_commit :setup_webhooks, on: :create, if: :should_auto_setup_webhooks?
   after_update_commit :enqueue_group_conversation_backfill, if: :should_backfill_group_conversations?
+  after_update_commit :handle_contact_sync_setting_change, if: :saved_change_to_contact_sync_enabled?
 
   def name
     'Whatsapp'
@@ -142,6 +143,24 @@ class Channel::Whatsapp < ApplicationRecord
   end
 
   private
+
+  def handle_contact_sync_setting_change
+    if contact_sync_enabled? && provider == 'unoapi'
+      update_columns( # rubocop:disable Rails/SkipsModelValidations
+        contact_sync_status: 'waiting_connection',
+        contact_sync_error: nil,
+        contact_sync_next_run_at: Time.current
+      )
+      Whatsapp::Unoapi::ContactSync::ConnectionCheckJob.perform_later(id)
+    else
+      update_columns( # rubocop:disable Rails/SkipsModelValidations
+        contact_sync_status: 'disabled',
+        contact_sync_cursor: nil,
+        contact_sync_error: nil,
+        contact_sync_next_run_at: nil
+      )
+    end
+  end
 
   def ensure_webhook_verify_token
     provider_config['webhook_verify_token'] ||= SecureRandom.hex(16) if %w[whatsapp_cloud unoapi].include?(provider)

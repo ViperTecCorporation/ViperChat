@@ -8,9 +8,10 @@ import { mapGetters } from 'vuex';
 // import { createConsumer } from '@rails/actioncable';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
+import UnoapiContactSync from './UnoapiContactSync.vue';
 
 export default {
-  components: { NextButton, Switch },
+  components: { NextButton, Switch, UnoapiContactSync },
   mixins: [inboxMixin],
   props: {
     inbox: {
@@ -47,6 +48,7 @@ export default {
       composingMessage: false,
       sendReactionAsReply: true,
       sendProfilePicture: true,
+      contactSyncEnabled: false,
       connect: false,
       disconnect: false,
       qrcode: '',
@@ -121,6 +123,7 @@ export default {
       this.composingMessage = this.inbox.provider_config.composing_message;
       this.sendReactionAsReply = this.inbox.provider_config.send_reaction_as_reply;
       this.sendProfilePicture = this.inbox.provider_config.send_profile_picture;
+      this.contactSyncEnabled = this.inbox.contact_sync_enabled ?? false;
       this.connect = false;
       this.disconnect = false;
     },
@@ -193,6 +196,7 @@ export default {
           id: this.inbox.id,
           formData: false,
           channel: {
+            contact_sync_enabled: this.contactSyncEnabled,
             provider_config: {
               ...providerConfig,
               api_key: this.apiKey,
@@ -581,6 +585,8 @@ export default {
           </span>
         </label>
       </div>
+
+      <UnoapiContactSync v-model="contactSyncEnabled" :inbox="inbox" />
 
       <div class="w-3/4 pb-4 config-helptext">
         <img v-if="qrcode" :src="qrcode" />

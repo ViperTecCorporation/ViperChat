@@ -4,6 +4,45 @@ require 'rails_helper'
 require Rails.root.join 'spec/models/concerns/reauthorizable_shared.rb'
 
 RSpec.describe Channel::Whatsapp do
+  describe 'UnoAPI contact synchronization' do
+    let(:channel) do
+      create(
+        :channel_whatsapp,
+        provider: 'unoapi',
+        contact_sync_enabled: false,
+        sync_templates: false,
+        validate_provider_config: false
+      )
+    end
+
+    it 'enqueues a connection check when synchronization is enabled' do
+      expect do
+        channel.update!(contact_sync_enabled: true)
+      end.to have_enqueued_job(Whatsapp::Unoapi::ContactSync::ConnectionCheckJob).with(channel.id)
+
+      expect(channel.reload).to have_attributes(
+        contact_sync_status: 'waiting_connection',
+        contact_sync_error: nil
+      )
+    end
+
+    it 'marks synchronization disabled and clears its cursor when turned off' do
+      channel.update_columns( # rubocop:disable Rails/SkipsModelValidations
+        contact_sync_enabled: true,
+        contact_sync_status: 'running',
+        contact_sync_cursor: '42'
+      )
+
+      channel.update!(contact_sync_enabled: false)
+
+      expect(channel.reload).to have_attributes(
+        contact_sync_status: 'disabled',
+        contact_sync_cursor: nil,
+        contact_sync_next_run_at: nil
+      )
+    end
+  end
+
   describe 'concerns' do
     let(:channel) { create(:channel_whatsapp) }
 

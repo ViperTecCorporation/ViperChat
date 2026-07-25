@@ -70,5 +70,7 @@ describe Whatsapp::UnoapiWebhookSetupService do
     expect(webhook['url']).to be_nil
     expect(webhook['token']).to eq('c84834e6b008de54e8db97b7b01cc')
     expect(webhook['sendNewMessages']).to be(true)
+    expect(payload).not_to have_key('contact_sync_enabled')
+    expect(payload).not_to have_key('sync_contacts')
   end
 end

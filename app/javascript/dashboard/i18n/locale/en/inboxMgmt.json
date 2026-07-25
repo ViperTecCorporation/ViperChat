@@ -387,6 +387,25 @@
           "PLACEHOLDER": "Select to show profile picture.",
           "ERROR": "Select to show profile picture."
         },
+        "CONTACT_SYNC": {
+          "SECTION": "Contact synchronization",
+          "LABEL": "Synchronize UnoAPI contacts",
+          "HELP": "Creates missing contacts and updates only invalid names, identities, and pictures. The first synchronization starts 3 minutes after the session becomes online; subsequent runs occur every 3 hours.",
+          "STATUS_LABEL": "Status",
+          "PROGRESS": "Processed",
+          "PROGRESS_WITH_FAILURES": "{progress} ({failed} failed)",
+          "LAST_SYNC": "Last synchronization",
+          "NEXT_SYNC": "Next run",
+          "STATUS": {
+            "DISABLED": "Disabled",
+            "WAITING_CONNECTION": "Waiting for connection",
+            "SCHEDULED": "Scheduled",
+            "RUNNING": "Running",
+            "COMPLETED": "Completed",
+            "FAILED": "Failed",
+            "PAUSED": "Paused"
+          }
+        },
         "URL": {
           "LABEL": "Unoapi URL",
           "PLACEHOLDER": "Please enter an Unoapi URL or use default https://unoapi.cloud",
