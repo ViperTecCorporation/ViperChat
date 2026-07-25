@@ -86,6 +86,13 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
     expect(channel.inbox.contact_inboxes.count).to eq(link_count)
   end
 
+  it 'keeps idempotency when page identities are preloaded in batches' do
+    importer.perform
+    page_importer = described_class.build_for_page(channel: channel, payloads: [payload]).first
+
+    expect(page_importer.perform).to eq(:skipped)
+  end
+
   it 'merges compatible pre-existing phone and LID contacts instead of treating the page as already imported' do
     phone_contact = create(:contact, account: account, phone_number: '+5566998765432', name: 'Maria Silva')
     lid_contact = create(:contact, account: account, bsuid: '273877414502425@lid', name: 'Maria')

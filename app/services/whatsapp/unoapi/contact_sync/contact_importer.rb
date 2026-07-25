@@ -2,11 +2,45 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
   class InvalidContactError < StandardError; end
   class IdentityConflictError < StandardError; end
 
+  def self.build_for_page(channel:, payloads:)
+    importers = payloads.map { |payload| new(channel: channel, payload: payload) }
+    identities = importers.filter_map do |importer|
+      importer.identity_for_preload
+    rescue InvalidContactError
+      nil
+    end
+
+    source_ids = identities.flat_map { |identity| identity[:source_ids] }.uniq
+    phone_numbers = identities.filter_map { |identity| identity[:phone_number] }.uniq
+    links_by_source_id = channel.inbox.contact_inboxes.where(source_id: source_ids).to_a.group_by(&:source_id)
+    contact_ids_by_phone = channel.account.contacts.where(phone_number: phone_numbers)
+                                  .pluck(:phone_number, :id)
+                                  .group_by(&:first)
+                                  .transform_values { |pairs| pairs.map(&:last) }
+
+    importers.each do |importer|
+      importer.preload_idempotency!(
+        links_by_source_id: links_by_source_id,
+        contact_ids_by_phone: contact_ids_by_phone
+      )
+    end
+    importers
+  end
+
   def initialize(channel:, payload:)
     @channel = channel
     @inbox = channel.inbox
     @account = channel.account
     @payload = payload.with_indifferent_access
+  end
+
+  def identity_for_preload
+    { source_ids: source_ids, phone_number: phone_number }
+  end
+
+  def preload_idempotency!(links_by_source_id:, contact_ids_by_phone:)
+    @links_by_source_id = links_by_source_id
+    @contact_ids_by_phone = contact_ids_by_phone
   end
 
   def perform
@@ -107,7 +141,11 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
   def already_imported?
     return false if last_updated_ms.zero?
 
-    links = @inbox.contact_inboxes.where(source_id: source_ids).to_a
+    links = if @links_by_source_id
+              source_ids.flat_map { |source_id| @links_by_source_id.fetch(source_id, []) }
+            else
+              @inbox.contact_inboxes.where(source_id: source_ids).to_a
+            end
     return false unless links.size == source_ids.size
     return false unless links.map(&:contact_id).uniq.one?
     return false if duplicate_account_phone?(links.first.contact_id)
@@ -117,6 +155,10 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
 
   def duplicate_account_phone?(contact_id)
     return false if phone_number.blank?
+
+    if @contact_ids_by_phone
+      return @contact_ids_by_phone.fetch(phone_number, []).any? { |candidate_id| candidate_id != contact_id }
+    end
 
     @account.contacts.where(phone_number: phone_number).where.not(id: contact_id).exists?
   end

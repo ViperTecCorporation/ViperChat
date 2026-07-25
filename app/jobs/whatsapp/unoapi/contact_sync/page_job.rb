@@ -4,6 +4,7 @@ class Whatsapp::Unoapi::ContactSync::PageJob < MutexApplicationJob
   GLOBAL_LOCK = 'unoapi-contact-sync:global-page'.freeze
   LOCK_TIMEOUT = 15.minutes
   MAX_RETRIES = 3
+  NEXT_PAGE_DELAY = 2.seconds
 
   retry_on_lock_conflict wait: 30.seconds, attempts: 20
 
@@ -54,8 +55,9 @@ class Whatsapp::Unoapi::ContactSync::PageJob < MutexApplicationJob
   def import_contacts(channel, contacts)
     processed = 0
     failed = 0
-    contacts.each do |payload|
-      result = Whatsapp::Unoapi::ContactSync::ContactImporter.new(channel: channel, payload: payload).perform
+    importers = Whatsapp::Unoapi::ContactSync::ContactImporter.build_for_page(channel: channel, payloads: contacts)
+    contacts.zip(importers).each do |payload, importer|
+      result = importer.perform
       processed += 1 if %i[processed skipped].include?(result)
     rescue StandardError => e
       failed += 1
@@ -88,9 +90,9 @@ class Whatsapp::Unoapi::ContactSync::PageJob < MutexApplicationJob
     channel.update_columns(attributes.merge( # rubocop:disable Rails/SkipsModelValidations
                              contact_sync_status: 'scheduled',
                              contact_sync_cursor: next_cursor,
-                             contact_sync_next_run_at: Time.current
+                             contact_sync_next_run_at: Time.current + NEXT_PAGE_DELAY
                            ))
-    self.class.perform_later(channel.id, next_cursor)
+    self.class.set(wait: NEXT_PAGE_DELAY).perform_later(channel.id, next_cursor)
   end
 
   def complete_sync(channel, attributes, accumulated_failed)

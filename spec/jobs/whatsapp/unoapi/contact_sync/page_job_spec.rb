@@ -31,7 +31,7 @@ describe Whatsapp::Unoapi::ContactSync::PageJob do
     allow(job).to receive(:with_lock).and_yield
     allow(Whatsapp::Unoapi::ContactSync::Client).to receive(:new).with(channel).and_return(client)
     allow(client).to receive(:contacts).with(cursor: '0').and_return(page)
-    allow(Whatsapp::Unoapi::ContactSync::ContactImporter).to receive(:new).and_return(importer)
+    allow(Whatsapp::Unoapi::ContactSync::ContactImporter).to receive(:build_for_page).and_return([importer, importer])
   end
 
   it 'processes one page, advances the cursor, and enqueues only the next page' do
