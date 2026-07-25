@@ -7,6 +7,7 @@ on:
       - develop
       - master
       - uno
+      - '4.*'
   pull_request:
   workflow_dispatch:
 
@@ -15,7 +16,7 @@ jobs:
   lint-backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
@@ -25,14 +26,14 @@ jobs:
   lint-frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4.4.0
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: 'pnpm'
       - name: Install pnpm dependencies
-        run: pnpm i
+        run: pnpm i --frozen-lockfile
       - name: Run ESLint
         run: pnpm run eslint
 
@@ -40,14 +41,14 @@ jobs:
   frontend-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4.4.0
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: 'pnpm'
       - name: Install pnpm dependencies
-        run: pnpm i
+        run: pnpm i --frozen-lockfile
       - name: Run frontend tests
         run: pnpm run test:coverage
 
@@ -83,23 +84,20 @@ jobs:
         options: --entrypoint redis-server
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4.4.0
 
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: 'pnpm'
 
       - name: Install pnpm dependencies
-        run: pnpm i
+        run: pnpm i --frozen-lockfile
 
       - name: Strip enterprise code
         run: |

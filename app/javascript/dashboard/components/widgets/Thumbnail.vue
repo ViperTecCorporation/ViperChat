@@ -151,7 +151,7 @@ export default {
       <Avatar
         v-show="!shouldShowImage"
         :name="userNameWithoutEmoji"
-        :src="''"
+        src=""
         :class="thumbnailClass"
         :size="avatarSize"
         :rounded-full="variant === 'circle'"

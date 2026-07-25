@@ -4,12 +4,8 @@ import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { getMaxUploadSizeByChannel } from '@chatwoot/utils';
 import { DirectUpload } from 'activestorage';
 import { setDirectUploadAuthHeaders } from 'dashboard/helper/directUploadsHelper';
-import {
-  DEFAULT_MAXIMUM_FILE_UPLOAD_SIZE,
-  resolveMaximumFileUploadSize,
-} from 'shared/helpers/FileHelper';
+import { resolveMaximumFileUploadSize } from 'shared/helpers/FileHelper';
 import { MAXIMUM_FILE_UPLOAD_SIZE } from 'shared/constants/messages';
-import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
 export default {
   computed: {

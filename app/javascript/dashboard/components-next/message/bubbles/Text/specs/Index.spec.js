@@ -15,7 +15,10 @@ vi.mock('dashboard/composables/useTranslations', () => ({
   }),
 }));
 
-const mountTextBubble = ({ contentAttributes = {}, content = 'Hello' } = {}) => {
+const mountTextBubble = ({
+  contentAttributes = {},
+  content = 'Hello',
+} = {}) => {
   const Wrapper = defineComponent({
     setup() {
       provideMessageContext({

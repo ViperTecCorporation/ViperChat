@@ -75,14 +75,18 @@ const normalizeType = type => {
 };
 
 const initialActiveIndex = props.allAttachments.findIndex(
-  attachment => getAttachmentId(attachment) === getAttachmentId(props.attachment)
+  attachment =>
+    getAttachmentId(attachment) === getAttachmentId(props.attachment)
 );
 
 if (import.meta.env.DEV) {
   // eslint-disable-next-line no-console
   console.info('[GalleryView] attachment', props.attachment);
   // eslint-disable-next-line no-console
-  console.info('[GalleryView] allAttachments count', props.allAttachments.length);
+  console.info(
+    '[GalleryView] allAttachments count',
+    props.allAttachments.length
+  );
   // eslint-disable-next-line no-console
   console.info(
     '[GalleryView] initialActiveIndex',
@@ -99,7 +103,9 @@ const isDownloading = ref(false);
 const activeAttachment = ref({});
 const activeFileType = ref('');
 const activeImageIndex = ref(initialActiveIndex >= 0 ? initialActiveIndex : 0);
-const activeAttachmentUrl = computed(() => getAttachmentUrl(activeAttachment.value));
+const activeAttachmentUrl = computed(() =>
+  getAttachmentUrl(activeAttachment.value)
+);
 
 const imageRef = useTemplateRef('imageRef');
 
@@ -184,7 +190,11 @@ const onClickChangeAttachment = (attachment, index) => {
 };
 
 const onClickDownload = async () => {
-  const { file_type: rawType, data_url: url, extension } = activeAttachment.value;
+  const {
+    file_type: rawType,
+    data_url: url,
+    extension,
+  } = activeAttachment.value;
   const type = normalizeType(rawType);
   if (!Object.values(ALLOWED_FILE_TYPES).includes(type)) return;
 

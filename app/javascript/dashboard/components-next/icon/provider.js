@@ -1,5 +1,9 @@
 import { computed } from 'vue';
-import { isVoiceCallEnabled } from 'dashboard/helper/inbox';
+import {
+  INBOX_TYPES,
+  TWILIO_CHANNEL_MEDIUM,
+  isVoiceCallEnabled,
+} from 'dashboard/helper/inbox';
 
 const channelTypeIconMap = {
   'Channel::Api': 'i-woot-api',

@@ -228,57 +228,57 @@ watch(
     <template v-else>
       <div class="max-h-[60vh] overflow-y-auto pr-1 flex flex-col gap-4">
         <div v-if="stickers.recent?.length" class="flex flex-col gap-3">
-        <div class="text-xs font-medium text-n-slate-11 uppercase">
-          {{ t('CONVERSATION.REPLYBOX.STICKERS.RECENT') }}
+          <div class="text-xs font-medium text-n-slate-11 uppercase">
+            {{ t('CONVERSATION.REPLYBOX.STICKERS.RECENT') }}
+          </div>
+          <div class="grid grid-cols-4 sm:grid-cols-5 gap-3">
+            <button
+              v-for="sticker in stickers.recent"
+              :key="`recent-${sticker.id}`"
+              type="button"
+              class="rounded-lg border border-n-weak overflow-hidden p-1 transition"
+              :class="{
+                'ring-2 ring-n-brand': selectedIds.has(sticker.id),
+                'hover:border-n-slate-6': !selectionMode,
+              }"
+              @click="handleStickerClick(sticker)"
+            >
+              <img
+                :src="getStickerPreviewUrl(sticker)"
+                :alt="t('CONVERSATION.REPLYBOX.STICKERS.ALT')"
+                class="w-full h-20 object-contain"
+              />
+            </button>
+          </div>
         </div>
-        <div class="grid grid-cols-4 sm:grid-cols-5 gap-3">
-          <button
-            v-for="sticker in stickers.recent"
-            :key="`recent-${sticker.id}`"
-            type="button"
-            class="rounded-lg border border-n-weak overflow-hidden p-1 transition"
-            :class="{
-              'ring-2 ring-n-brand': selectedIds.has(sticker.id),
-              'hover:border-n-slate-6': !selectionMode,
-            }"
-            @click="handleStickerClick(sticker)"
-          >
-            <img
-              :src="getStickerPreviewUrl(sticker)"
-              :alt="t('CONVERSATION.REPLYBOX.STICKERS.ALT')"
-              class="w-full h-20 object-contain"
-            />
-          </button>
-        </div>
-      </div>
 
-      <div class="flex flex-col gap-3">
-        <div class="text-xs font-medium text-n-slate-11 uppercase">
-          {{ t('CONVERSATION.REPLYBOX.STICKERS.ALL') }}
+        <div class="flex flex-col gap-3">
+          <div class="text-xs font-medium text-n-slate-11 uppercase">
+            {{ t('CONVERSATION.REPLYBOX.STICKERS.ALL') }}
+          </div>
+          <div v-if="!stickers.all?.length" class="text-sm text-n-slate-11">
+            {{ t('CONVERSATION.REPLYBOX.STICKERS.EMPTY') }}
+          </div>
+          <div v-else class="grid grid-cols-4 sm:grid-cols-5 gap-3">
+            <button
+              v-for="sticker in stickers.all"
+              :key="sticker.id"
+              type="button"
+              class="rounded-lg border border-n-weak overflow-hidden p-1 transition"
+              :class="{
+                'ring-2 ring-n-brand': selectedIds.has(sticker.id),
+                'hover:border-n-slate-6': !selectionMode,
+              }"
+              @click="handleStickerClick(sticker)"
+            >
+              <img
+                :src="getStickerPreviewUrl(sticker)"
+                :alt="t('CONVERSATION.REPLYBOX.STICKERS.ALT')"
+                class="w-full h-20 object-contain"
+              />
+            </button>
+          </div>
         </div>
-        <div v-if="!stickers.all?.length" class="text-sm text-n-slate-11">
-          {{ t('CONVERSATION.REPLYBOX.STICKERS.EMPTY') }}
-        </div>
-        <div v-else class="grid grid-cols-4 sm:grid-cols-5 gap-3">
-          <button
-            v-for="sticker in stickers.all"
-            :key="sticker.id"
-            type="button"
-            class="rounded-lg border border-n-weak overflow-hidden p-1 transition"
-            :class="{
-              'ring-2 ring-n-brand': selectedIds.has(sticker.id),
-              'hover:border-n-slate-6': !selectionMode,
-            }"
-            @click="handleStickerClick(sticker)"
-          >
-            <img
-              :src="getStickerPreviewUrl(sticker)"
-              :alt="t('CONVERSATION.REPLYBOX.STICKERS.ALT')"
-              class="w-full h-20 object-contain"
-            />
-          </button>
-        </div>
-      </div>
       </div>
     </template>
   </Dialog>

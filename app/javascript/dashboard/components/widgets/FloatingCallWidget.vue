@@ -82,7 +82,9 @@ const canTransfer = computed(() => {
 const assignableAgents = computed(() => {
   const inboxId = activeCallContext.value?.inboxId;
   if (!inboxId) return [];
-  return store.getters['inboxAssignableAgents/getAssignableAgents'](`${inboxId}`);
+  return store.getters['inboxAssignableAgents/getAssignableAgents'](
+    `${inboxId}`
+  );
 });
 
 const inboxes = computed(() => store.getters['inboxes/getInboxes'] || []);
@@ -91,7 +93,8 @@ const internalInboxes = computed(() =>
 );
 const voiceInboxes = computed(() =>
   inboxes.value.filter(
-    inbox => inbox.channel_type === INBOX_TYPES.VOICE && inbox.provider === 'custom'
+    inbox =>
+      inbox.channel_type === INBOX_TYPES.VOICE && inbox.provider === 'custom'
   )
 );
 const allAgents = computed(() => store.getters['agents/getAgents'] || []);
@@ -113,7 +116,9 @@ const ringTone = computed(() => {
     const conversation = getCallInfo(activeCall.value).conversation;
     const status = conversation?.additional_attributes?.call_status;
     if (status === 'ringing') {
-      return activeCall.value.callDirection === 'outbound' ? 'outbound' : 'inbound';
+      return activeCall.value.callDirection === 'outbound'
+        ? 'outbound'
+        : 'inbound';
     }
     return null;
   }
@@ -123,7 +128,8 @@ const ringTone = computed(() => {
     const status = conversation?.additional_attributes?.call_status;
     if (status === 'ringing') {
       if (call.callDirection === 'outbound') return 'outbound';
-      if (call.callDirection === 'inbound' && !hasActiveCall.value) return 'inbound';
+      if (call.callDirection === 'inbound' && !hasActiveCall.value)
+        return 'inbound';
     }
     if (!status && call.callDirection === 'inbound' && !hasActiveCall.value) {
       return 'inbound';
@@ -558,7 +564,9 @@ onUnmounted(() => {
           v-model="transferQuery"
           type="search"
           class="w-full px-3 py-2 rounded-md border border-n-strong bg-transparent text-sm"
-          :placeholder="$t('CONVERSATION.VOICE_WIDGET.TRANSFER_SEARCH_PLACEHOLDER')"
+          :placeholder="
+            $t('CONVERSATION.VOICE_WIDGET.TRANSFER_SEARCH_PLACEHOLDER')
+          "
         />
         <div class="max-h-64 overflow-y-auto flex flex-col gap-2">
           <button
@@ -605,12 +613,12 @@ onUnmounted(() => {
         </div>
         <div class="grid grid-cols-3 gap-3">
           <button
-          v-for="digit in keypadDigits"
-          :key="digit"
-          class="h-12 rounded-lg bg-n-slate-3 text-n-slate-12 text-lg font-semibold hover:bg-n-slate-4 transition-colors"
-          @click="handleKeypadInput(digit)"
-        >
-          {{ digit }}
+            v-for="digit in keypadDigits"
+            :key="digit"
+            class="h-12 rounded-lg bg-n-slate-3 text-n-slate-12 text-lg font-semibold hover:bg-n-slate-4 transition-colors"
+            @click="handleKeypadInput(digit)"
+          >
+            {{ digit }}
           </button>
         </div>
         <div class="flex justify-end gap-2">
@@ -676,7 +684,9 @@ onUnmounted(() => {
 
         <label v-if="internalInboxes.length > 1" class="flex flex-col gap-2">
           <span class="text-sm text-n-slate-11">
-            {{ $t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_PICK_INTERNAL_INBOX') }}
+            {{
+              $t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_PICK_INTERNAL_INBOX')
+            }}
           </span>
           <select
             v-model="selectedInternalInboxId"
@@ -702,7 +712,9 @@ onUnmounted(() => {
           />
           <NextButton
             :label="$t('CONVERSATION.VOICE_WIDGET.INTERNAL_CALL_START')"
-            :disabled="!selectedInternalAgentId || !selectedInternalVoiceInboxId"
+            :disabled="
+              !selectedInternalAgentId || !selectedInternalVoiceInboxId
+            "
             :is-loading="isInternalCalling"
             @click="startInternalCall"
           />

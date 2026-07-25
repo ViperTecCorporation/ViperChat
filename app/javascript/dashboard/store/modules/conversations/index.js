@@ -212,7 +212,8 @@ export const mutations = {
       _state.attachmentsMeta[id] = {
         ...meta,
         totalCount:
-          (meta.totalCount || existingAttachments.length) + attachmentsToAdd.length,
+          (meta.totalCount || existingAttachments.length) +
+          attachmentsToAdd.length,
       };
     }
   },
@@ -239,7 +240,8 @@ export const mutations = {
 
     const meta = _state.attachmentsMeta[id];
     if (meta) {
-      const removedCount = existingAttachments.length - filteredAttachments.length;
+      const removedCount =
+        existingAttachments.length - filteredAttachments.length;
       const nextTotal =
         (meta.totalCount || existingAttachments.length) - removedCount;
       _state.attachmentsMeta[id] = {

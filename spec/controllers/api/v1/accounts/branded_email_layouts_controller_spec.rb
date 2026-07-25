@@ -114,6 +114,8 @@ RSpec.describe 'Branded Email Layout API', type: :request do
       end
 
       it 'rejects updates when feature is disabled' do
+        account.disable_features!(:branded_email_templates)
+
         patch "/api/v1/accounts/#{account.id}/branded_email_layout",
               headers: admin.create_new_auth_token,
               params: { branded_email_layout: layout },

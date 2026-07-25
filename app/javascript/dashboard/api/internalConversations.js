@@ -27,4 +27,3 @@ class InternalConversationsAPI extends ApiClient {
 }
 
 export default new InternalConversationsAPI();
-

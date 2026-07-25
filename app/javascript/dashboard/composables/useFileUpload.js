@@ -3,7 +3,7 @@ import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { DirectUpload } from 'activestorage';
 import { setDirectUploadAuthHeaders } from 'dashboard/helper/directUploadsHelper';
-import { checkFileSizeLimit, resolveMaximumFileUploadSize } from 'shared/helpers/FileHelper';
+import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { MAXIMUM_FILE_UPLOAD_SIZE } from 'shared/constants/messages';
 
 /**
@@ -13,21 +13,18 @@ import { MAXIMUM_FILE_UPLOAD_SIZE } from 'shared/constants/messages';
  * @param {Function} options.attachFile - Callback to handle file attachment
  * @param {boolean} options.isPrivateNote - Whether the upload is for a private note
  */
-export const useFileUpload = ({ inbox, attachFile, isPrivateNote = false }) => {
+export const useFileUpload = ({ attachFile }) => {
   const { t } = useI18n();
 
   const accountId = useMapGetter('getCurrentAccountId');
   const currentChat = useMapGetter('getSelectedChat');
   const globalConfig = useMapGetter('globalConfig/get');
 
-  const installationLimit = resolveMaximumFileUploadSize(
-    globalConfig.value?.maximumFileUploadSize
-  );
-
-  // helper: compute max upload size for a given file's mime
-  const maxSizeFor = mime => {
+  // helper: compute max upload size
+  const maxSizeFor = () => {
     const configured =
-      Number(globalConfig.value.maxFileUploadSizeInMb) || MAXIMUM_FILE_UPLOAD_SIZE;
+      Number(globalConfig.value.maxFileUploadSizeInMb) ||
+      MAXIMUM_FILE_UPLOAD_SIZE;
 
     // Por enquanto usamos um limite global, independente do canal.
     // O valor é definido via env MAXIMUM_FILE_UPLOAD_SIZE (em MB),
@@ -45,8 +42,7 @@ export const useFileUpload = ({ inbox, attachFile, isPrivateNote = false }) => {
   const handleDirectFileUpload = file => {
     if (!file) return;
 
-    const mime = file.file?.type || file.type;
-    const maxSizeMB = maxSizeFor(mime);
+    const maxSizeMB = maxSizeFor();
 
     if (!checkFileSizeLimit(file, maxSizeMB)) {
       alertOverLimit(maxSizeMB);

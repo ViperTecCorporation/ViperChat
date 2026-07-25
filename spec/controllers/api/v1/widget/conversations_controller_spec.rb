@@ -287,7 +287,7 @@ RSpec.describe '/api/v1/widget/conversations/toggle_typing', type: :request do
             message_type: :activity,
             content: "Conversation was resolved by #{contact.name}",
             content_attributes: { activity: { type: 'conversation_status_changed', status: 'resolved' } }
-          }
+          )
         )
       end
     end

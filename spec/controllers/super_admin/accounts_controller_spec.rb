@@ -18,8 +18,10 @@ RSpec.describe 'Super Admin accounts API', type: :request do
       it 'shows the list of accounts' do
         sign_in(super_admin, scope: :super_admin)
         get '/super_admin/accounts'
+        document = Nokogiri::HTML(response.body)
+
         expect(response).to have_http_status(:success)
-        expect(response.body).to include('New account')
+        expect(document.at_css('a[href="/super_admin/accounts/new"]')).to be_present
         expect(response.body).to include(account.name)
       end
     end

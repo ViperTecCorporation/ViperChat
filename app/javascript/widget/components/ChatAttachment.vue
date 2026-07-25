@@ -37,7 +37,9 @@ export default {
       if (Number.isFinite(configured) && configured > 0) {
         return configured;
       }
-      return MAXIMUM_FILE_UPLOAD_SIZE;
+      return resolveMaximumFileUploadSize(
+        this.globalConfig.maximumFileUploadSize
+      );
     },
     allowedFileTypes() {
       return ALLOWED_FILE_TYPES;

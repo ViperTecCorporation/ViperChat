@@ -78,7 +78,7 @@ RSpec.describe Conversations::ResolutionJob do
     skipped_inbox = create(:inbox, account: account)
     account.update(
       auto_resolve_after: 14_400,
-      auto_resolve_inboxes: [{ inbox_id: selected_inbox.id, send_to_groups: false }]
+      auto_resolve_inboxes: [{ 'inbox_id' => selected_inbox.id, 'send_to_groups' => false }]
     )
     selected_conversation = create(:conversation, account: account, inbox: selected_inbox, last_activity_at: 13.days.ago)
     skipped_conversation = create(:conversation, account: account, inbox: skipped_inbox, last_activity_at: 13.days.ago)
@@ -106,8 +106,8 @@ RSpec.describe Conversations::ResolutionJob do
     account.update(
       auto_resolve_after: 14_400,
       auto_resolve_inboxes: [
-        { inbox_id: enabled_inbox.id, send_to_groups: true },
-        { inbox_id: disabled_inbox.id, send_to_groups: false }
+        { 'inbox_id' => enabled_inbox.id, 'send_to_groups' => true },
+        { 'inbox_id' => disabled_inbox.id, 'send_to_groups' => false }
       ]
     )
     enabled_group_conversation = create(

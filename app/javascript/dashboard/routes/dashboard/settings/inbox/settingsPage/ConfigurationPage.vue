@@ -8,6 +8,7 @@ import inboxMixin from 'shared/mixins/inboxMixin';
 import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFieldSection.vue';
 import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsToggleSection.vue';
 import SettingsAccordion from 'dashboard/components-next/Settings/SettingsAccordion.vue';
+import SettingsSection from 'dashboard/components/SettingsSection.vue';
 import ImapSettings from '../ImapSettings.vue';
 import SmtpSettings from '../SmtpSettings.vue';
 import { useVuelidate } from '@vuelidate/core';
@@ -15,18 +16,19 @@ import { required } from '@vuelidate/validators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TextArea from 'next/textarea/TextArea.vue';
 import { sanitizeAllowedDomains } from 'dashboard/helper/URLHelper';
-import Input from 'dashboard/components-next/input/Input.vue';
+import InputControl from 'dashboard/components-next/input/Input.vue';
 
 export default {
   components: {
     SettingsFieldSection,
     SettingsToggleSection,
     SettingsAccordion,
+    SettingsSection,
     ImapSettings,
     SmtpSettings,
     NextButton,
     TextArea,
-    Input,
+    InputControl,
   },
   mixins: [inboxMixin],
   props: {
@@ -388,21 +390,21 @@ export default {
         :sub-title="$t('INBOX_MGMT.ADD.VOICE.DESC')"
       >
         <div class="flex flex-col gap-4 max-w-3xl">
-          <Input
+          <InputControl
             v-model="customVoiceConfig.webrtcWsUrl"
             :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.WEBRTC_WS_URL.LABEL')"
             :placeholder="
               $t('INBOX_MGMT.ADD.VOICE.CUSTOM.WEBRTC_WS_URL.PLACEHOLDER')
             "
           />
-          <Input
+          <InputControl
             v-model="customVoiceConfig.sipDomain"
             :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.SIP_DOMAIN.LABEL')"
             :placeholder="
               $t('INBOX_MGMT.ADD.VOICE.CUSTOM.SIP_DOMAIN.PLACEHOLDER')
             "
           />
-          <Input
+          <InputControl
             v-model="customVoiceConfig.sipOutboundProxy"
             :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.SIP_OUTBOUND_PROXY.LABEL')"
             :placeholder="
@@ -431,19 +433,21 @@ export default {
               $t('INBOX_MGMT.ADD.VOICE.CUSTOM.STUN_SERVERS.PLACEHOLDER')
             "
           />
-          <Input
+          <InputControl
             v-model="customVoiceConfig.turnUrl"
             :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_URL.LABEL')"
-            :placeholder="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_URL.PLACEHOLDER')"
+            :placeholder="
+              $t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_URL.PLACEHOLDER')
+            "
           />
-          <Input
+          <InputControl
             v-model="customVoiceConfig.turnUsername"
             :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_USERNAME.LABEL')"
             :placeholder="
               $t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_USERNAME.PLACEHOLDER')
             "
           />
-          <Input
+          <InputControl
             v-model="customVoiceConfig.turnPassword"
             type="password"
             :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.TURN_PASSWORD.LABEL')"
@@ -480,25 +484,21 @@ export default {
             </select>
           </label>
           <template v-if="customVoiceConfig.transferMode === 'ari'">
-            <Input
+            <InputControl
               v-model="customVoiceConfig.transferApiUrl"
-              :label="
-                $t('INBOX_MGMT.ADD.VOICE.CUSTOM.TRANSFER_API_URL.LABEL')
-              "
+              :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.TRANSFER_API_URL.LABEL')"
               :placeholder="
                 $t('INBOX_MGMT.ADD.VOICE.CUSTOM.TRANSFER_API_URL.PLACEHOLDER')
               "
             />
-            <Input
+            <InputControl
               v-model="customVoiceConfig.transferApiToken"
               type="password"
               :label="
                 $t('INBOX_MGMT.ADD.VOICE.CUSTOM.TRANSFER_API_TOKEN.LABEL')
               "
               :placeholder="
-                $t(
-                  'INBOX_MGMT.ADD.VOICE.CUSTOM.TRANSFER_API_TOKEN.PLACEHOLDER'
-                )
+                $t('INBOX_MGMT.ADD.VOICE.CUSTOM.TRANSFER_API_TOKEN.PLACEHOLDER')
               "
             />
           </template>
@@ -508,21 +508,21 @@ export default {
               {{ $t('INBOX_MGMT.ADD.VOICE.CUSTOM.USE_AGENT_JWT') }}
             </label>
             <template v-if="!customVoiceConfig.useAgentJwt">
-              <Input
+              <InputControl
                 v-model="customVoiceConfig.jwtIssuer"
                 :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_ISSUER.LABEL')"
                 :placeholder="
                   $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_ISSUER.PLACEHOLDER')
                 "
               />
-              <Input
+              <InputControl
                 v-model="customVoiceConfig.jwtAudience"
                 :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_AUDIENCE.LABEL')"
                 :placeholder="
                   $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_AUDIENCE.PLACEHOLDER')
                 "
               />
-              <Input
+              <InputControl
                 v-model="customVoiceConfig.jwtSecret"
                 type="password"
                 :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_SECRET.LABEL')"
@@ -530,7 +530,7 @@ export default {
                   $t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_SECRET.PLACEHOLDER')
                 "
               />
-              <Input
+              <InputControl
                 v-model="customVoiceConfig.jwtTtl"
                 :label="$t('INBOX_MGMT.ADD.VOICE.CUSTOM.JWT_TTL.LABEL')"
                 :placeholder="

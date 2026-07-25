@@ -8,7 +8,10 @@ export const actions = {
   },
   create(_, { inboxId, agentList }) {
     // eslint-disable-next-line no-console
-    console.log('[InboxMembersStore] create', { inboxId, agentCount: agentList?.length });
+    console.log('[InboxMembersStore] create', {
+      inboxId,
+      agentCount: agentList?.length,
+    });
     return InboxMembersAPI.update({ inboxId, agentList });
   },
   updateCredentials(_, { inboxId, memberAttributes }) {

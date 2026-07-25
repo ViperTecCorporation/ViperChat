@@ -118,15 +118,15 @@ export function useMessageContext() {
   }
 
   const currentChatAttachments = useMapGetter('getSelectedChatAttachments');
-const shouldLog = (import.meta.env?.VITE_CONSOLE_LOG ?? 'true')
-  .toString()
-  .toLowerCase() === 'true';
-const logDebug = (...args) => {
-  if (shouldLog) {
-    // eslint-disable-next-line no-console
-    console.log('[message:provider]', ...args);
-  }
-};
+  const shouldLog =
+    (import.meta.env?.VITE_CONSOLE_LOG ?? 'true').toString().toLowerCase() ===
+    'true';
+  const logDebug = (...args) => {
+    if (shouldLog) {
+      // eslint-disable-next-line no-console
+      console.log('[message:provider]', ...args);
+    }
+  };
 
   const normalizeType = type => {
     if (!type) return '';

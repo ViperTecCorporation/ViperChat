@@ -83,7 +83,7 @@ const handleDialogClose = () => {
     <CampaignList
       v-else-if="!hasNoWhatsAppCampaigns"
       :campaigns="WhatsAppCampaigns"
-      :show-duplicate="true"
+      show-duplicate
       @delete="handleDelete"
       @duplicate="handleDuplicate"
     />

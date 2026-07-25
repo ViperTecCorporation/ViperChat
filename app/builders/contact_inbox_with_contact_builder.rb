@@ -152,7 +152,7 @@ class ContactInboxWithContactBuilder
     return if contact.email.blank? || valid_contact_email?(contact.email)
 
     Rails.logger.info("[CONTACT_INBOX] clearing invalid contact email contact_id=#{contact.id} email=#{contact.email}")
-    contact.update_columns(email: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    contact.update_columns(email: nil, updated_at: Time.current)
   end
 
   def valid_contact_email?(email)

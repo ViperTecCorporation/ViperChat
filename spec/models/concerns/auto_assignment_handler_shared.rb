@@ -18,6 +18,7 @@ shared_examples_for 'auto_assignment_handler' do
     end
 
     before do
+      account.disable_features!(:assignment_v2)
       create(:inbox_member, inbox: inbox, user: agent)
       allow(Redis::Alfred).to receive(:rpoplpush).and_return(agent.id)
     end

@@ -33,10 +33,7 @@ const contactDisplayPhone = contact => {
     >
       <span class="truncate max-w-[14rem]">
         {{ contactDisplayName(contact) }}
-        <span
-          v-if="contactDisplayPhone(contact)"
-          class="text-n-slate-11"
-        >
+        <span v-if="contactDisplayPhone(contact)" class="text-n-slate-11">
           ({{ contactDisplayPhone(contact) }})
         </span>
       </span>

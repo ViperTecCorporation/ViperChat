@@ -59,9 +59,9 @@ const props = defineProps({
   },
 });
 
-defineOptions({ inheritAttrs: false });
-
 const emit = defineEmits(['confirm', 'close']);
+
+defineOptions({ inheritAttrs: false });
 
 const { t } = useI18n();
 
@@ -83,10 +83,6 @@ const maxWidthClass = computed(() => {
   return classesMap[props.width] ?? 'max-w-md';
 });
 
-const positionClass = computed(() =>
-  props.position === 'top' ? 'dialog-position-top' : ''
-);
-
 const open = () => {
   isOpen.value = true;
   dialogRef.value?.showModal();
@@ -103,10 +99,6 @@ const handleNativeClose = () => {
   isOpen.value = false;
   emit('close');
 };
-
-// Only close if the close event originated from this dialog,
-// not from a child dialog (e.g. ProseMirror prompt) bubbling up.
-const handleDialogClose = e => e.target === dialogRef.value && close();
 
 // Only close on click-outside if this dialog is the topmost one.
 // If another dialog (e.g. ProseMirror prompt) is open on top, ignore.

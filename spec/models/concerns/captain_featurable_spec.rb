@@ -91,6 +91,7 @@ RSpec.describe CaptainFeaturable do
 
     context 'when captain_models is nil' do
       before do
+        account.disable_features!('captain_integration_v2')
         account.update!(captain_models: nil)
       end
 

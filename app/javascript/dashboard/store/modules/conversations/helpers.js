@@ -90,8 +90,14 @@ const filterByGroups = (shouldFilter, assigneeType, conversation = {}) => {
 };
 
 export const applyPageFilters = (conversation, filters) => {
-  const { assigneeType, inboxId, status, labels = [], teamId, conversationType } =
-    filters;
+  const {
+    assigneeType,
+    inboxId,
+    status,
+    labels = [],
+    teamId,
+    conversationType,
+  } = filters;
   const {
     status: chatStatus,
     inbox_id: chatInboxId,

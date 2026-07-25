@@ -22,16 +22,19 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     return true unless avatarable.is_a?(Contact)
 
     attrs = avatarable.additional_attributes || {}
-    url_hash = generate_url_hash(avatar_url, avatar_signature_metadata(avatar_url, avatar_metadata))
-    attrs['avatar_url_hash'] != url_hash && attrs['avatar_url_enqueued_hash'] != url_hash
+    stored_hashes = attrs.values_at('avatar_url_hash', 'avatar_url_enqueued_hash')
+    return false if stored_hashes.include?(generate_url_hash(avatar_url))
+
+    stored_hashes.exclude?(generate_url_hash(avatar_url, avatar_signature_metadata(avatar_url, avatar_metadata)))
   end
 
   def self.enqueue_if_needed(avatarable, avatar_url, avatar_metadata = nil)
+    return false unless should_enqueue?(avatarable, avatar_url, avatar_metadata)
+
     signature_metadata = avatar_signature_metadata(avatar_url, avatar_metadata)
     return false unless reserve_enqueue!(avatarable, avatar_url, signature_metadata)
 
-    job_args = [avatarable, avatar_url]
-    job_args << signature_metadata if signature_metadata.present?
+    job_args = [avatarable, avatar_url, signature_metadata.presence].compact
     perform_later(*job_args)
     true
   end
@@ -42,10 +45,10 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
 
     avatarable.with_lock do
       attrs = avatarable.additional_attributes || {}
-      url_hash = generate_url_hash(avatar_url, avatar_metadata)
-      return false if attrs['avatar_url_hash'] == url_hash || attrs['avatar_url_enqueued_hash'] == url_hash
+      url_hashes = [generate_url_hash(avatar_url), generate_url_hash(avatar_url, avatar_metadata)]
+      next false if (url_hashes & attrs.values_at('avatar_url_hash', 'avatar_url_enqueued_hash')).any?
 
-      attrs['avatar_url_enqueued_hash'] = url_hash
+      attrs['avatar_url_enqueued_hash'] = url_hashes.last
       attrs['avatar_url_signature_metadata'] = avatar_metadata if avatar_metadata.present?
       attrs['last_avatar_enqueue_at'] = Time.current.iso8601
       avatarable.update_columns(additional_attributes: attrs) # rubocop:disable Rails/SkipsModelValidations
@@ -84,7 +87,7 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     {}
   end
 
-  def self.remote_avatar_metadata(avatar_url)
+  def self.remote_avatar_metadata(avatar_url) # rubocop:disable Metrics/MethodLength
     options = SafeFetch::RequestOptions.new(
       url: avatar_url,
       method: :get,
@@ -96,7 +99,7 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     response = if SafeFetch.allow_private_network?
                  SafeFetch::PrivateNetworkRequest.new(options).perform
                else
-                 SsrfFilter.head(options.url, **options.request_options)
+                 SsrfFilter.get(options.url, **options.request_options)
                end
 
     return {} unless response.is_a?(Net::HTTPSuccess) || response.is_a?(Net::HTTPRedirection)

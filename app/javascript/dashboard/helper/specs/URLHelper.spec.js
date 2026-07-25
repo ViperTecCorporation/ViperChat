@@ -271,7 +271,9 @@ describe('#URL Helpers', () => {
     });
 
     it('should correctly handle URLs with non-standard TLDs', () => {
-      expect(getHostNameFromURL('https://viperchat.help')).toBe('viperchat.help');
+      expect(getHostNameFromURL('https://viperchat.help')).toBe(
+        'viperchat.help'
+      );
     });
   });
 

@@ -72,6 +72,12 @@ export const createPendingMessage = data => {
       },
     })) || [];
   const tempAttachments = [{ id: tempMessageId }];
+  let attachments = null;
+  if (pendingContactAttachments.length > 0) {
+    attachments = pendingContactAttachments;
+  } else if (file) {
+    attachments = tempAttachments;
+  }
   const pendingMessage = {
     ...data,
     content: message || null,
@@ -81,12 +87,7 @@ export const createPendingMessage = data => {
     created_at: timestamp,
     message_type: MESSAGE_TYPE.OUTGOING,
     conversation_id: data.conversationId,
-    attachments:
-      pendingContactAttachments.length > 0
-        ? pendingContactAttachments
-        : file
-          ? tempAttachments
-          : null,
+    attachments,
   };
 
   return pendingMessage;

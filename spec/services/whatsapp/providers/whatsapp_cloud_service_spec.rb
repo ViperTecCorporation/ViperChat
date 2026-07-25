@@ -42,6 +42,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
   let(:whatsapp_response) { { messages: [{ id: 'message_id' }] } }
 
   before do
+    whatsapp_channel.account.disable_features!('send_agent_name_in_whatsapp_message')
     stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
   end
 

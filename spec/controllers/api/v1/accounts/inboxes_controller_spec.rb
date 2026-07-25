@@ -194,6 +194,7 @@ RSpec.describe 'Inboxes API', type: :request do
       end
 
       it 'does not return saved branded email layout when feature is disabled' do
+        account.disable_features!(:branded_email_templates)
         email_channel = create(:channel_email, account: account)
         email_inbox = create(:inbox, channel: email_channel, account: account)
         create(:email_template, :layout, account: account, inbox: email_inbox, body: '<html>{{ content_for_layout }} Branded</html>')
@@ -681,6 +682,7 @@ RSpec.describe 'Inboxes API', type: :request do
       end
 
       it 'rejects branded email layout when feature is disabled' do
+        account.disable_features!(:branded_email_templates)
         email_channel = create(:channel_email, account: account)
         email_inbox = create(:inbox, channel: email_channel, account: account)
 
@@ -695,6 +697,7 @@ RSpec.describe 'Inboxes API', type: :request do
       end
 
       it 'ignores blank branded email layout when feature is disabled' do
+        account.disable_features!(:branded_email_templates)
         email_channel = create(:channel_email, account: account)
         email_inbox = create(:inbox, channel: email_channel, account: account)
 

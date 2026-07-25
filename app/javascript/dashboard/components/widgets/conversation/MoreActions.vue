@@ -34,9 +34,7 @@ const currentAttachments = computed(
 const currentAttachmentsMeta = computed(
   () => store.getters.getSelectedChatAttachmentsMeta
 );
-const conversationMessages = computed(
-  () => currentChat.value?.messages || []
-);
+const conversationMessages = computed(() => currentChat.value?.messages || []);
 
 const mediaCounter = computed(() => currentAttachments.value.length || 0);
 
