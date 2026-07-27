@@ -227,10 +227,9 @@ describe('#mutations', () => {
         created_at: 100,
       });
 
-      expect(state.allConversations[0].messages.map(message => message.id)).toEqual([
-        20,
-        10,
-      ]);
+      expect(
+        state.allConversations[0].messages.map(message => message.id)
+      ).toEqual([20, 10]);
       expect(state.allConversations[0].timestamp).toBe(200);
     });
   });

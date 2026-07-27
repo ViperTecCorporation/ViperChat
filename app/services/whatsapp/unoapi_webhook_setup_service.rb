@@ -33,7 +33,12 @@ class Whatsapp::UnoapiWebhookSetupService
     body = params(whatsapp_channel, phone_number)
     response = HTTParty.post("#{url}/register", headers: headers(whatsapp_channel), body: body.to_json)
     Rails.logger.debug { "Response #{response}" }
-    return send_message(whatsapp_channel) if response.success?
+    if response.success?
+      connected = send_message(whatsapp_channel)
+      contact_sync_enabled = connected && whatsapp_channel.contact_sync_enabled?
+      Whatsapp::Unoapi::ContactSync::ConnectionCheckJob.set(wait: 5.seconds).perform_later(whatsapp_channel.id) if contact_sync_enabled
+      return connected
+    end
 
     whatsapp_channel.errors.add(:provider_config, response.body)
     true

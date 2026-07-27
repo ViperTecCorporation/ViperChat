@@ -9,9 +9,10 @@ import { mapGetters } from 'vuex';
 // import { createConsumer } from '@rails/actioncable';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SwitchControl from 'dashboard/components-next/switch/Switch.vue';
+import UnoapiContactSync from './UnoapiContactSync.vue';
 
 export default {
-  components: { NextButton, SwitchControl },
+  components: { NextButton, SwitchControl, UnoapiContactSync },
   mixins: [inboxMixin],
   props: {
     inbox: {
@@ -27,6 +28,9 @@ export default {
       apiKey: '',
       url: 'https://unoapi.cloud',
       connectionType: 'qrcode',
+      pixMerchantName: '',
+      pixKey: '',
+      pixKeyType: '',
       ignoreGroupMessages: false,
       ignoreNewsletterMessages: true,
       ignoreGroupIndividualReceipts: true,
@@ -49,6 +53,7 @@ export default {
       composingMessage: false,
       sendReactionAsReply: true,
       sendProfilePicture: true,
+      contactSyncEnabled: false,
       connect: false,
       disconnect: false,
       qrcode: '',
@@ -102,6 +107,9 @@ export default {
         this.inbox.provider_config.connection_type === 'pairing_code'
           ? 'pairing_code'
           : 'qrcode';
+      this.pixMerchantName = this.inbox.provider_config.pix_merchant_name || '';
+      this.pixKey = this.inbox.provider_config.pix_key || '';
+      this.pixKeyType = this.inbox.provider_config.pix_key_type || '';
       this.ignoreGroupMessages =
         this.inbox.provider_config.ignore_group_messages;
       this.ignoreNewsletterMessages =
@@ -139,6 +147,7 @@ export default {
       this.sendReactionAsReply =
         this.inbox.provider_config.send_reaction_as_reply;
       this.sendProfilePicture = this.inbox.provider_config.send_profile_picture;
+      this.contactSyncEnabled = this.inbox.contact_sync_enabled ?? false;
       this.connect = false;
       this.disconnect = false;
     },
@@ -204,6 +213,16 @@ export default {
       }
     },
     async updateInbox() {
+      const pixConfigFields = [
+        this.pixMerchantName,
+        this.pixKey,
+        this.pixKeyType,
+      ].filter(Boolean);
+      if (pixConfigFields.length > 0 && pixConfigFields.length < 3) {
+        useAlert(this.$t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.ERROR'));
+        return;
+      }
+
       try {
         const providerConfig = {
           ...(this.inbox.provider_config || {}),
@@ -217,10 +236,14 @@ export default {
           id: this.inbox.id,
           formData: false,
           channel: {
+            contact_sync_enabled: this.contactSyncEnabled,
             provider_config: {
               ...providerConfig,
               api_key: this.apiKey,
               connection_type: this.connectionType,
+              pix_merchant_name: this.pixMerchantName || null,
+              pix_key: this.pixKey || null,
+              pix_key_type: this.pixKeyType || null,
               ignore_newsletter_messages: this.ignoreNewsletterMessages,
               ignore_group_individual_receipts:
                 this.ignoreGroupIndividualReceipts,
@@ -319,6 +342,57 @@ export default {
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.CONNECTION_TYPE.ERROR') }}
           </span>
         </label>
+      </div>
+
+      <div
+        class="mt-4 mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400"
+      >
+        {{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.TITLE') }}
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl pb-6">
+        <label class="md:col-span-2">
+          <span>
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.MERCHANT_LABEL') }}
+          </span>
+          <input
+            v-model.trim="pixMerchantName"
+            type="text"
+            :placeholder="
+              $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.MERCHANT_PLACEHOLDER')
+            "
+          />
+        </label>
+        <label>
+          <span>{{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.KEY_LABEL') }}</span>
+          <input
+            v-model.trim="pixKey"
+            type="text"
+            :placeholder="
+              $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.KEY_PLACEHOLDER')
+            "
+          />
+        </label>
+        <label class="flex flex-col gap-1 text-sm text-n-slate-11">
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.TYPE_LABEL') }}
+          <select v-model="pixKeyType" class="rounded-md border-n-strong">
+            <option value="">
+              {{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.TYPE_PLACEHOLDER') }}
+            </option>
+            <option value="EMAIL">
+              {{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.TYPE_EMAIL') }}
+            </option>
+            <option value="CNPJ">
+              {{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.TYPE_CNPJ') }}
+            </option>
+            <option value="PHONE">
+              {{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.TYPE_PHONE') }}
+            </option>
+          </select>
+        </label>
+        <span class="md:col-span-2 text-sm leading-6 text-slate-500">
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.HELP') }}
+        </span>
       </div>
 
       <div
@@ -716,6 +790,8 @@ export default {
           </span>
         </label>
       </div>
+
+      <UnoapiContactSync v-model="contactSyncEnabled" :inbox="inbox" />
 
       <div class="w-3/4 pb-4 config-helptext">
         <img v-if="qrcode" :src="qrcode" />

@@ -37,15 +37,11 @@ class ContentAttributeValidator < ActiveModel::Validator
   end
 
   def validate_item_actions!(record)
-    if record.items.select { |item| item[:actions].blank? }.present?
-      record.errors.add(:content_attributes, 'contains items missing actions') && return
-    end
-
     validate_item_action_attributes!(record)
   end
 
   def validate_item_action_attributes!(record)
-    item_action_keys = record.items.collect { |item| item[:actions].collect(&:keys) }
+    item_action_keys = record.items.filter_map { |item| item[:actions] }.collect { |actions| actions.collect(&:keys) }
     invalid_keys = item_action_keys.flatten.compact.map(&:to_sym) - ALLOWED_CARD_ITEM_ACTION_KEYS
     record.errors.add(:content_attributes, "contains invalid keys for actions:  #{invalid_keys}") if invalid_keys.present?
   end

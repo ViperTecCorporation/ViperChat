@@ -27,6 +27,7 @@ import ActionButtons from './ActionButtons.vue';
 import InboxEmptyState from './InboxEmptyState.vue';
 import AttachmentPreviews from './AttachmentPreviews.vue';
 import CopilotReplyBottomPanel from 'dashboard/components/widgets/WootWriter/CopilotReplyBottomPanel.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 
 const props = defineProps({
   contacts: { type: Array, default: () => [] },
@@ -42,6 +43,7 @@ const props = defineProps({
   contactsUiFlags: { type: Object, default: null },
   messageSignature: { type: String, default: '' },
   sendWithSignature: { type: Boolean, default: false },
+  hasUnoapiInbox: { type: Boolean, default: false },
   formState: { type: Object, required: true },
 });
 
@@ -53,6 +55,8 @@ const emit = defineEmits([
   'updateTargetInbox',
   'clearSelectedContact',
   'createConversation',
+  'openInternalChat',
+  'openCreateGroup',
 ]);
 
 const DEFAULT_FORMATTING = 'Context::Default';
@@ -420,6 +424,30 @@ useKeyboardEvents({
         @clear-selected-contact="clearSelectedContact"
         @update-dropdown="handleDropdownUpdate"
       />
+      <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+        <span class="text-sm font-medium text-n-slate-11">
+          {{ $t('COMPOSE_NEW_CONVERSATION.FORM.START_WITH') }}
+        </span>
+        <div class="flex flex-wrap items-center gap-2">
+          <Button
+            :label="$t('CONVERSATION.INTERNAL_CHAT.BUTTON')"
+            icon="i-lucide-users"
+            color="slate"
+            variant="outline"
+            size="sm"
+            @click="$emit('openInternalChat')"
+          />
+          <Button
+            v-if="hasUnoapiInbox"
+            :label="$t('CONVERSATION.GROUP.CREATE_GROUP')"
+            icon="i-lucide-message-circle-plus"
+            color="slate"
+            variant="outline"
+            size="sm"
+            @click="$emit('openCreateGroup')"
+          />
+        </div>
+      </div>
       <InboxEmptyState v-if="showNoInboxAlert" />
       <InboxSelector
         v-else

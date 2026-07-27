@@ -57,8 +57,17 @@ export default {
       type: Boolean,
       default: false,
     },
+    showPixButton: {
+      type: Boolean,
+      default: false,
+    },
   },
-  emits: ['setReplyMode', 'toggleEditorSize', 'executeCopilotAction'],
+  emits: [
+    'setReplyMode',
+    'toggleEditorSize',
+    'executeCopilotAction',
+    'sendPixPayment',
+  ],
   setup(props, { emit }) {
     const setReplyMode = mode => {
       emit('setReplyMode', mode);
@@ -167,8 +176,21 @@ export default {
         </span>
       </div>
     </div>
-    <div v-if="captainTasksEnabled" class="flex items-center gap-2">
-      <div class="relative">
+    <div
+      v-if="showPixButton || captainTasksEnabled"
+      class="flex items-center gap-2"
+    >
+      <NextButton
+        v-if="showPixButton"
+        v-tooltip.bottom="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.TOOLTIP')"
+        ghost
+        :disabled="disabled || isEditorDisabled"
+        class="text-n-teal-10 hover:enabled:!bg-n-teal-3"
+        sm
+        icon="i-lucide-qr-code"
+        @click="$emit('sendPixPayment')"
+      />
+      <div v-if="captainTasksEnabled" class="relative">
         <NextButton
           ref="copilotToggleRef"
           ghost
@@ -195,6 +217,7 @@ export default {
         />
       </div>
       <NextButton
+        v-if="captainTasksEnabled"
         ghost
         class="text-n-slate-11"
         sm

@@ -286,6 +286,7 @@
       "DISABLE_SIGN_TOOLTIP": "Desativar assinatura",
       "MSG_INPUT": "Shift + enter para nova linha. Digite '/' para selecionar uma Resposta Pronta.",
       "PRIVATE_MSG_INPUT": "A mensagem será visível apenas para agentes",
+      "CAPTAIN_SHORTCUTS": "Ctrl + M: melhorar resposta\nCtrl + O: verificar ortografia",
       "MESSAGING_RESTRICTED": "Você não pode responder esta conversa",
       "MESSAGING_RESTRICTED_WHATSAPP": "Você só pode responder usando uma mensagem de modelo devido à restrição da janela de 24 horas",
       "MESSAGING_RESTRICTED_API": "Você só pode responder usando uma mensagem de template devido à restrição da janela de mensagens",
@@ -310,6 +311,14 @@
       "TIP_AUDIORECORDER_ICON": "Gravar áudio",
       "TIP_AUDIORECORDER_PERMISSION": "Permitir acesso ao áudio",
       "TIP_AUDIORECORDER_ERROR": "Não foi possível abrir o áudio",
+      "PIX_PAYMENT": {
+        "TOOLTIP": "Enviar solicitação de pagamento PIX",
+        "CONFIRM_TITLE": "Enviar chave PIX?",
+        "CONFIRM_DESCRIPTION": "A chave PIX configurada nesta caixa será enviada para este contato.",
+        "CONFIRM_LABEL": "Sim",
+        "CANCEL_LABEL": "Não",
+        "MESSAGE_CONTENT": "Pix - {type} : {key}"
+      },
       "DRAG_DROP": "Arraste e solte aqui para anexar",
       "START_AUDIO_RECORDING": "Iniciar gravação de áudio",
       "STOP_AUDIO_RECORDING": "Parar gravação de áudio",
@@ -471,6 +480,7 @@
       "INTERNAL_CALL_FAILED": "Não foi possível iniciar a chamada"
     },
     "INTERNAL_CHAT": {
+      "BUTTON": "Chat interno",
       "TITLE": "Nova conversa interna",
       "DESCRIPTION": "Inicie um chat entre agentes usando uma caixa de entrada interna.",
       "NO_INBOX": "Crie uma caixa de entrada interna em Configurações -> Caixas de entrada para iniciar um chat.",

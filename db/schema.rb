@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_19_000001) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_25_000000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -718,7 +718,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_19_000001) do
     t.datetime "updated_at", precision: nil, null: false
     t.jsonb "message_templates", default: {}
     t.datetime "message_templates_last_updated", precision: nil
+    t.boolean "contact_sync_enabled", default: false, null: false
+    t.string "contact_sync_status", default: "disabled", null: false
+    t.string "contact_sync_cursor"
+    t.integer "contact_sync_processed_count", default: 0, null: false
+    t.integer "contact_sync_failed_count", default: 0, null: false
+    t.integer "contact_sync_total_count"
+    t.text "contact_sync_error"
+    t.datetime "contact_sync_started_at"
+    t.datetime "contact_sync_completed_at"
+    t.datetime "contact_sync_next_run_at"
     t.index ["phone_number"], name: "index_channel_whatsapp_on_phone_number", unique: true
+    t.index ["provider", "contact_sync_enabled"], name: "index_whatsapp_on_provider_and_contact_sync"
   end
 
   create_table "companies", force: :cascade do |t|
@@ -745,6 +756,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_19_000001) do
     t.datetime "updated_at", precision: nil, null: false
     t.boolean "hmac_verified", default: false
     t.string "pubsub_token"
+    t.jsonb "additional_attributes", default: {}, null: false
     t.index ["contact_id"], name: "index_contact_inboxes_on_contact_id"
     t.index ["inbox_id", "source_id"], name: "index_contact_inboxes_on_inbox_id_and_source_id", unique: true
     t.index ["inbox_id"], name: "index_contact_inboxes_on_inbox_id"

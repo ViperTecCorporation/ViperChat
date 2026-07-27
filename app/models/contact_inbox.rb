@@ -3,6 +3,7 @@
 # Table name: contact_inboxes
 #
 #  id            :bigint           not null, primary key
+#  additional_attributes :jsonb
 #  hmac_verified :boolean          default(FALSE)
 #  pubsub_token  :string
 #  created_at    :datetime         not null
@@ -31,6 +32,8 @@ class ContactInbox < ApplicationRecord
   belongs_to :contact
   belongs_to :inbox
 
+  before_validation :prepare_additional_attributes
+
   has_many :conversations, dependent: :destroy_async
 
   # contact_inboxes that are not associated with any conversation
@@ -56,6 +59,10 @@ class ContactInbox < ApplicationRecord
   end
 
   private
+
+  def prepare_additional_attributes
+    self.additional_attributes ||= {}
+  end
 
   def validate_twilio_source_id
     # https://www.twilio.com/docs/glossary/what-e164#regex-matching-for-e164

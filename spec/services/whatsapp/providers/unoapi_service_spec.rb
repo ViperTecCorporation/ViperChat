@@ -18,6 +18,103 @@ describe Whatsapp::Providers::UnoapiService do
     )
   end
 
+  describe '#send_message' do
+    let(:conversation) do
+      create(:conversation, account: whatsapp_channel.account, inbox: whatsapp_channel.inbox)
+    end
+    let(:message) do
+      create(
+        :message,
+        account: whatsapp_channel.account,
+        inbox: whatsapp_channel.inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        content: 'Solicitação de pagamento PIX',
+        content_attributes: { whatsapp_interactive: { type: 'payment_request' } }
+      )
+    end
+
+    before do
+      whatsapp_channel.update!(
+        provider_config: whatsapp_channel.provider_config.merge(
+          'pix_merchant_name' => 'Minha Empresa',
+          'pix_key' => 'financeiro@minhaempresa.com.br',
+          'pix_key_type' => 'EMAIL'
+        )
+      )
+    end
+
+    it 'sends the configured PIX key as an UnoAPI payment request' do
+      stub = stub_request(:post, 'https://uno.example.com/v13.0/random_id/messages')
+             .with(
+               headers: { 'Authorization' => 'Bearer test_key', 'Content-Type' => 'application/json' },
+               body: {
+                 messaging_product: 'whatsapp',
+                 to: '5511912008012',
+                 type: 'interactive',
+                 interactive: {
+                   type: 'button',
+                   action: {
+                     buttons: [{
+                       type: 'payment_request',
+                       payment_setting: {
+                         type: 'pix_static_code',
+                         pix_static_code: {
+                           merchant_name: 'Minha Empresa',
+                           key: 'financeiro@minhaempresa.com.br',
+                           key_type: 'EMAIL'
+                         }
+                       }
+                     }]
+                   }
+                 }
+               }.to_json
+             )
+             .to_return(
+               status: 200,
+               body: { statuses: [{ id: 'uno-pix-message-id', status: 'sent' }] }.to_json,
+               headers: { 'Content-Type' => 'application/json' }
+             )
+
+      expect(service.send_message('5511912008012', message)).to eq('uno-pix-message-id')
+      expect(message.reload.status).to eq('sent')
+      expect(stub).to have_been_requested.once
+    end
+
+    it 'accepts the standard messages response shape as a fallback' do
+      stub_request(:post, 'https://uno.example.com/v13.0/random_id/messages')
+        .to_return(
+          status: 200,
+          body: { messages: [{ id: 'uno-standard-message-id' }] }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      expect(service.send_message('5511912008012', message)).to eq('uno-standard-message-id')
+    end
+
+    it 'marks the message failed when the configured PIX key is missing' do
+      whatsapp_channel.update!(
+        provider_config: whatsapp_channel.provider_config.except('pix_merchant_name', 'pix_key', 'pix_key_type')
+      )
+
+      expect(service.send_message('5511912008012', message)).to be_nil
+      expect(message.reload).to have_attributes(
+        status: 'failed',
+        external_error: 'PIX payment configuration is incomplete for this inbox'
+      )
+    end
+
+    it 'marks the message failed for group conversations' do
+      conversation.update!(group: true)
+
+      expect(service.send_message('120363040468224422@g.us', message)).to be_nil
+      expect(message.reload).to have_attributes(
+        status: 'failed',
+        external_error: 'PIX payment requests are not supported in groups'
+      )
+    end
+  end
+
   it 'fetches group participants from the Uno v15 group endpoint' do
     stub = stub_request(:get, 'https://uno.example.com/v15.0/556600000000/groups/120363040468224422%40g.us/participants')
            .with(headers: { 'Authorization' => 'Bearer test_key', 'Content-Type' => 'application/json' })

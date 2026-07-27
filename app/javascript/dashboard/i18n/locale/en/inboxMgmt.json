@@ -262,6 +262,20 @@
           "PLACEHOLDER": "Please enter an inbox name",
           "ERROR": "This field is required"
         },
+        "PIX_PAYMENT": {
+          "TITLE": "PIX payment",
+          "MERCHANT_LABEL": "Merchant name",
+          "MERCHANT_PLACEHOLDER": "Enter the name sent as merchant_name",
+          "KEY_LABEL": "PIX key",
+          "KEY_PLACEHOLDER": "Enter the PIX key used in payment requests",
+          "TYPE_LABEL": "Key type",
+          "TYPE_PLACEHOLDER": "Select the type",
+          "TYPE_EMAIL": "Email",
+          "TYPE_CNPJ": "CNPJ",
+          "TYPE_PHONE": "Phone",
+          "HELP": "The merchant name, key, and type are stored only in this UnoAPI inbox configuration.",
+          "ERROR": "Enter the merchant name, PIX key, and select a valid type."
+        },
         "SEND_AGENT_NAME": {
           "LABEL": "Send agent name",
           "PLACEHOLDER": "Check to send agent name.",
@@ -392,6 +406,25 @@
           "LABEL": "Show profile picture",
           "PLACEHOLDER": "Select to show profile picture.",
           "ERROR": "Select to show profile picture."
+        },
+        "CONTACT_SYNC": {
+          "SECTION": "Contact synchronization",
+          "LABEL": "Synchronize UnoAPI contacts",
+          "HELP": "Creates missing contacts and updates only invalid names, identities, and pictures. The first synchronization starts 3 minutes after the session becomes online; subsequent runs occur every 3 hours.",
+          "STATUS_LABEL": "Status",
+          "PROGRESS": "Processed",
+          "PROGRESS_WITH_FAILURES": "{progress} ({failed} failed)",
+          "LAST_SYNC": "Last synchronization",
+          "NEXT_SYNC": "Next run",
+          "STATUS": {
+            "DISABLED": "Disabled",
+            "WAITING_CONNECTION": "Waiting for connection",
+            "SCHEDULED": "Scheduled",
+            "RUNNING": "Running",
+            "COMPLETED": "Completed",
+            "FAILED": "Failed",
+            "PAUSED": "Paused"
+          }
         },
         "URL": {
           "LABEL": "Unoapi URL",

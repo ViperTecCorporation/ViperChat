@@ -285,6 +285,20 @@
           "PLACEHOLDER": "Chave da API",
           "ERROR": "Por favor, insira um valor válido."
         },
+        "PIX_PAYMENT": {
+          "TITLE": "Pagamento PIX",
+          "MERCHANT_LABEL": "Nome do recebedor",
+          "MERCHANT_PLACEHOLDER": "Informe o nome que será enviado como merchant_name",
+          "KEY_LABEL": "Chave PIX",
+          "KEY_PLACEHOLDER": "Informe a chave PIX usada nas solicitações de pagamento",
+          "TYPE_LABEL": "Tipo da chave",
+          "TYPE_PLACEHOLDER": "Selecione o tipo",
+          "TYPE_EMAIL": "E-mail",
+          "TYPE_CNPJ": "CNPJ",
+          "TYPE_PHONE": "Telefone",
+          "HELP": "O nome do recebedor, a chave e o tipo ficam armazenados somente na configuração desta caixa UnoAPI.",
+          "ERROR": "Informe o nome do recebedor, a chave PIX e selecione um tipo válido."
+        },
         "API_CALLBACK": {
           "TITLE": "URL de callback",
           "SUBTITLE": "Você deve configurar a URL do webhook e o token de verificação no portal do desenvolvedor do Facebook com os valores mostrados abaixo.",
@@ -453,6 +467,25 @@
           "LABEL": "Mostrar foto de perfil",
           "PLACEHOLDER": "Selecione para mostrar a foto de perfil.",
           "ERROR": "Selecione para mostrar a foto de perfil."
+        },
+        "CONTACT_SYNC": {
+          "SECTION": "Sincronização de contatos",
+          "LABEL": "Sincronizar contatos da UnoAPI",
+          "HELP": "Cria contatos ausentes e atualiza somente nomes inválidos, identidades e fotos. A primeira sincronização começa 3 minutos após a sessão ficar online; as seguintes ocorrem a cada 3 horas.",
+          "STATUS_LABEL": "Estado",
+          "PROGRESS": "Processados",
+          "PROGRESS_WITH_FAILURES": "{progress} ({failed} com falha)",
+          "LAST_SYNC": "Última sincronização",
+          "NEXT_SYNC": "Próxima execução",
+          "STATUS": {
+            "DISABLED": "Desativada",
+            "WAITING_CONNECTION": "Aguardando conexão",
+            "SCHEDULED": "Agendada",
+            "RUNNING": "Em execução",
+            "COMPLETED": "Concluída",
+            "FAILED": "Falhou",
+            "PAUSED": "Pausada"
+          }
         },
         "URL": {
           "LABEL": "URL do Unoapi",

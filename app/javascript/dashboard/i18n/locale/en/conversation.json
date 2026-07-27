@@ -101,6 +101,9 @@
       "SELF_DEMOTE_CONFIRM_DESCRIPTION": "The connected session will lose its group administrator permissions. Confirm to continue.",
       "UPDATE_ERROR": "Could not update the group"
     },
+    "INTERNAL_CHAT": {
+      "BUTTON": "Internal chat"
+    },
     "EMPTY_STATE": {
       "CMD_BAR": "to open command menu",
       "KEYBOARD_SHORTCUTS": "to view keyboard shortcuts"
@@ -291,6 +294,7 @@
       "DISABLE_SIGN_TOOLTIP": "Disable signature",
       "MSG_INPUT": "Shift + enter for new line. Start with '/' to select a Canned Response.",
       "PRIVATE_MSG_INPUT": "Shift + enter for new line. This will be visible only to Agents",
+      "CAPTAIN_SHORTCUTS": "Ctrl + M: improve reply\nCtrl + O: check spelling",
       "MESSAGING_RESTRICTED": "You cannot reply to this conversation",
       "MESSAGING_RESTRICTED_WHATSAPP": "You can only reply using a template message due to 24-hour message window restriction",
       "MESSAGING_RESTRICTED_API": "You can only reply using a template message due to message window restriction",
@@ -314,6 +318,14 @@
       "TIP_AUDIORECORDER_ICON": "Record audio",
       "TIP_AUDIORECORDER_PERMISSION": "Allow access to audio",
       "TIP_AUDIORECORDER_ERROR": "Could not open the audio",
+      "PIX_PAYMENT": {
+        "TOOLTIP": "Send PIX payment request",
+        "CONFIRM_TITLE": "Send PIX key?",
+        "CONFIRM_DESCRIPTION": "The PIX key configured for this inbox will be sent to this contact.",
+        "CONFIRM_LABEL": "Yes",
+        "CANCEL_LABEL": "No",
+        "MESSAGE_CONTENT": "Pix - {type} : {key}"
+      },
       "AUDIO_CONVERSION_FAILED": "Audio conversion failed. Please try again.",
       "DRAG_DROP": "Drag and drop here to attach",
       "IMAGE_UPLOAD_SUCCESS": "Image uploaded successfully",

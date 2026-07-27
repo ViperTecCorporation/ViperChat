@@ -24,12 +24,24 @@ export default {
       type: String,
       default: 'No',
     },
+    confirmOnEnter: {
+      type: Boolean,
+      default: false,
+    },
   },
   data: () => ({
     show: false,
     resolvePromise: undefined,
     rejectPromise: undefined,
   }),
+
+  mounted() {
+    window.addEventListener('keydown', this.handleKeyDown);
+  },
+
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.handleKeyDown);
+  },
 
   methods: {
     showConfirmation() {
@@ -47,6 +59,20 @@ export default {
     cancel() {
       this.resolvePromise(false);
       this.show = false;
+    },
+    handleKeyDown(event) {
+      if (
+        !this.show ||
+        !this.confirmOnEnter ||
+        event.key !== 'Enter' ||
+        event.isComposing ||
+        event.repeat
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      this.confirm();
     },
   },
 };

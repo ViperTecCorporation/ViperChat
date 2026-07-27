@@ -25,6 +25,11 @@ scheduled_messages_delivery_job:
   class: 'ScheduledMessages::DeliveryJob'
   queue: scheduled_jobs
 
+unoapi_contact_sync_schedule_job:
+  cron: '0 */3 * * *'
+  class: 'Whatsapp::Unoapi::ContactSync::ScheduleJob'
+  queue: scheduled_jobs
+
 # executed daily at 2230 UTC
 # which is our lowest traffic time
 remove_stale_contact_inboxes_job.rb:

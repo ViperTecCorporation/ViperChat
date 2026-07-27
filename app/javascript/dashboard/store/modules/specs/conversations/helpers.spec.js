@@ -84,11 +84,9 @@ describe('#sortMessagesChronologically', () => {
       { id: 10, created_at: 200 },
     ];
 
-    expect(sortMessagesChronologically(messages).map(message => message.id)).toEqual([
-      30,
-      10,
-      20,
-    ]);
+    expect(
+      sortMessagesChronologically(messages).map(message => message.id)
+    ).toEqual([30, 10, 20]);
   });
 });
 

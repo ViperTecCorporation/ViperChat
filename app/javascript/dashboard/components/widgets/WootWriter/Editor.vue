@@ -994,6 +994,10 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, insertContentIntoEditor);
   > .ProseMirror {
     @apply p-0 break-words text-n-slate-12;
 
+    p.empty-node:first-child::before {
+      white-space: pre-line;
+    }
+
     h1,
     h2,
     h3,

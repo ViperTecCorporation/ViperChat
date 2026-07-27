@@ -134,7 +134,22 @@ json.bot_name resource.channel.try(:bot_name) if resource.telegram?
 ### WhatsApp Channel
 if resource.whatsapp?
   json.message_templates resource.channel.try(:message_templates)
-  json.provider_config resource.channel.try(:provider_config) if Current.account_user&.administrator?
+  if Current.account_user&.administrator?
+    json.provider_config resource.channel.try(:provider_config)
+    json.contact_sync_enabled resource.channel.try(:contact_sync_enabled)
+    json.contact_sync_status resource.channel.try(:contact_sync_status)
+    json.contact_sync_cursor resource.channel.try(:contact_sync_cursor)
+    json.contact_sync_processed_count resource.channel.try(:contact_sync_processed_count)
+    json.contact_sync_failed_count resource.channel.try(:contact_sync_failed_count)
+    json.contact_sync_total_count resource.channel.try(:contact_sync_total_count)
+    json.contact_sync_error resource.channel.try(:contact_sync_error)
+    json.contact_sync_started_at resource.channel.try(:contact_sync_started_at)
+    json.contact_sync_completed_at resource.channel.try(:contact_sync_completed_at)
+    json.contact_sync_next_run_at resource.channel.try(:contact_sync_next_run_at)
+  elsif resource.channel.try(:provider) == 'unoapi'
+    provider_config = resource.channel.try(:provider_config) || {}
+    json.provider_config provider_config.slice('pix_merchant_name', 'pix_key', 'pix_key_type')
+  end
   # Only show reauthorization for embedded signup; manual flow uses API keys, not OAuth
   json.reauthorization_required(
     (resource.channel.try(:provider_config) || {}).to_h['source'] == 'embedded_signup' &&
