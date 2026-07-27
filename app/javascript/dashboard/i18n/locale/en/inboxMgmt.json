@@ -264,6 +264,8 @@
         },
         "PIX_PAYMENT": {
           "TITLE": "PIX payment",
+          "MERCHANT_LABEL": "Merchant name",
+          "MERCHANT_PLACEHOLDER": "Enter the name sent as merchant_name",
           "KEY_LABEL": "PIX key",
           "KEY_PLACEHOLDER": "Enter the PIX key used in payment requests",
           "TYPE_LABEL": "Key type",
@@ -271,8 +273,8 @@
           "TYPE_EMAIL": "Email",
           "TYPE_CNPJ": "CNPJ",
           "TYPE_PHONE": "Phone",
-          "HELP": "The key is stored only in this UnoAPI inbox configuration. The inbox name is used as the merchant name.",
-          "ERROR": "Enter the PIX key and select a valid type."
+          "HELP": "The merchant name, key, and type are stored only in this UnoAPI inbox configuration.",
+          "ERROR": "Enter the merchant name, PIX key, and select a valid type."
         },
         "SEND_AGENT_NAME": {
           "LABEL": "Send agent name",

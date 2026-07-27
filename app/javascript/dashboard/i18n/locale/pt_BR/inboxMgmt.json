@@ -287,6 +287,8 @@
         },
         "PIX_PAYMENT": {
           "TITLE": "Pagamento PIX",
+          "MERCHANT_LABEL": "Nome do recebedor",
+          "MERCHANT_PLACEHOLDER": "Informe o nome que será enviado como merchant_name",
           "KEY_LABEL": "Chave PIX",
           "KEY_PLACEHOLDER": "Informe a chave PIX usada nas solicitações de pagamento",
           "TYPE_LABEL": "Tipo da chave",
@@ -294,8 +296,8 @@
           "TYPE_EMAIL": "E-mail",
           "TYPE_CNPJ": "CNPJ",
           "TYPE_PHONE": "Telefone",
-          "HELP": "A chave fica armazenada somente na configuração desta caixa UnoAPI. O nome do recebedor será o nome da caixa de entrada.",
-          "ERROR": "Informe a chave PIX e selecione um tipo válido."
+          "HELP": "O nome do recebedor, a chave e o tipo ficam armazenados somente na configuração desta caixa UnoAPI.",
+          "ERROR": "Informe o nome do recebedor, a chave PIX e selecione um tipo válido."
         },
         "API_CALLBACK": {
           "TITLE": "URL de callback",

@@ -37,6 +37,7 @@ describe Whatsapp::Providers::UnoapiService do
     before do
       whatsapp_channel.update!(
         provider_config: whatsapp_channel.provider_config.merge(
+          'pix_merchant_name' => 'Minha Empresa',
           'pix_key' => 'financeiro@minhaempresa.com.br',
           'pix_key_type' => 'EMAIL'
         )
@@ -59,7 +60,7 @@ describe Whatsapp::Providers::UnoapiService do
                        payment_setting: {
                          type: 'pix_static_code',
                          pix_static_code: {
-                           merchant_name: whatsapp_channel.inbox.name,
+                           merchant_name: 'Minha Empresa',
                            key: 'financeiro@minhaempresa.com.br',
                            key_type: 'EMAIL'
                          }
@@ -93,13 +94,13 @@ describe Whatsapp::Providers::UnoapiService do
 
     it 'marks the message failed when the configured PIX key is missing' do
       whatsapp_channel.update!(
-        provider_config: whatsapp_channel.provider_config.except('pix_key', 'pix_key_type')
+        provider_config: whatsapp_channel.provider_config.except('pix_merchant_name', 'pix_key', 'pix_key_type')
       )
 
       expect(service.send_message('5511912008012', message)).to be_nil
       expect(message.reload).to have_attributes(
         status: 'failed',
-        external_error: 'PIX key is not configured for this inbox'
+        external_error: 'PIX payment configuration is incomplete for this inbox'
       )
     end
 

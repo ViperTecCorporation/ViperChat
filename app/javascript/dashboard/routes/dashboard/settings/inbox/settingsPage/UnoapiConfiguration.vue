@@ -28,6 +28,7 @@ export default {
       apiKey: '',
       url: 'https://unoapi.cloud',
       connectionType: 'qrcode',
+      pixMerchantName: '',
       pixKey: '',
       pixKeyType: '',
       ignoreGroupMessages: false,
@@ -106,6 +107,7 @@ export default {
         this.inbox.provider_config.connection_type === 'pairing_code'
           ? 'pairing_code'
           : 'qrcode';
+      this.pixMerchantName = this.inbox.provider_config.pix_merchant_name || '';
       this.pixKey = this.inbox.provider_config.pix_key || '';
       this.pixKeyType = this.inbox.provider_config.pix_key_type || '';
       this.ignoreGroupMessages =
@@ -211,7 +213,12 @@ export default {
       }
     },
     async updateInbox() {
-      if (Boolean(this.pixKey) !== Boolean(this.pixKeyType)) {
+      const pixConfigFields = [
+        this.pixMerchantName,
+        this.pixKey,
+        this.pixKeyType,
+      ].filter(Boolean);
+      if (pixConfigFields.length > 0 && pixConfigFields.length < 3) {
         useAlert(this.$t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.ERROR'));
         return;
       }
@@ -234,6 +241,7 @@ export default {
               ...providerConfig,
               api_key: this.apiKey,
               connection_type: this.connectionType,
+              pix_merchant_name: this.pixMerchantName || null,
               pix_key: this.pixKey || null,
               pix_key_type: this.pixKeyType || null,
               ignore_newsletter_messages: this.ignoreNewsletterMessages,
@@ -343,6 +351,18 @@ export default {
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl pb-6">
+        <label class="md:col-span-2">
+          <span>
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.MERCHANT_LABEL') }}
+          </span>
+          <input
+            v-model.trim="pixMerchantName"
+            type="text"
+            :placeholder="
+              $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.MERCHANT_PLACEHOLDER')
+            "
+          />
+        </label>
         <label>
           <span>{{ $t('INBOX_MGMT.ADD.WHATSAPP.PIX_PAYMENT.KEY_LABEL') }}</span>
           <input

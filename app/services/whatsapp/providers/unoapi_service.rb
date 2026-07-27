@@ -128,8 +128,9 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
 
     pix_key = whatsapp_channel.provider_config['pix_key'].to_s.strip
     pix_key_type = whatsapp_channel.provider_config['pix_key_type'].to_s.upcase
-    unless pix_key.present? && pix_key_type.in?(Channel::Whatsapp::UNOAPI_PIX_KEY_TYPES)
-      return fail_pix_payment_request(message, 'PIX key is not configured for this inbox')
+    merchant_name = pix_merchant_name
+    unless merchant_name.present? && pix_key.present? && pix_key_type.in?(Channel::Whatsapp::UNOAPI_PIX_KEY_TYPES)
+      return fail_pix_payment_request(message, 'PIX payment configuration is incomplete for this inbox')
     end
 
     request_body = {
@@ -144,7 +145,7 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
             payment_setting: {
               type: 'pix_static_code',
               pix_static_code: {
-                merchant_name: pix_merchant_name,
+                merchant_name: merchant_name,
                 key: pix_key,
                 key_type: pix_key_type
               }
@@ -174,7 +175,9 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
   end
 
   def pix_merchant_name
-    whatsapp_channel.inbox&.name.presence || whatsapp_channel.account.name
+    whatsapp_channel.provider_config['pix_merchant_name'].to_s.strip.presence ||
+      whatsapp_channel.inbox&.name.presence ||
+      whatsapp_channel.account.name
   end
 
   def fail_pix_payment_request(message, error)

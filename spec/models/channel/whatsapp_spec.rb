@@ -17,6 +17,7 @@ RSpec.describe Channel::Whatsapp do
     it 'accepts EMAIL, CNPJ, and PHONE key types' do
       described_class::UNOAPI_PIX_KEY_TYPES.each do |key_type|
         channel.provider_config = channel.provider_config.merge(
+          'pix_merchant_name' => 'Minha Empresa',
           'pix_key' => 'configured-key',
           'pix_key_type' => key_type
         )
@@ -28,12 +29,14 @@ RSpec.describe Channel::Whatsapp do
     it 'normalizes whitespace and lowercase key types before saving' do
       channel.update!(
         provider_config: channel.provider_config.merge(
+          'pix_merchant_name' => '  Minha Empresa  ',
           'pix_key' => '  financeiro@minhaempresa.com.br  ',
           'pix_key_type' => 'email'
         )
       )
 
       expect(channel.reload.provider_config).to include(
+        'pix_merchant_name' => 'Minha Empresa',
         'pix_key' => 'financeiro@minhaempresa.com.br',
         'pix_key_type' => 'EMAIL'
       )
@@ -41,6 +44,7 @@ RSpec.describe Channel::Whatsapp do
 
     it 'requires a supported type when a PIX key is configured' do
       channel.provider_config = channel.provider_config.merge(
+        'pix_merchant_name' => 'Minha Empresa',
         'pix_key' => 'configured-key',
         'pix_key_type' => 'CPF'
       )
@@ -51,6 +55,7 @@ RSpec.describe Channel::Whatsapp do
 
     it 'requires a PIX key when a type is configured' do
       channel.provider_config = channel.provider_config.merge(
+        'pix_merchant_name' => 'Minha Empresa',
         'pix_key' => '',
         'pix_key_type' => 'EMAIL'
       )

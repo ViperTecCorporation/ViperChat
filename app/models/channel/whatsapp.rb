@@ -180,8 +180,10 @@ class Channel::Whatsapp < ApplicationRecord
     return unless provider == 'unoapi'
 
     self.provider_config ||= {}
-    return unless provider_config.key?('pix_key') || provider_config.key?('pix_key_type')
+    return unless provider_config.keys.intersect?(%w[pix_merchant_name pix_key pix_key_type])
 
+    provider_config['pix_merchant_name'] = provider_config['pix_merchant_name'].to_s.strip.presence
+    provider_config['pix_merchant_name'] ||= inbox&.name.presence if provider_config['pix_key'].present?
     provider_config['pix_key'] = provider_config['pix_key'].to_s.strip.presence
     provider_config['pix_key_type'] = provider_config['pix_key_type'].to_s.upcase.presence
   end
@@ -197,10 +199,12 @@ class Channel::Whatsapp < ApplicationRecord
   def validate_unoapi_pix_config
     return unless provider == 'unoapi'
 
+    pix_merchant_name = provider_config['pix_merchant_name'].to_s.strip
     pix_key = provider_config['pix_key'].to_s.strip
     pix_key_type = provider_config['pix_key_type'].to_s.upcase
-    return if pix_key.blank? && pix_key_type.blank?
+    return if pix_merchant_name.blank? && pix_key.blank? && pix_key_type.blank?
 
+    errors.add(:provider_config, 'PIX merchant name is required') if pix_merchant_name.blank?
     errors.add(:provider_config, 'PIX key is required') if pix_key.blank?
     return if pix_key_type.in?(UNOAPI_PIX_KEY_TYPES)
 
