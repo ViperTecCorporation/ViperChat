@@ -48,6 +48,20 @@ describe MessageFinder do
       end
     end
 
+    context 'with a backfilled message created after the cursor in the database' do
+      let!(:cursor) do
+        create(:message, account: account, inbox: inbox, conversation: conversation, created_at: 1.hour.ago)
+      end
+      let!(:backfilled_message) do
+        create(:message, account: account, inbox: inbox, conversation: conversation, created_at: 2.hours.ago)
+      end
+      let(:params) { { before: cursor.id } }
+
+      it 'paginates by chronological position instead of the database id' do
+        expect(message_finder.perform).to include(backfilled_message)
+      end
+    end
+
     context 'with after attribute' do
       let(:params) { { after: conversation.messages.first.id } }
 

@@ -7,6 +7,12 @@ export const findPendingMessageIndex = (chat, message) => {
   );
 };
 
+export const sortMessagesChronologically = messages =>
+  [...messages].sort((left, right) => {
+    const timestampOrder = (left.created_at || 0) - (right.created_at || 0);
+    return timestampOrder || (left.id || 0) - (right.id || 0);
+  });
+
 const STATUS_ENUM = {
   0: 'open',
   1: 'resolved',

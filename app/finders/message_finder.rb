@@ -33,18 +33,39 @@ class MessageFinder
   end
 
   def messages_after(after_id)
-    messages.reorder('created_at asc').where('id > ?', after_id).limit(100)
+    cursor = messages.find_by(id: after_id)
+    return messages.none unless cursor
+
+    messages
+      .where('created_at > ? OR (created_at = ? AND id > ?)', cursor.created_at, cursor.created_at, cursor.id)
+      .reorder(created_at: :asc, id: :asc)
+      .limit(100)
   end
 
   def messages_before(before_id)
-    messages.reorder('created_at desc').where('id < ?', before_id).limit(20).reverse
+    cursor = messages.find_by(id: before_id)
+    return messages.none unless cursor
+
+    messages
+      .where('created_at < ? OR (created_at = ? AND id < ?)', cursor.created_at, cursor.created_at, cursor.id)
+      .reorder(created_at: :desc, id: :desc)
+      .limit(20)
+      .reverse
   end
 
   def messages_between(after_id, before_id)
-    messages.reorder('created_at asc').where('id >= ? AND id < ?', after_id, before_id).limit(1000)
+    after_cursor = messages.find_by(id: after_id)
+    before_cursor = messages.find_by(id: before_id)
+    return messages.none unless after_cursor && before_cursor
+
+    messages
+      .where('created_at > ? OR (created_at = ? AND id >= ?)', after_cursor.created_at, after_cursor.created_at, after_cursor.id)
+      .where('created_at < ? OR (created_at = ? AND id < ?)', before_cursor.created_at, before_cursor.created_at, before_cursor.id)
+      .reorder(created_at: :asc, id: :asc)
+      .limit(1000)
   end
 
   def messages_latest
-    messages.reorder('created_at desc').limit(20).reverse
+    messages.reorder(created_at: :desc, id: :desc).limit(20).reverse
   end
 end
