@@ -43,6 +43,7 @@ import CSATBubble from './bubbles/CSAT.vue';
 import FormBubble from './bubbles/Form.vue';
 import VoiceCallBubble from './bubbles/VoiceCall.vue';
 import StickerBubble from './bubbles/Sticker.vue';
+import CardsBubble from './bubbles/Cards.vue';
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
@@ -399,6 +400,10 @@ const componentToRender = computed(() => {
     return StickerBubble;
   }
 
+  if (props.contentType === CONTENT_TYPES.CARDS) {
+    return CardsBubble;
+  }
+
   if (props.contentType === CONTENT_TYPES.INCOMING_EMAIL) {
     return EmailBubble;
   }
@@ -528,6 +533,7 @@ const shouldRenderMessage = computed(() => {
   const isEmailContentType = props.contentType === CONTENT_TYPES.INCOMING_EMAIL;
   const isUnsupported = props.contentAttributes?.isUnsupported;
   const isStickerContentType = props.contentType === CONTENT_TYPES.STICKER;
+  const isCardsContentType = props.contentType === CONTENT_TYPES.CARDS;
   const isAnIntegrationMessage =
     props.contentType === CONTENT_TYPES.INTEGRATIONS;
   const isFailedMessage = props.status === MESSAGE_STATUS.FAILED;
@@ -539,6 +545,7 @@ const shouldRenderMessage = computed(() => {
     isEmailContentType ||
     isUnsupported ||
     isStickerContentType ||
+    isCardsContentType ||
     isAnIntegrationMessage ||
     isFailedMessage ||
     hasExternalError ||
