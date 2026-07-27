@@ -69,6 +69,7 @@ import {
   getContactVariables,
 } from 'dashboard/helper/editorHelper';
 import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
+import { useCaptain } from 'dashboard/composables/useCaptain';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
 import {
   checkFileSizeLimit,
@@ -137,6 +138,7 @@ export default {
     const replyEditor = useTemplateRef('replyEditor');
     const messageEditor = useTemplateRef('messageEditor');
     const copilot = useCopilotReply();
+    const { captainTasksEnabled } = useCaptain();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
 
     return {
@@ -148,6 +150,7 @@ export default {
       replyEditor,
       messageEditor,
       copilot,
+      captainTasksEnabled,
       shortcutKey,
     };
   },
@@ -342,9 +345,13 @@ export default {
         }
         return this.$t('CONVERSATION.FOOTER.MESSAGING_RESTRICTED');
       }
-      return this.isPrivate
+      const placeholder = this.isPrivate
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
+
+      return this.captainTasksEnabled
+        ? `${placeholder}\n${this.$t('CONVERSATION.FOOTER.CAPTAIN_SHORTCUTS')}`
+        : placeholder;
     },
     isMessageLengthReachingThreshold() {
       return this.message.length > this.maxLength - 50;
@@ -964,7 +971,35 @@ export default {
           },
           allowOnFocusedInput: true,
         },
+        '$mod+KeyM': {
+          action: event => {
+            this.handleCaptainShortcut(event, 'improve');
+          },
+          allowOnFocusedInput: true,
+        },
+        '$mod+KeyO': {
+          action: event => {
+            this.handleCaptainShortcut(event, 'fix_spelling_grammar');
+          },
+          allowOnFocusedInput: true,
+        },
       };
+    },
+    handleCaptainShortcut(event, action) {
+      if (!this.isFocused) return;
+
+      event.preventDefault();
+      if (
+        event.repeat ||
+        !this.captainTasksEnabled ||
+        !this.hasMeaningfulEditorContent ||
+        this.isEditorDisabled ||
+        this.copilot.isActive.value
+      ) {
+        return;
+      }
+
+      this.executeCopilotAction(action, this.message);
     },
     isAValidEvent(selectedKey) {
       return (
