@@ -146,6 +146,9 @@ if resource.whatsapp?
     json.contact_sync_started_at resource.channel.try(:contact_sync_started_at)
     json.contact_sync_completed_at resource.channel.try(:contact_sync_completed_at)
     json.contact_sync_next_run_at resource.channel.try(:contact_sync_next_run_at)
+  elsif resource.channel.try(:provider) == 'unoapi'
+    provider_config = resource.channel.try(:provider_config) || {}
+    json.provider_config provider_config.slice('pix_merchant_name', 'pix_key', 'pix_key_type')
   end
   # Only show reauthorization for embedded signup; manual flow uses API keys, not OAuth
   json.reauthorization_required(

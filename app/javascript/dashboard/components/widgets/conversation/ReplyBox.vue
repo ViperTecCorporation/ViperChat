@@ -2122,6 +2122,9 @@ export default {
       ref="pixPaymentConfirmDialog"
       :title="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_TITLE')"
       :description="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_DESCRIPTION')"
+      :confirm-label="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_LABEL')"
+      :cancel-label="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CANCEL_LABEL')"
+      confirm-on-enter
     />
   </div>
 </template>

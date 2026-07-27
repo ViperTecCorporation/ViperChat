@@ -321,6 +321,8 @@
         "TOOLTIP": "Send PIX payment request",
         "CONFIRM_TITLE": "Send PIX key?",
         "CONFIRM_DESCRIPTION": "The PIX key configured for this inbox will be sent to this contact.",
+        "CONFIRM_LABEL": "Yes",
+        "CANCEL_LABEL": "No",
         "MESSAGE_CONTENT": "Pix - {type} : {key}"
       },
       "AUDIO_CONVERSION_FAILED": "Audio conversion failed. Please try again.",

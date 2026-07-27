@@ -87,12 +87,28 @@ RSpec.describe 'Inboxes API', type: :request do
           expect(data.fetch('provider_config')).not_to have_key('contact_sync_enabled')
         end
 
-        it 'will not return provider config for agent' do
+        it 'returns only the safe UnoAPI PIX config for agent' do
+          inbox.channel.update_columns( # rubocop:disable Rails/SkipsModelValidations
+            provider: 'unoapi',
+            provider_config: inbox.channel.provider_config.merge(
+              'api_key' => 'secret-api-key',
+              'pix_merchant_name' => 'Minha Empresa',
+              'pix_key' => '1450742000190',
+              'pix_key_type' => 'CNPJ'
+            )
+          )
+
           get "/api/v1/accounts/#{account.id}/inboxes",
               headers: agent.create_new_auth_token,
               as: :json
 
-          expect(response.body).not_to include('provider_config')
+          data = response.parsed_body['payload'].find { |item| item['id'] == inbox.id }
+          expect(data.fetch('provider_config')).to eq(
+            'pix_merchant_name' => 'Minha Empresa',
+            'pix_key' => '1450742000190',
+            'pix_key_type' => 'CNPJ'
+          )
+          expect(data.fetch('provider_config')).not_to have_key('api_key')
         end
       end
     end

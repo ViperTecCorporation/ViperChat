@@ -314,6 +314,8 @@
         "TOOLTIP": "Enviar solicitação de pagamento PIX",
         "CONFIRM_TITLE": "Enviar chave PIX?",
         "CONFIRM_DESCRIPTION": "A chave PIX configurada nesta caixa será enviada para este contato.",
+        "CONFIRM_LABEL": "Sim",
+        "CANCEL_LABEL": "Não",
         "MESSAGE_CONTENT": "Pix - {type} : {key}"
       },
       "DRAG_DROP": "Arraste e solte aqui para anexar",
