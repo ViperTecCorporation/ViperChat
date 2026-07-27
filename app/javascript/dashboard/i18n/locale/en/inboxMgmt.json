@@ -262,6 +262,18 @@
           "PLACEHOLDER": "Please enter an inbox name",
           "ERROR": "This field is required"
         },
+        "PIX_PAYMENT": {
+          "TITLE": "PIX payment",
+          "KEY_LABEL": "PIX key",
+          "KEY_PLACEHOLDER": "Enter the PIX key used in payment requests",
+          "TYPE_LABEL": "Key type",
+          "TYPE_PLACEHOLDER": "Select the type",
+          "TYPE_EMAIL": "Email",
+          "TYPE_CNPJ": "CNPJ",
+          "TYPE_PHONE": "Phone",
+          "HELP": "The key is stored only in this UnoAPI inbox configuration. The inbox name is used as the merchant name.",
+          "ERROR": "Enter the PIX key and select a valid type."
+        },
         "SEND_AGENT_NAME": {
           "LABEL": "Send agent name",
           "PLACEHOLDER": "Check to send agent name.",

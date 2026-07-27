@@ -22,15 +22,18 @@ class Channel::Whatsapp < ApplicationRecord
   include Reauthorizable
 
   self.table_name = 'channel_whatsapp'
+  UNOAPI_PIX_KEY_TYPES = %w[EMAIL CNPJ PHONE].freeze
   EDITABLE_ATTRS = [:phone_number, :provider, :contact_sync_enabled, { provider_config: {} }].freeze
 
   # default at the moment is 360dialog lets change later.
   PROVIDERS = %w[default whatsapp_cloud unoapi].freeze
   before_validation :ensure_unoapi_group_conversation_schema_default
+  before_validation :normalize_unoapi_pix_config
   before_validation :ensure_webhook_verify_token
 
   validates :provider, inclusion: { in: PROVIDERS }
   validates :phone_number, presence: true, uniqueness: true
+  validate :validate_unoapi_pix_config
   validate :validate_provider_config
 
   after_create :sync_templates
@@ -173,12 +176,35 @@ class Channel::Whatsapp < ApplicationRecord
     provider_config['use_group_conversation_schema'] = true unless provider_config.key?('use_group_conversation_schema')
   end
 
+  def normalize_unoapi_pix_config
+    return unless provider == 'unoapi'
+
+    self.provider_config ||= {}
+    return unless provider_config.key?('pix_key') || provider_config.key?('pix_key_type')
+
+    provider_config['pix_key'] = provider_config['pix_key'].to_s.strip.presence
+    provider_config['pix_key_type'] = provider_config['pix_key_type'].to_s.upcase.presence
+  end
+
   def validate_provider_config
     errors.add(:provider_config, 'Invalid Credentials') unless provider_service.validate_provider_config?
   rescue HTTParty::Error => e
     errors.add(:provider_config, e.message)
   rescue SocketError, Errno::ECONNREFUSED
     errors.add(:provider_config, 'Conection refused, verify Whatsapp Cloud API URL field')
+  end
+
+  def validate_unoapi_pix_config
+    return unless provider == 'unoapi'
+
+    pix_key = provider_config['pix_key'].to_s.strip
+    pix_key_type = provider_config['pix_key_type'].to_s.upcase
+    return if pix_key.blank? && pix_key_type.blank?
+
+    errors.add(:provider_config, 'PIX key is required') if pix_key.blank?
+    return if pix_key_type.in?(UNOAPI_PIX_KEY_TYPES)
+
+    errors.add(:provider_config, "PIX key type must be one of: #{UNOAPI_PIX_KEY_TYPES.join(', ')}")
   end
 
   # Logs only the embedded signup → manual migration (the save drops the

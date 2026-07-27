@@ -317,6 +317,12 @@
       "TIP_AUDIORECORDER_ICON": "Record audio",
       "TIP_AUDIORECORDER_PERMISSION": "Allow access to audio",
       "TIP_AUDIORECORDER_ERROR": "Could not open the audio",
+      "PIX_PAYMENT": {
+        "TOOLTIP": "Send PIX payment request",
+        "CONFIRM_TITLE": "Send PIX key?",
+        "CONFIRM_DESCRIPTION": "The PIX key configured for this inbox will be sent to this contact.",
+        "MESSAGE_CONTENT": "Pix - {type} : {key}"
+      },
       "AUDIO_CONVERSION_FAILED": "Audio conversion failed. Please try again.",
       "DRAG_DROP": "Drag and drop here to attach",
       "IMAGE_UPLOAD_SUCCESS": "Image uploaded successfully",

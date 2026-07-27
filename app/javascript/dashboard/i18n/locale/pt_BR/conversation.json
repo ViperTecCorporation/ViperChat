@@ -310,6 +310,12 @@
       "TIP_AUDIORECORDER_ICON": "Gravar áudio",
       "TIP_AUDIORECORDER_PERMISSION": "Permitir acesso ao áudio",
       "TIP_AUDIORECORDER_ERROR": "Não foi possível abrir o áudio",
+      "PIX_PAYMENT": {
+        "TOOLTIP": "Enviar solicitação de pagamento PIX",
+        "CONFIRM_TITLE": "Enviar chave PIX?",
+        "CONFIRM_DESCRIPTION": "A chave PIX configurada nesta caixa será enviada para este contato.",
+        "MESSAGE_CONTENT": "Pix - {type} : {key}"
+      },
       "DRAG_DROP": "Arraste e solte aqui para anexar",
       "START_AUDIO_RECORDING": "Iniciar gravação de áudio",
       "STOP_AUDIO_RECORDING": "Parar gravação de áudio",

@@ -310,6 +310,27 @@ RSpec.describe 'Conversation Messages API', type: :request do
         expect(message.source_id).to be_nil
         expect(message.content_attributes['external_error']).to be_nil
       end
+
+      it 'preserves the PIX payment marker when retrying' do
+        message.update!(
+          content_attributes: {
+            external_error: 'error',
+            whatsapp_interactive: { type: 'payment_request' }
+          }
+        )
+
+        expect do
+          post "/api/v1/accounts/#{account.id}/conversations/#{message.conversation.display_id}/messages/#{message.id}/retry",
+               headers: agent.create_new_auth_token,
+               as: :json
+        end.to have_enqueued_job(SendReplyJob).with(message.id)
+
+        expect(response).to have_http_status(:success)
+        expect(message.reload.content_attributes).to eq(
+          'whatsapp_interactive' => { 'type' => 'payment_request' }
+        )
+        expect(message.source_id).to be_nil
+      end
     end
 
     context 'when the message id is invalid' do

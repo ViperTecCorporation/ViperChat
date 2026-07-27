@@ -74,6 +74,10 @@ import {
   checkFileSizeLimit,
   isFileTypeAllowedForChannel,
 } from 'shared/helpers/FileHelper';
+import {
+  hasPixPaymentConfiguration,
+  pixPaymentDisplayType,
+} from 'dashboard/helper/pixPaymentHelper';
 
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
@@ -217,6 +221,24 @@ export default {
         item => item.id === this.currentChat.account_id
       );
       return account?.role === 'administrator';
+    },
+    showPixPaymentButton() {
+      const config = this.inbox?.provider_config || {};
+
+      return (
+        this.isAUnoapiChannel &&
+        !this.isOnPrivateNote &&
+        !this.currentChat?.group &&
+        hasPixPaymentConfiguration(config)
+      );
+    },
+    pixPaymentMessageContent() {
+      const config = this.inbox?.provider_config || {};
+
+      return this.$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.MESSAGE_CONTENT', {
+        type: pixPaymentDisplayType(config.pix_key_type),
+        key: config.pix_key,
+      });
     },
     scheduleAgents() {
       return this.$store.getters['agents/getAgents'] || [];
@@ -1286,6 +1308,23 @@ export default {
         this.confirmOnSendReply();
       }
     },
+    async sendPixPayment() {
+      if (!this.showPixPaymentButton) return;
+
+      const confirmed =
+        await this.$refs.pixPaymentConfirmDialog.showConfirmation();
+      if (!confirmed) return;
+
+      await this.sendMessage({
+        conversationId: this.currentChat.id,
+        message: this.pixPaymentMessageContent,
+        private: false,
+        contentType: 'text',
+        contentAttributes: {
+          whatsapp_interactive: { type: 'payment_request' },
+        },
+      });
+    },
     async sendMessage(
       messagePayload,
       editorMessage = '',
@@ -1727,11 +1766,13 @@ export default {
       :editor-content="message"
       :popout-reply-box="popOutReplyBox"
       :has-content="hasMeaningfulEditorContent"
+      :show-pix-button="showPixPaymentButton"
       @set-reply-mode="setReplyMode"
       @toggle-editor-size="toggleEditorSize"
       @toggle-popout="togglePopout"
       @toggle-copilot="copilot.toggleEditor"
       @execute-copilot-action="executeCopilotAction"
+      @send-pix-payment="sendPixPayment"
     />
     <ArticleSearchPopover
       v-if="showArticleSearchPopover && connectedPortalSlug"
@@ -2076,6 +2117,11 @@ export default {
       ref="confirmDialog"
       :title="$t('CONVERSATION.REPLYBOX.UNDEFINED_VARIABLES.TITLE')"
       :description="undefinedVariableMessage"
+    />
+    <woot-confirm-modal
+      ref="pixPaymentConfirmDialog"
+      :title="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_TITLE')"
+      :description="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_DESCRIPTION')"
     />
   </div>
 </template>

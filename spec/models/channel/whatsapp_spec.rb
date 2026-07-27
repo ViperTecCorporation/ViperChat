@@ -4,6 +4,62 @@ require 'rails_helper'
 require Rails.root.join 'spec/models/concerns/reauthorizable_shared.rb'
 
 RSpec.describe Channel::Whatsapp do
+  describe 'UnoAPI PIX configuration' do
+    let(:channel) do
+      create(
+        :channel_whatsapp,
+        provider: 'unoapi',
+        sync_templates: false,
+        validate_provider_config: false
+      )
+    end
+
+    it 'accepts EMAIL, CNPJ, and PHONE key types' do
+      described_class::UNOAPI_PIX_KEY_TYPES.each do |key_type|
+        channel.provider_config = channel.provider_config.merge(
+          'pix_key' => 'configured-key',
+          'pix_key_type' => key_type
+        )
+
+        expect(channel).to be_valid
+      end
+    end
+
+    it 'normalizes whitespace and lowercase key types before saving' do
+      channel.update!(
+        provider_config: channel.provider_config.merge(
+          'pix_key' => '  financeiro@minhaempresa.com.br  ',
+          'pix_key_type' => 'email'
+        )
+      )
+
+      expect(channel.reload.provider_config).to include(
+        'pix_key' => 'financeiro@minhaempresa.com.br',
+        'pix_key_type' => 'EMAIL'
+      )
+    end
+
+    it 'requires a supported type when a PIX key is configured' do
+      channel.provider_config = channel.provider_config.merge(
+        'pix_key' => 'configured-key',
+        'pix_key_type' => 'CPF'
+      )
+
+      expect(channel).not_to be_valid
+      expect(channel.errors[:provider_config]).to include('PIX key type must be one of: EMAIL, CNPJ, PHONE')
+    end
+
+    it 'requires a PIX key when a type is configured' do
+      channel.provider_config = channel.provider_config.merge(
+        'pix_key' => '',
+        'pix_key_type' => 'EMAIL'
+      )
+
+      expect(channel).not_to be_valid
+      expect(channel.errors[:provider_config]).to include('PIX key is required')
+    end
+  end
+
   describe 'UnoAPI contact synchronization' do
     let(:channel) do
       create(

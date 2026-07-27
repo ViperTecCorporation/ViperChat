@@ -38,7 +38,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
     service = Messages::StatusUpdateService.new(message, 'sent')
     service.perform
-    message.update!(content_attributes: {}, source_id: nil)
+    message.update!(content_attributes: retry_content_attributes, source_id: nil)
     ::SendReplyJob.perform_later(message.id)
   rescue StandardError => e
     render_could_not_create_error(e.message)
@@ -99,6 +99,12 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   def already_translated_content_available?
     message.translations.present? && message.translations[permitted_params[:target_language]].present?
+  end
+
+  def retry_content_attributes
+    return {} unless message.content_attributes&.dig('whatsapp_interactive', 'type') == 'payment_request'
+
+    { 'whatsapp_interactive' => { 'type' => 'payment_request' } }
   end
 
   # API inbox check
