@@ -101,6 +101,9 @@
       "SELF_DEMOTE_CONFIRM_DESCRIPTION": "The connected session will lose its group administrator permissions. Confirm to continue.",
       "UPDATE_ERROR": "Could not update the group"
     },
+    "INTERNAL_CHAT": {
+      "BUTTON": "Internal chat"
+    },
     "EMPTY_STATE": {
       "CMD_BAR": "to open command menu",
       "KEYBOARD_SHORTCUTS": "to view keyboard shortcuts"

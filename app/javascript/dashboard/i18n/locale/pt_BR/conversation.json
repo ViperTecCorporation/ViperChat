@@ -471,6 +471,7 @@
       "INTERNAL_CALL_FAILED": "Não foi possível iniciar a chamada"
     },
     "INTERNAL_CHAT": {
+      "BUTTON": "Chat interno",
       "TITLE": "Nova conversa interna",
       "DESCRIPTION": "Inicie um chat entre agentes usando uma caixa de entrada interna.",
       "NO_INBOX": "Crie uma caixa de entrada interna em Configurações -> Caixas de entrada para iniciar um chat.",
