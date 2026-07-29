@@ -70,6 +70,7 @@ RSpec.describe 'Inboxes API', type: :request do
         it 'returns contact synchronization state outside provider config for admin' do
           inbox.channel.update_columns( # rubocop:disable Rails/SkipsModelValidations
             contact_sync_enabled: true,
+            contact_export_enabled: true,
             contact_sync_status: 'completed',
             contact_sync_processed_count: 200
           )
@@ -81,6 +82,7 @@ RSpec.describe 'Inboxes API', type: :request do
           data = response.parsed_body['payload'].find { |item| item['id'] == inbox.id }
           expect(data).to include(
             'contact_sync_enabled' => true,
+            'contact_export_enabled' => true,
             'contact_sync_status' => 'completed',
             'contact_sync_processed_count' => 200
           )
@@ -630,7 +632,7 @@ RSpec.describe 'Inboxes API', type: :request do
         expect(whatsapp_channel.reload).not_to be_reauthorization_required
       end
 
-      it 'updates the local UnoAPI contact synchronization flag without adding it to provider config' do
+      it 'updates the local UnoAPI contact synchronization flags without adding them to provider config' do
         whatsapp_channel = create(
           :channel_whatsapp,
           account: account,
@@ -650,13 +652,17 @@ RSpec.describe 'Inboxes API', type: :request do
         expect do
           patch "/api/v1/accounts/#{account.id}/inboxes/#{whatsapp_channel.inbox.id}",
                 headers: admin.create_new_auth_token,
-                params: { channel: { contact_sync_enabled: true } },
+                params: { channel: { contact_sync_enabled: true, contact_export_enabled: true } },
                 as: :json
         end.to have_enqueued_job(Whatsapp::Unoapi::ContactSync::ConnectionCheckJob).with(whatsapp_channel.id)
 
         expect(response).to have_http_status(:success)
-        expect(whatsapp_channel.reload.contact_sync_enabled).to be(true)
+        expect(whatsapp_channel.reload).to have_attributes(
+          contact_sync_enabled: true,
+          contact_export_enabled: true
+        )
         expect(whatsapp_channel.provider_config).not_to have_key('contact_sync_enabled')
+        expect(whatsapp_channel.provider_config).not_to have_key('contact_export_enabled')
       end
 
       it 'updates twitter inbox when administrator' do

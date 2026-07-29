@@ -8,18 +8,30 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  exportEnabled: {
+    type: Boolean,
+    default: false,
+  },
   inbox: {
     type: Object,
     required: true,
   },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'update:exportEnabled']);
 const { t } = useI18n();
 
 const enabled = computed({
   get: () => props.modelValue,
-  set: value => emit('update:modelValue', value),
+  set: value => {
+    emit('update:modelValue', value);
+    if (!value) emit('update:exportEnabled', false);
+  },
+});
+
+const exportEnabled = computed({
+  get: () => props.exportEnabled,
+  set: value => emit('update:exportEnabled', value),
 });
 
 const statusLabels = computed(() => ({
@@ -73,6 +85,19 @@ const progress = computed(() => {
       </label>
       <p class="mt-2 text-sm text-slate-500">
         {{ t('INBOX_MGMT.ADD.WHATSAPP.CONTACT_SYNC.HELP') }}
+      </p>
+      <label class="mt-4 flex items-center gap-2">
+        <SwitchControl
+          v-model="exportEnabled"
+          :disabled="!enabled"
+          class="shrink-0"
+        />
+        <span>{{
+          t('INBOX_MGMT.ADD.WHATSAPP.CONTACT_SYNC.EXPORT_LABEL')
+        }}</span>
+      </label>
+      <p class="mt-2 text-sm text-slate-500">
+        {{ t('INBOX_MGMT.ADD.WHATSAPP.CONTACT_SYNC.EXPORT_HELP') }}
       </p>
       <dl class="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
         <div>

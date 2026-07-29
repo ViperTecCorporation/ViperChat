@@ -30,22 +30,41 @@ class Whatsapp::Unoapi::ContactSync::Client
     response.parsed_response
   end
 
+  def import_contact(payload)
+    response = request(
+      "#{base_url}/#{session_id}/contacts/import",
+      method: :post,
+      body: payload.to_json
+    )
+    raise_for_response!(response, transient_codes: [409])
+    parsed_response = response.parsed_response
+    valid_response = parsed_response.is_a?(Hash) && parsed_response['success'] == true && parsed_response['contact'].is_a?(Hash)
+    raise PermanentError, 'UnoAPI contact import response is invalid' unless valid_response
+
+    parsed_response
+  end
+
   private
 
-  def request(url)
-    HTTParty.get(url, headers: headers, timeout: 30)
+  def request(url, method: :get, body: nil)
+    HTTParty.public_send(method, url, headers: headers, timeout: 30, body: body)
   rescue Timeout::Error, SocketError, Errno::ECONNREFUSED => e
     raise TransientError, "#{e.class}: #{e.message}"
   end
 
-  def raise_for_response!(response)
+  def raise_for_response!(response, transient_codes: [])
     return if response.success?
 
     error = response.parsed_response.is_a?(Hash) ? response.parsed_response['error'] : response.body
     raise ProviderMismatchError, error if response.code == 409 && error == 'contact_directory_requires_zapo_provider'
-    raise TransientError, "UnoAPI HTTP #{response.code}: #{error}" if response.code == 429 || response.code >= 500
+
+    raise TransientError, "UnoAPI HTTP #{response.code}: #{error}" if transient_response?(response, transient_codes)
 
     raise PermanentError, "UnoAPI HTTP #{response.code}: #{error}"
+  end
+
+  def transient_response?(response, transient_codes)
+    transient_codes.include?(response.code) || response.code == 429 || response.code >= 500
   end
 
   def base_url

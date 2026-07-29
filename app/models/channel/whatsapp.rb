@@ -23,7 +23,7 @@ class Channel::Whatsapp < ApplicationRecord
 
   self.table_name = 'channel_whatsapp'
   UNOAPI_PIX_KEY_TYPES = %w[EMAIL CNPJ PHONE].freeze
-  EDITABLE_ATTRS = [:phone_number, :provider, :contact_sync_enabled, { provider_config: {} }].freeze
+  EDITABLE_ATTRS = [:phone_number, :provider, :contact_sync_enabled, :contact_export_enabled, { provider_config: {} }].freeze
 
   # default at the moment is 360dialog lets change later.
   PROVIDERS = %w[default whatsapp_cloud unoapi].freeze
@@ -42,6 +42,7 @@ class Channel::Whatsapp < ApplicationRecord
   after_commit :setup_webhooks, on: :create, if: :should_auto_setup_webhooks?
   after_update_commit :enqueue_group_conversation_backfill, if: :should_backfill_group_conversations?
   after_update_commit :handle_contact_sync_setting_change, if: :saved_change_to_contact_sync_enabled?
+  after_update_commit :handle_contact_export_setting_change, if: :saved_change_to_contact_export_enabled?
 
   def name
     'Whatsapp'
@@ -160,9 +161,17 @@ class Channel::Whatsapp < ApplicationRecord
         contact_sync_status: 'disabled',
         contact_sync_cursor: nil,
         contact_sync_error: nil,
-        contact_sync_next_run_at: nil
+        contact_sync_next_run_at: nil,
+        contact_export_enabled: false
       )
     end
+  end
+
+  def handle_contact_export_setting_change
+    return unless contact_export_enabled? && contact_sync_enabled? && provider == 'unoapi'
+    return if saved_change_to_contact_sync_enabled?
+
+    Whatsapp::Unoapi::ContactSync::ConnectionCheckJob.perform_later(id)
   end
 
   def ensure_webhook_verify_token

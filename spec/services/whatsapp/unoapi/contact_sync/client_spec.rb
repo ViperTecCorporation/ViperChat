@@ -44,6 +44,38 @@ describe Whatsapp::Unoapi::ContactSync::Client do
     expect(request).to have_been_requested
   end
 
+  it 'imports a contact through the session endpoint' do
+    payload = {
+      phone_number: '5566999069708',
+      user_id: '53515477086263@lid',
+      full_name: 'Fran Fernandes',
+      first_name: 'Fran',
+      username: 'fran'
+    }
+    request = stub_request(:post, 'https://uno.example.com/5566996222471/contacts/import')
+              .with(headers: { 'Authorization' => 'secret' }, body: payload.to_json)
+              .to_return(
+                status: 200,
+                body: { success: true, contact: payload }.to_json,
+                headers: { 'Content-Type' => 'application/json' }
+              )
+
+    expect(client.import_contact(payload)).to include('success' => true)
+    expect(request).to have_been_requested
+  end
+
+  it 'treats an unavailable session during contact import as transient' do
+    stub_request(:post, 'https://uno.example.com/5566996222471/contacts/import')
+      .to_return(
+        status: 409,
+        body: { error: 'session_unavailable' }.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
+
+    expect { client.import_contact(phone_number: '5566999069708', full_name: 'Fran Fernandes') }
+      .to raise_error(Whatsapp::Unoapi::ContactSync::Client::TransientError)
+  end
+
   it 'raises the provider mismatch error returned by a non-Zapo session' do
     stub_request(:get, 'https://uno.example.com/5566996222471/contacts?cursor=0&limit=200')
       .to_return(

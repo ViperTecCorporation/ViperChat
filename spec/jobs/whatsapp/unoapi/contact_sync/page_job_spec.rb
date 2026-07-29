@@ -70,4 +70,13 @@ describe Whatsapp::Unoapi::ContactSync::PageJob do
       contact_sync_next_run_at: nil
     )
   end
+
+  it 'starts inbox-scoped contact export after the last page when enabled' do
+    channel.update_columns(contact_export_enabled: true) # rubocop:disable Rails/SkipsModelValidations
+    page.merge!('has_more' => false, 'next_cursor' => nil)
+
+    expect do
+      job.perform(channel.id, '0')
+    end.to have_enqueued_job(Whatsapp::Unoapi::ContactSync::ExportJob).with(channel.id)
+  end
 end

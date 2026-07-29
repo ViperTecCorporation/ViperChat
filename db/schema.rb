@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_25_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_29_000000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -728,6 +728,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_25_000000) do
     t.datetime "contact_sync_started_at"
     t.datetime "contact_sync_completed_at"
     t.datetime "contact_sync_next_run_at"
+    t.boolean "contact_export_enabled", default: false, null: false
     t.index ["phone_number"], name: "index_channel_whatsapp_on_phone_number", unique: true
     t.index ["provider", "contact_sync_enabled"], name: "index_whatsapp_on_provider_and_contact_sync"
   end

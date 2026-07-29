@@ -411,6 +411,8 @@
           "SECTION": "Contact synchronization",
           "LABEL": "Synchronize UnoAPI contacts",
           "HELP": "Creates missing contacts and updates only invalid names, identities, and pictures. The first synchronization starts 3 minutes after the session becomes online; subsequent runs occur every 3 hours.",
+          "EXPORT_LABEL": "Send new contacts from this inbox to UnoAPI",
+          "EXPORT_HELP": "After reading the remote address book, sends only contacts linked to this inbox that have not been found or sent yet. Global contacts from other inboxes are not included.",
           "STATUS_LABEL": "Status",
           "PROGRESS": "Processed",
           "PROGRESS_WITH_FAILURES": "{progress} ({failed} failed)",

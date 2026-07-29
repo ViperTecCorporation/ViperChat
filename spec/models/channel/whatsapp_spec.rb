@@ -90,6 +90,7 @@ RSpec.describe Channel::Whatsapp do
     it 'marks synchronization disabled and clears its cursor when turned off' do
       channel.update_columns( # rubocop:disable Rails/SkipsModelValidations
         contact_sync_enabled: true,
+        contact_export_enabled: true,
         contact_sync_status: 'running',
         contact_sync_cursor: '42'
       )
@@ -99,8 +100,20 @@ RSpec.describe Channel::Whatsapp do
       expect(channel.reload).to have_attributes(
         contact_sync_status: 'disabled',
         contact_sync_cursor: nil,
-        contact_sync_next_run_at: nil
+        contact_sync_next_run_at: nil,
+        contact_export_enabled: false
       )
+    end
+
+    it 'starts a fresh synchronization before enabling inbox contact export' do
+      channel.update_columns( # rubocop:disable Rails/SkipsModelValidations
+        contact_sync_enabled: true,
+        contact_sync_status: 'completed'
+      )
+
+      expect do
+        channel.update!(contact_export_enabled: true)
+      end.to have_enqueued_job(Whatsapp::Unoapi::ContactSync::ConnectionCheckJob).with(channel.id)
     end
   end
 

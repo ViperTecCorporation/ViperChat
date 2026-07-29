@@ -1,0 +1,94 @@
+require 'rails_helper'
+
+describe Whatsapp::Unoapi::ContactSync::ContactExporter do
+  subject(:exporter) { described_class.new(channel: channel, contact: contact, client: client) }
+
+  let(:account) { create(:account) }
+  let(:channel) do
+    create(
+      :channel_whatsapp,
+      account: account,
+      provider: 'unoapi',
+      contact_sync_enabled: true,
+      contact_export_enabled: true,
+      sync_templates: false,
+      validate_provider_config: false
+    )
+  end
+  let(:contact) do
+    create(
+      :contact,
+      account: account,
+      name: 'Fran Fernandes',
+      phone_number: '+5566999069708',
+      bsuid: '53515477086263@lid',
+      whatsapp_username: 'fran'
+    )
+  end
+  let!(:contact_inbox) do
+    create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '5566999069708')
+  end
+  let(:client) { instance_double(Whatsapp::Unoapi::ContactSync::Client) }
+  let(:response) do
+    {
+      'success' => true,
+      'contact' => {
+        'phone_number' => '556699069708',
+        'full_name' => 'Fran Fernandes',
+        'first_name' => 'Fran',
+        'user_id' => '53515477086263@lid',
+        'username' => 'fran'
+      }
+    }
+  end
+
+  before do
+    allow(client).to receive(:import_contact).and_return(response)
+  end
+
+  it 'exports an inbox contact once and persists the canonical identity returned by UnoAPI' do
+    expect(exporter.perform).to eq(:processed)
+    expect(client).to have_received(:import_contact).with(
+      phone_number: '5566999069708',
+      full_name: 'Fran Fernandes',
+      first_name: 'Fran',
+      user_id: '53515477086263@lid',
+      username: 'fran'
+    ).once
+    expect(contact_inbox.reload.additional_attributes.fetch('unoapi_contact_export')).to include(
+      'status' => 'exported',
+      'phone_number' => '556699069708',
+      'user_id' => '53515477086263@lid'
+    )
+
+    expect(exporter.perform).to eq(:skipped)
+    expect(client).to have_received(:import_contact).once
+  end
+
+  it 'does not export a contact already found during the inbound synchronization' do
+    contact_inbox.update!(additional_attributes: { 'unoapi_last_updated_ms' => 1_784_977_424_000 })
+
+    expect(exporter.perform).to eq(:skipped)
+    expect(client).not_to have_received(:import_contact)
+  end
+
+  it 'uses the phone as name instead of exporting a technical JID' do
+    contact.update!(name: '53515477086263@lid')
+
+    expect(exporter.perform).to eq(:processed)
+    expect(client).to have_received(:import_contact).with(hash_including(
+                                                            full_name: '5566999069708',
+                                                            first_name: '5566999069708'
+                                                          ))
+  end
+
+  it 'marks a permanent rejection and does not post the same identity again' do
+    allow(client).to receive(:import_contact)
+      .and_raise(Whatsapp::Unoapi::ContactSync::Client::PermanentError, 'UnoAPI HTTP 400: invalid contact')
+
+    expect(exporter.perform).to eq(:failed)
+    expect(exporter.perform).to eq(:skipped)
+    expect(client).to have_received(:import_contact).once
+    expect(contact_inbox.reload.additional_attributes.dig('unoapi_contact_export', 'status')).to eq('failed')
+  end
+end

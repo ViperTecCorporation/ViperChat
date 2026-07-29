@@ -472,6 +472,8 @@
           "SECTION": "Sincronização de contatos",
           "LABEL": "Sincronizar contatos da UnoAPI",
           "HELP": "Cria contatos ausentes e atualiza somente nomes inválidos, identidades e fotos. A primeira sincronização começa 3 minutos após a sessão ficar online; as seguintes ocorrem a cada 3 horas.",
+          "EXPORT_LABEL": "Enviar novos contatos desta caixa para a UnoAPI",
+          "EXPORT_HELP": "Após ler a agenda remota, envia somente contatos vinculados a esta caixa que ainda não foram encontrados ou enviados. Contatos globais de outras caixas não são incluídos.",
           "STATUS_LABEL": "Estado",
           "PROGRESS": "Processados",
           "PROGRESS_WITH_FAILURES": "{progress} ({failed} com falha)",

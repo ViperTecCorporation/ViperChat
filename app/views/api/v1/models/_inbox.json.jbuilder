@@ -137,6 +137,7 @@ if resource.whatsapp?
   if Current.account_user&.administrator?
     json.provider_config resource.channel.try(:provider_config)
     json.contact_sync_enabled resource.channel.try(:contact_sync_enabled)
+    json.contact_export_enabled resource.channel.try(:contact_export_enabled)
     json.contact_sync_status resource.channel.try(:contact_sync_status)
     json.contact_sync_cursor resource.channel.try(:contact_sync_cursor)
     json.contact_sync_processed_count resource.channel.try(:contact_sync_processed_count)

@@ -54,6 +54,7 @@ export default {
       sendReactionAsReply: true,
       sendProfilePicture: true,
       contactSyncEnabled: false,
+      contactExportEnabled: false,
       connect: false,
       disconnect: false,
       qrcode: '',
@@ -148,6 +149,7 @@ export default {
         this.inbox.provider_config.send_reaction_as_reply;
       this.sendProfilePicture = this.inbox.provider_config.send_profile_picture;
       this.contactSyncEnabled = this.inbox.contact_sync_enabled ?? false;
+      this.contactExportEnabled = this.inbox.contact_export_enabled ?? false;
       this.connect = false;
       this.disconnect = false;
     },
@@ -237,6 +239,7 @@ export default {
           formData: false,
           channel: {
             contact_sync_enabled: this.contactSyncEnabled,
+            contact_export_enabled: this.contactExportEnabled,
             provider_config: {
               ...providerConfig,
               api_key: this.apiKey,
@@ -791,7 +794,11 @@ export default {
         </label>
       </div>
 
-      <UnoapiContactSync v-model="contactSyncEnabled" :inbox="inbox" />
+      <UnoapiContactSync
+        v-model="contactSyncEnabled"
+        v-model:export-enabled="contactExportEnabled"
+        :inbox="inbox"
+      />
 
       <div class="w-3/4 pb-4 config-helptext">
         <img v-if="qrcode" :src="qrcode" />

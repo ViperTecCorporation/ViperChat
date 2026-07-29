@@ -103,6 +103,7 @@ class Whatsapp::Unoapi::ContactSync::PageJob < MutexApplicationJob
                              contact_sync_next_run_at: 3.hours.from_now,
                              contact_sync_error: accumulated_failed.positive? ? "#{accumulated_failed} contact(s) failed" : nil
                            ))
+    Whatsapp::Unoapi::ContactSync::ExportJob.perform_later(channel.id) if channel.contact_export_enabled?
   end
 
   def validate_page!(page, cursor)

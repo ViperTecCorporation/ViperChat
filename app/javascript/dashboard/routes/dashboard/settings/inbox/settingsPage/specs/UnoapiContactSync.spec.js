@@ -42,4 +42,18 @@ describe('UnoapiContactSync', () => {
 
     expect(wrapper.emitted('update:modelValue')).toEqual([[true]]);
   });
+
+  it('keeps contact export inbox-scoped and dependent on synchronization', () => {
+    const wrapper = shallowMount(UnoapiContactSync, {
+      props: { modelValue: true, exportEnabled: false, inbox },
+    });
+    const switches = wrapper.findAllComponents(SwitchControl);
+
+    expect(switches).toHaveLength(2);
+    switches[1].vm.$emit('update:modelValue', true);
+    expect(wrapper.emitted('update:exportEnabled')).toEqual([[true]]);
+
+    switches[0].vm.$emit('update:modelValue', false);
+    expect(wrapper.emitted('update:exportEnabled')).toEqual([[true], [false]]);
+  });
 });
