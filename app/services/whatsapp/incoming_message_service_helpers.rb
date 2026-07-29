@@ -279,7 +279,8 @@ module Whatsapp::IncomingMessageServiceHelpers
   def find_message_by_source_id(source_id)
     return unless source_id
 
-    @message = inbox.messages.find_by(source_id: source_id)
+    messages = inbox.messages.where(source_id: source_id).order(:created_at).to_a
+    @message = messages.find { |message| !message.content_attributes['external_echo'] } || messages.first
   end
 
   def lock_message_source_id!

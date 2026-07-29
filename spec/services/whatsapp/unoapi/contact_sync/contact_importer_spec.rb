@@ -76,6 +76,102 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
     expect(invalid_contact.reload.name).to eq('Nome escolhido pelo operador')
   end
 
+  it 'replaces WhatsApp technical identifiers used as contact names' do
+    importer.perform
+    contact = account.contacts.find_by!(bsuid: payload[:user_id])
+    technical_names = [
+      payload[:user_id],
+      '5566998765432@s.whatsapp.net',
+      '120363123456789@g.us',
+      'status@broadcast',
+      '123456789@newsletter'
+    ]
+
+    technical_names.each do |technical_name|
+      contact.update!(name: technical_name)
+
+      expect(importer.perform).to eq(:processed)
+      expect(contact.reload.name).to eq('Maria Silva')
+    end
+  end
+
+  it 'replaces a normalized JID without a suffix used as the contact name' do
+    normalized_jid = '5566999424178'
+    contact = create(
+      :contact,
+      account: account,
+      phone_number: "+#{normalized_jid}",
+      bsuid: normalized_jid,
+      name: normalized_jid
+    )
+
+    result = described_class.new(
+      channel: channel,
+      payload: payload.merge(user_id: normalized_jid, phone_number: normalized_jid)
+    ).perform
+
+    expect(result).to eq(:processed)
+    expect(contact.reload.name).to eq('Maria Silva')
+  end
+
+  it 'repairs a technical name when UnoAPI returns the same last_updated_ms' do
+    importer.perform
+    contact = account.contacts.find_by!(bsuid: payload[:user_id])
+    contact.update!(name: payload[:user_id])
+
+    expect(importer.perform).to eq(:processed)
+    expect(contact.reload.name).to eq('Maria Silva')
+  end
+
+  it 'uses the normalized phone as the name when UnoAPI has no valid name' do
+    phone_payload = payload.merge(display_name: nil, push_name: nil)
+    phone_importer = described_class.new(channel: channel, payload: phone_payload)
+
+    expect(phone_importer.perform).to eq(:processed)
+
+    contact = account.contacts.find_by!(bsuid: payload[:user_id])
+    expect(contact).to have_attributes(name: '+5566998765432', phone_number: '+5566998765432')
+    expect(phone_importer.perform).to eq(:skipped)
+  end
+
+  it 'repairs a fixed line previously stored with an incorrect ninth digit' do
+    fixed_lid = '162332634288180@lid'
+    contact = create(
+      :contact,
+      account: account,
+      phone_number: '+5566935175000',
+      bsuid: fixed_lid,
+      name: '+5566935175000'
+    )
+    contact_inbox = create(
+      :contact_inbox,
+      inbox: channel.inbox,
+      contact: contact,
+      source_id: '5566935175000'
+    )
+    fixed_importer = described_class.new(
+      channel: channel,
+      payload: payload.merge(user_id: fixed_lid, phone_number: '556635175000', display_name: nil, push_name: nil)
+    )
+
+    expect(fixed_importer.perform).to eq(:processed)
+    expect(contact.reload).to have_attributes(name: '+556635175000', phone_number: '+556635175000')
+    expect(contact_inbox.reload.source_id).to eq('556635175000')
+  end
+
+  it 'preserves a valid Brazilian toll-free number and uses it as the fallback name' do
+    toll_free_lid = '110329170280512@lid'
+    toll_free_importer = described_class.new(
+      channel: channel,
+      payload: payload.merge(user_id: toll_free_lid, phone_number: '558007440010', display_name: nil, push_name: nil)
+    )
+
+    expect(toll_free_importer.perform).to eq(:processed)
+
+    contact = account.contacts.find_by!(bsuid: toll_free_lid)
+    expect(contact).to have_attributes(name: '+558007440010', phone_number: '+558007440010')
+  end
+
   it 'is idempotent when the same directory item is processed again' do
     importer.perform
     contact_count = account.contacts.count

@@ -2,6 +2,8 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
   class InvalidContactError < StandardError; end
   class IdentityConflictError < StandardError; end
 
+  WHATSAPP_JID_SUFFIXES = %w[@lid @s.whatsapp.net @g.us @broadcast @newsletter].freeze
+
   def self.build_for_page(channel:, payloads:)
     importers = payloads.map { |payload| new(channel: channel, payload: payload) }
     identities = importers.filter_map do |importer|
@@ -12,7 +14,7 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
 
     source_ids = identities.flat_map { |identity| identity[:source_ids] }.uniq
     phone_numbers = identities.filter_map { |identity| identity[:phone_number] }.uniq
-    links_by_source_id = channel.inbox.contact_inboxes.where(source_id: source_ids).to_a.group_by(&:source_id)
+    links_by_source_id = channel.inbox.contact_inboxes.where(source_id: source_ids).includes(:contact).to_a.group_by(&:source_id)
     contact_ids_by_phone = channel.account.contacts.where(phone_number: phone_numbers)
                                   .pluck(:phone_number, :id)
                                   .group_by(&:first)
@@ -99,7 +101,7 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
 
   def create_contact
     @account.contacts.create!(
-      name: preferred_name || phone_number || user_id,
+      name: replacement_name || user_id,
       phone_number: phone_number,
       bsuid: user_id,
       whatsapp_username: username
@@ -108,12 +110,13 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
 
   def update_contact(contact)
     ensure_payload_matches_contact!(contact)
+    prepare_legacy_phone_repair(contact)
     attributes = {
-      phone_number: contact.phone_number.presence || phone_number,
+      phone_number: @legacy_phone_source_id.present? ? phone_number : contact.phone_number.presence || phone_number,
       bsuid: contact.bsuid.presence || user_id,
       whatsapp_username: username.presence || contact.whatsapp_username
     }.compact
-    attributes[:name] = preferred_name if invalid_name?(contact.name) && preferred_name.present?
+    attributes[:name] = replacement_name if repairable_name?(contact)
     contact.update!(attributes)
   end
 
@@ -122,11 +125,13 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
       raise IdentityConflictError, "contact #{contact.id} already belongs to LID #{contact.bsuid}"
     end
     return if contact.phone_number.blank? || phone_number.blank? || contact.phone_number == phone_number
+    return if legacy_phone_repair?(contact)
 
     raise IdentityConflictError, "contact #{contact.id} already belongs to phone #{contact.phone_number}"
   end
 
   def update_contact_inboxes(contact)
+    repair_legacy_phone_source(contact)
     source_ids.each do |source_id|
       contact_inbox = @inbox.contact_inboxes.find_or_create_by!(source_id: source_id) do |record|
         record.contact = contact
@@ -136,6 +141,28 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
       attributes = (contact_inbox.additional_attributes || {}).merge('unoapi_last_updated_ms' => last_updated_ms)
       contact_inbox.update!(additional_attributes: attributes)
     end
+  end
+
+  def prepare_legacy_phone_repair(contact)
+    @legacy_phone_source_id = contact.phone_number.delete_prefix('+') if legacy_phone_repair?(contact)
+  end
+
+  def legacy_phone_repair?(contact)
+    candidate = legacy_brazilian_mobile_candidate(raw_phone_digits)
+    candidate.present? && contact.phone_number == "+#{candidate}" && valid_phone?(raw_phone_digits)
+  end
+
+  def repair_legacy_phone_source(contact)
+    return if @legacy_phone_source_id.blank?
+
+    contact_inbox = @inbox.contact_inboxes.find_by(contact: contact, source_id: @legacy_phone_source_id)
+    return if contact_inbox.blank?
+
+    target = @inbox.contact_inboxes.find_by(source_id: normalized_phone)
+    return if target&.contact_id == contact.id
+    raise IdentityConflictError, "source #{normalized_phone} belongs to contact #{target.contact_id}" if target
+
+    contact_inbox.update!(source_id: normalized_phone)
   end
 
   def already_imported?
@@ -149,9 +176,16 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     return false unless links.size == source_ids.size
     return false unless links.map(&:contact_id).uniq.one?
     return false if duplicate_account_phone?(links.first.contact_id)
+    return false if repairable_name?(links.first.contact)
 
-    links.all? { |link| link.additional_attributes['unoapi_last_updated_ms'].to_i >= last_updated_ms }
+    imported_at_or_after?(links)
   end
+
+  def repairable_name?(contact)
+    invalid_name?(contact.name) && replacement_name.present? && contact.name.to_s.strip != replacement_name
+  end
+
+  def imported_at_or_after?(links) = links.all? { |link| link.additional_attributes['unoapi_last_updated_ms'].to_i >= last_updated_ms }
 
   def duplicate_account_phone?(contact_id)
     return false if phone_number.blank?
@@ -199,16 +233,27 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
 
   def normalize_phone(digits)
     return if digits.blank?
+    raise InvalidContactError, "invalid E.164 phone: #{digits}" unless digits.match?(/\A[1-9]\d{1,14}\z/)
+    return digits unless digits.start_with?('55')
+    return digits if valid_phone?(digits)
 
-    if digits.start_with?('55')
-      return "#{digits[0, 4]}9#{digits[4..]}" if digits.length == 12
-      return digits if digits.length == 13 && digits[4] == '9'
+    candidate = legacy_brazilian_mobile_candidate(digits)
+    return candidate if valid_mobile_phone?(candidate)
 
-      raise InvalidContactError, "invalid Brazilian mobile phone: #{digits}"
-    end
-    return digits if digits.match?(/\A[1-9]\d{1,14}\z/)
+    raise InvalidContactError, "invalid Brazilian phone: #{digits}"
+  end
 
-    raise InvalidContactError, "invalid E.164 phone: #{digits}"
+  def valid_phone?(digits) = Phonelib.parse("+#{digits}").valid?
+
+  def legacy_brazilian_mobile_candidate(digits)
+    "#{digits[0, 4]}9#{digits[4..]}" if digits.length == 12
+  end
+
+  def valid_mobile_phone?(digits)
+    return false if digits.blank?
+
+    phone = Phonelib.parse("+#{digits}")
+    phone.valid? && phone.type == :mobile
   end
 
   def preferred_name
@@ -216,6 +261,8 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
                         .map { |name| name.to_s.strip }
                         .find { |name| valid_name?(name) }
   end
+
+  def replacement_name = preferred_name || phone_number
 
   def invalid_name?(name)
     !valid_name?(name)
@@ -225,9 +272,12 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     value = name.to_s.strip
     return false if value.each_grapheme_cluster.count < 3
     return false unless value.match?(/[\p{L}\p{N}]/)
+    return false if value.casecmp?(user_id.to_s)
+    return false if WHATSAPP_JID_SUFFIXES.any? { |suffix| value.downcase.end_with?(suffix) }
 
     digits = value.gsub(/\D/, '')
-    digits.blank? || [raw_phone_digits, normalized_phone].compact_blank.exclude?(digits)
+    technical_phone_digits = [raw_phone_digits, normalized_phone, legacy_brazilian_mobile_candidate(raw_phone_digits)].compact_blank
+    digits.blank? || technical_phone_digits.exclude?(digits)
   end
 
   def enqueue_avatar(contact)

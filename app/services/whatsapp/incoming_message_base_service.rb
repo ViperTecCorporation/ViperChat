@@ -59,7 +59,7 @@ class Whatsapp::IncomingMessageBaseService
     # We use an atomic Redis SET NX to prevent concurrent workers from both
     # processing the same message simultaneously.
     return if process_message_edit
-    return if find_message_by_source_id(messages_data.first[:id])
+    return if reconcile_existing_message(messages_data.first[:id])
     return unless lock_message_source_id!
     set_message_type
     set_contact
@@ -80,6 +80,13 @@ class Whatsapp::IncomingMessageBaseService
     update_message_with_status(@message, status)
   rescue ArgumentError => e
     Rails.logger.error "Error while processing whatsapp status update #{e.message}"
+  end
+
+  def reconcile_existing_message(source_id)
+    return false unless find_message_by_source_id(source_id)
+
+    update_message_with_status(@message, status: 'delivered') if outgoing_echo
+    true
   end
 
   def contact_sync_payload?

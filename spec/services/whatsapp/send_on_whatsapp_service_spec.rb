@@ -94,8 +94,15 @@ describe Whatsapp::SendOnWhatsappService do
         )
         allow(unoapi_conversation).to receive(:can_reply?).and_return(false)
         allow(unoapi_channel).to receive(:send_message).with('5511999999999', message).and_return('uno-message-id')
+        dedup_lock = instance_double(Whatsapp::MessageDedupLock)
 
         expect(unoapi_channel).not_to receive(:send_template)
+        expect(Whatsapp::MessageDedupLock).to receive(:new)
+          .with("#{unoapi_channel.inbox.id}:uno-message-id")
+          .and_return(dedup_lock)
+          .ordered
+        expect(dedup_lock).to receive(:acquire!).ordered
+        expect(message).to receive(:update!).with(source_id: 'uno-message-id').and_call_original.ordered
 
         described_class.new(message: message).perform
 
