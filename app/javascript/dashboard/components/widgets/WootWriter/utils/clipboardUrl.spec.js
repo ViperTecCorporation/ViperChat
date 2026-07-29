@@ -17,6 +17,17 @@ describe('extractFullProtocolUrlFromClipboard', () => {
     );
   });
 
+  it('preserves a GitHub package URL instead of its page title', () => {
+    const url =
+      'https://github.com/ViperTecCorporation/ViperConnect/pkgs/container/viperconnect-docs/1076854859?tag=4.0.0-beta8';
+    const data = clipboardData({
+      html: `<a href="${url}">viperconnect-docs versions · viperteccorporation</a>`,
+      text: 'viperconnect-docs versions · viperteccorporation',
+    });
+
+    expect(extractFullProtocolUrlFromClipboard(data)).toBe(url);
+  });
+
   it('accepts a complete HTTP URL', () => {
     const data = clipboardData({
       html: '<a href="http://example.com/page">Example page</a>',

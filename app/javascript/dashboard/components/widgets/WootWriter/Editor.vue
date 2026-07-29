@@ -791,10 +791,9 @@ function createEditorView() {
       paste: (view, event) => {
         if (props.disabled) return;
 
-        const supportsRichLinks = Boolean(view.state.schema.marks.link);
-        const pastedUrl = supportsRichLinks
-          ? null
-          : extractFullProtocolUrlFromClipboard(event.clipboardData);
+        const pastedUrl = extractFullProtocolUrlFromClipboard(
+          event.clipboardData
+        );
         if (pastedUrl) {
           event.preventDefault();
           view.dispatch(view.state.tr.insertText(pastedUrl));
