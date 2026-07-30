@@ -139,6 +139,28 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
     expect(client).to have_received(:import_contact)
   end
 
+  it 'normalizes the base phone before merging a network-confirmed mobile contact' do
+    contact.update_columns(phone_number: '+556696057870') # rubocop:disable Rails/SkipsModelValidations
+    contact_inbox.update_columns(source_id: '556696057870') # rubocop:disable Rails/SkipsModelValidations
+    mobile_contact = create(
+      :contact,
+      account: account,
+      phone_number: '+5566996057870',
+      bsuid: '19654022004956@lid'
+    )
+    allow(client).to receive(:verify_contact).and_return(
+      'wa_id' => '556696057870',
+      'user_id' => '19654022004956@lid',
+      'status' => 'valid'
+    )
+
+    expect(exporter.perform).to eq(:processed)
+    expect(Contact.exists?(mobile_contact.id)).to be(false)
+    expect(contact.reload.phone_number).to eq('+5566996057870')
+    expect(channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
+      .to contain_exactly('5566996057870', '19654022004956@lid')
+  end
+
   it 'merges a technical LID-only contact confirmed by the WhatsApp network' do
     channel.inbox.update!(lock_to_single_conversation: true)
     lid_contact = create(:contact, account: account, name: '53515477086263@lid')

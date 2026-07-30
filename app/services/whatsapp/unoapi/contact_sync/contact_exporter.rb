@@ -115,7 +115,9 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
 
   def reconcile_identity_contacts!(verified_lid, network_phone, chatwoot_phone)
     sanitize_contact_email!(@contact)
-    identity_contacts(verified_lid, network_phone, chatwoot_phone).each do |mergee|
+    contacts = identity_contacts(verified_lid, network_phone, chatwoot_phone)
+    @contact.update_columns(phone_number: "+#{chatwoot_phone}", updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    contacts.each do |mergee|
       sanitize_contact_email!(mergee)
       collapse_duplicate_links!(mergee)
       ContactMergeAction.new(account: @channel.account, base_contact: @contact, mergee_contact: mergee).perform
