@@ -105,6 +105,7 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
 
       replace_source_links!(original_phone, chatwoot_phone)
       replace_source_links!(network_phone, chatwoot_phone)
+      normalize_mobile_source_links!(chatwoot_phone)
       stale_lid_links(verified_lid).each { |link| replace_source_link!(link, verified_lid) }
       ensure_source_link!(chatwoot_phone)
       ensure_verified_link!(verified_lid)
@@ -166,6 +167,13 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
     @contact.contact_inboxes.where(source_id: old_source_id).to_a.each do |link|
       replace_source_link!(link, verified_source_id)
     end
+  end
+
+  def normalize_mobile_source_links!(canonical_phone)
+    return unless brazilian_mobile_phone?(canonical_phone)
+
+    phone_without_ninth_digit = canonical_phone[0, 4] + canonical_phone[5..]
+    replace_source_links!(phone_without_ninth_digit, canonical_phone)
   end
 
   def replace_source_link!(stale_link, verified_source_id)

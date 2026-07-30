@@ -161,6 +161,20 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
       .to contain_exactly('5566996057870', '19654022004956@lid')
   end
 
+  it 'removes the phone alias without the ninth digit when the canonical alias already exists' do
+    create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '556699069708')
+
+    allow(client).to receive(:verify_contact).and_return(
+      'wa_id' => '5566999069708',
+      'user_id' => '53515477086263@lid',
+      'status' => 'valid'
+    )
+
+    expect(exporter.perform).to eq(:processed)
+    expect(channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
+      .to contain_exactly('5566999069708', '53515477086263@lid')
+  end
+
   it 'merges a technical LID-only contact confirmed by the WhatsApp network' do
     channel.inbox.update!(lock_to_single_conversation: true)
     lid_contact = create(:contact, account: account, name: '53515477086263@lid')
