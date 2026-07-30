@@ -15,6 +15,9 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
     payload = export_payload
     return :skipped if payload.blank? || already_attempted?(payload)
 
+    payload = verified_payload(payload)
+    return :skipped if already_attempted?(payload)
+
     response = @client.import_contact(payload)
     remote_contact = response.fetch('contact')
     mark_attempt(payload, status: 'exported', remote_contact: remote_contact)
@@ -56,6 +59,16 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
       user_id: user_id,
       username: @contact.whatsapp_username.to_s.strip.delete_prefix('@').first(64).presence
     }.compact
+  end
+
+  def verified_payload(payload)
+    verification = @client.verify_contact(payload[:phone_number]).with_indifferent_access
+    verified_lid = verification[:user_id].to_s.strip
+    unless verification[:status] == 'valid' && verified_lid.match?(/\A\d+@lid\z/)
+      raise Whatsapp::Unoapi::ContactSync::Client::PermanentError, 'UnoAPI could not validate the contact LID'
+    end
+
+    payload.merge(user_id: verified_lid)
   end
 
   def lid

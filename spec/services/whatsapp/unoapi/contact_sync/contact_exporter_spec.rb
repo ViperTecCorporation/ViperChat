@@ -43,6 +43,12 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
   end
 
   before do
+    allow(client).to receive(:verify_contact).and_return(
+      'input' => '5566999069708',
+      'wa_id' => '556699069708',
+      'user_id' => '53515477086263@lid',
+      'status' => 'valid'
+    )
     allow(client).to receive(:import_contact).and_return(response)
   end
 
@@ -62,6 +68,7 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
     )
 
     expect(exporter.perform).to eq(:skipped)
+    expect(client).to have_received(:verify_contact).once
     expect(client).to have_received(:import_contact).once
   end
 
@@ -69,7 +76,18 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
     contact_inbox.update!(additional_attributes: { 'unoapi_last_updated_ms' => 1_784_977_424_000 })
 
     expect(exporter.perform).to eq(:skipped)
+    expect(client).not_to have_received(:verify_contact)
     expect(client).not_to have_received(:import_contact)
+  end
+
+  it 'replaces a stale local LID with the identity validated by the WhatsApp network' do
+    contact.update!(bsuid: '99226763698235@lid')
+
+    expect(exporter.perform).to eq(:processed)
+    expect(client).to have_received(:import_contact).with(hash_including(
+                                                            phone_number: '5566999069708',
+                                                            user_id: '53515477086263@lid'
+                                                          ))
   end
 
   it 'uses the phone as name instead of exporting a technical JID' do
