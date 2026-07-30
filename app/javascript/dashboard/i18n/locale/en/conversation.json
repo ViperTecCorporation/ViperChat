@@ -294,6 +294,7 @@
       "DISABLE_SIGN_TOOLTIP": "Disable signature",
       "MSG_INPUT": "Shift + enter for new line. Start with '/' to select a Canned Response.",
       "PRIVATE_MSG_INPUT": "Shift + enter for new line. This will be visible only to Agents",
+      "SCHEDULE_SHORTCUT": "Ctrl + S: schedule message",
       "CAPTAIN_SHORTCUTS": "Ctrl + M: improve reply\nCtrl + O: check spelling",
       "MESSAGING_RESTRICTED": "You cannot reply to this conversation",
       "MESSAGING_RESTRICTED_WHATSAPP": "You can only reply using a template message due to 24-hour message window restriction",

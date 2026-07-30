@@ -286,6 +286,7 @@
       "DISABLE_SIGN_TOOLTIP": "Desativar assinatura",
       "MSG_INPUT": "Shift + enter para nova linha. Digite '/' para selecionar uma Resposta Pronta.",
       "PRIVATE_MSG_INPUT": "A mensagem será visível apenas para agentes",
+      "SCHEDULE_SHORTCUT": "Ctrl + S: agendar mensagem",
       "CAPTAIN_SHORTCUTS": "Ctrl + M: melhorar resposta\nCtrl + O: verificar ortografia",
       "MESSAGING_RESTRICTED": "Você não pode responder esta conversa",
       "MESSAGING_RESTRICTED_WHATSAPP": "Você só pode responder usando uma mensagem de modelo devido à restrição da janela de 24 horas",

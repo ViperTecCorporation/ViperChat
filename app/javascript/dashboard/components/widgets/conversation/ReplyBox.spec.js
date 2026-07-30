@@ -67,4 +67,28 @@ describe('ReplyBox Captain shortcuts', () => {
       'Atalhos existentes\nCtrl + M: melhorar resposta\nCtrl + O: verificar ortografia'
     );
   });
+
+  it('adds the schedule shortcut only to the WhatsApp reply placeholder', () => {
+    const translations = {
+      'CONVERSATION.FOOTER.MSG_INPUT': 'Atalhos existentes',
+      'CONVERSATION.FOOTER.SCHEDULE_SHORTCUT': 'Ctrl + S: agendar mensagem',
+    };
+    const context = {
+      isEditorDisabled: false,
+      isPrivate: false,
+      captainTasksEnabled: false,
+      inbox: { channel_type: 'Channel::Whatsapp' },
+      $t: key => translations[key],
+    };
+
+    expect(ReplyBox.computed.messagePlaceHolder.call(context)).toBe(
+      'Atalhos existentes\nCtrl + S: agendar mensagem'
+    );
+
+    context.isPrivate = true;
+    translations['CONVERSATION.FOOTER.PRIVATE_MSG_INPUT'] = 'Nota privada';
+    expect(ReplyBox.computed.messagePlaceHolder.call(context)).toBe(
+      'Nota privada'
+    );
+  });
 });

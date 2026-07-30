@@ -348,10 +348,15 @@ export default {
       const placeholder = this.isPrivate
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
+      const shortcuts = [];
+      if (!this.isPrivate && this.inbox?.channel_type === 'Channel::Whatsapp') {
+        shortcuts.push(this.$t('CONVERSATION.FOOTER.SCHEDULE_SHORTCUT'));
+      }
+      if (this.captainTasksEnabled) {
+        shortcuts.push(this.$t('CONVERSATION.FOOTER.CAPTAIN_SHORTCUTS'));
+      }
 
-      return this.captainTasksEnabled
-        ? `${placeholder}\n${this.$t('CONVERSATION.FOOTER.CAPTAIN_SHORTCUTS')}`
-        : placeholder;
+      return [placeholder, ...shortcuts].join('\n');
     },
     isMessageLengthReachingThreshold() {
       return this.message.length > this.maxLength - 50;
