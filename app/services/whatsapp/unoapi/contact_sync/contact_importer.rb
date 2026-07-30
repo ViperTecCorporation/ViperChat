@@ -153,7 +153,12 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
 
   def legacy_phone_repair?(contact)
     candidate = legacy_brazilian_mobile_candidate(raw_phone_digits)
-    candidate.present? && contact.phone_number == "+#{candidate}" && valid_phone?(raw_phone_digits)
+    contact_digits = contact.phone_number.to_s.gsub(/\D/, '')
+    removes_invalid_ninth_digit = candidate.present? && contact_digits == candidate && valid_phone?(raw_phone_digits)
+    inserts_missing_ninth_digit = canonical_brazilian_mobile?(normalized_phone) &&
+                                  contact_digits == phone_without_ninth_digit(normalized_phone)
+
+    removes_invalid_ninth_digit || inserts_missing_ninth_digit
   end
 
   def equivalent_phone_numbers?(left, right)
@@ -211,10 +216,36 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     return if contact_inbox.blank?
 
     target = @inbox.contact_inboxes.find_by(source_id: normalized_phone)
-    return if target&.contact_id == contact.id
+    if target&.contact_id == contact.id
+      merge_source_links!(contact_inbox, target)
+      merge_inbox_conversation_aliases!(contact) if @inbox.lock_to_single_conversation?
+      return
+    end
     raise IdentityConflictError, "source #{normalized_phone} belongs to contact #{target.contact_id}" if target
 
     contact_inbox.update!(source_id: normalized_phone)
+  end
+
+  def merge_source_links!(source, target)
+    Conversation.where(contact_inbox_id: source.id).update_all(contact_inbox_id: target.id) # rubocop:disable Rails/SkipsModelValidations
+    target.update!(
+      additional_attributes: source.additional_attributes.deep_merge(target.additional_attributes)
+    )
+    source.delete
+  end
+
+  def merge_inbox_conversation_aliases!(contact)
+    conversations = @inbox.conversations.non_group_conversations.where(contact_id: contact.id).to_a
+    return if conversations.size <= 1
+
+    target = conversations.max_by { |conversation| [conversation.last_activity_at, conversation.id] }
+    mergees = conversations - [target]
+    Message.where(conversation_id: mergees.map(&:id)).update_all(conversation_id: target.id) # rubocop:disable Rails/SkipsModelValidations
+    target.update_columns( # rubocop:disable Rails/SkipsModelValidations
+      last_activity_at: conversations.filter_map(&:last_activity_at).max,
+      updated_at: Time.current
+    )
+    mergees.each(&:destroy!)
   end
 
   def already_imported?
@@ -230,6 +261,7 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     return false if duplicate_account_phone?(links.first.contact_id)
     return false if repairable_name?(links.first.contact)
     return false if repairable_email?(links.first.contact)
+    return false if legacy_phone_repair?(links.first.contact)
 
     imported_at_or_after?(links)
   end
@@ -310,6 +342,14 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
 
   def legacy_brazilian_mobile_candidate(digits)
     "#{digits[0, 4]}9#{digits[4..]}" if digits.length == 12
+  end
+
+  def canonical_brazilian_mobile?(digits)
+    digits.to_s.match?(/\A55\d{2}9\d{8}\z/) && valid_mobile_phone?(digits)
+  end
+
+  def phone_without_ninth_digit(digits)
+    digits[0, 4] + digits[5..]
   end
 
   def valid_mobile_phone?(digits)

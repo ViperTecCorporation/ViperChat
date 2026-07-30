@@ -42,6 +42,64 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
       .to contain_exactly('273877414502425@lid', '5566998765432')
   end
 
+  it 'collapses an existing mobile alias without the ninth digit even with the same update timestamp' do
+    channel.inbox.update!(lock_to_single_conversation: true)
+    contact = create(
+      :contact,
+      account: account,
+      phone_number: '+556698765432',
+      bsuid: payload[:user_id],
+      name: 'Maria Silva'
+    )
+    legacy_link = create(
+      :contact_inbox,
+      inbox: channel.inbox,
+      contact: contact,
+      source_id: '556698765432',
+      additional_attributes: { 'unoapi_last_updated_ms' => payload[:last_updated_ms] }
+    )
+    canonical_link = create(
+      :contact_inbox,
+      inbox: channel.inbox,
+      contact: contact,
+      source_id: '5566998765432',
+      additional_attributes: { 'unoapi_last_updated_ms' => payload[:last_updated_ms] }
+    )
+    lid_link = create(
+      :contact_inbox,
+      inbox: channel.inbox,
+      contact: contact,
+      source_id: payload[:user_id],
+      additional_attributes: { 'unoapi_last_updated_ms' => payload[:last_updated_ms] }
+    )
+    canonical_conversation = create(
+      :conversation,
+      account: account,
+      inbox: channel.inbox,
+      contact: contact,
+      contact_inbox: canonical_link,
+      last_activity_at: 2.days.ago
+    )
+    legacy_conversation = create(
+      :conversation,
+      account: account,
+      inbox: channel.inbox,
+      contact: contact,
+      contact_inbox: legacy_link,
+      last_activity_at: 1.day.ago
+    )
+    message = create(:message, account: account, inbox: channel.inbox, conversation: legacy_conversation, sender: contact)
+
+    expect(importer.perform).to eq(:processed)
+    expect(contact.reload.phone_number).to eq('+5566998765432')
+    expect(channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
+      .to contain_exactly('5566998765432', payload[:user_id])
+    expect(channel.inbox.conversations.where(contact: contact).count).to eq(1)
+    expect(message.reload.conversation).to eq(legacy_conversation)
+    expect(Conversation.exists?(canonical_conversation.id)).to be(false)
+    expect(lid_link.reload.additional_attributes['unoapi_last_updated_ms']).to eq(payload[:last_updated_ms])
+  end
+
   it 'reuses an account contact already linked to another inbox' do
     other_channel = create(
       :channel_whatsapp,
