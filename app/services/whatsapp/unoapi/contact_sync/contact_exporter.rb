@@ -22,7 +22,8 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
     remote_contact = response.fetch('contact')
     mark_attempt(payload, status: 'exported', remote_contact: remote_contact)
     :processed
-  rescue Whatsapp::Unoapi::ContactSync::Client::PermanentError, KeyError => e
+  rescue Whatsapp::Unoapi::ContactSync::Client::PermanentError, ActiveRecord::RecordInvalid,
+         ActiveRecord::RecordNotUnique, KeyError => e
     mark_attempt(payload, status: 'failed', error: e.message) if payload.present?
     Rails.logger.error(
       "[UNOAPI CONTACT EXPORT] channel_id=#{@channel.id} contact_id=#{@contact.id} " \

@@ -126,6 +126,16 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
                                                           ))
   end
 
+  it 'marks legacy duplicate-phone validation errors as failed without interrupting the export batch' do
+    duplicate = create(:contact, account: account, phone_number: '+5566999999999')
+    duplicate.update_columns(phone_number: contact.phone_number) # rubocop:disable Rails/SkipsModelValidations
+
+    expect(exporter.perform).to eq(:failed)
+    expect(contact_inbox.reload.additional_attributes.dig('unoapi_contact_export', 'error'))
+      .to include('Phone number has already been taken')
+    expect(client).not_to have_received(:import_contact)
+  end
+
   it 'uses the phone as name instead of exporting a technical JID' do
     contact.update!(name: '53515477086263@lid')
 
