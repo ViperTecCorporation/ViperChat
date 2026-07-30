@@ -84,6 +84,9 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
     contact.update!(bsuid: '99226763698235@lid')
 
     expect(exporter.perform).to eq(:processed)
+    expect(contact.reload.bsuid).to eq('53515477086263@lid')
+    expect(channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
+      .to contain_exactly('5566999069708', '53515477086263@lid')
     expect(client).to have_received(:import_contact).with(hash_including(
                                                             phone_number: '5566999069708',
                                                             user_id: '53515477086263@lid'

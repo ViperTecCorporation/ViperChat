@@ -68,7 +68,39 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
       raise Whatsapp::Unoapi::ContactSync::Client::PermanentError, 'UnoAPI could not validate the contact LID'
     end
 
+    persist_verified_lid!(verified_lid)
     payload.merge(user_id: verified_lid)
+  end
+
+  def persist_verified_lid!(verified_lid)
+    return if @contact.bsuid == verified_lid && links.any? { |link| link.source_id == verified_lid }
+
+    Contact.transaction do
+      conflicting_contact = @channel.account.contacts.where(bsuid: verified_lid).where.not(id: @contact.id).first
+      if conflicting_contact
+        raise Whatsapp::Unoapi::ContactSync::Client::PermanentError,
+              "verified LID belongs to contact #{conflicting_contact.id}"
+      end
+
+      attributes = { bsuid: verified_lid }
+      attributes[:email] = nil if technical_email?
+      @contact.update!(attributes)
+
+      verified_link = @channel.inbox.contact_inboxes.find_or_initialize_by(source_id: verified_lid)
+      if verified_link.persisted? && verified_link.contact_id != @contact.id
+        raise Whatsapp::Unoapi::ContactSync::Client::PermanentError,
+              "verified LID belongs to inbox contact #{verified_link.contact_id}"
+      end
+
+      verified_link.contact = @contact
+      verified_link.save!
+      links << verified_link unless links.include?(verified_link)
+    end
+  end
+
+  def technical_email?
+    value = @contact.email.to_s.strip
+    value.present? && (!value.match?(Devise.email_regexp) || value.match?(/@(lid|s\.whatsapp\.net|g\.us|broadcast|newsletter)\z/i))
   end
 
   def lid
