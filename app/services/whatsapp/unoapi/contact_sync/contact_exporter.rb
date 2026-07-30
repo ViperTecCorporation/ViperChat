@@ -73,8 +73,6 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
   end
 
   def persist_verified_lid!(verified_lid)
-    return if @contact.bsuid == verified_lid && links.any? { |link| link.source_id == verified_lid }
-
     Contact.transaction do
       conflicting_contact = @channel.account.contacts.where(bsuid: verified_lid).where.not(id: @contact.id).first
       if conflicting_contact
@@ -86,16 +84,68 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
       attributes[:email] = nil if technical_email?
       @contact.update!(attributes)
 
-      verified_link = @channel.inbox.contact_inboxes.find_or_initialize_by(source_id: verified_lid)
-      if verified_link.persisted? && verified_link.contact_id != @contact.id
-        raise Whatsapp::Unoapi::ContactSync::Client::PermanentError,
-              "verified LID belongs to inbox contact #{verified_link.contact_id}"
-      end
-
-      verified_link.contact = @contact
-      verified_link.save!
-      links << verified_link unless links.include?(verified_link)
+      stale_lid_links(verified_lid).each { |link| replace_lid_link!(link, verified_lid) }
+      ensure_verified_link!(verified_lid)
+      merge_contact_conversation_aliases!
     end
+    @links = nil
+  end
+
+  def stale_lid_links(verified_lid)
+    @contact.contact_inboxes.where("source_id LIKE '%@lid'").where.not(source_id: verified_lid).to_a
+  end
+
+  def replace_lid_link!(stale_link, verified_lid)
+    verified_link = stale_link.inbox.contact_inboxes.find_by(source_id: verified_lid)
+    return stale_link.update!(source_id: verified_lid) if verified_link.blank?
+
+    ensure_link_belongs_to_contact!(verified_link)
+    Conversation.where(contact_inbox_id: stale_link.id).update_all(contact_inbox_id: verified_link.id) # rubocop:disable Rails/SkipsModelValidations
+    attributes = stale_link.additional_attributes.deep_merge(verified_link.additional_attributes)
+    verified_link.update!(additional_attributes: attributes)
+    stale_link.delete
+  end
+
+  def ensure_verified_link!(verified_lid)
+    verified_link = @channel.inbox.contact_inboxes.find_or_initialize_by(source_id: verified_lid)
+    ensure_link_belongs_to_contact!(verified_link) if verified_link.persisted?
+    verified_link.contact = @contact
+    verified_link.save!
+  end
+
+  def ensure_link_belongs_to_contact!(link)
+    return if link.contact_id == @contact.id
+
+    raise Whatsapp::Unoapi::ContactSync::Client::PermanentError,
+          "verified LID belongs to inbox contact #{link.contact_id}"
+  end
+
+  def merge_contact_conversation_aliases!
+    return unless @channel.provider == 'unoapi' && @channel.inbox.lock_to_single_conversation?
+
+    conversations = @channel.inbox.conversations.non_group_conversations
+                            .where(contact_id: @contact.id, contact_inbox_id: current_inbox_links.select(:id))
+                            .to_a
+    return if conversations.size <= 1
+
+    target = preferred_conversation(conversations)
+    mergees = conversations - [target]
+    Message.where(conversation_id: mergees.map(&:id)).update_all(conversation_id: target.id) # rubocop:disable Rails/SkipsModelValidations
+    target.update_columns( # rubocop:disable Rails/SkipsModelValidations
+      last_activity_at: conversations.filter_map(&:last_activity_at).max,
+      updated_at: Time.current
+    )
+    mergees.each(&:destroy!)
+  end
+
+  def current_inbox_links
+    @contact.contact_inboxes.where(inbox_id: @channel.inbox.id)
+  end
+
+  def preferred_conversation(conversations)
+    conversations.select { |conversation| conversation.contact_inbox.source_id.exclude?('@') }
+                 .max_by { |conversation| [conversation.last_activity_at, conversation.id] } ||
+      conversations.max_by { |conversation| [conversation.last_activity_at, conversation.id] }
   end
 
   def technical_email?

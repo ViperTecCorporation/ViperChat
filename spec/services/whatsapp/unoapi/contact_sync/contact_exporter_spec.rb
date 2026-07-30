@@ -81,12 +81,45 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
   end
 
   it 'replaces a stale local LID with the identity validated by the WhatsApp network' do
-    contact.update!(bsuid: '99226763698235@lid')
+    stale_lid = '99226763698235@lid'
+    channel.inbox.update!(lock_to_single_conversation: true)
+    contact.update!(bsuid: stale_lid)
+    stale_link = create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: stale_lid)
+    phone_conversation = create(
+      :conversation,
+      account: account,
+      inbox: channel.inbox,
+      contact: contact,
+      contact_inbox: contact_inbox,
+      last_activity_at: 2.days.ago
+    )
+    stale_conversation = create(
+      :conversation,
+      account: account,
+      inbox: channel.inbox,
+      contact: contact,
+      contact_inbox: stale_link,
+      last_activity_at: 1.day.ago
+    )
+    stale_message = create(:message, account: account, inbox: channel.inbox, conversation: stale_conversation, sender: contact)
+    other_channel = create(
+      :channel_whatsapp,
+      account: account,
+      provider: 'unoapi',
+      sync_templates: false,
+      validate_provider_config: false
+    )
+    create(:contact_inbox, inbox: other_channel.inbox, contact: contact, source_id: stale_lid)
 
     expect(exporter.perform).to eq(:processed)
     expect(contact.reload.bsuid).to eq('53515477086263@lid')
     expect(channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
       .to contain_exactly('5566999069708', '53515477086263@lid')
+    expect(other_channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
+      .to contain_exactly('53515477086263@lid')
+    expect(stale_message.reload.conversation).to eq(phone_conversation)
+    expect(channel.inbox.conversations.where(contact: contact).count).to eq(1)
+    expect(Conversation.exists?(stale_conversation.id)).to be(false)
     expect(client).to have_received(:import_contact).with(hash_including(
                                                             phone_number: '5566999069708',
                                                             user_id: '53515477086263@lid'
