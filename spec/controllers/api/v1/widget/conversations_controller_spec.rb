@@ -274,7 +274,7 @@ RSpec.describe '/api/v1/widget/conversations/toggle_typing', type: :request do
 
         get '/api/v1/widget/conversations/toggle_status',
             headers: { 'X-Auth-Token' => token },
-            params: { website_token: web_widget.website_token },
+            params: { website_token: web_widget.website_token, locale: 'en' },
             as: :json
 
         expect(response).to have_http_status(:success)

@@ -11,7 +11,8 @@ describe Whatsapp::Providers::UnoapiService do
       provider_config: {
         'url' => 'https://uno.example.com',
         'api_key' => 'test_key',
-        'business_account_id' => '556600000000'
+        'business_account_id' => '556600000000',
+        'phone_number_id' => 'random_id'
       },
       sync_templates: false,
       validate_provider_config: false
