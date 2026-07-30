@@ -61,6 +61,9 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
       user_id: '53515477086263@lid',
       username: 'fran'
     ).once
+    expect(contact.reload.phone_number).to eq('+5566999069708')
+    expect(channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
+      .to contain_exactly('5566999069708', '53515477086263@lid')
     expect(contact_inbox.reload.additional_attributes.fetch('unoapi_contact_export')).to include(
       'status' => 'exported',
       'phone_number' => '556699069708',
@@ -126,14 +129,42 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
                                                           ))
   end
 
-  it 'marks legacy duplicate-phone validation errors as failed without interrupting the export batch' do
+  it 'merges a legacy duplicate with the same phone before persisting the verified identity' do
     duplicate = create(:contact, account: account, phone_number: '+5566999999999')
     duplicate.update_columns(phone_number: contact.phone_number) # rubocop:disable Rails/SkipsModelValidations
 
-    expect(exporter.perform).to eq(:failed)
-    expect(contact_inbox.reload.additional_attributes.dig('unoapi_contact_export', 'error'))
-      .to include('Phone number has already been taken')
-    expect(client).not_to have_received(:import_contact)
+    expect(exporter.perform).to eq(:processed)
+    expect(Contact.exists?(duplicate.id)).to be(false)
+    expect(contact.reload.phone_number).to eq('+5566999069708')
+    expect(client).to have_received(:import_contact)
+  end
+
+  it 'merges a technical LID-only contact confirmed by the WhatsApp network' do
+    channel.inbox.update!(lock_to_single_conversation: true)
+    lid_contact = create(:contact, account: account, name: '53515477086263@lid')
+    lid_link = create(:contact_inbox, inbox: channel.inbox, contact: lid_contact, source_id: '53515477086263@lid')
+    phone_conversation = create(:conversation, account: account, inbox: channel.inbox, contact: contact, contact_inbox: contact_inbox)
+    lid_conversation = create(:conversation, account: account, inbox: channel.inbox, contact: lid_contact, contact_inbox: lid_link)
+    lid_message = create(:message, account: account, inbox: channel.inbox, conversation: lid_conversation, sender: lid_contact)
+
+    expect(exporter.perform).to eq(:processed)
+    expect(Contact.exists?(lid_contact.id)).to be(false)
+    expect(lid_message.reload.sender).to eq(contact)
+    expect(lid_message.conversation).to eq(phone_conversation)
+    expect(Conversation.exists?(lid_conversation.id)).to be(false)
+  end
+
+  it 'keeps separate conversations when the UnoAPI inbox does not lock contacts to one conversation' do
+    channel.inbox.update!(lock_to_single_conversation: false)
+    lid_contact = create(:contact, account: account, name: '53515477086263@lid')
+    lid_link = create(:contact_inbox, inbox: channel.inbox, contact: lid_contact, source_id: '53515477086263@lid')
+    create(:conversation, account: account, inbox: channel.inbox, contact: contact, contact_inbox: contact_inbox)
+    lid_conversation = create(:conversation, account: account, inbox: channel.inbox, contact: lid_contact, contact_inbox: lid_link)
+
+    expect(exporter.perform).to eq(:processed)
+    expect(Contact.exists?(lid_contact.id)).to be(false)
+    expect(channel.inbox.conversations.where(contact: contact).count).to eq(2)
+    expect(Conversation.exists?(lid_conversation.id)).to be(true)
   end
 
   it 'uses the phone as name instead of exporting a technical JID' do

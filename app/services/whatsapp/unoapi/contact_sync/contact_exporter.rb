@@ -69,46 +69,125 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
       raise Whatsapp::Unoapi::ContactSync::Client::PermanentError, 'UnoAPI could not validate the contact LID'
     end
 
-    persist_verified_lid!(verified_lid)
-    payload.merge(user_id: verified_lid)
+    network_phone = verified_phone(verification, payload[:phone_number])
+    chatwoot_phone = chatwoot_phone(verified_lid, network_phone, payload[:phone_number])
+    persist_verified_identity!(verified_lid, network_phone, chatwoot_phone, payload[:phone_number])
+    payload.merge(phone_number: chatwoot_phone, user_id: verified_lid)
   end
 
-  def persist_verified_lid!(verified_lid)
+  def verified_phone(verification, fallback)
+    phone_number = verification[:wa_id].to_s.gsub(/\D/, '')
+    phone_number.match?(/\A[1-9]\d{6,14}\z/) ? phone_number : fallback
+  end
+
+  def chatwoot_phone(verified_lid, network_phone, original_phone)
+    candidates = [original_phone, network_phone]
+    candidates.concat(@channel.account.contacts.where(bsuid: verified_lid).pluck(:phone_number))
+    candidates.concat(
+      Contact.joins(contact_inboxes: :inbox)
+             .where(account_id: @channel.account.id, inboxes: { account_id: @channel.account.id }, contact_inboxes: { source_id: verified_lid })
+             .pluck(:phone_number)
+    )
+    candidates.map { |phone| phone.to_s.gsub(/\D/, '') }.find { |phone| brazilian_mobile_phone?(phone) } || network_phone
+  end
+
+  def brazilian_mobile_phone?(phone_number)
+    phone_number.match?(/\A55\d{2}9\d{8}\z/)
+  end
+
+  def persist_verified_identity!(verified_lid, network_phone, chatwoot_phone, original_phone)
     Contact.transaction do
-      conflicting_contact = @channel.account.contacts.where(bsuid: verified_lid).where.not(id: @contact.id).first
-      if conflicting_contact
-        raise Whatsapp::Unoapi::ContactSync::Client::PermanentError,
-              "verified LID belongs to contact #{conflicting_contact.id}"
-      end
+      reconcile_identity_contacts!(verified_lid, network_phone, chatwoot_phone)
 
-      attributes = { bsuid: verified_lid }
-      attributes[:email] = nil if technical_email?
-      @contact.update!(attributes)
+      attributes = { bsuid: verified_lid, phone_number: "+#{chatwoot_phone}" }
+      attributes[:email] = nil if technical_email?(@contact)
+      @contact.update_columns(attributes.merge(updated_at: Time.current)) # rubocop:disable Rails/SkipsModelValidations
 
-      stale_lid_links(verified_lid).each { |link| replace_lid_link!(link, verified_lid) }
+      replace_source_links!(original_phone, chatwoot_phone)
+      replace_source_links!(network_phone, chatwoot_phone)
+      stale_lid_links(verified_lid).each { |link| replace_source_link!(link, verified_lid) }
+      ensure_source_link!(chatwoot_phone)
       ensure_verified_link!(verified_lid)
       merge_contact_conversation_aliases!
     end
     @links = nil
   end
 
+  def reconcile_identity_contacts!(verified_lid, network_phone, chatwoot_phone)
+    sanitize_contact_email!(@contact)
+    identity_contacts(verified_lid, network_phone, chatwoot_phone).each do |mergee|
+      sanitize_contact_email!(mergee)
+      collapse_duplicate_links!(mergee)
+      ContactMergeAction.new(account: @channel.account, base_contact: @contact, mergee_contact: mergee).perform
+      @contact.reload
+    end
+  end
+
+  def identity_contacts(verified_lid, network_phone, chatwoot_phone)
+    phone_numbers = [@contact.phone_number, "+#{network_phone}", "+#{chatwoot_phone}"].compact_blank.uniq
+    contacts = @channel.account.contacts.where(phone_number: phone_numbers).where.not(id: @contact.id).to_a
+    contacts.concat(@channel.account.contacts.where(bsuid: verified_lid).where.not(id: @contact.id))
+    contacts.concat(
+      Contact.joins(contact_inboxes: :inbox)
+             .where(account_id: @channel.account.id, inboxes: { account_id: @channel.account.id }, contact_inboxes: { source_id: verified_lid })
+             .where.not(id: @contact.id)
+    )
+    contacts.uniq.sort_by { |contact| contact.phone_number == @contact.phone_number ? 0 : 1 }
+  end
+
+  def collapse_duplicate_links!(mergee)
+    mergee.contact_inboxes.to_a.each do |mergee_link|
+      base_link = @contact.contact_inboxes.find_by(inbox_id: mergee_link.inbox_id, source_id: mergee_link.source_id)
+      next if base_link.blank?
+
+      move_link_conversations!(mergee_link, base_link)
+      base_link.update!(
+        additional_attributes: mergee_link.additional_attributes.deep_merge(base_link.additional_attributes)
+      )
+      mergee_link.delete
+    end
+  end
+
+  def sanitize_contact_email!(contact)
+    return unless technical_email?(contact)
+
+    contact.update_columns(email: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
   def stale_lid_links(verified_lid)
     @contact.contact_inboxes.where("source_id LIKE '%@lid'").where.not(source_id: verified_lid).to_a
   end
 
-  def replace_lid_link!(stale_link, verified_lid)
-    verified_link = stale_link.inbox.contact_inboxes.find_by(source_id: verified_lid)
-    return stale_link.update!(source_id: verified_lid) if verified_link.blank?
+  def replace_source_links!(old_source_id, verified_source_id)
+    return if old_source_id.blank? || old_source_id == verified_source_id
+
+    @contact.contact_inboxes.where(source_id: old_source_id).to_a.each do |link|
+      replace_source_link!(link, verified_source_id)
+    end
+  end
+
+  def replace_source_link!(stale_link, verified_source_id)
+    verified_link = stale_link.inbox.contact_inboxes.find_by(source_id: verified_source_id)
+    return stale_link.update!(source_id: verified_source_id) if verified_link.blank?
 
     ensure_link_belongs_to_contact!(verified_link)
-    Conversation.where(contact_inbox_id: stale_link.id).update_all(contact_inbox_id: verified_link.id) # rubocop:disable Rails/SkipsModelValidations
-    attributes = stale_link.additional_attributes.deep_merge(verified_link.additional_attributes)
-    verified_link.update!(additional_attributes: attributes)
+    move_link_conversations!(stale_link, verified_link)
+    verified_link.update!(
+      additional_attributes: stale_link.additional_attributes.deep_merge(verified_link.additional_attributes)
+    )
     stale_link.delete
   end
 
+  def move_link_conversations!(source_link, target_link)
+    Conversation.where(contact_inbox_id: source_link.id).update_all(contact_inbox_id: target_link.id) # rubocop:disable Rails/SkipsModelValidations
+  end
+
   def ensure_verified_link!(verified_lid)
-    verified_link = @channel.inbox.contact_inboxes.find_or_initialize_by(source_id: verified_lid)
+    ensure_source_link!(verified_lid)
+  end
+
+  def ensure_source_link!(source_id)
+    verified_link = @channel.inbox.contact_inboxes.find_or_initialize_by(source_id: source_id)
     ensure_link_belongs_to_contact!(verified_link) if verified_link.persisted?
     verified_link.contact = @contact
     verified_link.save!
@@ -122,11 +201,21 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
   end
 
   def merge_contact_conversation_aliases!
-    return unless @channel.provider == 'unoapi' && @channel.inbox.lock_to_single_conversation?
+    @contact.inboxes.distinct.each do |inbox|
+      next unless unoapi_single_conversation_inbox?(inbox)
 
-    conversations = @channel.inbox.conversations.non_group_conversations
-                            .where(contact_id: @contact.id, contact_inbox_id: current_inbox_links.select(:id))
-                            .to_a
+      merge_inbox_conversation_aliases!(inbox)
+    end
+  end
+
+  def unoapi_single_conversation_inbox?(inbox)
+    inbox.channel.is_a?(Channel::Whatsapp) && inbox.channel.provider == 'unoapi' && inbox.lock_to_single_conversation?
+  end
+
+  def merge_inbox_conversation_aliases!(inbox)
+    conversations = inbox.conversations.non_group_conversations
+                         .where(contact_id: @contact.id, contact_inbox_id: @contact.contact_inboxes.where(inbox_id: inbox.id).select(:id))
+                         .to_a
     return if conversations.size <= 1
 
     target = preferred_conversation(conversations)
@@ -139,18 +228,14 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
     mergees.each(&:destroy!)
   end
 
-  def current_inbox_links
-    @contact.contact_inboxes.where(inbox_id: @channel.inbox.id)
-  end
-
   def preferred_conversation(conversations)
     conversations.select { |conversation| conversation.contact_inbox.source_id.exclude?('@') }
                  .max_by { |conversation| [conversation.last_activity_at, conversation.id] } ||
       conversations.max_by { |conversation| [conversation.last_activity_at, conversation.id] }
   end
 
-  def technical_email?
-    value = @contact.email.to_s.strip
+  def technical_email?(contact)
+    value = contact.email.to_s.strip
     value.present? && (!value.match?(Devise.email_regexp) || value.match?(/@(lid|s\.whatsapp\.net|g\.us|broadcast|newsletter)\z/i))
   end
 
