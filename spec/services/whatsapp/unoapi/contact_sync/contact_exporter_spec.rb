@@ -52,7 +52,7 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
     allow(client).to receive(:import_contact).and_return(response)
   end
 
-  it 'exports an inbox contact once and persists the canonical identity returned by UnoAPI' do
+  it 'exports an inbox contact once and persists the canonical identity returned by UnoAPI' do # rubocop:disable RSpec/MultipleExpectations
     expect(exporter.perform).to eq(:processed)
     expect(client).to have_received(:import_contact).with(
       phone_number: '5566999069708',
@@ -83,7 +83,7 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
     expect(client).not_to have_received(:import_contact)
   end
 
-  it 'replaces a stale local LID with the identity validated by the WhatsApp network' do
+  it 'replaces a stale local LID with the identity validated by the WhatsApp network' do # rubocop:disable RSpec/MultipleExpectations
     stale_lid = '99226763698235@lid'
     channel.inbox.update!(lock_to_single_conversation: true)
     contact.update!(bsuid: stale_lid)

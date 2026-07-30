@@ -332,7 +332,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
     end
 
     context 'when webhook payload contains an SMB message echo' do
-      it 'reconciles an echo with the original message without regressing its status' do
+      it 'reconciles an echo with the original message without regressing its status' do # rubocop:disable RSpec/ExampleLength
         contact = create(:contact, account: whatsapp_channel.account, phone_number: '+5581981829525')
         contact_inbox = create(
           :contact_inbox,

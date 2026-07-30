@@ -42,7 +42,7 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
       .to contain_exactly('273877414502425@lid', '5566998765432')
   end
 
-  it 'collapses an existing mobile alias without the ninth digit even with the same update timestamp' do
+  it 'collapses an existing mobile alias without the ninth digit even with the same update timestamp' do # rubocop:disable RSpec/ExampleLength
     channel.inbox.update!(lock_to_single_conversation: true)
     mobile_lid = '117398703231205@lid'
     mobile_payload = payload.merge(

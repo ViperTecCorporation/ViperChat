@@ -17,7 +17,7 @@
 #  index_channel_whatsapp_on_phone_number  (phone_number) UNIQUE
 #
 
-class Channel::Whatsapp < ApplicationRecord
+class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLength
   include Channelable
   include Reauthorizable
 
@@ -185,7 +185,7 @@ class Channel::Whatsapp < ApplicationRecord
     provider_config['use_group_conversation_schema'] = true unless provider_config.key?('use_group_conversation_schema')
   end
 
-  def normalize_unoapi_pix_config
+  def normalize_unoapi_pix_config # rubocop:disable Metrics/AbcSize
     return unless provider == 'unoapi'
 
     self.provider_config ||= {}
@@ -205,7 +205,7 @@ class Channel::Whatsapp < ApplicationRecord
     errors.add(:provider_config, 'Conection refused, verify Whatsapp Cloud API URL field')
   end
 
-  def validate_unoapi_pix_config
+  def validate_unoapi_pix_config # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
     return unless provider == 'unoapi'
 
     pix_merchant_name = provider_config['pix_merchant_name'].to_s.strip

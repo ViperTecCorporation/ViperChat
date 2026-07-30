@@ -123,7 +123,7 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
     message.content_attributes&.dig('whatsapp_interactive', 'type') == 'payment_request'
   end
 
-  def send_pix_payment_request(phone_number, message)
+  def send_pix_payment_request(phone_number, message) # rubocop:disable Metrics/MethodLength
     return fail_pix_payment_request(message, 'PIX payment requests are not supported in groups') if message.conversation.group?
 
     pix_key = whatsapp_channel.provider_config['pix_key'].to_s.strip
@@ -159,7 +159,7 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
     process_pix_payment_response(response, message)
   end
 
-  def process_pix_payment_response(response, message)
+  def process_pix_payment_response(response, message) # rubocop:disable Metrics/CyclomaticComplexity
     parsed_response = response.parsed_response
     status = parsed_response['statuses']&.first if parsed_response.is_a?(Hash)
     return process_response(response, message) if status.blank?

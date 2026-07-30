@@ -1,10 +1,10 @@
-class Whatsapp::Unoapi::ContactSync::ContactImporter
+class Whatsapp::Unoapi::ContactSync::ContactImporter # rubocop:disable Metrics/ClassLength
   class InvalidContactError < StandardError; end
   class IdentityConflictError < StandardError; end
 
   WHATSAPP_JID_SUFFIXES = %w[@lid @s.whatsapp.net @g.us @broadcast @newsletter].freeze
 
-  def self.build_for_page(channel:, payloads:, client: nil)
+  def self.build_for_page(channel:, payloads:, client: nil) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
     importers = payloads.map { |payload| new(channel: channel, payload: payload, client: client) }
     identities = importers.filter_map do |importer|
       importer.identity_for_preload
@@ -93,7 +93,7 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     base
   end
 
-  def ensure_mergeable!(left, right)
+  def ensure_mergeable!(left, right) # rubocop:disable Metrics/CyclomaticComplexity
     if left.bsuid.present? && right.bsuid.present? && left.bsuid != right.bsuid && !verified_contacts?(left, right)
       raise IdentityConflictError, "LID conflict: #{left.bsuid} != #{right.bsuid}"
     end
@@ -124,7 +124,7 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     contact.update!(attributes)
   end
 
-  def ensure_payload_matches_contact!(contact)
+  def ensure_payload_matches_contact!(contact) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     if contact.bsuid.present? && user_id.present? && contact.bsuid != user_id && !@network_identity_verified
       raise IdentityConflictError, "contact #{contact.id} already belongs to LID #{contact.bsuid}"
     end
@@ -263,7 +263,7 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     mergees.each(&:destroy!)
   end
 
-  def already_imported?
+  def already_imported? # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     return false if last_updated_ms.zero?
 
     links = if @links_by_source_id
@@ -300,9 +300,7 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
   def duplicate_account_phone?(contact_id)
     return false if phone_number.blank?
 
-    if @contact_ids_by_phone
-      return @contact_ids_by_phone.fetch(phone_number, []).any? { |candidate_id| candidate_id != contact_id }
-    end
+    return @contact_ids_by_phone.fetch(phone_number, []).any? { |candidate_id| candidate_id != contact_id } if @contact_ids_by_phone
 
     @account.contacts.where(phone_number: phone_number).where.not(id: contact_id).exists?
   end

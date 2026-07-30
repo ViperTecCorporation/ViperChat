@@ -89,18 +89,4 @@ describe Whatsapp::UnoapiWebhookSetupService do
     payload = JSON.parse(calls.first.last[:body])
     expect(payload['connectionType']).to eq('pairing_code')
   end
-
-  it 'sends pairing_code when selected in the provider configuration' do
-    channel.provider_config['connection_type'] = 'pairing_code'
-    calls = []
-    allow(HTTParty).to receive(:post) do |url, options|
-      calls << [url, options]
-      calls.length == 1 ? register_response : message_response
-    end
-
-    service.perform(channel)
-
-    payload = JSON.parse(calls.first.last[:body])
-    expect(payload['connectionType']).to eq('pairing_code')
-  end
 end

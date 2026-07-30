@@ -1,6 +1,6 @@
 require 'digest'
 
-class Whatsapp::Unoapi::ContactSync::ContactExporter
+class Whatsapp::Unoapi::ContactSync::ContactExporter # rubocop:disable Metrics/ClassLength
   EXPORT_ATTRIBUTE = 'unoapi_contact_export'.freeze
 
   def initialize(channel:, contact:, client:)
@@ -9,7 +9,7 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
     @client = client
   end
 
-  def perform
+  def perform # rubocop:disable Metrics/CyclomaticComplexity
     return :skipped if links.empty? || imported_from_unoapi?
 
     payload = export_payload
@@ -126,7 +126,7 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter
     end
   end
 
-  def identity_contacts(verified_lid, network_phone, chatwoot_phone)
+  def identity_contacts(verified_lid, network_phone, chatwoot_phone) # rubocop:disable Metrics/AbcSize
     phone_numbers = [@contact.phone_number, "+#{network_phone}", "+#{chatwoot_phone}"].compact_blank.uniq
     contacts = @channel.account.contacts.where(phone_number: phone_numbers).where.not(id: @contact.id).to_a
     contacts.concat(@channel.account.contacts.where(bsuid: verified_lid).where.not(id: @contact.id))
