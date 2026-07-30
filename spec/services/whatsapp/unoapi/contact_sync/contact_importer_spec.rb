@@ -44,32 +44,39 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
 
   it 'collapses an existing mobile alias without the ninth digit even with the same update timestamp' do
     channel.inbox.update!(lock_to_single_conversation: true)
+    mobile_lid = '117398703231205@lid'
+    mobile_payload = payload.merge(
+      user_id: mobile_lid,
+      phone_number: '551733453633',
+      display_name: 'Celular com prefixo de fixo'
+    )
+    mobile_importer = described_class.new(channel: channel, payload: mobile_payload)
     contact = create(
       :contact,
       account: account,
-      phone_number: '+556698765432',
-      bsuid: payload[:user_id],
-      name: 'Maria Silva'
+      phone_number: '+551733453633',
+      bsuid: mobile_lid,
+      name: 'Celular com prefixo de fixo'
     )
     legacy_link = create(
       :contact_inbox,
       inbox: channel.inbox,
       contact: contact,
-      source_id: '556698765432',
+      source_id: '551733453633',
       additional_attributes: { 'unoapi_last_updated_ms' => payload[:last_updated_ms] }
     )
     canonical_link = create(
       :contact_inbox,
       inbox: channel.inbox,
       contact: contact,
-      source_id: '5566998765432',
+      source_id: '5517933453633',
       additional_attributes: { 'unoapi_last_updated_ms' => payload[:last_updated_ms] }
     )
     lid_link = create(
       :contact_inbox,
       inbox: channel.inbox,
       contact: contact,
-      source_id: payload[:user_id],
+      source_id: mobile_lid,
       additional_attributes: { 'unoapi_last_updated_ms' => payload[:last_updated_ms] }
     )
     canonical_conversation = create(
@@ -90,10 +97,10 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
     )
     message = create(:message, account: account, inbox: channel.inbox, conversation: legacy_conversation, sender: contact)
 
-    expect(importer.perform).to eq(:processed)
-    expect(contact.reload.phone_number).to eq('+5566998765432')
+    expect(mobile_importer.perform).to eq(:processed)
+    expect(contact.reload.phone_number).to eq('+5517933453633')
     expect(channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
-      .to contain_exactly('5566998765432', payload[:user_id])
+      .to contain_exactly('5517933453633', mobile_lid)
     expect(channel.inbox.conversations.where(contact: contact).count).to eq(1)
     expect(message.reload.conversation).to eq(legacy_conversation)
     expect(Conversation.exists?(canonical_conversation.id)).to be(false)

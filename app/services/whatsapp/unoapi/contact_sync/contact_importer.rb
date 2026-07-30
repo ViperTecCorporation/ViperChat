@@ -148,7 +148,14 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
   end
 
   def prepare_legacy_phone_repair(contact)
-    @legacy_phone_source_id = contact.phone_number.delete_prefix('+') if legacy_phone_repair?(contact)
+    return unless legacy_phone_repair?(contact)
+
+    @legacy_phone_source_id = contact.phone_number.delete_prefix('+')
+    canonical_alias = known_canonical_mobile_alias(contact)
+    return if canonical_alias.blank?
+
+    @normalized_phone = canonical_alias
+    @source_ids = nil
   end
 
   def legacy_phone_repair?(contact)
@@ -158,7 +165,15 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     inserts_missing_ninth_digit = canonical_brazilian_mobile?(normalized_phone) &&
                                   contact_digits == phone_without_ninth_digit(normalized_phone)
 
-    removes_invalid_ninth_digit || inserts_missing_ninth_digit
+    removes_invalid_ninth_digit || inserts_missing_ninth_digit || known_canonical_mobile_alias(contact).present?
+  end
+
+  def known_canonical_mobile_alias(contact)
+    contact_digits = contact.phone_number.to_s.gsub(/\D/, '')
+    candidate = legacy_brazilian_mobile_candidate(contact_digits)
+    return unless canonical_brazilian_mobile?(candidate)
+
+    candidate if @inbox.contact_inboxes.exists?(contact: contact, source_id: candidate)
   end
 
   def equivalent_phone_numbers?(left, right)
