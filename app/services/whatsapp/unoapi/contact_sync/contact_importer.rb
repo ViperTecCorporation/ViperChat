@@ -4,8 +4,8 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
 
   WHATSAPP_JID_SUFFIXES = %w[@lid @s.whatsapp.net @g.us @broadcast @newsletter].freeze
 
-  def self.build_for_page(channel:, payloads:)
-    importers = payloads.map { |payload| new(channel: channel, payload: payload) }
+  def self.build_for_page(channel:, payloads:, client: nil)
+    importers = payloads.map { |payload| new(channel: channel, payload: payload, client: client) }
     identities = importers.filter_map do |importer|
       importer.identity_for_preload
     rescue InvalidContactError
@@ -29,11 +29,12 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     importers
   end
 
-  def initialize(channel:, payload:)
+  def initialize(channel:, payload:, client: nil)
     @channel = channel
     @inbox = channel.inbox
     @account = channel.account
     @payload = payload.with_indifferent_access
+    @client = client
   end
 
   def identity_for_preload
@@ -63,6 +64,8 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
 
   def import_contact
     contacts = candidate_contacts
+    verify_conflicting_lid!(contacts) if conflicting_lid?(contacts)
+    contacts = candidate_contacts if @network_identity_verified
     contact = merge_compatible_contacts(contacts)
     contact ||= create_contact
     update_contact(contact)
@@ -91,10 +94,10 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
   end
 
   def ensure_mergeable!(left, right)
-    if left.bsuid.present? && right.bsuid.present? && left.bsuid != right.bsuid
+    if left.bsuid.present? && right.bsuid.present? && left.bsuid != right.bsuid && !verified_contacts?(left, right)
       raise IdentityConflictError, "LID conflict: #{left.bsuid} != #{right.bsuid}"
     end
-    return if left.phone_number.blank? || right.phone_number.blank? || left.phone_number == right.phone_number
+    return if left.phone_number.blank? || right.phone_number.blank? || equivalent_phone_numbers?(left.phone_number, right.phone_number)
 
     raise IdentityConflictError, "phone conflict: #{left.phone_number} != #{right.phone_number}"
   end
@@ -113,15 +116,16 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     prepare_legacy_phone_repair(contact)
     attributes = {
       phone_number: @legacy_phone_source_id.present? ? phone_number : contact.phone_number.presence || phone_number,
-      bsuid: contact.bsuid.presence || user_id,
+      bsuid: resolved_bsuid(contact),
       whatsapp_username: username.presence || contact.whatsapp_username
     }.compact
     attributes[:name] = replacement_name if repairable_name?(contact)
+    attributes[:email] = nil if repairable_email?(contact)
     contact.update!(attributes)
   end
 
   def ensure_payload_matches_contact!(contact)
-    if contact.bsuid.present? && user_id.present? && contact.bsuid != user_id
+    if contact.bsuid.present? && user_id.present? && contact.bsuid != user_id && !@network_identity_verified
       raise IdentityConflictError, "contact #{contact.id} already belongs to LID #{contact.bsuid}"
     end
     return if contact.phone_number.blank? || phone_number.blank? || contact.phone_number == phone_number
@@ -152,6 +156,54 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     candidate.present? && contact.phone_number == "+#{candidate}" && valid_phone?(raw_phone_digits)
   end
 
+  def equivalent_phone_numbers?(left, right)
+    left_digits = left.to_s.gsub(/\D/, '')
+    right_digits = right.to_s.gsub(/\D/, '')
+    return true if left_digits == right_digits
+
+    shorter, longer = [left_digits, right_digits].sort_by(&:length)
+    shorter.start_with?('55') &&
+      legacy_brazilian_mobile_candidate(shorter) == longer &&
+      valid_phone?(shorter)
+  end
+
+  def conflicting_lid?(contacts)
+    return false if user_id.blank?
+
+    contacts.any? { |contact| contact.bsuid.present? && contact.bsuid != user_id }
+  end
+
+  def verify_conflicting_lid!(contacts)
+    conflicting_contact = contacts.find { |contact| contact.bsuid.present? && contact.bsuid != user_id }
+    unless @client && raw_phone_digits.present?
+      raise IdentityConflictError, "contact #{conflicting_contact.id} already belongs to LID #{conflicting_contact.bsuid}"
+    end
+
+    verification = @client.verify_contact(raw_phone_digits).with_indifferent_access
+    verified_lid = verification[:user_id].to_s.strip
+    unless verification[:status] == 'valid' && verified_lid.match?(/\A\d+@lid\z/)
+      raise IdentityConflictError, "network could not validate LID for contact #{conflicting_contact.id}"
+    end
+
+    @user_id = verified_lid
+    @source_ids = nil
+    @network_identity_verified = true
+  end
+
+  def verified_contacts?(*contacts)
+    return false unless @network_identity_verified
+
+    contacts.all? do |contact|
+      contact.phone_number.blank? || equivalent_phone_numbers?(contact.phone_number, phone_number)
+    end
+  end
+
+  def resolved_bsuid(contact)
+    return user_id if contact.bsuid.blank? || @network_identity_verified
+
+    contact.bsuid
+  end
+
   def repair_legacy_phone_source(contact)
     return if @legacy_phone_source_id.blank?
 
@@ -177,12 +229,23 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter
     return false unless links.map(&:contact_id).uniq.one?
     return false if duplicate_account_phone?(links.first.contact_id)
     return false if repairable_name?(links.first.contact)
+    return false if repairable_email?(links.first.contact)
 
     imported_at_or_after?(links)
   end
 
   def repairable_name?(contact)
     invalid_name?(contact.name) && replacement_name.present? && contact.name.to_s.strip != replacement_name
+  end
+
+  def repairable_email?(contact)
+    value = contact.email.to_s.strip
+    return false if value.blank?
+    return true unless value.match?(Devise.email_regexp)
+    return true if WHATSAPP_JID_SUFFIXES.any? { |suffix| value.downcase.end_with?(suffix) }
+
+    technical_identities = [user_id, raw_phone_digits, normalized_phone, phone_number].compact_blank
+    technical_identities.any? { |identity| value.casecmp?(identity.to_s) }
   end
 
   def imported_at_or_after?(links) = links.all? { |link| link.additional_attributes['unoapi_last_updated_ms'].to_i >= last_updated_ms }

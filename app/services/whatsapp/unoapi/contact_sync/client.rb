@@ -30,6 +30,19 @@ class Whatsapp::Unoapi::ContactSync::Client
     response.parsed_response
   end
 
+  def verify_contact(phone_number)
+    response = request(
+      "#{base_url}/#{session_id}/contacts",
+      method: :post,
+      body: { contacts: [phone_number] }.to_json
+    )
+    raise_for_response!(response)
+    contact = response.parsed_response&.fetch('contacts', nil)&.first
+    raise PermanentError, 'UnoAPI contact verification response is invalid' unless contact.is_a?(Hash)
+
+    contact
+  end
+
   def import_contact(payload)
     response = request(
       "#{base_url}/#{session_id}/contacts/import",

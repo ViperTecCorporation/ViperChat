@@ -123,6 +123,14 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
     expect(contact.reload.name).to eq('Maria Silva')
   end
 
+  it 'clears an invalid legacy email before updating the contact' do
+    contact = create(:contact, account: account, phone_number: '+5566998765432', name: 'Maria Silva')
+    contact.update_column(:email, '273877414502425') # rubocop:disable Rails/SkipsModelValidations
+
+    expect(importer.perform).to eq(:processed)
+    expect(contact.reload.email).to be_nil
+  end
+
   it 'uses the normalized phone as the name when UnoAPI has no valid name' do
     phone_payload = payload.merge(display_name: nil, push_name: nil)
     phone_importer = described_class.new(channel: channel, payload: phone_payload)
@@ -157,6 +165,27 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
     expect(fixed_importer.perform).to eq(:processed)
     expect(contact.reload).to have_attributes(name: '+556635175000', phone_number: '+556635175000')
     expect(contact_inbox.reload.source_id).to eq('556635175000')
+  end
+
+  it 'merges duplicate fixed-line contacts when one has an incorrect ninth digit' do
+    fixed_lid = '162332634288180@lid'
+    stale_contact = create(
+      :contact,
+      account: account,
+      phone_number: '+5566935175000',
+      bsuid: fixed_lid,
+      name: '+5566935175000'
+    )
+    create(:contact_inbox, inbox: channel.inbox, contact: stale_contact, source_id: fixed_lid)
+    correct_contact = create(:contact, account: account, phone_number: '+556635175000', name: 'Telefone fixo')
+    fixed_importer = described_class.new(
+      channel: channel,
+      payload: payload.merge(user_id: fixed_lid, phone_number: '556635175000', display_name: 'Telefone fixo')
+    )
+
+    expect { fixed_importer.perform }.to change(account.contacts, :count).by(-1)
+    expect(correct_contact.reload).to have_attributes(phone_number: '+556635175000', bsuid: fixed_lid)
+    expect(channel.inbox.contact_inboxes.where(source_id: fixed_lid).pick(:contact_id)).to eq(correct_contact.id)
   end
 
   it 'preserves a valid Brazilian toll-free number and uses it as the fallback name' do
@@ -228,5 +257,34 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
       /already belongs to LID/
     )
     expect(account.contacts.count).to eq(1)
+  end
+
+  it 'replaces a stale LID after the WhatsApp network validates the canonical LID' do
+    stale_lid = '99226763698235@lid'
+    contact = create(
+      :contact,
+      account: account,
+      phone_number: '+5566998765432',
+      bsuid: stale_lid,
+      name: 'Maria Silva'
+    )
+    create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '5566998765432')
+    create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: stale_lid)
+    client = instance_double(
+      Whatsapp::Unoapi::ContactSync::Client,
+      verify_contact: {
+        'input' => '556698765432',
+        'wa_id' => '556698765432',
+        'user_id' => payload[:user_id],
+        'status' => 'valid'
+      }
+    )
+    verified_importer = described_class.new(channel: channel, payload: payload, client: client)
+
+    expect(verified_importer.perform).to eq(:processed)
+    expect(client).to have_received(:verify_contact).with('556698765432')
+    expect(contact.reload.bsuid).to eq(payload[:user_id])
+    expect(channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
+      .to contain_exactly(stale_lid, payload[:user_id], '5566998765432')
   end
 end

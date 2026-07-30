@@ -33,7 +33,7 @@ class Whatsapp::Unoapi::ContactSync::PageJob < MutexApplicationJob
     mark_running(channel)
     page = client.contacts(cursor: cursor)
     validate_page!(page, cursor)
-    processed, failed = import_contacts(channel, page.fetch('contacts'))
+    processed, failed = import_contacts(channel, page.fetch('contacts'), client)
     finish_page(channel, page, cursor, processed, failed)
   rescue Whatsapp::Unoapi::ContactSync::Client::ProviderMismatchError => e
     mark_paused(channel, e.message)
@@ -52,10 +52,14 @@ class Whatsapp::Unoapi::ContactSync::PageJob < MutexApplicationJob
     )
   end
 
-  def import_contacts(channel, contacts)
+  def import_contacts(channel, contacts, client)
     processed = 0
     failed = 0
-    importers = Whatsapp::Unoapi::ContactSync::ContactImporter.build_for_page(channel: channel, payloads: contacts)
+    importers = Whatsapp::Unoapi::ContactSync::ContactImporter.build_for_page(
+      channel: channel,
+      payloads: contacts,
+      client: client
+    )
     contacts.zip(importers).each do |payload, importer|
       result = importer.perform
       processed += 1 if %i[processed skipped].include?(result)

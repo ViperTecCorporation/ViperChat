@@ -44,6 +44,34 @@ describe Whatsapp::Unoapi::ContactSync::Client do
     expect(request).to have_been_requested
   end
 
+  it 'verifies a phone against the WhatsApp network and returns its canonical LID' do
+    request = stub_request(:post, 'https://uno.example.com/5566996222471/contacts')
+              .with(
+                headers: { 'Authorization' => 'secret' },
+                body: { contacts: ['5566996599465'] }.to_json
+              )
+              .to_return(
+                status: 200,
+                body: {
+                  contacts: [
+                    {
+                      input: '5566996599465',
+                      wa_id: '556696599465',
+                      user_id: '278563693535251@lid',
+                      status: 'valid'
+                    }
+                  ]
+                }.to_json,
+                headers: { 'Content-Type' => 'application/json' }
+              )
+
+    expect(client.verify_contact('5566996599465')).to include(
+      'user_id' => '278563693535251@lid',
+      'status' => 'valid'
+    )
+    expect(request).to have_been_requested
+  end
+
   it 'imports a contact through the session endpoint' do
     payload = {
       phone_number: '5566999069708',
