@@ -11,8 +11,7 @@ describe Whatsapp::Providers::UnoapiService do
       provider_config: {
         'url' => 'https://uno.example.com',
         'api_key' => 'test_key',
-        'business_account_id' => '556600000000',
-        'phone_number_id' => 'random_id'
+        'business_account_id' => '556600000000'
       },
       sync_templates: false,
       validate_provider_config: false
@@ -38,6 +37,7 @@ describe Whatsapp::Providers::UnoapiService do
     before do
       whatsapp_channel.update!(
         provider_config: whatsapp_channel.provider_config.merge(
+          'phone_number_id' => 'random_id',
           'pix_merchant_name' => 'Minha Empresa',
           'pix_key' => 'financeiro@minhaempresa.com.br',
           'pix_key_type' => 'EMAIL'
