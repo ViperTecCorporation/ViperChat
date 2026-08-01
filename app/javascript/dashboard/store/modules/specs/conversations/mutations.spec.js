@@ -208,6 +208,30 @@ describe('#mutations', () => {
       ]);
       expect(emitter.emit).not.toHaveBeenCalled();
     });
+
+    it('places a backfilled message chronologically without moving the conversation timestamp backwards', () => {
+      const state = {
+        allConversations: [
+          {
+            id: 1,
+            timestamp: 200,
+            messages: [{ id: 10, conversation_id: 1, created_at: 200 }],
+          },
+        ],
+        selectedChatId: 1,
+      };
+
+      mutations[types.ADD_MESSAGE](state, {
+        id: 20,
+        conversation_id: 1,
+        created_at: 100,
+      });
+
+      expect(
+        state.allConversations[0].messages.map(message => message.id)
+      ).toEqual([20, 10]);
+      expect(state.allConversations[0].timestamp).toBe(200);
+    });
   });
 
   describe('#CHANGE_CONVERSATION_STATUS', () => {

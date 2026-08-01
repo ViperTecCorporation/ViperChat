@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
+import { useAlert } from 'dashboard/composables';
 import { useStore } from 'dashboard/composables/store';
 import conversationApi from 'dashboard/api/inbox/conversation';
 import Avatar from 'next/avatar/Avatar.vue';
@@ -8,6 +10,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Modal from 'dashboard/components/Modal.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
+import ConfirmationModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 
 const props = defineProps({
   conversationId: {
@@ -24,13 +27,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['memberRemoved']);
+const emit = defineEmits(['memberRemoved', 'memberRoleUpdated']);
 
 const show = defineModel('show', { type: Boolean, default: false });
 
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
+const { t } = useI18n();
 
 const members = ref([]);
 const searchQuery = ref('');
@@ -38,6 +42,8 @@ const currentPage = ref(1);
 const membersTotalCount = ref(0);
 const isLoading = ref(false);
 const hasLoadedOnce = ref(false);
+const updatingMemberId = ref(null);
+const selfDemoteConfirmation = ref(null);
 
 const hasMorePages = computed(
   () => members.value.length < membersTotalCount.value
@@ -79,6 +85,68 @@ const matchesSearch = member => {
 };
 
 const filteredMembers = computed(() => members.value.filter(matchesSearch));
+
+const isMemberAdmin = member => {
+  const metadata = member.metadata || {};
+  return (
+    metadata.is_admin === true ||
+    metadata.is_admin === 'true' ||
+    ['admin', 'superadmin'].includes(metadata.role?.toString().toLowerCase())
+  );
+};
+
+const participantPayload = member => {
+  const metadata = member.metadata || {};
+  const contact = memberContact(member);
+  const userId = [
+    metadata.user_id,
+    metadata.lid,
+    contact.bsuid,
+    metadata.jid,
+    member.participant_identifier,
+  ].find(value => value?.toString().endsWith('@lid'));
+  const phoneValue = [
+    metadata.wa_id,
+    metadata.jid,
+    member.participant_identifier,
+    contact.phone_number,
+  ].find(value => value && !value.toString().endsWith('@lid'));
+  const waId = phoneValue?.toString().replace(/\D/g, '');
+
+  return {
+    ...(userId ? { user_id: userId.toString() } : {}),
+    ...(waId?.length >= 8 ? { wa_id: waId } : {}),
+  };
+};
+
+const roleActionLabel = member =>
+  isMemberAdmin(member)
+    ? t('CONVERSATION.GROUP.DEMOTE_ADMIN')
+    : t('CONVERSATION.GROUP.PROMOTE_ADMIN');
+
+const roleFailureReason = error => {
+  if (error === 'already_admin') {
+    return t('CONVERSATION.GROUP.ROLE_ALREADY_ADMIN');
+  }
+  if (error === 'self_demote_confirmation_required') {
+    return t('CONVERSATION.GROUP.SELF_DEMOTE_CONFIRMATION_REQUIRED');
+  }
+  if (error === 'participant_not_found') {
+    return t('CONVERSATION.GROUP.ROLE_PARTICIPANT_NOT_FOUND');
+  }
+  return error.toString();
+};
+
+const failedParticipantMessage = failed => {
+  const identifier =
+    failed?.user_id || failed?.wa_id || failed?.participant || failed;
+  const error = failed?.error || 'provider_error';
+
+  return t('CONVERSATION.GROUP.ROLE_UPDATE_FAILED_ITEM', {
+    participant: identifier,
+    reason: roleFailureReason(error),
+  });
+};
 
 const fetchMembers = async (page = 1) => {
   if (isLoading.value) return;
@@ -134,6 +202,62 @@ const removeMember = async member => {
   members.value = members.value.filter(item => item.id !== member.id);
   membersTotalCount.value = Math.max(membersTotalCount.value - 1, 0);
   emit('memberRemoved');
+};
+
+const updateMemberRole = async member => {
+  if (!props.isSessionAdmin || updatingMemberId.value) return;
+
+  const action = isMemberAdmin(member) ? 'demote' : 'promote';
+  const isSelfDemote = action === 'demote' && member.session_participant;
+  if (isSelfDemote) {
+    const confirmed = await selfDemoteConfirmation.value.showConfirmation();
+    if (!confirmed) return;
+  }
+
+  const participant = participantPayload(member);
+  if (!participant.user_id && !participant.wa_id) {
+    useAlert(t('CONVERSATION.GROUP.ROLE_PARTICIPANT_NOT_FOUND'));
+    return;
+  }
+
+  updatingMemberId.value = member.id;
+  try {
+    const { data } = await conversationApi.updateGroupContactRoles({
+      conversationId: props.conversationId,
+      action,
+      participants: [participant],
+      confirmedSelfDemote: isSelfDemote,
+    });
+    const successful =
+      data[action === 'promote' ? 'promoted' : 'demoted'] || [];
+    if (!successful.length) {
+      Array(data.failed || []).forEach(failed => {
+        useAlert(failedParticipantMessage(failed));
+      });
+      return;
+    }
+
+    try {
+      await fetchMembers(1);
+    } catch {
+      // The role change already succeeded. Let the parent refresh retry
+      // without reporting the completed operation as failed.
+    }
+    emit('memberRoleUpdated');
+    useAlert(
+      action === 'promote'
+        ? t('CONVERSATION.GROUP.PROMOTE_SUCCESS')
+        : t('CONVERSATION.GROUP.DEMOTE_SUCCESS')
+    );
+  } catch (error) {
+    useAlert(
+      error.response?.data?.error ||
+        error.message ||
+        t('CONVERSATION.GROUP.ROLE_UPDATE_ERROR')
+    );
+  } finally {
+    updatingMemberId.value = null;
+  }
 };
 
 watch(
@@ -212,6 +336,24 @@ watch(
                 </span>
               </button>
 
+              <Button
+                v-if="isSessionAdmin"
+                v-tooltip.top="roleActionLabel(member)"
+                :icon="
+                  isMemberAdmin(member)
+                    ? 'i-lucide-shield-minus'
+                    : 'i-lucide-shield-plus'
+                "
+                size="xs"
+                ghost
+                :amber="isMemberAdmin(member)"
+                :blue="!isMemberAdmin(member)"
+                :aria-label="roleActionLabel(member)"
+                :disabled="Boolean(updatingMemberId)"
+                :is-loading="updatingMemberId === member.id"
+                @click="updateMemberRole(member)"
+              />
+
               <ComposeConversation
                 v-if="memberContact(member).id"
                 :contact-id="String(memberContact(member).id)"
@@ -268,4 +410,11 @@ watch(
       </div>
     </div>
   </Modal>
+  <ConfirmationModal
+    ref="selfDemoteConfirmation"
+    :title="$t('CONVERSATION.GROUP.SELF_DEMOTE_CONFIRM_TITLE')"
+    :description="$t('CONVERSATION.GROUP.SELF_DEMOTE_CONFIRM_DESCRIPTION')"
+    :confirm-label="$t('CONVERSATION.GROUP.DEMOTE_ADMIN')"
+    :cancel-label="$t('CONVERSATION.GROUP.CANCEL')"
+  />
 </template>

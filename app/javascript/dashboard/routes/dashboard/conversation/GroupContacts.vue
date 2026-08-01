@@ -11,6 +11,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import GroupAddMembersModal from './GroupAddMembersModal.vue';
 import GroupMembersModal from './GroupMembersModal.vue';
 import GroupJoinRequestsModal from './GroupJoinRequestsModal.vue';
+import GroupPermissionsModal from './GroupPermissionsModal.vue';
 
 const props = defineProps({
   conversationId: {
@@ -38,6 +39,7 @@ const isUploadingPicture = ref(false);
 const showMembersModal = ref(false);
 const showAddMembersModal = ref(false);
 const showJoinRequestsModal = ref(false);
+const showPermissionsModal = ref(false);
 const isEditingTitle = ref(false);
 const joinRequestsCount = ref(0);
 const groupPictureInput = ref(null);
@@ -273,6 +275,23 @@ const persistGroupInfo = async () => {
     storedGroupPicture.value;
 };
 
+const restoreGroupInfoFields = () => {
+  groupTitle.value = groupInfo.value.group_title || '';
+  groupDescription.value = groupInfo.value.group_description || '';
+  groupPictureUrl.value =
+    groupInfo.value.group_picture ||
+    groupInfo.value.additional_attributes?.group_picture ||
+    storedGroupPicture.value;
+};
+
+const showGroupUpdateError = error => {
+  useAlert(
+    error.response?.data?.error ||
+      error.message ||
+      t('CONVERSATION.GROUP.UPDATE_ERROR')
+  );
+};
+
 const openGroupPicturePicker = () => {
   if (!isSessionAdmin.value || isUploadingPicture.value) return;
   groupPictureInput.value?.click();
@@ -289,6 +308,9 @@ const uploadGroupPicture = async event => {
     const { fileUrl } = await uploadFile(file);
     groupPictureUrl.value = fileUrl;
     await persistGroupInfo();
+  } catch (error) {
+    restoreGroupInfoFields();
+    showGroupUpdateError(error);
   } finally {
     isUploadingPicture.value = false;
     event.target.value = '';
@@ -302,6 +324,9 @@ const updateGroupInfo = async () => {
   isUpdatingGroup.value = true;
   try {
     await persistGroupInfo();
+  } catch (error) {
+    restoreGroupInfoFields();
+    showGroupUpdateError(error);
   } finally {
     isUpdatingGroup.value = false;
   }
@@ -324,6 +349,9 @@ const updateGroupTitle = async () => {
   try {
     await persistGroupInfo();
     isEditingTitle.value = false;
+  } catch (error) {
+    restoreGroupInfoFields();
+    showGroupUpdateError(error);
   } finally {
     isUpdatingGroup.value = false;
   }
@@ -331,6 +359,20 @@ const updateGroupTitle = async () => {
 
 const handleJoinRequestProcessed = async () => {
   await syncGroupContacts();
+};
+
+const handlePermissionsUpdated = data => {
+  groupInfo.value = data || {};
+  updateConversationStore(data);
+};
+
+const handleGroupLeft = data => {
+  groupInfo.value = data || {};
+  store.dispatch(
+    'removeConversationFromList',
+    Number(data?.id || props.conversationId)
+  );
+  joinRequestsCount.value = 0;
 };
 </script>
 
@@ -411,6 +453,15 @@ const handleJoinRequestProcessed = async () => {
           >
             {{ groupDisplayTitle }}
           </h3>
+          <Button
+            v-tooltip.top="$t('CONVERSATION.GROUP.PERMISSIONS')"
+            icon="i-lucide-shield-check"
+            size="xs"
+            ghost
+            slate
+            :aria-label="$t('CONVERSATION.GROUP.PERMISSIONS')"
+            @click="showPermissionsModal = true"
+          />
           <Button
             v-if="isSessionAdmin"
             v-tooltip.top="$t('CONVERSATION.GROUP.TITLE')"
@@ -584,6 +635,7 @@ const handleJoinRequestProcessed = async () => {
       :total-count="groupMemberCount"
       :is-session-admin="isSessionAdmin"
       @member-removed="handleJoinRequestProcessed"
+      @member-role-updated="fetchGroupContacts({ reset: true })"
     />
     <GroupAddMembersModal
       v-model:show="showAddMembersModal"
@@ -594,6 +646,16 @@ const handleJoinRequestProcessed = async () => {
       v-model:show="showJoinRequestsModal"
       :conversation-id="conversationId"
       @request-processed="handleJoinRequestProcessed"
+    />
+    <GroupPermissionsModal
+      v-model:show="showPermissionsModal"
+      :conversation-id="conversationId"
+      :is-session-admin="isSessionAdmin"
+      :announcement="Boolean(groupInfo.group_announcement)"
+      :locked="Boolean(groupInfo.group_locked)"
+      :join-approval-mode="groupInfo.group_join_approval_mode || ''"
+      @permissions-updated="handlePermissionsUpdated"
+      @group-left="handleGroupLeft"
     />
   </div>
 </template>

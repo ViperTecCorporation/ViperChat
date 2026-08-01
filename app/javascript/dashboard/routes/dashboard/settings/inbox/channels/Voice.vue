@@ -136,14 +136,14 @@ async function createChannel() {
   if (!isFormValid) return;
 
   try {
-      const channel = await store.dispatch('inboxes/createVoiceChannel', {
-        name: `Voice (${state.phoneNumber})`,
-        voice: {
-          phone_number: state.phoneNumber,
-          provider: state.provider,
-          provider_config: getProviderConfig(),
-        },
-      });
+    const channel = await store.dispatch('inboxes/createVoiceChannel', {
+      name: `Voice (${state.phoneNumber})`,
+      voice: {
+        phone_number: state.phoneNumber,
+        provider: state.provider,
+        provider_config: getProviderConfig(),
+      },
+    });
 
     router.replace({
       name: 'settings_inboxes_add_agents',
@@ -206,9 +206,7 @@ async function createChannel() {
           v-model="state.authToken"
           type="password"
           :label="t('INBOX_MGMT.ADD.VOICE.TWILIO.AUTH_TOKEN.LABEL')"
-          :placeholder="
-            t('INBOX_MGMT.ADD.VOICE.TWILIO.AUTH_TOKEN.PLACEHOLDER')
-          "
+          :placeholder="t('INBOX_MGMT.ADD.VOICE.TWILIO.AUTH_TOKEN.PLACEHOLDER')"
           :message="formErrors.authToken"
           :message-type="formErrors.authToken ? 'error' : 'info'"
           @blur="v$.authToken?.$touch"
@@ -253,9 +251,7 @@ async function createChannel() {
         <Input
           v-model="state.sipDomain"
           :label="t('INBOX_MGMT.ADD.VOICE.CUSTOM.SIP_DOMAIN.LABEL')"
-          :placeholder="
-            t('INBOX_MGMT.ADD.VOICE.CUSTOM.SIP_DOMAIN.PLACEHOLDER')
-          "
+          :placeholder="t('INBOX_MGMT.ADD.VOICE.CUSTOM.SIP_DOMAIN.PLACEHOLDER')"
           :message="formErrors.sipDomain"
           :message-type="formErrors.sipDomain ? 'error' : 'info'"
           @blur="v$.sipDomain?.$touch"
@@ -271,7 +267,10 @@ async function createChannel() {
 
         <label class="flex flex-col gap-1 text-sm text-n-slate-11">
           {{ t('INBOX_MGMT.ADD.VOICE.CUSTOM.SIP_TRANSPORT.LABEL') }}
-          <select v-model="state.sipTransport" class="rounded-md border-n-strong">
+          <select
+            v-model="state.sipTransport"
+            class="rounded-md border-n-strong"
+          >
             <option value="wss">
               {{ t('INBOX_MGMT.ADD.VOICE.CUSTOM.SIP_TRANSPORT.WSS') }}
             </option>
@@ -295,7 +294,10 @@ async function createChannel() {
 
         <label class="flex flex-col gap-1 text-sm text-n-slate-11">
           {{ t('INBOX_MGMT.ADD.VOICE.CUSTOM.TRANSFER_MODE.LABEL') }}
-          <select v-model="state.transferMode" class="rounded-md border-n-strong">
+          <select
+            v-model="state.transferMode"
+            class="rounded-md border-n-strong"
+          >
             <option value="sip_refer">
               {{ t('INBOX_MGMT.ADD.VOICE.CUSTOM.TRANSFER_MODE.SIP_REFER') }}
             </option>

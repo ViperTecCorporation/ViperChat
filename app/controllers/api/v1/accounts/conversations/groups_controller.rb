@@ -10,7 +10,10 @@ class Api::V1::Accounts::Conversations::GroupsController < Api::V1::Accounts::Ba
       participants: participant_payloads,
       join_approval_mode: group_params[:join_approval_mode]
     )
-    return render json: { error: provider_error(response, 'Provider failed to create group') }, status: :unprocessable_entity unless response.success?
+    unless response.success?
+      return render json: { error: provider_error(response, 'Provider failed to create group') },
+                    status: provider_failure_status(response)
+    end
 
     @conversation = create_local_group_conversation(response.parsed_response.with_indifferent_access)
     render 'api/v1/accounts/conversations/create'
@@ -93,6 +96,13 @@ class Api::V1::Accounts::Conversations::GroupsController < Api::V1::Accounts::Ba
   end
 
   def provider_error(response, fallback)
-    response.parsed_response.try(:[], 'error') || fallback
+    payload = response.parsed_response
+    payload = payload.with_indifferent_access if payload.respond_to?(:with_indifferent_access)
+    payload.try(:[], :error) || fallback
+  end
+
+  def provider_failure_status(response)
+    status = response.code.to_i
+    status.between?(400, 599) ? status : :unprocessable_entity
   end
 end

@@ -17,7 +17,6 @@ import ChangePassword from './ChangePassword.vue';
 import NotificationPreferences from './NotificationPreferences.vue';
 import AudioNotifications from './AudioNotifications.vue';
 import SectionLayout from '../account/components/SectionLayout.vue';
-import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import AccessToken from './AccessToken.vue';
 import MfaSettingsCard from './MfaSettingsCard.vue';
 import ActiveSessions from './ActiveSessions.vue';
@@ -44,7 +43,6 @@ export default {
     AccessToken,
     MfaSettingsCard,
     ActiveSessions,
-    BaseSettingsHeader,
   },
   setup() {
     const { isEditorHotKeyEnabled, updateUISettings } = useUISettings();

@@ -489,6 +489,11 @@ const actions = {
     }
   },
 
+  removeConversationFromList({ commit, dispatch }, conversationId) {
+    commit(types.DELETE_CONVERSATION, conversationId);
+    dispatch('conversationStats/get', {}, { root: true });
+  },
+
   addConversation({ commit, state, dispatch, rootState }, conversation) {
     const { currentInbox, appliedFilters } = state;
     const {

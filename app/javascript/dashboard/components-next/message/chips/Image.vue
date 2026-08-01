@@ -77,7 +77,10 @@ const handleError = () => {
   clearRetryTimer();
   retryTimer = setTimeout(() => {
     cacheBust.value = Date.now();
-    logDebug('retrying image load', { retryCount: retryCount.value, cacheBust: cacheBust.value });
+    logDebug('retrying image load', {
+      retryCount: retryCount.value,
+      cacheBust: cacheBust.value,
+    });
   }, delay);
 };
 
@@ -86,7 +89,10 @@ watch(
   () => {
     resetRetryState();
     cacheBust.value = Date.now();
-    logDebug('dataUrl changed', { dataUrl: attachment.value?.dataUrl, thumbUrl: attachment.value?.thumbUrl });
+    logDebug('dataUrl changed', {
+      dataUrl: attachment.value?.dataUrl,
+      thumbUrl: attachment.value?.thumbUrl,
+    });
   }
 );
 
@@ -96,7 +102,8 @@ watch(
     if (!value) return;
     logDebug('opening gallery', {
       attachment: attachment.value,
-      filteredCurrentChatAttachmentsCount: filteredCurrentChatAttachments.value.length,
+      filteredCurrentChatAttachmentsCount:
+        filteredCurrentChatAttachments.value.length,
     });
   }
 );

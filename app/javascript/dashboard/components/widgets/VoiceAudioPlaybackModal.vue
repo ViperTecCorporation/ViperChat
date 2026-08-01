@@ -18,7 +18,8 @@ const errorMessage = ref('');
 const inboxes = computed(() => store.getters['inboxes/getInboxes'] || []);
 const hasCustomVoiceInbox = computed(() =>
   inboxes.value.some(
-    inbox => inbox.channel_type === INBOX_TYPES.VOICE && inbox.provider === 'custom'
+    inbox =>
+      inbox.channel_type === INBOX_TYPES.VOICE && inbox.provider === 'custom'
   )
 );
 
@@ -59,7 +60,10 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  CustomVoiceClient.removeEventListener('call:audio_blocked', handleAudioBlocked);
+  CustomVoiceClient.removeEventListener(
+    'call:audio_blocked',
+    handleAudioBlocked
+  );
 });
 </script>
 

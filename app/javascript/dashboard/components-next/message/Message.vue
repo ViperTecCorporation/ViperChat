@@ -43,6 +43,7 @@ import CSATBubble from './bubbles/CSAT.vue';
 import FormBubble from './bubbles/Form.vue';
 import VoiceCallBubble from './bubbles/VoiceCall.vue';
 import StickerBubble from './bubbles/Sticker.vue';
+import CardsBubble from './bubbles/Cards.vue';
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
@@ -155,6 +156,11 @@ const { isAnInternalChannel, isAWhatsAppChannel, isATwilioWhatsAppChannel } =
   useInbox(props.inboxId);
 const inboxGetter = useMapGetter('inboxes/getInbox');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
+const isUnoapiInbox = computed(
+  () =>
+    inbox.value.channel_type === 'Channel::Whatsapp' &&
+    inbox.value.provider === 'unoapi'
+);
 const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
 
@@ -394,6 +400,10 @@ const componentToRender = computed(() => {
     return StickerBubble;
   }
 
+  if (props.contentType === CONTENT_TYPES.CARDS) {
+    return CardsBubble;
+  }
+
   if (props.contentType === CONTENT_TYPES.INCOMING_EMAIL) {
     return EmailBubble;
   }
@@ -489,7 +499,16 @@ const contextMenuEnabledOptions = computed(() => {
       !isFailedOrProcessing &&
       !isMessageDeleted.value,
     cannedResponse: isOutgoing && hasText && !isMessageDeleted.value,
-    edit: false,
+    edit:
+      isUnoapiInbox.value &&
+      isOutgoing &&
+      hasText &&
+      !hasAttachments &&
+      !!props.sourceId &&
+      !props.private &&
+      props.contentType === CONTENT_TYPES.TEXT &&
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
     copyLink: !isFailedOrProcessing,
     translate: !isFailedOrProcessing && !isMessageDeleted.value && hasText,
     replyTo:
@@ -514,6 +533,7 @@ const shouldRenderMessage = computed(() => {
   const isEmailContentType = props.contentType === CONTENT_TYPES.INCOMING_EMAIL;
   const isUnsupported = props.contentAttributes?.isUnsupported;
   const isStickerContentType = props.contentType === CONTENT_TYPES.STICKER;
+  const isCardsContentType = props.contentType === CONTENT_TYPES.CARDS;
   const isAnIntegrationMessage =
     props.contentType === CONTENT_TYPES.INTEGRATIONS;
   const isFailedMessage = props.status === MESSAGE_STATUS.FAILED;
@@ -525,6 +545,7 @@ const shouldRenderMessage = computed(() => {
     isEmailContentType ||
     isUnsupported ||
     isStickerContentType ||
+    isCardsContentType ||
     isAnIntegrationMessage ||
     isFailedMessage ||
     hasExternalError ||
@@ -558,7 +579,9 @@ const messageAttachments = computed(() => {
 });
 
 const shouldShowDeletedMediaNotice = computed(() => {
-  return isDeletedContentPreserved.value && componentToRender.value !== TextBubble;
+  return (
+    isDeletedContentPreserved.value && componentToRender.value !== TextBubble
+  );
 });
 
 const longPressStartPoint = ref(null);

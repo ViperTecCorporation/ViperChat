@@ -108,9 +108,7 @@ const getAttachmentSelectionKeys = attachment => {
     name,
   ];
 
-  return candidates
-    .map(value => (value ? String(value) : ''))
-    .filter(Boolean);
+  return candidates.map(value => (value ? String(value) : '')).filter(Boolean);
 };
 const { t } = useI18n();
 const router = useRouter();
@@ -146,7 +144,11 @@ const getExtension = attachment => {
   ).toString();
   const byType =
     attachment?.extension ||
-    (type.includes('/') ? type.split('/')[1] : type.includes('.') ? type.split('.').pop() : '');
+    (type.includes('/')
+      ? type.split('/')[1]
+      : type.includes('.')
+        ? type.split('.').pop()
+        : '');
 
   const byName =
     attachment?.file_name ||
@@ -193,9 +195,29 @@ const getNormalizedType = attachment => {
     if (url.includes('image')) return 'image';
   }
 
-  const audioExts = ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'oga', 'flac', 'opus', 'amr'];
+  const audioExts = [
+    'mp3',
+    'm4a',
+    'aac',
+    'wav',
+    'ogg',
+    'oga',
+    'flac',
+    'opus',
+    'amr',
+  ];
   const videoExts = ['mp4', 'mov', 'mkv', 'webm', 'avi', 'm4v'];
-  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'bmp', 'tiff', 'svg'];
+  const imageExts = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp',
+    'heic',
+    'bmp',
+    'tiff',
+    'svg',
+  ];
 
   if (audioExts.includes(ext)) return 'audio';
   if (videoExts.includes(ext)) return 'video';
@@ -207,7 +229,8 @@ const getNormalizedType = attachment => {
 const isImage = attachment => getNormalizedType(attachment) === 'image';
 const isVideo = attachment => getNormalizedType(attachment) === 'video';
 const isAudio = attachment => getNormalizedType(attachment) === 'audio';
-const isMediaFile = attachment => ['image', 'video', 'audio'].includes(getNormalizedType(attachment));
+const isMediaFile = attachment =>
+  ['image', 'video', 'audio'].includes(getNormalizedType(attachment));
 
 const getDisplayName = attachment => {
   const name =
@@ -246,7 +269,9 @@ const downloadAttachment = async attachment => {
   }
   const type = attachment?.file_type || attachment?.fileType;
   const extension = getExtension(attachment);
-  const fileName = getDisplayName(attachment) || `attachment${extension ? `.${extension}` : ''}`;
+  const fileName =
+    getDisplayName(attachment) ||
+    `attachment${extension ? `.${extension}` : ''}`;
   try {
     await downloadFile({ url, type, extension, fileName });
   } catch (error) {
@@ -465,7 +490,10 @@ const isAttachmentSelected = attachment => {
 
 const selectedDeleteIds = computed(() =>
   selectedAttachments.value
-    .map(attachment => attachment?.id || attachment?.attachment_id || attachment?.attachmentId)
+    .map(
+      attachment =>
+        attachment?.id || attachment?.attachment_id || attachment?.attachmentId
+    )
     .filter(Boolean)
 );
 
@@ -846,14 +874,16 @@ watch(
         </div>
 
         <div v-else class="flex flex-col gap-6">
-          <div class="flex flex-wrap items-center gap-4 text-sm text-n-slate-11">
+          <div
+            class="flex flex-wrap items-center gap-4 text-sm text-n-slate-11"
+          >
             <button
               type="button"
               class="inline-flex items-center gap-1 rounded-md px-2 py-1 transition cursor-pointer"
               :class="[
                 mediaFilter === 'all'
                   ? 'bg-n-alpha-3 text-n-slate-12'
-                  : 'hover:bg-n-alpha-2'
+                  : 'hover:bg-n-alpha-2',
               ]"
               @click="setMediaFilter('all')"
             >
@@ -869,7 +899,7 @@ watch(
               :class="[
                 mediaFilter === 'image'
                   ? 'bg-n-alpha-3 text-n-slate-12'
-                  : 'hover:bg-n-alpha-2'
+                  : 'hover:bg-n-alpha-2',
               ]"
               @click="setMediaFilter('image')"
             >
@@ -885,7 +915,7 @@ watch(
               :class="[
                 mediaFilter === 'video'
                   ? 'bg-n-alpha-3 text-n-slate-12'
-                  : 'hover:bg-n-alpha-2'
+                  : 'hover:bg-n-alpha-2',
               ]"
               @click="setMediaFilter('video')"
             >
@@ -901,7 +931,7 @@ watch(
               :class="[
                 mediaFilter === 'audio'
                   ? 'bg-n-alpha-3 text-n-slate-12'
-                  : 'hover:bg-n-alpha-2'
+                  : 'hover:bg-n-alpha-2',
               ]"
               @click="setMediaFilter('audio')"
             >
@@ -1011,10 +1041,10 @@ watch(
                     'ring-2 ring-white/70 shadow-lg opacity-100':
                       isAttachmentSelected(attachment),
                   }"
-                  >
-                    <span
-                    class="i-lucide-check w-3 h-3 text-n-brand"
+                >
+                  <span
                     v-if="isAttachmentSelected(attachment)"
+                    class="i-lucide-check w-3 h-3 text-n-brand"
                   />
                 </div>
                 <div
@@ -1042,13 +1072,23 @@ watch(
                     </span>
                   </div>
                 </div>
-                <div class="flex items-center justify-between text-xs text-n-slate-11">
+                <div
+                  class="flex items-center justify-between text-xs text-n-slate-11"
+                >
                   <span class="truncate">
-                    {{ attachment.file_name || attachment.filename || attachment.id }}
+                    {{
+                      attachment.file_name ||
+                      attachment.filename ||
+                      attachment.id
+                    }}
                   </span>
                   <span class="flex items-center gap-1">
                     <i class="i-lucide-clock-3 w-3.5 h-3.5" />
-                    {{ formatDateTime(attachment.created_at || attachment.timestamp) }}
+                    {{
+                      formatDateTime(
+                        attachment.created_at || attachment.timestamp
+                      )
+                    }}
                   </span>
                 </div>
               </button>
@@ -1062,10 +1102,7 @@ watch(
           </div>
 
           <div v-if="activeTab === 'docs'" class="flex flex-col gap-3">
-            <div
-              v-if="documents.length"
-              class="flex flex-col gap-4"
-            >
+            <div v-if="documents.length" class="flex flex-col gap-4">
               <div
                 v-for="group in Object.values(groupedDocs)"
                 :key="group.label"
@@ -1093,23 +1130,32 @@ watch(
                         : openDocument(doc, $event)
                     "
                   >
-                    <span class="i-lucide-file-text w-5 h-5 text-n-slate-11 flex-shrink-0" />
+                    <span
+                      class="i-lucide-file-text w-5 h-5 text-n-slate-11 flex-shrink-0"
+                    />
                     <div class="flex flex-col min-w-0 gap-0.5">
                       <span class="text-sm text-n-slate-12 truncate">
                         {{ getDisplayName(doc) }}
                       </span>
-                      <span class="text-xs text-n-slate-11 flex items-center gap-2">
+                      <span
+                        class="text-xs text-n-slate-11 flex items-center gap-2"
+                      >
                         <span class="flex items-center gap-1">
                           <i class="i-lucide-clock-3 w-3.5 h-3.5" />
                           {{ formatDateTime(doc.created_at || doc.timestamp) }}
                         </span>
-                        <span v-if="doc.file_size" class="flex items-center gap-1">
+                        <span
+                          v-if="doc.file_size"
+                          class="flex items-center gap-1"
+                        >
                           <span class="i-lucide-database w-3.5 h-3.5" />
                           {{ formatSize(doc.file_size) }}
                         </span>
                       </span>
                     </div>
-                    <span class="i-lucide-download w-4 h-4 text-n-slate-11 flex-shrink-0" />
+                    <span
+                      class="i-lucide-download w-4 h-4 text-n-slate-11 flex-shrink-0"
+                    />
                     <span
                       v-if="isSelectionActive"
                       class="absolute top-2 right-2 w-4 h-4 rounded-full border border-blue-500 bg-blue-500 text-white shadow-md ring-1 ring-blue-400/70 flex items-center justify-center text-[10px]"
@@ -1118,10 +1164,10 @@ watch(
                         'ring-2 ring-white/70 shadow-lg opacity-100':
                           isAttachmentSelected(doc),
                       }"
-                      >
-                        <span
-                        class="i-lucide-check w-3 h-3 text-n-brand"
+                    >
+                      <span
                         v-if="isAttachmentSelected(doc)"
+                        class="i-lucide-check w-3 h-3 text-n-brand"
                       />
                     </span>
                   </a>
@@ -1161,7 +1207,9 @@ watch(
                     :class="{
                       'ring-1 ring-blue-500':
                         isForwardSelectionActive &&
-                        selectedLinkMessageIds.includes(Number(link.message_id)),
+                        selectedLinkMessageIds.includes(
+                          Number(link.message_id)
+                        ),
                     }"
                     :href="link.url"
                     target="_blank"
@@ -1179,7 +1227,10 @@ watch(
                           :alt="link.url"
                           @error="onPreviewError"
                         />
-                        <span v-else class="i-lucide-link-2 w-4 h-4 text-n-slate-11" />
+                        <span
+                          v-else
+                          class="i-lucide-link-2 w-4 h-4 text-n-slate-11"
+                        />
                       </span>
                       <span class="flex items-center gap-2 truncate">
                         <span class="i-lucide-link-2 w-4 h-4 text-n-slate-11" />
@@ -1193,14 +1244,22 @@ watch(
                       v-if="isForwardSelectionActive"
                       class="absolute top-2 right-2 w-4 h-4 rounded-full border border-blue-500 bg-blue-500 text-white shadow-md ring-1 ring-blue-400/70 flex items-center justify-center text-[10px]"
                       :class="{
-                        'opacity-40': !selectedLinkMessageIds.includes(Number(link.message_id)),
+                        'opacity-40': !selectedLinkMessageIds.includes(
+                          Number(link.message_id)
+                        ),
                         'ring-2 ring-white/70 shadow-lg opacity-100':
-                          selectedLinkMessageIds.includes(Number(link.message_id)),
+                          selectedLinkMessageIds.includes(
+                            Number(link.message_id)
+                          ),
                       }"
-                      >
-                        <span
+                    >
+                      <span
+                        v-if="
+                          selectedLinkMessageIds.includes(
+                            Number(link.message_id)
+                          )
+                        "
                         class="i-lucide-check w-3 h-3 text-n-brand"
-                        v-if="selectedLinkMessageIds.includes(Number(link.message_id))"
                       />
                     </span>
                   </a>
@@ -1222,10 +1281,7 @@ watch(
             </div>
           </div>
 
-          <div
-            v-if="hasMoreAttachments"
-            class="flex justify-center pt-2"
-          >
+          <div v-if="hasMoreAttachments" class="flex justify-center pt-2">
             <Button
               size="sm"
               variant="ghost"
@@ -1240,10 +1296,7 @@ watch(
                   class="i-lucide-loader-2 animate-spin"
                 />
                 <span>{{ $t('CONVERSATION.MEDIA_LIBRARY.LOAD_MORE') }}</span>
-                <span
-                  v-if="totalCountFromMeta"
-                  class="text-xs text-n-slate-11"
-                >
+                <span v-if="totalCountFromMeta" class="text-xs text-n-slate-11">
                   {{ attachmentList.length }} / {{ totalCountFromMeta }}
                 </span>
               </span>

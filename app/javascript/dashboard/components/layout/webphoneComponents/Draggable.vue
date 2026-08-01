@@ -1,14 +1,3 @@
-<template>
-  <div
-    ref="draggable"
-    :class="['absolute cursor-pointer', borderClass, 'rounded-xl', 'z-40']"
-    :style="{ left: x + 'px', top: y + 'px' }"
-    @mousedown="startDrag"
-  >
-    <slot />
-  </div>
-</template>
-
 <script>
 export default {
   props: {
@@ -93,6 +82,18 @@ export default {
   },
 };
 </script>
+
+<template>
+  <div
+    ref="draggable"
+    class="absolute cursor-pointer rounded-xl z-40"
+    :class="[borderClass]"
+    :style="{ left: x + 'px', top: y + 'px' }"
+    @mousedown="startDrag"
+  >
+    <slot />
+  </div>
+</template>
 
 <style>
 body {

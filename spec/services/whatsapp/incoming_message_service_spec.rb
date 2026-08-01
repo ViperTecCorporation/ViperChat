@@ -86,6 +86,16 @@ describe Whatsapp::IncomingMessageService do
         described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
         expect(whatsapp_channel.inbox.messages.count).to eq(1)
       end
+
+      it 'accepts the same provider message id in different inboxes' do
+        other_channel = create(:channel_whatsapp, sync_templates: false)
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        described_class.new(inbox: other_channel.inbox, params: params).perform
+
+        expect(whatsapp_channel.inbox.messages.where(source_id: params[:messages].first[:id]).count).to eq(1)
+        expect(other_channel.inbox.messages.where(source_id: params[:messages].first[:id]).count).to eq(1)
+      end
     end
 
     context 'when unsupported message types' do
@@ -214,6 +224,66 @@ describe Whatsapp::IncomingMessageService do
     end
 
     context 'when valid interactive message params' do
+      let(:carousel_message) do
+        {
+          'from' => '2423423243',
+          'id' => 'carousel-message-id',
+          'timestamp' => '1633034394',
+          'type' => 'interactive',
+          'context' => { 'id' => 'original-message-id' },
+          'referral' => { 'source_url' => 'https://example.com/referral' },
+          'interactive' => {
+            'type' => 'carousel',
+            'body' => { 'text' => 'Confira as últimas ofertas!' },
+            'carousel' => {
+              'cards' => [
+                {
+                  'header' => { 'type' => 'image', 'image' => { 'link' => 'https://example.com/one.jpg' } },
+                  'body' => { 'text' => 'Sistema de automação comercial #1' },
+                  'action' => {
+                    'buttons' => [
+                      {
+                        'type' => 'cta_url',
+                        'url' => { 'title' => 'Agende uma demonstração', 'link' => 'https://vipertec.com.br' }
+                      }
+                    ]
+                  }
+                },
+                {
+                  'header' => { 'text' => 'Segurança' },
+                  'body' => { 'text' => 'Segurança a um palmo de sua mão. #2' },
+                  'action' => {
+                    'buttons' => [
+                      {
+                        'type' => 'reply',
+                        'reply' => { 'title' => 'Tenho interesse', 'id' => 'interested' }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      end
+
+      let(:original_message) do
+        contact = create(:contact, account: whatsapp_channel.account)
+        contact_inbox = create(
+          :contact_inbox,
+          contact: contact,
+          inbox: whatsapp_channel.inbox,
+          source_id: '2423423243'
+        )
+        conversation = create(
+          :conversation,
+          contact: contact,
+          contact_inbox: contact_inbox,
+          inbox: whatsapp_channel.inbox
+        )
+        create(:message, conversation: conversation, source_id: 'original-message-id')
+      end
+
       it 'creates appropriate conversations, message and contacts' do
         params = {
           'contacts' => [{ 'profile' => { 'name' => 'Sojan Jose' }, 'wa_id' => '2423423243' }],
@@ -231,6 +301,89 @@ describe Whatsapp::IncomingMessageService do
         expect(whatsapp_channel.inbox.conversations.count).not_to eq(0)
         expect(Contact.all.first.name).to eq('Sojan Jose')
         expect(whatsapp_channel.inbox.messages.first.content).to eq('First Button')
+      end
+
+      it 'creates a cards message from a carousel and preserves existing attributes' do
+        original_message
+        carousel_params = {
+          'contacts' => [{ 'profile' => { 'name' => 'Sojan Jose' }, 'wa_id' => '2423423243' }],
+          'messages' => [carousel_message]
+        }.with_indifferent_access
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: carousel_params).perform
+
+        message = whatsapp_channel.inbox.messages.find_by!(source_id: 'carousel-message-id')
+        expect(message.content_type).to eq('cards')
+        expect(message.content).to eq('Confira as últimas ofertas!')
+        expect(message.content_attributes).to include(
+          'in_reply_to_external_id' => 'original-message-id',
+          'in_reply_to' => original_message.id,
+          'referral' => { 'source_url' => 'https://example.com/referral' },
+          'whatsapp_interactive' => { 'type' => 'carousel' }
+        )
+        expect(message.content_attributes['items']).to contain_exactly(
+          {
+            'title' => '',
+            'description' => 'Sistema de automação comercial #1',
+            'media_url' => 'https://example.com/one.jpg',
+            'actions' => [
+              {
+                'type' => 'link',
+                'text' => 'Agende uma demonstração',
+                'uri' => 'https://vipertec.com.br'
+              }
+            ]
+          },
+          {
+            'title' => 'Segurança',
+            'description' => 'Segurança a um palmo de sua mão. #2',
+            'media_url' => '',
+            'actions' => [
+              {
+                'type' => 'postback',
+                'text' => 'Tenho interesse',
+                'payload' => 'interested'
+              }
+            ]
+          }
+        )
+      end
+
+      it 'keeps incomplete carousel payloads safe' do
+        carousel_message['interactive']['carousel']['cards'] = [
+          nil,
+          'invalid',
+          { 'body' => { 'text' => 'Card sem botões' } }
+        ]
+        carousel_params = {
+          'contacts' => [{ 'profile' => { 'name' => 'Sojan Jose' }, 'wa_id' => '2423423243' }],
+          'messages' => [carousel_message]
+        }.with_indifferent_access
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: carousel_params).perform
+        end.not_to raise_error
+
+        message = whatsapp_channel.inbox.messages.find_by!(source_id: 'carousel-message-id')
+        expect(message.content_type).to eq('cards')
+        expect(message.content_attributes['items']).to contain_exactly(
+          {
+            'title' => '',
+            'description' => 'Card sem botões',
+            'media_url' => '',
+            'actions' => []
+          }
+        )
+      end
+
+      it 'preserves the external echo attribute when parsing carousel metadata' do
+        service = described_class.new(inbox: whatsapp_channel.inbox, params: {}, outgoing_echo: true)
+
+        attributes = service.send(:message_content_attributes, carousel_message.with_indifferent_access)
+
+        expect(attributes[:external_echo]).to be(true)
+        expect(attributes.dig(:whatsapp_interactive, :type)).to eq('carousel')
+        expect(attributes[:items].size).to eq(2)
       end
     end
 
@@ -515,13 +668,15 @@ describe Whatsapp::IncomingMessageService do
                                     ] }] }.with_indifferent_access
 
         # Simulate another worker holding the lock
-        lock = Whatsapp::MessageDedupLock.new('wamid.SDFADSf23sfasdafasdfa')
+        dedup_id = "#{whatsapp_channel.inbox.id}:wamid.SDFADSf23sfasdafasdfa"
+        lock = Whatsapp::MessageDedupLock.new(dedup_id)
         expect(lock.acquire!).to be_truthy
 
+        message_count = whatsapp_channel.inbox.messages.count
         described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
-        expect(whatsapp_channel.inbox.messages.count).to eq(0)
+        expect(whatsapp_channel.inbox.messages.count).to eq(message_count)
       ensure
-        key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: 'wamid.SDFADSf23sfasdafasdfa')
+        key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: dedup_id)
         Redis::Alfred.delete(key)
       end
     end

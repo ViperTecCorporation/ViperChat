@@ -121,6 +121,110 @@ RSpec.describe 'Conversation Group Contacts API', type: :request do
     end
   end
 
+  describe 'PATCH /api/v1/accounts/{account.id}/conversations/{conversation.id}/group_contacts' do
+    it 'prioritizes user_id, also sends wa_id, and updates the member after provider success' do
+      provider_response = instance_double(
+        HTTParty::Response,
+        success?: true,
+        parsed_response: {
+          'group_id' => conversation.group_source_id,
+          'promoted' => ['123456789012345@lid'],
+          'failed' => []
+        }
+      )
+      participants = [{ 'user_id' => '123456789012345@lid', 'wa_id' => '5566999999999' }]
+      allow(provider_service)
+        .to receive(:update_group_participant_roles)
+        .with(group_id: conversation.group_source_id, action: 'promote', participants: participants)
+        .and_return(provider_response)
+
+      patch path,
+            params: { action: 'promote', participants: participants },
+            headers: agent.create_new_auth_token,
+            as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['promoted']).to eq(['123456789012345@lid'])
+      expect(group_contact.reload.metadata).to include('is_admin' => true, 'role' => 'admin')
+    end
+
+    it 'does not promote a participant who is already an admin' do
+      group_contact.update!(metadata: group_contact.metadata.merge('is_admin' => true, 'role' => 'admin'))
+      allow(provider_service).to receive(:update_group_participant_roles)
+
+      patch path,
+            params: {
+              action: 'promote',
+              participants: [{ user_id: '123456789012345@lid', wa_id: '5566999999999' }]
+            },
+            headers: agent.create_new_auth_token,
+            as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['promoted']).to eq([])
+      expect(response.parsed_body['failed'].first['error']).to eq('already_admin')
+      expect(provider_service).not_to have_received(:update_group_participant_roles)
+    end
+
+    it 'requires explicit confirmation before demoting the connected session' do
+      session_wa_id = whatsapp_channel.phone_number.gsub(/\D/, '')
+      session_contact = create(:contact, account: account, phone_number: whatsapp_channel.phone_number)
+      session_group_contact = create(
+        :group_contact,
+        account: account,
+        conversation: conversation,
+        contact: session_contact,
+        metadata: { 'wa_id' => session_wa_id, 'is_admin' => true, 'role' => 'admin' }
+      )
+      allow(provider_service).to receive(:update_group_participant_roles)
+
+      patch path,
+            params: { action: 'demote', participants: [{ wa_id: session_wa_id }] },
+            headers: agent.create_new_auth_token,
+            as: :json
+
+      expect(response.parsed_body['failed'].first['error']).to eq('self_demote_confirmation_required')
+      expect(provider_service).not_to have_received(:update_group_participant_roles)
+      expect(session_group_contact.reload.metadata['is_admin']).to be(true)
+    end
+
+    it 'rejects role changes when the connected session is not an admin' do
+      conversation.update!(group_session_admin: false)
+
+      patch path,
+            params: {
+              action: 'promote',
+              participants: [{ user_id: '123456789012345@lid', wa_id: '5566999999999' }]
+            },
+            headers: agent.create_new_auth_token,
+            as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it 'preserves a provider 500 error without changing the participant role' do
+      provider_response = instance_double(
+        HTTParty::Response,
+        success?: false,
+        code: 500,
+        parsed_response: { 'error' => 'action must be promote or demote' }
+      )
+      allow(provider_service).to receive(:update_group_participant_roles).and_return(provider_response)
+
+      patch path,
+            params: {
+              action: 'promote',
+              participants: [{ user_id: '123456789012345@lid', wa_id: '5566999999999' }]
+            },
+            headers: agent.create_new_auth_token,
+            as: :json
+
+      expect(response).to have_http_status(:internal_server_error)
+      expect(response.parsed_body['error']).to eq('action must be promote or demote')
+      expect(group_contact.reload.metadata['is_admin']).not_to be(true)
+    end
+  end
+
   describe 'DELETE /api/v1/accounts/{account.id}/conversations/{conversation.id}/group_contacts' do
     it 'removes the local group contact when the provider confirms removal' do
       provider_response = instance_double(HTTParty::Response, success?: true, parsed_response: { 'removed' => ['5566999999999'], 'failed' => [] })
@@ -143,6 +247,7 @@ RSpec.describe 'Conversation Group Contacts API', type: :request do
       provider_response = instance_double(
         HTTParty::Response,
         success?: true,
+        code: 200,
         parsed_response: { 'removed' => [], 'failed' => ['5566999999999'], 'error' => 'participant remove failed' }
       )
 

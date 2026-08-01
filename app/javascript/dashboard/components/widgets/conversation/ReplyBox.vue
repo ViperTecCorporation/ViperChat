@@ -69,11 +69,16 @@ import {
   getContactVariables,
 } from 'dashboard/helper/editorHelper';
 import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
+import { useCaptain } from 'dashboard/composables/useCaptain';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
 import {
   checkFileSizeLimit,
   isFileTypeAllowedForChannel,
 } from 'shared/helpers/FileHelper';
+import {
+  hasPixPaymentConfiguration,
+  pixPaymentDisplayType,
+} from 'dashboard/helper/pixPaymentHelper';
 
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
@@ -133,6 +138,7 @@ export default {
     const replyEditor = useTemplateRef('replyEditor');
     const messageEditor = useTemplateRef('messageEditor');
     const copilot = useCopilotReply();
+    const { captainTasksEnabled } = useCaptain();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
 
     return {
@@ -144,6 +150,7 @@ export default {
       replyEditor,
       messageEditor,
       copilot,
+      captainTasksEnabled,
       shortcutKey,
     };
   },
@@ -217,6 +224,24 @@ export default {
         item => item.id === this.currentChat.account_id
       );
       return account?.role === 'administrator';
+    },
+    showPixPaymentButton() {
+      const config = this.inbox?.provider_config || {};
+
+      return (
+        this.isAUnoapiChannel &&
+        !this.isOnPrivateNote &&
+        !this.currentChat?.group &&
+        hasPixPaymentConfiguration(config)
+      );
+    },
+    pixPaymentMessageContent() {
+      const config = this.inbox?.provider_config || {};
+
+      return this.$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.MESSAGE_CONTENT', {
+        type: pixPaymentDisplayType(config.pix_key_type),
+        key: config.pix_key,
+      });
     },
     scheduleAgents() {
       return this.$store.getters['agents/getAgents'] || [];
@@ -320,9 +345,18 @@ export default {
         }
         return this.$t('CONVERSATION.FOOTER.MESSAGING_RESTRICTED');
       }
-      return this.isPrivate
+      const placeholder = this.isPrivate
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
+      const shortcuts = [];
+      if (!this.isPrivate && this.inbox?.channel_type === 'Channel::Whatsapp') {
+        shortcuts.push(this.$t('CONVERSATION.FOOTER.SCHEDULE_SHORTCUT'));
+      }
+      if (this.captainTasksEnabled) {
+        shortcuts.push(this.$t('CONVERSATION.FOOTER.CAPTAIN_SHORTCUTS'));
+      }
+
+      return [placeholder, ...shortcuts].join('\n');
     },
     isMessageLengthReachingThreshold() {
       return this.message.length > this.maxLength - 50;
@@ -942,7 +976,35 @@ export default {
           },
           allowOnFocusedInput: true,
         },
+        '$mod+KeyM': {
+          action: event => {
+            this.handleCaptainShortcut(event, 'improve');
+          },
+          allowOnFocusedInput: true,
+        },
+        '$mod+KeyO': {
+          action: event => {
+            this.handleCaptainShortcut(event, 'fix_spelling_grammar');
+          },
+          allowOnFocusedInput: true,
+        },
       };
+    },
+    handleCaptainShortcut(event, action) {
+      if (!this.isFocused) return;
+
+      event.preventDefault();
+      if (
+        event.repeat ||
+        !this.captainTasksEnabled ||
+        !this.hasMeaningfulEditorContent ||
+        this.isEditorDisabled ||
+        this.copilot.isActive.value
+      ) {
+        return;
+      }
+
+      this.executeCopilotAction(action, this.message);
     },
     isAValidEvent(selectedKey) {
       return (
@@ -1285,6 +1347,23 @@ export default {
       } else {
         this.confirmOnSendReply();
       }
+    },
+    async sendPixPayment() {
+      if (!this.showPixPaymentButton) return;
+
+      const confirmed =
+        await this.$refs.pixPaymentConfirmDialog.showConfirmation();
+      if (!confirmed) return;
+
+      await this.sendMessage({
+        conversationId: this.currentChat.id,
+        message: this.pixPaymentMessageContent,
+        private: false,
+        contentType: 'text',
+        contentAttributes: {
+          whatsapp_interactive: { type: 'payment_request' },
+        },
+      });
     },
     async sendMessage(
       messagePayload,
@@ -1727,11 +1806,13 @@ export default {
       :editor-content="message"
       :popout-reply-box="popOutReplyBox"
       :has-content="hasMeaningfulEditorContent"
+      :show-pix-button="showPixPaymentButton"
       @set-reply-mode="setReplyMode"
       @toggle-editor-size="toggleEditorSize"
       @toggle-popout="togglePopout"
       @toggle-copilot="copilot.toggleEditor"
       @execute-copilot-action="executeCopilotAction"
+      @send-pix-payment="sendPixPayment"
     />
     <ArticleSearchPopover
       v-if="showArticleSearchPopover && connectedPortalSlug"
@@ -2076,6 +2157,14 @@ export default {
       ref="confirmDialog"
       :title="$t('CONVERSATION.REPLYBOX.UNDEFINED_VARIABLES.TITLE')"
       :description="undefinedVariableMessage"
+    />
+    <woot-confirm-modal
+      ref="pixPaymentConfirmDialog"
+      :title="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_TITLE')"
+      :description="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_DESCRIPTION')"
+      :confirm-label="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_LABEL')"
+      :cancel-label="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CANCEL_LABEL')"
+      confirm-on-enter
     />
   </div>
 </template>

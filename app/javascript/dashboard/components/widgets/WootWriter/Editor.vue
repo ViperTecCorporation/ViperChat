@@ -74,6 +74,7 @@ import { createTypingIndicator } from '@chatwoot/utils';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { uploadFile } from 'dashboard/helper/uploadHelper';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { extractFullProtocolUrlFromClipboard } from './utils/clipboardUrl';
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -789,6 +790,16 @@ function createEditorView() {
       },
       paste: (view, event) => {
         if (props.disabled) return;
+
+        const pastedUrl = extractFullProtocolUrlFromClipboard(
+          event.clipboardData
+        );
+        if (pastedUrl) {
+          event.preventDefault();
+          view.dispatch(view.state.tr.insertText(pastedUrl));
+          return;
+        }
+
         const { files } = event.clipboardData;
         if (!files.length) return;
         event.preventDefault();
@@ -993,6 +1004,10 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, insertContentIntoEditor);
 
   > .ProseMirror {
     @apply p-0 break-words text-n-slate-12;
+
+    p.empty-node:first-child::before {
+      white-space: pre-line;
+    }
 
     h1,
     h2,

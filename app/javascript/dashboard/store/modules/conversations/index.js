@@ -1,7 +1,10 @@
 import types from '../../mutation-types';
 import getters, { getSelectedChatConversation } from './getters';
 import actions from './actions';
-import { findPendingMessageIndex } from './helpers';
+import {
+  findPendingMessageIndex,
+  sortMessagesChronologically,
+} from './helpers';
 import { MESSAGE_STATUS } from 'shared/constants/messages';
 import wootConstants from 'dashboard/constants/globals';
 import { BUS_EVENTS } from '../../../../shared/constants/busEvents';
@@ -86,7 +89,7 @@ export const mutations = {
   [types.SET_PREVIOUS_CONVERSATIONS](_state, { id, data }) {
     if (data.length) {
       const [chat] = _state.allConversations.filter(c => c.id === id);
-      chat.messages.unshift(...data);
+      chat.messages = sortMessagesChronologically([...data, ...chat.messages]);
     }
   },
   [types.SET_ALL_ATTACHMENTS](_state, { id, data }) {
@@ -212,7 +215,8 @@ export const mutations = {
       _state.attachmentsMeta[id] = {
         ...meta,
         totalCount:
-          (meta.totalCount || existingAttachments.length) + attachmentsToAdd.length,
+          (meta.totalCount || existingAttachments.length) +
+          attachmentsToAdd.length,
       };
     }
   },
@@ -239,7 +243,8 @@ export const mutations = {
 
     const meta = _state.attachmentsMeta[id];
     if (meta) {
-      const removedCount = existingAttachments.length - filteredAttachments.length;
+      const removedCount =
+        existingAttachments.length - filteredAttachments.length;
       const nextTotal =
         (meta.totalCount || existingAttachments.length) - removedCount;
       _state.attachmentsMeta[id] = {
@@ -296,13 +301,14 @@ export const mutations = {
       chat.messages[pendingMessageIndex] = message;
     } else {
       chat.messages.push(message);
-      chat.timestamp = message.created_at;
+      chat.timestamp = Math.max(chat.timestamp || 0, message.created_at || 0);
       const { conversation: { unread_count: unreadCount = 0 } = {} } = message;
       chat.unread_count = unreadCount;
       if (selectedChatId === conversationId) {
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
       }
     }
+    chat.messages = sortMessagesChronologically(chat.messages);
   },
 
   [types.ADD_CONVERSATION](_state, conversation) {

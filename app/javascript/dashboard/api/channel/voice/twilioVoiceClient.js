@@ -39,7 +39,9 @@ class TwilioVoiceClient extends EventTarget {
 
     this.device.on('tokenWillExpire', async () => {
       // eslint-disable-next-line no-console
-      console.log('[TwilioVoiceClient] tokenWillExpire', { inboxId: this.inboxId });
+      console.log('[TwilioVoiceClient] tokenWillExpire', {
+        inboxId: this.inboxId,
+      });
       const r = await VoiceAPI.getToken(this.inboxId);
       if (r?.token) this.device.updateToken(r.token);
     });
@@ -48,7 +50,10 @@ class TwilioVoiceClient extends EventTarget {
     this.inboxId = inboxId;
 
     // eslint-disable-next-line no-console
-    console.log('[TwilioVoiceClient] deviceReady', { inboxId, accountId: account_id });
+    console.log('[TwilioVoiceClient] deviceReady', {
+      inboxId,
+      accountId: account_id,
+    });
     return this.device;
   }
 

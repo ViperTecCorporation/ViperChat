@@ -38,7 +38,12 @@ export default {
     }
     return false;
   },
-  profileUpdate({ displayName, avatar, custom_attributes: customAttributes, ...profileAttributes }) {
+  profileUpdate({
+    displayName,
+    avatar,
+    custom_attributes: customAttributes,
+    ...profileAttributes
+  }) {
     const formData = new FormData();
     Object.keys(profileAttributes).forEach(key => {
       const hasValue = profileAttributes[key] === undefined;

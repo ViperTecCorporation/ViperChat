@@ -4,6 +4,119 @@ require 'rails_helper'
 require Rails.root.join 'spec/models/concerns/reauthorizable_shared.rb'
 
 RSpec.describe Channel::Whatsapp do
+  describe 'UnoAPI PIX configuration' do
+    let(:channel) do
+      create(
+        :channel_whatsapp,
+        provider: 'unoapi',
+        sync_templates: false,
+        validate_provider_config: false
+      )
+    end
+
+    it 'accepts EMAIL, CNPJ, and PHONE key types' do
+      described_class::UNOAPI_PIX_KEY_TYPES.each do |key_type|
+        channel.provider_config = channel.provider_config.merge(
+          'pix_merchant_name' => 'Minha Empresa',
+          'pix_key' => 'configured-key',
+          'pix_key_type' => key_type
+        )
+
+        expect(channel).to be_valid
+      end
+    end
+
+    it 'normalizes whitespace and lowercase key types before saving' do
+      channel.update!(
+        provider_config: channel.provider_config.merge(
+          'pix_merchant_name' => '  Minha Empresa  ',
+          'pix_key' => '  financeiro@minhaempresa.com.br  ',
+          'pix_key_type' => 'email'
+        )
+      )
+
+      expect(channel.reload.provider_config).to include(
+        'pix_merchant_name' => 'Minha Empresa',
+        'pix_key' => 'financeiro@minhaempresa.com.br',
+        'pix_key_type' => 'EMAIL'
+      )
+    end
+
+    it 'requires a supported type when a PIX key is configured' do
+      channel.provider_config = channel.provider_config.merge(
+        'pix_merchant_name' => 'Minha Empresa',
+        'pix_key' => 'configured-key',
+        'pix_key_type' => 'CPF'
+      )
+
+      expect(channel).not_to be_valid
+      expect(channel.errors[:provider_config]).to include('PIX key type must be one of: EMAIL, CNPJ, PHONE')
+    end
+
+    it 'requires a PIX key when a type is configured' do
+      channel.provider_config = channel.provider_config.merge(
+        'pix_merchant_name' => 'Minha Empresa',
+        'pix_key' => '',
+        'pix_key_type' => 'EMAIL'
+      )
+
+      expect(channel).not_to be_valid
+      expect(channel.errors[:provider_config]).to include('PIX key is required')
+    end
+  end
+
+  describe 'UnoAPI contact synchronization' do
+    let(:channel) do
+      create(
+        :channel_whatsapp,
+        provider: 'unoapi',
+        contact_sync_enabled: false,
+        sync_templates: false,
+        validate_provider_config: false
+      )
+    end
+
+    it 'enqueues a connection check when synchronization is enabled' do
+      expect do
+        channel.update!(contact_sync_enabled: true)
+      end.to have_enqueued_job(Whatsapp::Unoapi::ContactSync::ConnectionCheckJob).with(channel.id)
+
+      expect(channel.reload).to have_attributes(
+        contact_sync_status: 'waiting_connection',
+        contact_sync_error: nil
+      )
+    end
+
+    it 'marks synchronization disabled and clears its cursor when turned off' do
+      channel.update_columns( # rubocop:disable Rails/SkipsModelValidations
+        contact_sync_enabled: true,
+        contact_export_enabled: true,
+        contact_sync_status: 'running',
+        contact_sync_cursor: '42'
+      )
+
+      channel.update!(contact_sync_enabled: false)
+
+      expect(channel.reload).to have_attributes(
+        contact_sync_status: 'disabled',
+        contact_sync_cursor: nil,
+        contact_sync_next_run_at: nil,
+        contact_export_enabled: false
+      )
+    end
+
+    it 'starts a fresh synchronization before enabling inbox contact export' do
+      channel.update_columns( # rubocop:disable Rails/SkipsModelValidations
+        contact_sync_enabled: true,
+        contact_sync_status: 'completed'
+      )
+
+      expect do
+        channel.update!(contact_export_enabled: true)
+      end.to have_enqueued_job(Whatsapp::Unoapi::ContactSync::ConnectionCheckJob).with(channel.id)
+    end
+  end
+
   describe 'concerns' do
     let(:channel) { create(:channel_whatsapp) }
 

@@ -54,6 +54,8 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
       description: details[:description].presence,
       picture: group_picture_url(details),
       join_approval_mode: details[:join_approval_mode].presence,
+      announcement: details[:announcement],
+      locked: details[:locked],
       created_at: details[:created_at].presence || details[:creation_timestamp].presence,
       suspended: details[:suspended]
     ).compact
@@ -97,13 +99,17 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     }.compact
     attrs[:group_suspended] = group[:suspended] unless group[:suspended].nil?
 
+    additional_attributes = @conversation.additional_attributes.to_h
+    additional_attributes['group_announcement'] = group[:announcement] unless group[:announcement].nil?
+    additional_attributes['group_locked'] = group[:locked] unless group[:locked].nil?
+
     picture_url = group_picture_url(group)
     if picture_url.present?
-      @conversation.additional_attributes ||= {}
-      @conversation.additional_attributes['group_picture'] = picture_url
+      additional_attributes['group_picture'] = picture_url
       Avatar::AvatarFromUrlJob.enqueue_if_needed(@conversation.contact, picture_url, avatar_metadata_from(group))
     end
 
+    attrs[:additional_attributes] = additional_attributes
     @conversation.assign_attributes(attrs)
     @conversation.save! if @conversation.changed?
   end

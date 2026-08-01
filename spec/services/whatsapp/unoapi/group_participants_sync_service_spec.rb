@@ -76,6 +76,8 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
         description: 'Canal comercial',
         picture: 'https://cdn.example.com/groups/group.jpg',
         join_approval_mode: 'approval_required',
+        announcement: true,
+        locked: false,
         creation_timestamp: '1710000000',
         suspended: false
       }.to_json,
@@ -97,6 +99,8 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
     expect(conversation.group_created_at_external).to eq(Time.zone.at(1_710_000_000))
     expect(conversation.group_suspended).to be(false)
     expect(conversation.additional_attributes['group_picture']).to eq('https://cdn.example.com/groups/group.jpg')
+    expect(conversation.additional_attributes['group_announcement']).to be(true)
+    expect(conversation.additional_attributes['group_locked']).to be(false)
     expect(conversation.group_contacts_synced_at).to be_present
     expect(conversation.group_session_admin).to be(true)
     maria_group_contact = conversation.group_contacts.joins(:contact).find_by!(contacts: { name: 'Maria' })

@@ -274,7 +274,7 @@ RSpec.describe '/api/v1/widget/conversations/toggle_typing', type: :request do
 
         get '/api/v1/widget/conversations/toggle_status',
             headers: { 'X-Auth-Token' => token },
-            params: { website_token: web_widget.website_token },
+            params: { website_token: web_widget.website_token, locale: 'en' },
             as: :json
 
         expect(response).to have_http_status(:success)
@@ -287,7 +287,7 @@ RSpec.describe '/api/v1/widget/conversations/toggle_typing', type: :request do
             message_type: :activity,
             content: "Conversation was resolved by #{contact.name}",
             content_attributes: { activity: { type: 'conversation_status_changed', status: 'resolved' } }
-          }
+          )
         )
       end
     end

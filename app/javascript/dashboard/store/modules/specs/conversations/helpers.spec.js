@@ -1,5 +1,6 @@
 import {
   findPendingMessageIndex,
+  sortMessagesChronologically,
   applyPageFilters,
   filterByInbox,
   filterByTeam,
@@ -72,6 +73,20 @@ describe('#findPendingMessageIndex', () => {
     };
     const message = { echo_id: 2 };
     expect(findPendingMessageIndex(chat, message)).toEqual(-1);
+  });
+});
+
+describe('#sortMessagesChronologically', () => {
+  it('uses the timestamp and id to place backfilled messages consistently', () => {
+    const messages = [
+      { id: 20, created_at: 200 },
+      { id: 30, created_at: 100 },
+      { id: 10, created_at: 200 },
+    ];
+
+    expect(
+      sortMessagesChronologically(messages).map(message => message.id)
+    ).toEqual([30, 10, 20]);
   });
 });
 

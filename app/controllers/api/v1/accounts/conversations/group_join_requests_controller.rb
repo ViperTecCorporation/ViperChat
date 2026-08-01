@@ -6,7 +6,7 @@ class Api::V1::Accounts::Conversations::GroupJoinRequestsController < Api::V1::A
     response = provider_service.group_join_requests(@conversation.group_source_id)
     return render json: normalized_join_requests(response.parsed_response) if response.success?
 
-    render json: { error: provider_error(response, 'Provider failed to fetch join requests') }, status: :unprocessable_entity
+    render json: { error: provider_error(response, 'Provider failed to fetch join requests') }, status: provider_failure_status(response)
   end
 
   def create
@@ -16,7 +16,7 @@ class Api::V1::Accounts::Conversations::GroupJoinRequestsController < Api::V1::A
     )
     return render json: response.parsed_response if response.success?
 
-    render json: { error: provider_error(response, 'Provider failed to approve join requests') }, status: :unprocessable_entity
+    render json: { error: provider_error(response, 'Provider failed to approve join requests') }, status: provider_failure_status(response)
   end
 
   def destroy
@@ -26,7 +26,7 @@ class Api::V1::Accounts::Conversations::GroupJoinRequestsController < Api::V1::A
     )
     return render json: response.parsed_response if response.success?
 
-    render json: { error: provider_error(response, 'Provider failed to reject join requests') }, status: :unprocessable_entity
+    render json: { error: provider_error(response, 'Provider failed to reject join requests') }, status: provider_failure_status(response)
   end
 
   private
@@ -59,7 +59,14 @@ class Api::V1::Accounts::Conversations::GroupJoinRequestsController < Api::V1::A
   end
 
   def provider_error(response, fallback)
-    response.parsed_response.try(:[], 'error') || fallback
+    payload = response.parsed_response
+    payload = payload.with_indifferent_access if payload.respond_to?(:with_indifferent_access)
+    payload.try(:[], :error) || fallback
+  end
+
+  def provider_failure_status(response)
+    status = response.code.to_i
+    status.between?(400, 599) ? status : :unprocessable_entity
   end
 
   def normalized_join_requests(payload)

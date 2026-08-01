@@ -42,9 +42,7 @@ const logDebug = (...args) => {
   }
 };
 
-const retryDelays = [
-  500, 1000, 2000, 4000, 8000, 16000, 32000, 64000,
-];
+const retryDelays = [500, 1000, 2000, 4000, 8000, 16000, 32000, 64000];
 const isPlaying = ref(false);
 const isMuted = ref(false);
 const currentTime = ref(0);
@@ -354,16 +352,12 @@ onBeforeUnmount(() => {
   >
     <div class="flex gap-1 w-full flex-1 items-center justify-start">
       <button class="p-0 border-0 size-8" @click="playOrPause">
-            <Icon
+        <Icon
           v-if="isReadyToPlay && isPlaying"
           class="size-8"
           icon="i-teenyicons-pause-small-solid"
         />
-        <Icon
-          v-else
-          class="size-8"
-          icon="i-teenyicons-play-small-solid"
-        />
+        <Icon v-else class="size-8" icon="i-teenyicons-play-small-solid" />
       </button>
       <div class="tabular-nums text-xs">
         {{ displayCurrentTime }} / {{ displayDuration }}

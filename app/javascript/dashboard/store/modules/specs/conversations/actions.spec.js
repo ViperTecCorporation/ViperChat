@@ -391,9 +391,13 @@ describe('#actions', () => {
           },
         },
       });
-      const dispatch = vi.fn();
+      const toggleStatusDispatch = vi.fn();
       await actions.toggleStatus(
-        { commit, dispatch, state: { conversationFilters: { status: 'open' } } },
+        {
+          commit,
+          dispatch: toggleStatusDispatch,
+          state: { conversationFilters: { status: 'open' } },
+        },
         { conversationId: 1, status: 'snoozed' }
       );
       expect(commit).toHaveBeenCalledTimes(1);
@@ -403,7 +407,7 @@ describe('#actions', () => {
           { conversationId: 1, status: 'snoozed', snoozedUntil: null },
         ],
       ]);
-      expect(dispatch).toHaveBeenCalledWith(
+      expect(toggleStatusDispatch).toHaveBeenCalledWith(
         'conversationStats/get',
         { status: 'open' },
         { root: true }
@@ -544,6 +548,18 @@ describe('#deleteMessage', () => {
       ).rejects.toThrow(Error);
       expect(commit.mock.calls).toEqual([]);
       expect(dispatch.mock.calls).toEqual([]);
+    });
+  });
+
+  describe('#removeConversationFromList', () => {
+    it('removes only local state without calling the delete API', () => {
+      actions.removeConversationFromList({ commit, dispatch }, 1);
+
+      expect(commit.mock.calls).toEqual([[types.DELETE_CONVERSATION, 1]]);
+      expect(dispatch.mock.calls).toEqual([
+        ['conversationStats/get', {}, { root: true }],
+      ]);
+      expect(axios.delete).not.toHaveBeenCalled();
     });
   });
 

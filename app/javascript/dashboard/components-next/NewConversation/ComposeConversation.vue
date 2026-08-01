@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, computed, onMounted, watch } from 'vue';
+import { reactive, ref, computed, nextTick, onMounted, watch } from 'vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -18,6 +18,9 @@ import {
 
 import Popover from 'dashboard/components-next/popover/Popover.vue';
 import ComposeNewConversationForm from 'dashboard/components-next/NewConversation/components/ComposeNewConversationForm.vue';
+import CreateGroupModal from 'dashboard/components-next/sidebar/CreateGroupModal.vue';
+import ComposeInternalChat from 'dashboard/components-next/InternalChat/ComposeInternalChat.vue';
+import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 
 const props = defineProps({
   contactId: {
@@ -39,6 +42,8 @@ const { t } = useI18n();
 const { fetchSignatureFlagFromUISettings } = useUISettings();
 
 const popoverRef = ref(null);
+const internalChatRef = ref(null);
+const showCreateGroupModal = ref(false);
 const contacts = ref([]);
 const selectedContact = ref(null);
 const targetInbox = ref(null);
@@ -70,6 +75,22 @@ const globalConfig = useMapGetter('globalConfig/get');
 const uiFlags = useMapGetter('contactConversations/getUIFlags');
 const messageSignature = useMapGetter('getMessageSignature');
 const inboxesList = useMapGetter('inboxes/getInboxes');
+const accountId = useMapGetter('getCurrentAccountId');
+
+const normalizedValue = value => (value || '').toString().toLowerCase();
+
+const hasUnoapiInbox = computed(() =>
+  (inboxesList.value || []).some(inbox => {
+    const channelType = normalizedValue(
+      inbox.channel_type || inbox.channelType
+    );
+    const provider = normalizedValue(
+      inbox.provider || inbox.providerName || inbox.provider_name
+    );
+
+    return channelType.includes('whatsapp') && provider.includes('uno');
+  })
+);
 
 const sendWithSignature = computed(() =>
   fetchSignatureFlagFromUISettings(targetInbox.value?.channelType)
@@ -166,6 +187,24 @@ const discardCompose = () => {
   closeCompose();
 };
 
+const openInternalChat = () => {
+  closeCompose();
+  nextTick(() => internalChatRef.value?.open());
+};
+
+const openCreateGroup = () => {
+  closeCompose();
+  showCreateGroupModal.value = true;
+};
+
+const onGroupCreated = conversation => {
+  if (conversation?.id) {
+    window.location.assign(
+      `/app/accounts/${accountId.value}/conversations/${conversation.id}`
+    );
+  }
+};
+
 const createConversation = async ({ payload, isFromWhatsApp }) => {
   try {
     const data = await store.dispatch('contactConversations/create', {
@@ -256,14 +295,28 @@ onMounted(() => resetContacts());
         :contacts-ui-flags="contactsUiFlags"
         :message-signature="messageSignature"
         :send-with-signature="sendWithSignature"
+        :has-unoapi-inbox="hasUnoapiInbox"
         @search-contacts="onContactSearch"
         @reset-contact-search="resetContacts"
         @update-selected-contact="handleSelectedContact"
         @update-target-inbox="handleTargetInbox"
         @clear-selected-contact="clearSelectedContact"
         @create-conversation="createConversation"
+        @open-internal-chat="openInternalChat"
+        @open-create-group="openCreateGroup"
         @discard="discardCompose"
       />
     </template>
   </Popover>
+  <ComposeInternalChat ref="internalChatRef">
+    <template #trigger />
+  </ComposeInternalChat>
+  <TeleportWithDirection to="body">
+    <CreateGroupModal
+      v-if="hasUnoapiInbox"
+      v-model:show="showCreateGroupModal"
+      :inboxes="inboxesList"
+      @group-created="onGroupCreated"
+    />
+  </TeleportWithDirection>
 </template>

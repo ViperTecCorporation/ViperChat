@@ -387,7 +387,9 @@ RSpec.describe ReplyMailbox do
     let(:conversation) { Conversation.where(inbox_id: channel_email.inbox).last }
 
     it 'shouldnt create a conversation in the channel' do
-      described_subject
+      with_modified_env MAILER_SENDER_EMAIL: 'Chatwoot <accounts@chatwoot.com>' do
+        described_subject
+      end
       expect(conversation.present?).to be(false)
     end
   end

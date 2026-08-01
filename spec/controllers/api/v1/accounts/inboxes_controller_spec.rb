@@ -67,12 +67,50 @@ RSpec.describe 'Inboxes API', type: :request do
           expect(response.body).to include('provider_config')
         end
 
-        it 'will not return provider config for agent' do
+        it 'returns contact synchronization state outside provider config for admin' do
+          inbox.channel.update_columns( # rubocop:disable Rails/SkipsModelValidations
+            contact_sync_enabled: true,
+            contact_export_enabled: true,
+            contact_sync_status: 'completed',
+            contact_sync_processed_count: 200
+          )
+
+          get "/api/v1/accounts/#{account.id}/inboxes",
+              headers: admin.create_new_auth_token,
+              as: :json
+
+          data = response.parsed_body['payload'].find { |item| item['id'] == inbox.id }
+          expect(data).to include(
+            'contact_sync_enabled' => true,
+            'contact_export_enabled' => true,
+            'contact_sync_status' => 'completed',
+            'contact_sync_processed_count' => 200
+          )
+          expect(data.fetch('provider_config')).not_to have_key('contact_sync_enabled')
+        end
+
+        it 'returns only the safe UnoAPI PIX config for agent' do
+          inbox.channel.update_columns( # rubocop:disable Rails/SkipsModelValidations
+            provider: 'unoapi',
+            provider_config: inbox.channel.provider_config.merge(
+              'api_key' => 'secret-api-key',
+              'pix_merchant_name' => 'Minha Empresa',
+              'pix_key' => '1450742000190',
+              'pix_key_type' => 'CNPJ'
+            )
+          )
+
           get "/api/v1/accounts/#{account.id}/inboxes",
               headers: agent.create_new_auth_token,
               as: :json
 
-          expect(response.body).not_to include('provider_config')
+          data = response.parsed_body['payload'].find { |item| item['id'] == inbox.id }
+          expect(data.fetch('provider_config')).to eq(
+            'pix_merchant_name' => 'Minha Empresa',
+            'pix_key' => '1450742000190',
+            'pix_key_type' => 'CNPJ'
+          )
+          expect(data.fetch('provider_config')).not_to have_key('api_key')
         end
       end
     end
@@ -194,6 +232,7 @@ RSpec.describe 'Inboxes API', type: :request do
       end
 
       it 'does not return saved branded email layout when feature is disabled' do
+        account.disable_features!(:branded_email_templates)
         email_channel = create(:channel_email, account: account)
         email_inbox = create(:inbox, channel: email_channel, account: account)
         create(:email_template, :layout, account: account, inbox: email_inbox, body: '<html>{{ content_for_layout }} Branded</html>')
@@ -593,6 +632,39 @@ RSpec.describe 'Inboxes API', type: :request do
         expect(whatsapp_channel.reload).not_to be_reauthorization_required
       end
 
+      it 'updates the local UnoAPI contact synchronization flags without adding them to provider config' do
+        whatsapp_channel = create(
+          :channel_whatsapp,
+          account: account,
+          provider: 'unoapi',
+          provider_config: {
+            'url' => 'https://uno.example.com',
+            'api_key' => 'test_key',
+            'business_account_id' => '5566996222471',
+            'phone_number_id' => '5566996222471'
+          },
+          sync_templates: false,
+          validate_provider_config: false
+        )
+        stub_request(:get, 'https://uno.example.com/v14.0/5566996222471/message_templates?access_token=test_key')
+          .to_return(status: 200, body: { data: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
+
+        expect do
+          patch "/api/v1/accounts/#{account.id}/inboxes/#{whatsapp_channel.inbox.id}",
+                headers: admin.create_new_auth_token,
+                params: { channel: { contact_sync_enabled: true, contact_export_enabled: true } },
+                as: :json
+        end.to have_enqueued_job(Whatsapp::Unoapi::ContactSync::ConnectionCheckJob).with(whatsapp_channel.id)
+
+        expect(response).to have_http_status(:success)
+        expect(whatsapp_channel.reload).to have_attributes(
+          contact_sync_enabled: true,
+          contact_export_enabled: true
+        )
+        expect(whatsapp_channel.provider_config).not_to have_key('contact_sync_enabled')
+        expect(whatsapp_channel.provider_config).not_to have_key('contact_export_enabled')
+      end
+
       it 'updates twitter inbox when administrator' do
         twitter_channel = create(:channel_twitter_profile, account: account, tweets_enabled: true)
         twitter_inbox = create(:inbox, channel: twitter_channel, account: account)
@@ -681,6 +753,7 @@ RSpec.describe 'Inboxes API', type: :request do
       end
 
       it 'rejects branded email layout when feature is disabled' do
+        account.disable_features!(:branded_email_templates)
         email_channel = create(:channel_email, account: account)
         email_inbox = create(:inbox, channel: email_channel, account: account)
 
@@ -695,6 +768,7 @@ RSpec.describe 'Inboxes API', type: :request do
       end
 
       it 'ignores blank branded email layout when feature is disabled' do
+        account.disable_features!(:branded_email_templates)
         email_channel = create(:channel_email, account: account)
         email_inbox = create(:inbox, channel: email_channel, account: account)
 

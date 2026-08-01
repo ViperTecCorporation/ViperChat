@@ -172,7 +172,10 @@ const handlePointerDown = event => {
   isDragging.value = true;
   hasDragged.value = false;
   dragStart.value = { x: event.clientX, y: event.clientY };
-  dragOffset.value = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  dragOffset.value = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerUp, { once: true });
 };
@@ -341,7 +344,9 @@ onUnmounted(() => {
           class="w-12 h-12 rounded-full bg-n-slate-3 hover:bg-n-slate-4 border border-n-strong flex items-center justify-center"
           @click="showMenu = !showMenu"
         >
-          <i class="text-lg text-n-slate-12 i-ph-dots-three-outline-vertical-bold" />
+          <i
+            class="text-lg text-n-slate-12 i-ph-dots-three-outline-vertical-bold"
+          />
         </button>
         <button
           class="w-14 h-14 rounded-full bg-n-teal-9 hover:bg-n-teal-10 shadow-xl border border-n-strong flex items-center justify-center"
@@ -355,12 +360,12 @@ onUnmounted(() => {
     </div>
   </div>
 
-    <woot-modal
-      v-model:show="showDialer"
-      :on-close="closeDialer"
-      size="modal-voice-dialer"
-    >
-      <div class="flex flex-col gap-4 p-6 w-[22rem] max-w-[22rem]">
+  <woot-modal
+    v-model:show="showDialer"
+    :on-close="closeDialer"
+    size="modal-voice-dialer"
+  >
+    <div class="flex flex-col gap-4 p-6 w-[22rem] max-w-[22rem]">
       <h3 class="text-base font-medium text-n-slate-12">
         {{ t('CONVERSATION.VOICE_WIDGET.DIALER_TITLE') }}
       </h3>
@@ -373,7 +378,9 @@ onUnmounted(() => {
           v-model="dialNumber"
           type="text"
           class="rounded-md border border-n-strong bg-transparent px-3 py-2 text-sm text-n-slate-12"
-          :placeholder="t('CONVERSATION.VOICE_WIDGET.DIALER_NUMBER_PLACEHOLDER')"
+          :placeholder="
+            t('CONVERSATION.VOICE_WIDGET.DIALER_NUMBER_PLACEHOLDER')
+          "
         />
       </label>
 
@@ -386,7 +393,11 @@ onUnmounted(() => {
           class="rounded-md border border-n-strong bg-transparent px-3 py-2 text-sm"
         >
           <option disabled value="">--</option>
-          <option v-for="inbox in voiceInboxes" :key="inbox.id" :value="inbox.id">
+          <option
+            v-for="inbox in voiceInboxes"
+            :key="inbox.id"
+            :value="inbox.id"
+          >
             {{ inbox.name }}
           </option>
         </select>

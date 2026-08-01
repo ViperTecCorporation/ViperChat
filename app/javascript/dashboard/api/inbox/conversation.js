@@ -142,6 +142,19 @@ class ConversationApi extends ApiClient {
     });
   }
 
+  updateGroupContactRoles({
+    conversationId,
+    action,
+    participants,
+    confirmedSelfDemote = false,
+  }) {
+    return axios.patch(`${this.url}/${conversationId}/group_contacts`, {
+      action,
+      participants,
+      confirmed_self_demote: confirmedSelfDemote,
+    });
+  }
+
   createGroup({
     inboxId,
     subject,
@@ -166,8 +179,16 @@ class ConversationApi extends ApiClient {
     return axios.patch(`${this.url}/${conversationId}/group`, params);
   }
 
-  syncGroup(conversationId) {
-    return axios.post(`${this.url}/${conversationId}/group/sync`);
+  leaveGroup(conversationId, { deleteConversation = false } = {}) {
+    return axios.delete(`${this.url}/${conversationId}/group`, {
+      data: { delete_conversation: deleteConversation },
+    });
+  }
+
+  syncGroup(conversationId, { deleteConversation = false } = {}) {
+    return axios.post(`${this.url}/${conversationId}/group/sync`, {
+      delete_conversation: deleteConversation,
+    });
   }
 
   fetchGroupInviteLink(conversationId) {

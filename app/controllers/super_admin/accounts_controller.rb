@@ -76,7 +76,7 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
       flag.to_sym if ActiveModel::Type::Boolean.new.cast(enabled)
     end
 
-    base_flags = requested_resource&.persisted? ? requested_resource.selected_feature_flags : Featurable.default_feature_flags
+    base_flags = params[:id].present? ? requested_resource.selected_feature_flags : Featurable.default_feature_flags
     (base_flags - editable_flags + enabled_flags).uniq
   end
 

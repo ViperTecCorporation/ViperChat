@@ -30,8 +30,6 @@ const props = defineProps({
   },
 });
 
-const { t } = useI18n();
-
 const emit = defineEmits([
   'blur',
   'input',
@@ -41,6 +39,8 @@ const emit = defineEmits([
   'keydown',
   'send',
 ]);
+
+const { t } = useI18n();
 
 const { formatMessage } = useMessageFormatter();
 

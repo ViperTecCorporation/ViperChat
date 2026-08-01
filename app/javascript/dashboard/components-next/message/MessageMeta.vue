@@ -119,7 +119,11 @@ const isRead = computed(() => {
     return sourceId.value && status.value === MESSAGE_STATUS.READ;
   }
 
-  if (isAWebWidgetInbox.value || isAPIInbox.value || isAnInternalChannel.value) {
+  if (
+    isAWebWidgetInbox.value ||
+    isAPIInbox.value ||
+    isAnInternalChannel.value
+  ) {
     return status.value === MESSAGE_STATUS.READ;
   }
 

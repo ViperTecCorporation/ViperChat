@@ -83,6 +83,12 @@ const toggle = () => {
   if (!showCompose.value) emit('close');
 };
 
+const open = () => {
+  showCompose.value = true;
+};
+
+defineExpose({ open });
+
 const resetForm = () => {
   selectedInboxId.value = null;
   selectedParticipants.value = [];

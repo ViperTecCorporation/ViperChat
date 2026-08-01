@@ -16,17 +16,47 @@ const { hasTranslations, translationContent } =
   useTranslations(contentAttributes);
 
 const renderOriginal = ref(false);
+const referralImageError = ref(false);
+
+const referralImageUrl = computed(() => {
+  if (messageType.value !== MESSAGE_TYPES.INCOMING) return '';
+
+  const referral = contentAttributes.value?.referral;
+  if (!referral) return '';
+
+  const imageUrl =
+    referral.thumbnailUrl ||
+    referral.thumbnail_url ||
+    (typeof referral.imageUrl === 'string' && referral.imageUrl) ||
+    (typeof referral.image_url === 'string' && referral.image_url);
+  if (!imageUrl) return '';
+
+  try {
+    const url = new URL(imageUrl);
+    return ['http:', 'https:'].includes(url.protocol) ? imageUrl : '';
+  } catch {
+    return '';
+  }
+});
 
 const renderContent = computed(() => {
+  let renderedContent;
+
   if (renderOriginal.value) {
-    return content.value;
+    renderedContent = content.value;
+  } else if (hasTranslations.value) {
+    renderedContent = translationContent.value;
+  } else {
+    renderedContent = content.value;
   }
 
-  if (hasTranslations.value) {
-    return translationContent.value;
-  }
+  if (!renderedContent || !referralImageUrl.value) return renderedContent;
 
-  return content.value;
+  return renderedContent
+    .split('\n')
+    .filter(line => line.trim() !== referralImageUrl.value)
+    .join('\n')
+    .trimEnd();
 });
 
 const isTemplate = computed(() => {
@@ -70,6 +100,16 @@ const handleSeeOriginal = () => {
         {{ $t('CONVERSATION.NO_CONTENT') }}
       </span>
       <FormattedContent v-if="renderContent" :content="renderContent" />
+      <img
+        v-if="referralImageUrl && !referralImageError"
+        data-testid="referral-image"
+        class="skip-context-menu w-full max-h-80 rounded-lg object-contain"
+        :src="referralImageUrl"
+        alt=""
+        loading="lazy"
+        referrerpolicy="no-referrer"
+        @error="referralImageError = true"
+      />
       <LinkPreviewCard v-if="linkPreview" :preview="linkPreview" />
       <TranslationToggle
         v-if="hasTranslations"

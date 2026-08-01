@@ -40,12 +40,12 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
       },
       message
     )
-    message.update!(source_id: message_id) if message_id.present?
+    persist_source_id(message_id)
   end
 
   def send_session_message
     message_id = channel.send_message(whatsapp_recipient, message)
-    message.update!(source_id: message_id) if message_id.present?
+    persist_source_id(message_id)
   end
 
   def template_params
@@ -54,6 +54,13 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
 
   def template_required?
     channel.provider != 'unoapi'
+  end
+
+  def persist_source_id(message_id)
+    return if message_id.blank?
+
+    Whatsapp::MessageDedupLock.new("#{inbox.id}:#{message_id}").acquire!
+    message.update!(source_id: message_id)
   end
 
   def whatsapp_recipient

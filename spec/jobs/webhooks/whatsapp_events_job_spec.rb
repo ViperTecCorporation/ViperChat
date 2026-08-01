@@ -55,10 +55,10 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       job.perform_now(params)
     end
 
-    it 'enqueue Whatsapp::IncomingMessageWhatsappCloudService even if channel reauthorization required' do
+    it 'does not enqueue for embedded signup channels requiring reauthorization' do
       channel.prompt_reauthorization!
       allow(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).and_return(process_service)
-      expect(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new)
+      expect(Whatsapp::IncomingMessageWhatsappCloudService).not_to receive(:new)
       job.perform_now(params)
     end
 
@@ -91,6 +91,7 @@ RSpec.describe Webhooks::WhatsappEventsJob do
     end
 
     it 'does not log a warning when channel only needs reauthorization' do
+      channel.update!(provider_config: channel.provider_config.merge('source' => 'manual'))
       channel.prompt_reauthorization!
       allow(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).and_return(process_service)
       allow(Rails.logger).to receive(:warn)

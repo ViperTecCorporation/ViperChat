@@ -1,9 +1,5 @@
-import {
-  UserAgent,
-  Registerer,
-  Inviter,
-  SessionState,
-} from 'sip.js';
+/* eslint-disable no-underscore-dangle, class-methods-use-this */
+import { UserAgent, Registerer, Inviter, SessionState } from 'sip.js';
 import VoiceAPI from './voiceAPIClient';
 
 const createCallDisconnectedEvent = detail =>
@@ -54,7 +50,12 @@ class CustomVoiceClient extends EventTarget {
   }
 
   async initializeDevice(inboxId, { force = false, reason = 'manual' } = {}) {
-    if (!force && this.initialized && this.inboxId === inboxId && this.userAgent) {
+    if (
+      !force &&
+      this.initialized &&
+      this.inboxId === inboxId &&
+      this.userAgent
+    ) {
       // eslint-disable-next-line no-console
       console.log('[CustomVoiceClient] reuseDevice', { inboxId });
       return this.userAgent;
@@ -63,10 +64,19 @@ class CustomVoiceClient extends EventTarget {
     this.destroyDevice();
 
     // eslint-disable-next-line no-console
-    console.log('[CustomVoiceClient] initializeDevice', { inboxId, reason, force });
+    console.log('[CustomVoiceClient] initializeDevice', {
+      inboxId,
+      reason,
+      force,
+    });
     const response = await VoiceAPI.getToken(inboxId);
-    const { token, webrtc, provider, auth_type: authType, password } =
-      response || {};
+    const {
+      token,
+      webrtc,
+      provider,
+      auth_type: authType,
+      password,
+    } = response || {};
     if (provider !== 'custom') throw new Error('Invalid provider');
     if (!webrtc?.ws_url || !webrtc?.sip_domain) {
       throw new Error('Invalid WebRTC config');
@@ -208,7 +218,8 @@ class CustomVoiceClient extends EventTarget {
       if (state === SessionState.Established && this.activeSession.bye) {
         this.activeSession.bye();
       } else if (
-        (state === SessionState.Initial || state === SessionState.Establishing) &&
+        (state === SessionState.Initial ||
+          state === SessionState.Establishing) &&
         this.activeSession.cancel
       ) {
         this.activeSession.cancel();
@@ -436,7 +447,8 @@ class CustomVoiceClient extends EventTarget {
 
     const handleStream = event => {
       const stream =
-        event.streams?.[0] || (event.track ? new MediaStream([event.track]) : null);
+        event.streams?.[0] ||
+        (event.track ? new MediaStream([event.track]) : null);
       if (!stream) return;
       if (event.track && event.track.kind !== 'audio') return;
       this.remoteAudio.srcObject = stream;
@@ -499,7 +511,9 @@ class CustomVoiceClient extends EventTarget {
       return true;
     } catch (error) {
       if (!getStoredAudioPermission()) {
-        this.dispatchEvent(createAudioBlockedEvent({ inboxId: this.inboxId, reason }));
+        this.dispatchEvent(
+          createAudioBlockedEvent({ inboxId: this.inboxId, reason })
+        );
       }
       // eslint-disable-next-line no-console
       console.warn('[CustomVoiceClient] remoteAudio play blocked', {
@@ -517,7 +531,9 @@ class CustomVoiceClient extends EventTarget {
 
     transport.onConnect = () => {
       // eslint-disable-next-line no-console
-      console.log('[CustomVoiceClient] transport connected', { inboxId: this.inboxId });
+      console.log('[CustomVoiceClient] transport connected', {
+        inboxId: this.inboxId,
+      });
       this.clearReconnectTimer();
       if (this.registerer) {
         this.registerer.register();
@@ -653,7 +669,10 @@ class CustomVoiceClient extends EventTarget {
 
       if (resolvedCallSid !== callSid) {
         this.pendingInvites.delete(callSid);
-        this.pendingInvites.set(resolvedCallSid, { invitation, conversationId });
+        this.pendingInvites.set(resolvedCallSid, {
+          invitation,
+          conversationId,
+        });
       } else {
         this.pendingInvites.set(callSid, { invitation, conversationId });
       }

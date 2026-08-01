@@ -5,7 +5,7 @@
 # - We save the hash of the synced URL to retrigger downloads only when
 #   there is a change in the underlying asset.
 # - A 1 minute rate limit window is enforced via `last_avatar_sync_at`.
-class Avatar::AvatarFromUrlJob < ApplicationJob
+class Avatar::AvatarFromUrlJob < ApplicationJob # rubocop:disable Metrics/ClassLength
   include UrlHelper
   queue_as :purgable
 
@@ -16,22 +16,33 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     avatar_hash content_length content_md5 content_type etag file_hash file_size
     hash last_modified picture_hash profile_picture_hash size updated_at
   ].freeze
+  AVATAR_CONTENT_IDENTITY_KEYS = %w[
+    avatar_hash content_md5 etag file_hash hash picture_hash profile_picture_hash
+  ].freeze
+  AVATAR_CONTENT_DETAIL_KEYS = %w[content_length content_type file_size size].freeze
+  AVATAR_FRESHNESS_KEYS = %w[last_modified updated_at].freeze
 
   def self.should_enqueue?(avatarable, avatar_url, avatar_metadata = nil)
     return false if avatar_url.blank?
     return true unless avatarable.is_a?(Contact)
 
     attrs = avatarable.additional_attributes || {}
-    url_hash = generate_url_hash(avatar_url, avatar_signature_metadata(avatar_url, avatar_metadata))
-    attrs['avatar_url_hash'] != url_hash && attrs['avatar_url_enqueued_hash'] != url_hash
+    return false if rate_limited_without_metadata?(attrs, avatar_metadata)
+    return false if stale_avatar_metadata?(attrs, avatar_metadata)
+
+    stored_hashes = attrs.values_at('avatar_url_hash', 'avatar_url_enqueued_hash')
+    return false if stored_hashes.include?(generate_url_hash(avatar_url))
+
+    stored_hashes.exclude?(generate_url_hash(avatar_url, avatar_signature_metadata(avatar_url, avatar_metadata)))
   end
 
   def self.enqueue_if_needed(avatarable, avatar_url, avatar_metadata = nil)
+    return false unless should_enqueue?(avatarable, avatar_url, avatar_metadata)
+
     signature_metadata = avatar_signature_metadata(avatar_url, avatar_metadata)
     return false unless reserve_enqueue!(avatarable, avatar_url, signature_metadata)
 
-    job_args = [avatarable, avatar_url]
-    job_args << signature_metadata if signature_metadata.present?
+    job_args = [avatarable, avatar_url, signature_metadata.presence].compact
     perform_later(*job_args)
     true
   end
@@ -42,15 +53,21 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
 
     avatarable.with_lock do
       attrs = avatarable.additional_attributes || {}
-      url_hash = generate_url_hash(avatar_url, avatar_metadata)
-      return false if attrs['avatar_url_hash'] == url_hash || attrs['avatar_url_enqueued_hash'] == url_hash
+      url_hashes = [generate_url_hash(avatar_url), generate_url_hash(avatar_url, avatar_metadata)]
+      next false if enqueue_blocked?(attrs, avatar_metadata, url_hashes)
 
-      attrs['avatar_url_enqueued_hash'] = url_hash
+      attrs['avatar_url_enqueued_hash'] = url_hashes.last
       attrs['avatar_url_signature_metadata'] = avatar_metadata if avatar_metadata.present?
       attrs['last_avatar_enqueue_at'] = Time.current.iso8601
       avatarable.update_columns(additional_attributes: attrs) # rubocop:disable Rails/SkipsModelValidations
       true
     end
+  end
+
+  def self.enqueue_blocked?(attrs, avatar_metadata, url_hashes)
+    rate_limited_without_metadata?(attrs, avatar_metadata) ||
+      stale_avatar_metadata?(attrs, avatar_metadata) ||
+      (url_hashes & attrs.values_at('avatar_url_hash', 'avatar_url_enqueued_hash')).any?
   end
 
   def self.generate_url_hash(url, avatar_metadata = nil)
@@ -71,10 +88,19 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
   end
 
   def self.avatar_signature_metadata(avatar_url, avatar_metadata = nil)
-    normalized_avatar_metadata(avatar_metadata).presence || remote_avatar_metadata(avatar_url)
+    filtered_avatar_metadata(avatar_metadata).presence || remote_avatar_metadata(avatar_url)
   end
 
   def self.normalized_avatar_metadata(avatar_metadata)
+    normalized = filtered_avatar_metadata(avatar_metadata)
+
+    content_identity = normalized.slice(*AVATAR_CONTENT_IDENTITY_KEYS)
+    return normalized if content_identity.blank?
+
+    content_identity.merge(normalized.slice(*AVATAR_CONTENT_DETAIL_KEYS))
+  end
+
+  def self.filtered_avatar_metadata(avatar_metadata)
     attrs = avatar_metadata.to_h.with_indifferent_access
     AVATAR_METADATA_KEYS.each_with_object({}) do |key, result|
       value = attrs[key].presence
@@ -84,7 +110,35 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     {}
   end
 
-  def self.remote_avatar_metadata(avatar_url)
+  def self.within_rate_limit?(attrs)
+    timestamp = parse_avatar_timestamp(attrs['last_avatar_sync_at'])
+    timestamp.present? && timestamp > RATE_LIMIT_WINDOW.ago
+  end
+
+  def self.rate_limited_without_metadata?(attrs, avatar_metadata)
+    normalized_avatar_metadata(avatar_metadata).blank? && within_rate_limit?(attrs)
+  end
+
+  def self.stale_avatar_metadata?(attrs, avatar_metadata)
+    stored_timestamp = avatar_metadata_timestamp(attrs['avatar_url_signature_metadata'])
+    incoming_timestamp = avatar_metadata_timestamp(avatar_metadata)
+    stored_timestamp.present? && incoming_timestamp.present? && incoming_timestamp < stored_timestamp
+  end
+
+  def self.avatar_metadata_timestamp(avatar_metadata)
+    attrs = avatar_metadata.to_h.with_indifferent_access
+    AVATAR_FRESHNESS_KEYS.filter_map { |key| parse_avatar_timestamp(attrs[key]) }.max
+  rescue StandardError
+    nil
+  end
+
+  def self.parse_avatar_timestamp(value)
+    Time.zone.parse(value.to_s) if value.present?
+  rescue ArgumentError, TypeError
+    nil
+  end
+
+  def self.remote_avatar_metadata(avatar_url) # rubocop:disable Metrics/MethodLength
     options = SafeFetch::RequestOptions.new(
       url: avatar_url,
       method: :get,
@@ -96,7 +150,7 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     response = if SafeFetch.allow_private_network?
                  SafeFetch::PrivateNetworkRequest.new(options).perform
                else
-                 SsrfFilter.head(options.url, **options.request_options)
+                 SsrfFilter.get(options.url, **options.request_options)
                end
 
     return {} unless response.is_a?(Net::HTTPSuccess) || response.is_a?(Net::HTTPRedirection)
@@ -121,14 +175,16 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
 
     begin
       return unless syncable_avatar?(avatarable, avatar_url, avatar_metadata)
+      return unless current_avatar_reservation?(avatarable, avatar_url, avatar_metadata)
 
-      fetch_and_attach_avatar(avatarable, avatar_url)
+      avatar_attached = fetch_and_attach_avatar(avatarable, avatar_url, avatar_metadata)
+      update_avatar_sync_attributes(avatarable, avatar_url, avatar_metadata) if avatar_attached
     rescue SafeFetch::HttpError => e
       log_http_error(avatar_url, e)
     rescue SafeFetch::Error => e
       Rails.logger.error "AvatarFromUrlJob error for #{avatar_url}: #{e.class} - #{e.message}"
     ensure
-      update_avatar_sync_attributes(avatarable, avatar_url, avatar_metadata)
+      release_avatar_reservation(avatarable, avatar_url, avatar_metadata)
     end
   end
 
@@ -147,15 +203,20 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
       should_sync_avatar?(avatarable, avatar_url, avatar_metadata)
   end
 
-  def fetch_and_attach_avatar(avatarable, avatar_url)
+  def fetch_and_attach_avatar(avatarable, avatar_url, avatar_metadata)
+    attached = false
     SafeFetch.fetch(
       avatar_url,
       max_bytes: MAX_DOWNLOAD_SIZE,
       allowed_content_type_prefixes: [],
       allowed_content_types: ALLOWED_CONTENT_TYPES
     ) do |avatar_file|
+      next unless current_avatar_reservation?(avatarable, avatar_url, avatar_metadata)
+
       attach_avatar(avatarable, avatar_file)
+      attached = true
     end
+    attached
   end
 
   def attach_avatar(avatarable, avatar_file)
@@ -182,17 +243,11 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
 
     attrs = avatarable.additional_attributes || {}
 
-    return false if within_rate_limit?(attrs)
+    return false if self.class.rate_limited_without_metadata?(attrs, avatar_metadata)
+    return false if self.class.stale_avatar_metadata?(attrs, avatar_metadata)
     return false if duplicate_url?(attrs, avatar_url, avatar_metadata)
 
     true
-  end
-
-  def within_rate_limit?(attrs)
-    ts = attrs['last_avatar_sync_at']
-    return false if ts.blank?
-
-    Time.zone.parse(ts) > RATE_LIMIT_WINDOW.ago
   end
 
   def duplicate_url?(attrs, avatar_url, avatar_metadata)
@@ -200,23 +255,48 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     stored_hash.present? && stored_hash == generate_url_hash(avatar_url, avatar_metadata)
   end
 
+  def current_avatar_reservation?(avatarable, avatar_url, avatar_metadata)
+    return true unless avatarable.is_a?(Contact)
+
+    reserved_hash = avatarable.reload.additional_attributes&.dig('avatar_url_enqueued_hash')
+    reserved_hash.blank? || reserved_hash == generate_url_hash(avatar_url, avatar_metadata)
+  end
+
   def generate_url_hash(url, avatar_metadata = nil)
     self.class.generate_url_hash(url, avatar_metadata)
   end
 
   def update_avatar_sync_attributes(avatarable, avatar_url, avatar_metadata)
-    # Only Contacts have sync attributes persisted
     return unless avatarable.is_a?(Contact)
     return if avatar_url.blank?
 
-    additional_attributes = avatarable.additional_attributes || {}
-    additional_attributes['last_avatar_sync_at'] = Time.current.iso8601
-    additional_attributes['avatar_url_hash'] = generate_url_hash(avatar_url, avatar_metadata)
-    additional_attributes['avatar_url_signature_metadata'] = avatar_metadata if avatar_metadata.present?
-    additional_attributes.delete('avatar_url_enqueued_hash')
+    avatarable.with_lock do
+      additional_attributes = avatarable.additional_attributes || {}
+      next unless current_or_unreserved?(additional_attributes, avatar_url, avatar_metadata)
 
-    # Persist without triggering validations that may fail due to avatar file checks
-    avatarable.update_columns(additional_attributes: additional_attributes) # rubocop:disable Rails/SkipsModelValidations
+      additional_attributes['last_avatar_sync_at'] = Time.current.iso8601
+      additional_attributes['avatar_url_hash'] = generate_url_hash(avatar_url, avatar_metadata)
+      additional_attributes['avatar_url_signature_metadata'] = avatar_metadata if avatar_metadata.present?
+      additional_attributes.delete('avatar_url_enqueued_hash')
+      avatarable.update_columns(additional_attributes: additional_attributes) # rubocop:disable Rails/SkipsModelValidations
+    end
+  end
+
+  def release_avatar_reservation(avatarable, avatar_url, avatar_metadata)
+    return unless avatarable.is_a?(Contact)
+
+    avatarable.with_lock do
+      additional_attributes = avatarable.additional_attributes || {}
+      next unless additional_attributes['avatar_url_enqueued_hash'] == generate_url_hash(avatar_url, avatar_metadata)
+
+      additional_attributes.delete('avatar_url_enqueued_hash')
+      avatarable.update_columns(additional_attributes: additional_attributes) # rubocop:disable Rails/SkipsModelValidations
+    end
+  end
+
+  def current_or_unreserved?(additional_attributes, avatar_url, avatar_metadata)
+    reserved_hash = additional_attributes['avatar_url_enqueued_hash']
+    reserved_hash.blank? || reserved_hash == generate_url_hash(avatar_url, avatar_metadata)
   end
 
   def valid_file?(file)

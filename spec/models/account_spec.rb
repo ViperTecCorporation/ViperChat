@@ -465,6 +465,7 @@ RSpec.describe Account do
 
     describe 'with no saved preferences' do
       before do
+        account.disable_features!('captain_integration_v2')
         account.update!(captain_models: nil)
       end
 

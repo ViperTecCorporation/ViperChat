@@ -15,6 +15,7 @@ class ActionCableBroadcastJob < ApplicationJob
 
     broadcast_data = prepare_broadcast_data(event_name, data)
     broadcast_to_members(members, event_name, broadcast_data)
+    Whatsapp::Unoapi::CatalogEventLogger.log_broadcast(broadcast_data)
   end
 
   private

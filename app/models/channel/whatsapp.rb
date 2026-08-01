@@ -17,20 +17,23 @@
 #  index_channel_whatsapp_on_phone_number  (phone_number) UNIQUE
 #
 
-class Channel::Whatsapp < ApplicationRecord
+class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLength
   include Channelable
   include Reauthorizable
 
   self.table_name = 'channel_whatsapp'
-  EDITABLE_ATTRS = [:phone_number, :provider, { provider_config: {} }].freeze
+  UNOAPI_PIX_KEY_TYPES = %w[EMAIL CNPJ PHONE].freeze
+  EDITABLE_ATTRS = [:phone_number, :provider, :contact_sync_enabled, :contact_export_enabled, { provider_config: {} }].freeze
 
   # default at the moment is 360dialog lets change later.
   PROVIDERS = %w[default whatsapp_cloud unoapi].freeze
   before_validation :ensure_unoapi_group_conversation_schema_default
+  before_validation :normalize_unoapi_pix_config
   before_validation :ensure_webhook_verify_token
 
   validates :provider, inclusion: { in: PROVIDERS }
   validates :phone_number, presence: true, uniqueness: true
+  validate :validate_unoapi_pix_config
   validate :validate_provider_config
 
   after_create :sync_templates
@@ -38,6 +41,8 @@ class Channel::Whatsapp < ApplicationRecord
   before_destroy :teardown_webhooks
   after_commit :setup_webhooks, on: :create, if: :should_auto_setup_webhooks?
   after_update_commit :enqueue_group_conversation_backfill, if: :should_backfill_group_conversations?
+  after_update_commit :handle_contact_sync_setting_change, if: :saved_change_to_contact_sync_enabled?
+  after_update_commit :handle_contact_export_setting_change, if: :saved_change_to_contact_export_enabled?
 
   def name
     'Whatsapp'
@@ -143,6 +148,32 @@ class Channel::Whatsapp < ApplicationRecord
 
   private
 
+  def handle_contact_sync_setting_change
+    if contact_sync_enabled? && provider == 'unoapi'
+      update_columns( # rubocop:disable Rails/SkipsModelValidations
+        contact_sync_status: 'waiting_connection',
+        contact_sync_error: nil,
+        contact_sync_next_run_at: Time.current
+      )
+      Whatsapp::Unoapi::ContactSync::ConnectionCheckJob.perform_later(id)
+    else
+      update_columns( # rubocop:disable Rails/SkipsModelValidations
+        contact_sync_status: 'disabled',
+        contact_sync_cursor: nil,
+        contact_sync_error: nil,
+        contact_sync_next_run_at: nil,
+        contact_export_enabled: false
+      )
+    end
+  end
+
+  def handle_contact_export_setting_change
+    return unless contact_export_enabled? && contact_sync_enabled? && provider == 'unoapi'
+    return if saved_change_to_contact_sync_enabled?
+
+    Whatsapp::Unoapi::ContactSync::ConnectionCheckJob.perform_later(id)
+  end
+
   def ensure_webhook_verify_token
     provider_config['webhook_verify_token'] ||= SecureRandom.hex(16) if %w[whatsapp_cloud unoapi].include?(provider)
   end
@@ -154,12 +185,39 @@ class Channel::Whatsapp < ApplicationRecord
     provider_config['use_group_conversation_schema'] = true unless provider_config.key?('use_group_conversation_schema')
   end
 
+  def normalize_unoapi_pix_config # rubocop:disable Metrics/AbcSize
+    return unless provider == 'unoapi'
+
+    self.provider_config ||= {}
+    return unless provider_config.keys.intersect?(%w[pix_merchant_name pix_key pix_key_type])
+
+    provider_config['pix_merchant_name'] = provider_config['pix_merchant_name'].to_s.strip.presence
+    provider_config['pix_merchant_name'] ||= inbox&.name.presence if provider_config['pix_key'].present?
+    provider_config['pix_key'] = provider_config['pix_key'].to_s.strip.presence
+    provider_config['pix_key_type'] = provider_config['pix_key_type'].to_s.upcase.presence
+  end
+
   def validate_provider_config
     errors.add(:provider_config, 'Invalid Credentials') unless provider_service.validate_provider_config?
   rescue HTTParty::Error => e
     errors.add(:provider_config, e.message)
   rescue SocketError, Errno::ECONNREFUSED
     errors.add(:provider_config, 'Conection refused, verify Whatsapp Cloud API URL field')
+  end
+
+  def validate_unoapi_pix_config # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
+    return unless provider == 'unoapi'
+
+    pix_merchant_name = provider_config['pix_merchant_name'].to_s.strip
+    pix_key = provider_config['pix_key'].to_s.strip
+    pix_key_type = provider_config['pix_key_type'].to_s.upcase
+    return if pix_merchant_name.blank? && pix_key.blank? && pix_key_type.blank?
+
+    errors.add(:provider_config, 'PIX merchant name is required') if pix_merchant_name.blank?
+    errors.add(:provider_config, 'PIX key is required') if pix_key.blank?
+    return if pix_key_type.in?(UNOAPI_PIX_KEY_TYPES)
+
+    errors.add(:provider_config, "PIX key type must be one of: #{UNOAPI_PIX_KEY_TYPES.join(', ')}")
   end
 
   # Logs only the embedded signup → manual migration (the save drops the

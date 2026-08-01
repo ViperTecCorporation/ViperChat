@@ -7,6 +7,12 @@ export const findPendingMessageIndex = (chat, message) => {
   );
 };
 
+export const sortMessagesChronologically = messages =>
+  [...messages].sort((left, right) => {
+    const timestampOrder = (left.created_at || 0) - (right.created_at || 0);
+    return timestampOrder || (left.id || 0) - (right.id || 0);
+  });
+
 const STATUS_ENUM = {
   0: 'open',
   1: 'resolved',
@@ -90,8 +96,14 @@ const filterByGroups = (shouldFilter, assigneeType, conversation = {}) => {
 };
 
 export const applyPageFilters = (conversation, filters) => {
-  const { assigneeType, inboxId, status, labels = [], teamId, conversationType } =
-    filters;
+  const {
+    assigneeType,
+    inboxId,
+    status,
+    labels = [],
+    teamId,
+    conversationType,
+  } = filters;
   const {
     status: chatStatus,
     inbox_id: chatInboxId,

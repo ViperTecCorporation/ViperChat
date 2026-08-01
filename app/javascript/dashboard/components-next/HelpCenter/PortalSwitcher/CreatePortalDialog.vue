@@ -79,7 +79,10 @@ const getBrandColor = () => {
   const raw = getComputedStyle(document.documentElement)
     .getPropertyValue('--brand-color')
     .trim();
-  const parts = raw.split(/\s+/).map(Number).filter(value => !Number.isNaN(value));
+  const parts = raw
+    .split(/\s+/)
+    .map(Number)
+    .filter(value => !Number.isNaN(value));
   if (parts.length !== 3) return '#2781F6';
   return `#${parts
     .map(value => Math.max(0, Math.min(255, value)))

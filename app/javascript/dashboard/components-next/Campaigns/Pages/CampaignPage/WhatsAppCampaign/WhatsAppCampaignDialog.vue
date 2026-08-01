@@ -7,14 +7,14 @@ import { CAMPAIGNS_EVENTS } from 'dashboard/helper/AnalyticsHelper/events.js';
 
 import WhatsAppCampaignForm from 'dashboard/components-next/Campaigns/Pages/CampaignPage/WhatsAppCampaign/WhatsAppCampaignForm.vue';
 
-const emit = defineEmits(['close']);
-
 defineProps({
   initialData: {
     type: Object,
     default: null,
   },
 });
+
+const emit = defineEmits(['close']);
 
 const store = useStore();
 const { t } = useI18n();

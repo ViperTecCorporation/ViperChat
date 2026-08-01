@@ -28,7 +28,6 @@ describe Whatsapp::UnoapiWebhookSetupService do
         'notify_failed_messages' => true,
         'composing_message' => false,
         'read_on_receipt' => false,
-        'read_on_reply' => true,
         'groq_api_key' => 'gsk-test',
         'send_reaction_as_reply' => true,
         'send_profile_picture' => true
@@ -64,11 +63,30 @@ describe Whatsapp::UnoapiWebhookSetupService do
 
     expect(register_url).to eq('https://uno.example.com/v15.0/5566996222471/register')
     expect(payload['autoConnect']).to be(true)
+    expect(payload['connectionType']).to eq('qrcode')
+    expect(payload['markOnlineOnConnect']).to be(false)
+    expect(payload['readOnReply']).to be(true)
     expect(payload['useRedis']).to be(true)
     expect(payload['useS3']).to be(true)
     expect(webhook['urlAbsolute']).to eq('https://chatwoot.vipertec.net/webhooks/whatsapp/5566996222471')
     expect(webhook['url']).to be_nil
     expect(webhook['token']).to eq('c84834e6b008de54e8db97b7b01cc')
     expect(webhook['sendNewMessages']).to be(true)
+    expect(payload).not_to have_key('contact_sync_enabled')
+    expect(payload).not_to have_key('sync_contacts')
+  end
+
+  it 'sends pairing_code when selected in the provider configuration' do
+    channel.provider_config['connection_type'] = 'pairing_code'
+    calls = []
+    allow(HTTParty).to receive(:post) do |url, options|
+      calls << [url, options]
+      calls.length == 1 ? register_response : message_response
+    end
+
+    service.perform(channel)
+
+    payload = JSON.parse(calls.first.last[:body])
+    expect(payload['connectionType']).to eq('pairing_code')
   end
 end

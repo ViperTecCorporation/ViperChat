@@ -210,6 +210,17 @@ export default {
           !this.isFailed,
         cannedResponse:
           this.isOutgoing && this.hasText && !this.isMessageDeleted,
+        edit:
+          this.isAUnoapiChannel &&
+          this.isOutgoing &&
+          this.hasText &&
+          !this.hasAttachments &&
+          !!this.data.source_id &&
+          !this.data.private &&
+          this.contentType === 'text' &&
+          !this.isMessageDeleted &&
+          !this.isFailed &&
+          !this.isPending,
         copyLink: !this.isFailed || !this.isProcessing,
         translate:
           (!this.isFailed || !this.isProcessing) &&
@@ -381,8 +392,10 @@ export default {
         bubble: this.isBubble,
         'is-private': this.data.private,
         'is-unsupported': this.isUnsupported,
-        'is-image': !this.shouldHideDeletedMedia && this.hasMediaAttachment('image'),
-        'is-video': !this.shouldHideDeletedMedia && this.hasMediaAttachment('video'),
+        'is-image':
+          !this.shouldHideDeletedMedia && this.hasMediaAttachment('image'),
+        'is-video':
+          !this.shouldHideDeletedMedia && this.hasMediaAttachment('video'),
         'is-text': this.hasText,
         'is-from-bot': this.isSentByBot,
         'is-failed': this.isFailed,

@@ -59,7 +59,7 @@ class Whatsapp::IncomingMessageBaseService
     # We use an atomic Redis SET NX to prevent concurrent workers from both
     # processing the same message simultaneously.
     return if process_message_edit
-    return if find_message_by_source_id(messages_data.first[:id])
+    return if reconcile_existing_message(messages_data.first[:id])
     return unless lock_message_source_id!
     set_message_type
     set_contact
@@ -80,6 +80,13 @@ class Whatsapp::IncomingMessageBaseService
     update_message_with_status(@message, status)
   rescue ArgumentError => e
     Rails.logger.error "Error while processing whatsapp status update #{e.message}"
+  end
+
+  def reconcile_existing_message(source_id)
+    return false unless find_message_by_source_id(source_id)
+
+    update_message_with_status(@message, status: 'delivered') if outgoing_echo
+    true
   end
 
   def contact_sync_payload?
@@ -480,7 +487,8 @@ class Whatsapp::IncomingMessageBaseService
 
   def create_message(message, source_id: nil, content_attributes_source: message)
     timestamp = message[:timestamp] ? Time.at(message[:timestamp].to_i, microsecond, :microsecond, in: 'UTC') : Time.current.utc
-    Rails.logger.info("[WHATSAPP] Incoming message type=#{message_type} content_type=#{message_type == 'sticker' ? 'sticker' : 'nil'} source_id=#{message[:id]}")
+    content_type = whatsapp_message_content_type(message)
+    Rails.logger.info("[WHATSAPP] Incoming message type=#{message_type} content_type=#{content_type || 'nil'} source_id=#{message[:id]}")
     @message = @conversation.messages.build(
       content: message_content(message),
       account_id: @inbox.account_id,
@@ -488,7 +496,7 @@ class Whatsapp::IncomingMessageBaseService
       message_type: webhook_outgoing_message? ? :outgoing : @message_type,
       # Set status to :delivered for echo messages to prevent SendReplyJob from trying to send them
       status: webhook_outgoing_message? ? :delivered : :sent,
-      content_type: message_type == 'sticker' ? 'sticker' : nil,
+      content_type: content_type,
       sender: webhook_outgoing_message? ? nil : @sender,
       source_id: (source_id || message[:id]).to_s,
       content_attributes: message_content_attributes(content_attributes_source),
@@ -506,7 +514,7 @@ class Whatsapp::IncomingMessageBaseService
     content_attrs[:in_reply_to_external_id] = @in_reply_to_external_id if @in_reply_to_external_id.present?
     referral_content_attrs = referral_attributes(message)
     content_attrs[:referral] = referral_content_attrs if referral_content_attrs.present?
-    content_attrs
+    content_attrs.merge(whatsapp_interactive_content_attributes(message))
   end
 
   def attach_contact(contact)

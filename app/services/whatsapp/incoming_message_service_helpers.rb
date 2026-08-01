@@ -123,6 +123,70 @@ module Whatsapp::IncomingMessageServiceHelpers
     parts.reject(&:blank?).join("\n")
   end
 
+  def whatsapp_message_content_type(message)
+    return 'cards' if whatsapp_carousel_message?(message) && whatsapp_carousel_items(message).any?
+    return 'sticker' if message_type == 'sticker'
+  end
+
+  def whatsapp_interactive_content_attributes(message)
+    return {} unless whatsapp_carousel_message?(message)
+
+    {
+      items: whatsapp_carousel_items(message),
+      whatsapp_interactive: { type: 'carousel' }
+    }
+  end
+
+  def whatsapp_carousel_message?(message)
+    message[:type].to_s == 'interactive' &&
+      message.dig(:interactive, :type).to_s == 'carousel'
+  end
+
+  def whatsapp_carousel_items(message)
+    cards = message.dig(:interactive, :carousel, :cards)
+    return [] unless cards.is_a?(Array)
+
+    cards.filter_map { |card| whatsapp_carousel_item(card) }
+  end
+
+  def whatsapp_carousel_item(card)
+    return unless card.respond_to?(:with_indifferent_access)
+
+    card = card.with_indifferent_access
+    item = {
+      title: card.dig(:header, :text).to_s,
+      description: card.dig(:body, :text).to_s,
+      media_url: card.dig(:header, :image, :link).to_s,
+      actions: whatsapp_carousel_actions(card.dig(:action, :buttons))
+    }
+    return if item.values_at(:title, :description, :media_url).all?(&:blank?) && item[:actions].blank?
+
+    item
+  end
+
+  def whatsapp_carousel_actions(buttons)
+    return [] unless buttons.is_a?(Array)
+
+    buttons.filter_map do |button|
+      next unless button.respond_to?(:with_indifferent_access)
+
+      whatsapp_carousel_action(button.with_indifferent_access)
+    end
+  end
+
+  def whatsapp_carousel_action(button)
+    case button[:type].to_s
+    when 'cta_url'
+      text = button.dig(:url, :title).to_s
+      uri = button.dig(:url, :link).to_s
+      { type: 'link', text: text, uri: uri } unless text.blank? && uri.blank?
+    when 'reply'
+      text = button.dig(:reply, :title).to_s
+      payload = button.dig(:reply, :id).to_s
+      { type: 'postback', text: text, payload: payload } unless text.blank? && payload.blank?
+    end
+  end
+
   def build_option_line(title, option_id)
     return if title.blank? && option_id.blank?
 
@@ -215,12 +279,13 @@ module Whatsapp::IncomingMessageServiceHelpers
   def find_message_by_source_id(source_id)
     return unless source_id
 
-    @message = Message.find_by(source_id: source_id)
+    messages = inbox.messages.where(source_id: source_id).order(:created_at).to_a
+    @message = messages.find { |message| !message.content_attributes['external_echo'] } || messages.first
   end
 
   def lock_message_source_id!
     return false if messages_data.blank?
 
-    Whatsapp::MessageDedupLock.new(messages_data.first[:id]).acquire!
+    Whatsapp::MessageDedupLock.new("#{inbox.id}:#{messages_data.first[:id]}").acquire!
   end
 end

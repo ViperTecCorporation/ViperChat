@@ -16,14 +16,14 @@ import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 import TagMultiSelectComboBox from 'dashboard/components-next/combobox/TagMultiSelectComboBox.vue';
 import WhatsAppTemplateParser from 'dashboard/components-next/whatsapp/WhatsAppTemplateParser.vue';
 
-const emit = defineEmits(['submit', 'cancel']);
-
 const props = defineProps({
   initialData: {
     type: Object,
     default: null,
   },
 });
+
+const emit = defineEmits(['submit', 'cancel']);
 
 const { t } = useI18n();
 
@@ -159,9 +159,7 @@ const formErrors = computed(() => ({
   template: !isUnoapiInbox.value
     ? getErrorMessage('templateId', 'TEMPLATE')
     : '',
-  message: isUnoapiInbox.value
-    ? getErrorMessage('message', 'MESSAGE')
-    : '',
+  message: isUnoapiInbox.value ? getErrorMessage('message', 'MESSAGE') : '',
   scheduledAt: getErrorMessage('scheduledAt', 'SCHEDULED_AT'),
   audience: isUnoapiInbox.value
     ? getErrorMessage('audienceText', 'UNOAPI_AUDIENCE')
@@ -465,9 +463,7 @@ watch(
           v-model="state.templateId"
           :options="templateOptions"
           :has-error="!!formErrors.template"
-          :placeholder="
-            t('CAMPAIGN.WHATSAPP.CREATE.FORM.TEMPLATE.PLACEHOLDER')
-          "
+          :placeholder="t('CAMPAIGN.WHATSAPP.CREATE.FORM.TEMPLATE.PLACEHOLDER')"
           :message="formErrors.template"
           class="[&>div>button]:bg-n-alpha-black2 [&>div>button:not(.focused)]:dark:outline-n-weak [&>div>button:not(.focused)]:hover:!outline-n-slate-6"
         />
@@ -493,9 +489,7 @@ watch(
           v-model="state.selectedAudience"
           :options="audienceList"
           :label="t('CAMPAIGN.WHATSAPP.CREATE.FORM.AUDIENCE.LABEL')"
-          :placeholder="
-            t('CAMPAIGN.WHATSAPP.CREATE.FORM.AUDIENCE.PLACEHOLDER')
-          "
+          :placeholder="t('CAMPAIGN.WHATSAPP.CREATE.FORM.AUDIENCE.PLACEHOLDER')"
           :has-error="!!formErrors.audience"
           :message="formErrors.audience"
           class="[&>div>button]:bg-n-alpha-black2"
@@ -524,9 +518,7 @@ watch(
           v-model="state.selectedAudience"
           :options="audienceList"
           :label="t('CAMPAIGN.WHATSAPP.CREATE.FORM.AUDIENCE.LABEL')"
-          :placeholder="
-            t('CAMPAIGN.WHATSAPP.CREATE.FORM.AUDIENCE.PLACEHOLDER')
-          "
+          :placeholder="t('CAMPAIGN.WHATSAPP.CREATE.FORM.AUDIENCE.PLACEHOLDER')"
           :has-error="!!formErrors.audience"
           :message="formErrors.audience"
           class="[&>div>button]:bg-n-alpha-black2"
@@ -611,4 +603,3 @@ watch(
     </div>
   </form>
 </template>
-

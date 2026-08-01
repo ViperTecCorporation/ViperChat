@@ -61,7 +61,9 @@ RSpec.describe 'Platform Accounts API', type: :request do
 
         json_response = response.parsed_body
         created_account = Account.find(json_response['id'])
-        expect(created_account.enabled_features.keys).to match_array(%w[inbox_management ip_lookup help_center advanced_search advanced_search_indexing])
+        expect(created_account.enabled_features.keys).to match_array(
+          %w[inbox_management ip_lookup help_center advanced_search advanced_search_indexing]
+        )
         expect(json_response['name']).to include('Test Account')
         expect(json_response['features'].keys).to match_array(%w[inbox_management ip_lookup help_center advanced_search advanced_search_indexing])
       end
@@ -177,6 +179,7 @@ RSpec.describe 'Platform Accounts API', type: :request do
 
       it 'updates an account when its permissible object' do
         create(:platform_app_permissible, platform_app: platform_app, permissible: account)
+        account.update!(selected_feature_flags: [])
         account.enable_features!('inbox_management', 'channel_facebook')
 
         patch "/platform/api/v1/accounts/#{account.id}", params: {

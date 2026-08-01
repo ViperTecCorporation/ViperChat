@@ -12,7 +12,7 @@ import WithLabel from 'v3/components/Form/WithLabel.vue';
 import NextInput from 'next/input/Input.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
-import Switch from 'next/switch/Switch.vue';
+import SwitchControl from 'next/switch/Switch.vue';
 import AccountId from './components/AccountId.vue';
 import BuildInfo from './components/BuildInfo.vue';
 import AccountDelete from './components/AccountDelete.vue';
@@ -30,7 +30,7 @@ export default {
     AudioTranscription,
     DeletedMessageContent,
     SectionLayout,
-    Switch,
+    SwitchControl,
     WithLabel,
     NextInput,
   },
@@ -281,7 +281,7 @@ export default {
     >
       <template #headerActions>
         <div class="flex justify-end">
-          <Switch v-model="openWaitingConversationsByDefault" />
+          <SwitchControl v-model="openWaitingConversationsByDefault" />
         </div>
       </template>
     </SectionLayout>

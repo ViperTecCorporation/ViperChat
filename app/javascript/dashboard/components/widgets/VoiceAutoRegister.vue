@@ -18,7 +18,8 @@ const lastInboxId = ref(null);
 const inboxes = computed(() => store.getters['inboxes/getInboxes'] || []);
 const customVoiceInboxes = computed(() =>
   inboxes.value.filter(
-    inbox => inbox.channel_type === INBOX_TYPES.VOICE && inbox.provider === 'custom'
+    inbox =>
+      inbox.channel_type === INBOX_TYPES.VOICE && inbox.provider === 'custom'
   )
 );
 
@@ -94,7 +95,10 @@ const attemptRegister = async reason => {
     lastInboxId.value = inbox.id;
 
     // eslint-disable-next-line no-console
-    console.log('[VoiceAutoRegister] register start', { inboxId: inbox.id, reason });
+    console.log('[VoiceAutoRegister] register start', {
+      inboxId: inbox.id,
+      reason,
+    });
     await CustomVoiceClient.initializeDevice(inbox.id);
     // eslint-disable-next-line no-console
     console.log('[VoiceAutoRegister] register success', { inboxId: inbox.id });

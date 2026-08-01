@@ -94,6 +94,7 @@ describe EmailTemplates::DbResolverService do
       end
 
       it 'skips account template when branded email templates feature is disabled' do
+        account.disable_features!(:branded_email_templates)
         account_template = create(:email_template, :layout, account: account, body: 'account {{ content_for_layout }}')
         Current.account = account
         Current.inbox = inbox
@@ -115,6 +116,7 @@ describe EmailTemplates::DbResolverService do
       end
 
       it 'skips account template when current inbox is not email and feature is disabled' do
+        account.disable_features!(:branded_email_templates)
         account_template = create(:email_template, :layout, account: account, body: 'account {{ content_for_layout }}')
         Current.account = account
         Current.inbox = create(:inbox, account: account)
@@ -125,6 +127,7 @@ describe EmailTemplates::DbResolverService do
       end
 
       it 'skips account template without an inbox when feature is disabled' do
+        account.disable_features!(:branded_email_templates)
         account_template = create(:email_template, :layout, account: account, body: 'account {{ content_for_layout }}')
         Current.account = account
 

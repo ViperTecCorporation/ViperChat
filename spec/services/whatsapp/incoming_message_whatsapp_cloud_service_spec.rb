@@ -332,6 +332,114 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
     end
 
     context 'when webhook payload contains an SMB message echo' do
+      it 'reconciles an echo with the original message without regressing its status' do # rubocop:disable RSpec/ExampleLength
+        contact = create(:contact, account: whatsapp_channel.account, phone_number: '+5581981829525')
+        contact_inbox = create(
+          :contact_inbox,
+          inbox: whatsapp_channel.inbox,
+          contact: contact,
+          source_id: '5581981829525'
+        )
+        conversation = create(
+          :conversation,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          contact: contact,
+          contact_inbox: contact_inbox
+        )
+        original_message = create(
+          :message,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          conversation: conversation,
+          message_type: :outgoing,
+          source_id: 'wamid.SMB_EXISTING_MESSAGE_ID',
+          status: :sent
+        )
+        echo_params = {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              field: 'smb_message_echoes',
+              value: {
+                metadata: {
+                  display_phone_number: whatsapp_channel.phone_number.delete('+'),
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                contacts: [{ wa_id: '5581981829525' }],
+                message_echoes: [{
+                  from: whatsapp_channel.phone_number.delete('+'),
+                  to: '5581981829525',
+                  id: 'wamid.SMB_EXISTING_MESSAGE_ID',
+                  text: { body: 'Mensagem enviada pelo atendimento' },
+                  timestamp: '1783370084',
+                  type: 'text'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+        expect(original_message.reload.status).to eq('delivered')
+
+        original_message.update!(status: :read)
+        described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
+
+        expect(original_message.reload.status).to eq('read')
+      end
+
+      it 'applies status updates to the original message when an echo duplicate already exists' do
+        contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, source_id: '558181829525')
+        conversation = create(:conversation, contact_inbox: contact_inbox, inbox: whatsapp_channel.inbox)
+        original_message = create(
+          :message,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          conversation: conversation,
+          message_type: :outgoing,
+          source_id: 'wamid.SMB_DUPLICATED_MESSAGE_ID',
+          status: :sent
+        )
+        echo_message = create(
+          :message,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          conversation: conversation,
+          message_type: :outgoing,
+          source_id: 'wamid.SMB_DUPLICATED_MESSAGE_ID',
+          status: :delivered,
+          content_attributes: { external_echo: true }
+        )
+        status_params = {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                metadata: {
+                  display_phone_number: whatsapp_channel.phone_number.delete('+'),
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                statuses: [{
+                  id: 'wamid.SMB_DUPLICATED_MESSAGE_ID',
+                  status: 'read',
+                  timestamp: '1783370085'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform
+
+        expect(original_message.reload.status).to eq('read')
+        expect(echo_message.reload.status).to eq('delivered')
+      end
+
       it 'creates an outgoing message and updates contact BSUID from to_user_id' do
         echo_params = {
           phone_number: whatsapp_channel.phone_number,

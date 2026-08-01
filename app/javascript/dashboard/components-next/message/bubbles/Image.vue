@@ -11,14 +11,17 @@ import { downloadFile } from '@chatwoot/utils';
 
 import GalleryView from 'dashboard/components/widgets/conversation/components/GalleryView.vue';
 
+const emit = defineEmits(['error']);
+
 const { t } = useI18n();
 
 const { filteredCurrentChatAttachments, attachments } = useMessageContext();
-const emit = defineEmits(['error']);
-
 const attachment = computed(() => {
   // pick the first image-like attachment
-  return attachments.value.find(item => item?.fileType === 'image') || attachments.value[0];
+  return (
+    attachments.value.find(item => item?.fileType === 'image') ||
+    attachments.value[0]
+  );
 });
 const galleryAttachment = computed(() => useSnakeCase(attachment.value || {}));
 
@@ -56,7 +59,7 @@ const imageSrc = computed(() => {
 
 const handleError = () => {
   const hasMoreRetries = retryCount.value < retryDelays.length;
-  const hasValidUrl = !!attachment.value?.dataUrl ;
+  const hasValidUrl = !!attachment.value?.dataUrl;
 
   if (!hasMoreRetries || !hasValidUrl) {
     hasError.value = true;
@@ -150,5 +153,3 @@ onBeforeUnmount(clearRetryTimer);
     @close="() => (showGallery = false)"
   />
 </template>
-
-
