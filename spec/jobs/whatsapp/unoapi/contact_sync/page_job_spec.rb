@@ -78,5 +78,12 @@ describe Whatsapp::Unoapi::ContactSync::PageJob do
     expect do
       job.perform(channel.id, '0')
     end.to have_enqueued_job(Whatsapp::Unoapi::ContactSync::ExportJob).with(channel.id)
+
+    expect(channel.reload).to have_attributes(
+      contact_sync_status: 'completed',
+      contact_sync_processed_count: 2,
+      contact_sync_failed_count: 0,
+      contact_sync_total_count: 2
+    )
   end
 end

@@ -196,6 +196,16 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
     expect(contact.reload.email).to be_nil
   end
 
+  it 'clears invalid legacy emails before merging duplicate contacts' do
+    phone_contact = create(:contact, account: account, phone_number: '+5566998765432', name: 'Maria Silva')
+    lid_contact = create(:contact, account: account, bsuid: payload[:user_id], name: 'Maria')
+    lid_contact.update_column(:email, '273877414502425') # rubocop:disable Rails/SkipsModelValidations
+    create(:contact_inbox, inbox: channel.inbox, contact: lid_contact, source_id: payload[:user_id])
+
+    expect { importer.perform }.to change(account.contacts, :count).by(-1)
+    expect(phone_contact.reload.email).to be_nil
+  end
+
   it 'uses the normalized phone as the name when UnoAPI has no valid name' do
     phone_payload = payload.merge(display_name: nil, push_name: nil)
     phone_importer = described_class.new(channel: channel, payload: phone_payload)

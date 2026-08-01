@@ -83,6 +83,14 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
     expect(client).not_to have_received(:import_contact)
   end
 
+  it 'skips a technical numeric identifier stored as an invalid phone' do
+    contact.update_columns(phone_number: '+106657677844519') # rubocop:disable Rails/SkipsModelValidations
+
+    expect(exporter.perform).to eq(:skipped)
+    expect(client).not_to have_received(:verify_contact)
+    expect(client).not_to have_received(:import_contact)
+  end
+
   it 'replaces a stale local LID with the identity validated by the WhatsApp network' do # rubocop:disable RSpec/MultipleExpectations
     stale_lid = '99226763698235@lid'
     channel.inbox.update!(lock_to_single_conversation: true)

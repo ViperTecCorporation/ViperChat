@@ -64,8 +64,10 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter # rubocop:disable Metrics/C
 
   def import_contact
     contacts = candidate_contacts
+    sanitize_legacy_emails!(contacts)
     verify_conflicting_lid!(contacts) if conflicting_lid?(contacts)
     contacts = candidate_contacts if @network_identity_verified
+    sanitize_legacy_emails!(contacts)
     contact = merge_compatible_contacts(contacts)
     contact ||= create_contact
     update_contact(contact)
@@ -91,6 +93,14 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter # rubocop:disable Metrics/C
       base.reload
     end
     base
+  end
+
+  def sanitize_legacy_emails!(contacts)
+    contacts.each do |contact|
+      next unless repairable_email?(contact)
+
+      contact.update_columns(email: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    end
   end
 
   def ensure_mergeable!(left, right) # rubocop:disable Metrics/CyclomaticComplexity

@@ -100,6 +100,7 @@ class Whatsapp::Unoapi::ContactSync::PageJob < MutexApplicationJob
   end
 
   def complete_sync(channel, attributes, accumulated_failed)
+    attributes[:contact_sync_total_count] = attributes[:contact_sync_processed_count] + accumulated_failed
     channel.update_columns(attributes.merge( # rubocop:disable Rails/SkipsModelValidations
                              contact_sync_status: 'completed',
                              contact_sync_cursor: nil,
