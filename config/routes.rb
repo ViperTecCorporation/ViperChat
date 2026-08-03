@@ -153,6 +153,7 @@ Rails.application.routes.draw do
               get :unread_counts, to: 'conversations/unread_counts#index'
               post :filter
               post :groups, to: 'conversations/groups#create'
+              post :assign_by_source, to: 'conversations/source_assignments#create'
             end
             scope module: :conversations do
               resources :messages, only: [:index, :create, :destroy, :update] do
