@@ -2,6 +2,7 @@ import { createConsumer } from '@rails/actioncable';
 
 const PRESENCE_INTERVAL = 20000;
 const RECONNECT_INTERVAL = 1000;
+const SUBSCRIPTION_RETRY_INTERVAL = 3000;
 
 class BaseActionCableConnector {
   static isDisconnected = false;
@@ -14,6 +15,16 @@ class BaseActionCableConnector {
   ) {
     const websocketURL = websocketHost ? `${websocketHost}/cable` : undefined;
 
+    this.app = app;
+    this.events = {};
+    this.reconnectTimer = null;
+    this.presenceTimer = null;
+    this.subscriptionRetryTimer = null;
+    this.isSubscriptionConfirmed = false;
+    this.isSubscriptionRejected = false;
+    this.isManuallyDisconnected = false;
+    this.isAValidEvent = () => true;
+
     this.consumer = createConsumer(websocketURL);
     this.subscription = this.consumer.subscriptions.create(
       {
@@ -23,23 +34,41 @@ class BaseActionCableConnector {
         user_id: app.$store.getters.getCurrentUserID,
       },
       {
+        connected: () => {
+          if (this.isManuallyDisconnected) return;
+
+          const shouldHandleReconnect = BaseActionCableConnector.isDisconnected;
+          this.isSubscriptionConfirmed = true;
+          this.clearSubscriptionRetryTimer();
+          this.clearReconnectTimer();
+          BaseActionCableConnector.isDisconnected = false;
+          if (shouldHandleReconnect) {
+            this.onReconnect();
+          }
+        },
         updatePresence() {
           this.perform('update_presence');
         },
         received: this.onReceived,
         disconnected: () => {
+          this.isSubscriptionConfirmed = false;
+          if (this.isManuallyDisconnected) return;
+
           BaseActionCableConnector.isDisconnected = true;
           this.onDisconnected();
           this.initReconnectTimer();
+          this.initSubscriptionRetryTimer();
+        },
+        rejected: () => {
+          this.isSubscriptionConfirmed = false;
+          this.isSubscriptionRejected = true;
+          this.clearSubscriptionRetryTimer();
         },
       }
     );
-    this.app = app;
-    this.events = {};
-    this.reconnectTimer = null;
-    this.isAValidEvent = () => true;
+    this.initSubscriptionRetryTimer();
     this.triggerPresenceInterval = () => {
-      setTimeout(() => {
+      this.presenceTimer = setTimeout(() => {
         this.subscription.updatePresence();
         this.triggerPresenceInterval();
       }, presenceInterval);
@@ -48,13 +77,13 @@ class BaseActionCableConnector {
   }
 
   checkConnection() {
+    if (this.isManuallyDisconnected) {
+      return;
+    }
+
     const isConnectionActive = this.consumer.connection.isOpen();
-    const isReconnected =
-      BaseActionCableConnector.isDisconnected && isConnectionActive;
-    if (isReconnected) {
+    if (isConnectionActive) {
       this.clearReconnectTimer();
-      this.onReconnect();
-      BaseActionCableConnector.isDisconnected = false;
     } else {
       this.initReconnectTimer();
     }
@@ -68,10 +97,49 @@ class BaseActionCableConnector {
   };
 
   initReconnectTimer = () => {
+    if (this.isManuallyDisconnected) {
+      return;
+    }
+
     this.clearReconnectTimer();
     this.reconnectTimer = setTimeout(() => {
       this.checkConnection();
     }, RECONNECT_INTERVAL);
+  };
+
+  clearSubscriptionRetryTimer = () => {
+    if (this.subscriptionRetryTimer) {
+      clearTimeout(this.subscriptionRetryTimer);
+      this.subscriptionRetryTimer = null;
+    }
+  };
+
+  initSubscriptionRetryTimer = () => {
+    if (
+      this.isManuallyDisconnected ||
+      this.isSubscriptionConfirmed ||
+      this.isSubscriptionRejected
+    ) {
+      return;
+    }
+
+    this.clearSubscriptionRetryTimer();
+    this.subscriptionRetryTimer = setTimeout(() => {
+      this.subscriptionRetryTimer = null;
+
+      if (this.consumer.connection.isOpen()) {
+        this.consumer.subscriptions.sendCommand(this.subscription, 'subscribe');
+      }
+
+      this.initSubscriptionRetryTimer();
+    }, SUBSCRIPTION_RETRY_INTERVAL);
+  };
+
+  clearPresenceTimer = () => {
+    if (this.presenceTimer) {
+      clearTimeout(this.presenceTimer);
+      this.presenceTimer = null;
+    }
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -81,6 +149,10 @@ class BaseActionCableConnector {
   onDisconnected = () => {};
 
   disconnect() {
+    this.isManuallyDisconnected = true;
+    this.clearReconnectTimer();
+    this.clearSubscriptionRetryTimer();
+    this.clearPresenceTimer();
     this.consumer.disconnect();
   }
 
