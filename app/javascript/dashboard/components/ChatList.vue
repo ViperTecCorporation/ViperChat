@@ -50,6 +50,7 @@ import {
   filterItemsByPermission,
 } from 'dashboard/helper/permissionsHelper.js';
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
+import { isConversationMine } from '../store/modules/conversations/helpers';
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
@@ -104,6 +105,7 @@ const appliedFilters = useMapGetter('getAppliedConversationFiltersV2');
 const folders = useMapGetter('customViews/getConversationCustomViews');
 const agentList = useMapGetter('agents/getAgents');
 const teamsList = useMapGetter('teams/getTeams');
+const myTeamsList = useMapGetter('teams/getMyTeams');
 const inboxesList = useMapGetter('inboxes/getInboxes');
 const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
@@ -372,8 +374,13 @@ const pageTitle = computed(() => {
 
 function filterByAssigneeTab(conversations) {
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ME) {
-    return conversations.filter(
-      c => c.meta?.assignee?.id === currentUser.value?.id
+    const currentUserTeamIds = myTeamsList.value.map(team => team.id);
+    return conversations.filter(conversation =>
+      isConversationMine(
+        conversation,
+        currentUser.value?.id,
+        currentUserTeamIds
+      )
     );
   }
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
@@ -897,7 +904,10 @@ useEmitter('fetch_conversation_stats', () => {
   store.dispatch('conversationStats/get', conversationFilters.value);
 });
 
-onMounted(() => {
+onMounted(async () => {
+  if (!teamsList.value.length) {
+    await store.dispatch('teams/get');
+  }
   setFiltersFromUISettings();
   store.dispatch('setChatListFilters', conversationFilters.value);
   store.dispatch('setChatStatusFilter', activeStatus.value);
