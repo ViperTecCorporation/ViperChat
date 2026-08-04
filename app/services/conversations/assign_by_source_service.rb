@@ -11,14 +11,13 @@ class Conversations::AssignBySourceService
     contact = find_contact(inbox)
     conversation = inbox.conversations.non_group_conversations
                         .where(contact: contact)
-                        .where.not(status: :resolved)
                         .order(last_activity_at: :desc, id: :desc)
                         .first!
 
     {
       conversation: conversation,
       inbox: inbox,
-      team: @account.teams.find_by!(name: @team_name)
+      team: find_team
     }
   end
 
@@ -38,6 +37,17 @@ class Conversations::AssignBySourceService
                        .or(@account.contacts.where(whatsapp_username: contact_identifier_candidates))
 
     inbox.contact_inboxes.find_by!(contact_id: contacts.select(:id)).contact
+  end
+
+  def find_team
+    exact_match = @account.teams.find_by(name: @team_name)
+    return exact_match if exact_match
+
+    escaped_name = ActiveRecord::Base.sanitize_sql_like(@team_name)
+    matches = @account.teams.where('name ILIKE ?', "%#{escaped_name}%").limit(2).to_a
+    return matches.first if matches.one?
+
+    raise ActiveRecord::RecordNotFound, 'Could not find a unique team'
   end
 
   def inbox_phone_candidates
