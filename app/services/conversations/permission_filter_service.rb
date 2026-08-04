@@ -41,7 +41,12 @@ class Conversations::PermissionFilterService
                        .distinct
                        .pluck(:id)
 
-    allowed_ids = (internal_access_ids + internal_participant_ids + inbox_access_ids).uniq
+    team_access_ids = Conversation
+                      .where(account_id: account.id, team_id: user.teams.where(account_id: account.id).select(:id))
+                      .distinct
+                      .pluck(:id)
+
+    allowed_ids = (internal_access_ids + internal_participant_ids + inbox_access_ids + team_access_ids).uniq
     return base_scope.none if allowed_ids.empty?
 
     base_scope.where(id: allowed_ids)
