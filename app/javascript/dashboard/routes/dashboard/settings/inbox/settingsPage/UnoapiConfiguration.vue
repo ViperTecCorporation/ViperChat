@@ -47,6 +47,7 @@ export default {
       ignoreBroadcastMessages: true,
       ignoreOwnMessages: false,
       ignoreYourselfMessages: false,
+      ignoreExternalEchoAutomations: false,
       sendConnectionStatus: true,
       markOnlineOnConnect: false,
       notifyFailedMessages: true,
@@ -84,6 +85,7 @@ export default {
     ignoreBroadcastMessages: { required },
     ignoreOwnMessages: { required },
     ignoreYourselfMessages: { required },
+    ignoreExternalEchoAutomations: { required },
     sendConnectionStatus: { required },
     markOnlineOnConnect: { required },
     notifyFailedMessages: { required },
@@ -138,6 +140,8 @@ export default {
       this.ignoreOwnMessages = this.inbox.provider_config.ignore_own_messages;
       this.ignoreYourselfMessages =
         this.inbox.provider_config.ignore_yourself_messages;
+      this.ignoreExternalEchoAutomations =
+        this.inbox.provider_config.ignore_external_echo_automations ?? false;
       this.sendConnectionStatus =
         this.inbox.provider_config.send_connection_status;
       this.markOnlineOnConnect =
@@ -265,6 +269,8 @@ export default {
               ignore_broadcast_messages: this.ignoreBroadcastMessages,
               ignore_own_messages: this.ignoreOwnMessages,
               ignore_yourself_messages: this.ignoreYourselfMessages,
+              ignore_external_echo_automations:
+                this.ignoreExternalEchoAutomations,
               send_connection_status: this.sendConnectionStatus,
               mark_online_on_connect: this.markOnlineOnConnect,
               notify_failed_messages: this.notifyFailedMessages,
@@ -694,6 +700,28 @@ export default {
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_YOURSELF_MESSAGES.LABEL') }}
           <span v-if="v$.ignoreYourselfMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_YOURSELF_MESSAGES.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div class="w-3/4 pb-4 config-helptext">
+        <label
+          :class="{ error: v$.ignoreExternalEchoAutomations.$error }"
+          style="display: flex; align-items: center"
+        >
+          <SwitchControl
+            v-model="ignoreExternalEchoAutomations"
+            style="flex: 0 0 auto; margin-right: 10px"
+          />
+          {{
+            $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_EXTERNAL_ECHO_AUTOMATIONS.LABEL')
+          }}
+          <span v-if="v$.ignoreExternalEchoAutomations.$error" class="message">
+            {{
+              $t(
+                'INBOX_MGMT.ADD.WHATSAPP.IGNORE_EXTERNAL_ECHO_AUTOMATIONS.ERROR'
+              )
+            }}
           </span>
         </label>
       </div>

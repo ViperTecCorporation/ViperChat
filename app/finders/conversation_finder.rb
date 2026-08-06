@@ -136,13 +136,13 @@ class ConversationFinder
     when 'me'
       @conversations = mine_conversations(@conversations)
     when 'unassigned'
-      @conversations = @conversations.unassigned.non_group_conversations
+      @conversations = unassigned_conversations(@conversations)
     when 'waiting'
       @conversations = waiting_conversations
     when 'groups'
       @conversations = @conversations.group_conversations
     when 'assigned'
-      @conversations = @conversations.assigned
+      @conversations = assigned_conversations(@conversations)
     when 'internal'
       @conversations = @conversations.joins(:inbox)
                                      .where(inboxes: { channel_type: 'Channel::Internal' })
@@ -241,8 +241,8 @@ class ConversationFinder
 
     counts = count_scope.unscope(:order).pick(
       Arel.sql("COUNT(*) FILTER (WHERE #{mine_count_filter})"),
-      Arel.sql('COUNT(*) FILTER (WHERE assignee_id IS NOT NULL)'),
-      Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = FALSE AND assignee_id IS NULL)'),
+      Arel.sql('COUNT(*) FILTER (WHERE assignee_id IS NOT NULL OR team_id IS NOT NULL)'),
+      Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = FALSE AND assignee_id IS NULL AND team_id IS NULL)'),
       Arel.sql("COUNT(*) FILTER (WHERE #{waiting_filter})"),
       Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = TRUE)'),
       Arel.sql('COUNT(*)')
@@ -254,8 +254,8 @@ class ConversationFinder
   def legacy_count_for_all_conversations(count_scope, internal_scope, waiting_scope)
     [
       mine_conversations(count_scope).count,
-      count_scope.assigned.count,
-      count_scope.unassigned.non_group_conversations.count,
+      assigned_conversations(count_scope).count,
+      unassigned_conversations(count_scope).count,
       waiting_scope.count,
       count_scope.group_conversations.count,
       count_scope.count,
@@ -274,6 +274,14 @@ class ConversationFinder
 
   def mine_conversations(scope)
     scope.where(assignee_id: current_user.id).or(scope.where(team_id: current_user_team_ids))
+  end
+
+  def assigned_conversations(scope)
+    scope.where.not(assignee_id: nil).or(scope.where.not(team_id: nil))
+  end
+
+  def unassigned_conversations(scope)
+    scope.where(assignee_id: nil, team_id: nil).non_group_conversations
   end
 
   def mine_count_filter

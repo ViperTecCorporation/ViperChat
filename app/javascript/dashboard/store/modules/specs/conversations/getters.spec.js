@@ -129,7 +129,7 @@ describe('#getters', () => {
     });
   });
   describe('#getUnAssignedChats', () => {
-    it('order returns only chats assigned to user', () => {
+    it('returns only conversations without an agent or team', () => {
       const conversationList = [
         {
           id: 1,
@@ -180,13 +180,6 @@ describe('#getters', () => {
           status: 1,
           meta: {},
           labels: ['dev'],
-        },
-        {
-          id: 22,
-          inbox_id: 4,
-          status: 1,
-          meta: { team: { id: 5 } },
-          labels: ['sales'],
         },
       ]);
     });

@@ -398,6 +398,11 @@
           "PLACEHOLDER": "Selecione para ignorar suas mensagens.",
           "ERROR": "Selecione para ignorar suas mensagens."
         },
+        "IGNORE_EXTERNAL_ECHO_AUTOMATIONS": {
+          "LABEL": "Ignorar mensagens de eco nas automações",
+          "PLACEHOLDER": "Selecione para impedir que ecos acionem automações.",
+          "ERROR": "Selecione se os ecos devem ser ignorados nas automações."
+        },
         "READ_ON_RECEIPT": {
           "LABEL": "Ler ao receber",
           "PLACEHOLDER": "Selecione para ler ao receber.",

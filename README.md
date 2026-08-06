@@ -19,6 +19,11 @@ ___
     
     - da opção de alterar logo e nome da empresa
   Exemplo de stack com os dois projetos integrados: https://github.com/clairton/unoapi-cloud/tree/main/examples/unochat
+
+## APIs exclusivas UnoAPI
+
+- [Atribuir uma conversa a um time pela origem](./docs/unoapi-assign-conversation-by-source.md)
+
 ## Anexar Contatos nas Conversas
 <img width="627" height="391" alt="image" src="https://github.com/user-attachments/assets/7a684d71-fc1b-491f-816b-818e6fb7af17" />
 <img width="611" height="632" alt="image" src="https://github.com/user-attachments/assets/61992136-70c3-4c09-9b8c-651e05640db3" />

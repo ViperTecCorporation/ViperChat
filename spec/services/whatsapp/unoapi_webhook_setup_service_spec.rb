@@ -38,8 +38,12 @@ describe Whatsapp::UnoapiWebhookSetupService do
   end
   let(:register_response) { instance_double(HTTParty::Response, success?: true) }
   let(:message_response) { instance_double(HTTParty::Response, success?: true) }
+  let(:config_response) do
+    instance_double(HTTParty::Response, success?: true, parsed_response: { 'webhooks' => [] })
+  end
 
   before do
+    allow(HTTParty).to receive(:get).and_return(config_response)
     allow(channel).to receive(:save!).and_return(true)
     allow(channel).to receive(:inbox).and_return(
       instance_double('Inbox', name: 'Viper tec Principal', account_id: account.id)
@@ -84,9 +88,48 @@ describe Whatsapp::UnoapiWebhookSetupService do
       calls.length == 1 ? register_response : message_response
     end
 
-    service.perform(channel)
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net' do
+      service.perform(channel)
+    end
 
     payload = JSON.parse(calls.first.last[:body])
     expect(payload['connectionType']).to eq('pairing_code')
+  end
+
+  it 'preserves additional webhooks already configured in UnoAPI' do
+    typebot_webhook = {
+      'id' => 'type',
+      'typebot' => true,
+      'urlAbsolute' => 'https://bot.example.com/typebot/webhook',
+      'sendIncomingMessages' => true
+    }
+    allow(HTTParty).to receive(:get).and_return(
+      instance_double(
+        HTTParty::Response,
+        success?: true,
+        parsed_response: {
+          'webhooks' => [
+            { 'id' => 'default', 'urlAbsolute' => 'https://old.example.com/webhook' },
+            typebot_webhook
+          ]
+        }
+      )
+    )
+    calls = []
+    allow(HTTParty).to receive(:post) do |url, options|
+      calls << [url, options]
+      calls.length == 1 ? register_response : message_response
+    end
+
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net' do
+      service.perform(channel)
+    end
+
+    payload = JSON.parse(calls.first.last[:body])
+    expect(payload['webhooks'].map { |webhook| webhook['id'] }).to eq(%w[default type])
+    expect(payload['webhooks'].first['urlAbsolute']).to eq(
+      'https://chatwoot.vipertec.net/webhooks/whatsapp/5566996222471'
+    )
+    expect(payload['webhooks'].second).to eq(typebot_webhook)
   end
 end

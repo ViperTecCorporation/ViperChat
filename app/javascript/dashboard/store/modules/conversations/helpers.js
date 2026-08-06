@@ -58,6 +58,11 @@ export const isConversationMine = (
   return isAssignedToUser || isAssignedToUserTeam;
 };
 
+export const isConversationUnassigned = conversation =>
+  !conversation.meta?.assignee &&
+  !conversation.meta?.team &&
+  !conversation.group;
+
 export const filterByLabel = (shouldFilter, labels, chatLabels) => {
   const isOnLabel = labels.every(label => chatLabels.includes(label));
   return labels.length ? isOnLabel && shouldFilter : shouldFilter;

@@ -34,7 +34,9 @@ class Messages::ForwardService
 
   def existing_conversation
     if target_contact_inbox.inbox.lock_to_single_conversation
-      target_contact_inbox.conversations.order(:created_at).last
+      target_contact_inbox.contact.conversations
+                          .where(inbox_id: target_contact_inbox.inbox_id)
+                          .order(:created_at).last
     else
       target_contact_inbox.conversations.open.order(:created_at).last
     end

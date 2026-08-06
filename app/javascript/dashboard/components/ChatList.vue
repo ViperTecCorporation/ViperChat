@@ -50,7 +50,10 @@ import {
   filterItemsByPermission,
 } from 'dashboard/helper/permissionsHelper.js';
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
-import { isConversationMine } from '../store/modules/conversations/helpers';
+import {
+  isConversationMine,
+  isConversationUnassigned,
+} from '../store/modules/conversations/helpers';
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
@@ -384,7 +387,7 @@ function filterByAssigneeTab(conversations) {
     );
   }
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
-    return conversations.filter(c => !c.meta?.assignee && !c.group);
+    return conversations.filter(isConversationUnassigned);
   }
   return [...conversations];
 }
