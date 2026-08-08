@@ -72,6 +72,11 @@ export default {
   data() {
     return {
       showSearchModal: false,
+      previousListContext: {
+        key: '',
+        name: '',
+        count: 0,
+      },
     };
   },
   computed: {
@@ -135,6 +140,9 @@ export default {
   methods: {
     onConversationLoad() {
       this.fetchConversationIfUnavailable();
+    },
+    onListContextChange(context) {
+      this.previousListContext = context;
     },
     initialize() {
       this.$store.dispatch('setActiveInbox', this.inboxId);
@@ -214,11 +222,14 @@ export default {
       :folders-id="foldersId"
       :is-on-expanded-layout="isOnExpandedLayout"
       @conversation-load="onConversationLoad"
+      @list-context-change="onListContextChange"
     />
     <ConversationBox
       v-if="showMessageView"
       :inbox-id="inboxId"
       :is-on-expanded-layout="isOnExpandedLayout"
+      :back-list-count="previousListContext.count"
+      :back-list-label="previousListContext.name"
     >
       <SidepanelSwitch v-if="currentChat.id" />
     </ConversationBox>

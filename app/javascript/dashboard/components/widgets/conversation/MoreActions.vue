@@ -133,17 +133,17 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="relative flex items-center gap-2 actions--container">
+  <div class="relative flex items-center gap-1 sm:gap-2 actions--container">
     <ButtonV4
       v-tooltip="$t('CONVERSATION.MEDIA_LIBRARY.BUTTON')"
       size="sm"
       variant="ghost"
       color="slate"
       icon="i-lucide-images"
-      class="rounded-md group-hover:bg-n-alpha-2"
+      class="rounded-md group-hover:bg-n-alpha-2 !w-8 !px-0 sm:!w-auto sm:!px-3"
       @click="openMediaModal"
     >
-      <span class="flex items-center gap-2">
+      <span class="hidden items-center gap-2 sm:flex">
         <span>{{ $t('CONVERSATION.MEDIA_LIBRARY.BUTTON') }}</span>
         <span
           class="rounded-md capitalize text-xs leading-5 font-medium text-center outline outline-1 px-1 flex-shrink-0 text-n-slate-11 outline-n-strong"
@@ -155,6 +155,7 @@ onUnmounted(() => {
     <ResolveAction
       :conversation-id="currentChat.id"
       :status="currentChat.status"
+      mobile-icon-only
     />
     <div
       v-on-clickaway="() => toggleDropdown(false)"

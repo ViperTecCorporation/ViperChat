@@ -154,7 +154,8 @@ export const actions = {
     }
   },
 
-  updateUISettings: async ({ commit }, params) => {
+  updateUISettings: async ({ commit, state: $state }, params) => {
+    const previousUISettings = { ...($state?.currentUser?.ui_settings || {}) };
     try {
       commit(types.SET_CURRENT_USER_UI_SETTINGS, params);
 
@@ -165,9 +166,15 @@ export const actions = {
       if (!isImpersonating) {
         const response = await authAPI.updateUISettings(params);
         commit(types.SET_CURRENT_USER, response.data);
+        return response.data;
       }
+      return $state?.currentUser;
     } catch (error) {
-      // Ignore error
+      commit(types.SET_CURRENT_USER_UI_SETTINGS, {
+        uiSettings: previousUISettings,
+        replace: true,
+      });
+      return false;
     }
   },
 
@@ -289,13 +296,18 @@ export const mutations = {
   [types.SET_CURRENT_USER](_state, currentUser) {
     _state.currentUser = currentUser;
   },
-  [types.SET_CURRENT_USER_UI_SETTINGS](_state, { uiSettings }) {
+  [types.SET_CURRENT_USER_UI_SETTINGS](
+    _state,
+    { uiSettings, replace = false }
+  ) {
     _state.currentUser = {
       ..._state.currentUser,
-      ui_settings: {
-        ..._state.currentUser.ui_settings,
-        ...uiSettings,
-      },
+      ui_settings: replace
+        ? uiSettings
+        : {
+            ..._state.currentUser.ui_settings,
+            ...uiSettings,
+          },
     };
   },
 

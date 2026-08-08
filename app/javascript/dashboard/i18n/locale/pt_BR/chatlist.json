@@ -7,6 +7,12 @@
       "404": "Não há conversas ativas neste grupo."
     },
     "FAILED_TO_SEND": "Falha ao enviar",
+    "PUSH_NOTIFICATIONS": {
+      "DISABLED": "As notificações de mensagens estão desativadas.",
+      "ACTIVATE": "Ativar",
+      "CLOSE": "Fechar aviso de notificações",
+      "BLOCKED": "As notificações estão bloqueadas no navegador. Libere a permissão nas configurações deste site."
+    },
     "TAB_HEADING": "Conversas",
     "MENTION_HEADING": "Menções",
     "UNATTENDED_HEADING": "Não Atendidas",

@@ -20,6 +20,13 @@ import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ConversationResolveAttributesModal from 'dashboard/components-next/ConversationWorkflow/ConversationResolveAttributesModal.vue';
 
+const props = defineProps({
+  mobileIconOnly: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 const store = useStore();
 const getters = useStoreGetters();
 const { t } = useI18n();
@@ -179,30 +186,48 @@ useEmitter(CMD_RESOLVE_CONVERSATION, onCmdResolveConversation);
     >
       <Button
         v-if="isOpen"
+        v-tooltip="t('CONVERSATION.HEADER.RESOLVE_ACTION')"
         :label="t('CONVERSATION.HEADER.RESOLVE_ACTION')"
+        :icon="props.mobileIconOnly ? 'i-lucide-check' : ''"
         size="sm"
         color="slate"
         no-animation
         class="ltr:rounded-r-none rtl:rounded-l-none !outline-0"
+        :class="
+          props.mobileIconOnly &&
+          '!w-8 !px-0 [&>span:last-child]:hidden sm:!w-auto sm:!px-3 sm:[&>span:last-child]:inline'
+        "
         :is-loading="isLoading"
         @click="onCmdResolveConversation"
       />
       <Button
         v-else-if="isResolved"
+        v-tooltip="t('CONVERSATION.HEADER.REOPEN_ACTION')"
         :label="t('CONVERSATION.HEADER.REOPEN_ACTION')"
+        :icon="props.mobileIconOnly ? 'i-lucide-rotate-ccw' : ''"
         size="sm"
         color="slate"
         no-animation
         class="ltr:rounded-r-none rtl:rounded-l-none !outline-0"
+        :class="
+          props.mobileIconOnly &&
+          '!w-8 !px-0 [&>span:last-child]:hidden sm:!w-auto sm:!px-3 sm:[&>span:last-child]:inline'
+        "
         :is-loading="isLoading"
         @click="onCmdOpenConversation"
       />
       <Button
         v-else-if="showOpenButton"
+        v-tooltip="t('CONVERSATION.HEADER.OPEN_ACTION')"
         :label="t('CONVERSATION.HEADER.OPEN_ACTION')"
+        :icon="props.mobileIconOnly ? 'i-lucide-rotate-ccw' : ''"
         size="sm"
         color="slate"
         no-animation
+        :class="
+          props.mobileIconOnly &&
+          '!w-8 !px-0 [&>span:last-child]:hidden sm:!w-auto sm:!px-3 sm:[&>span:last-child]:inline'
+        "
         :is-loading="isLoading"
         @click="onCmdOpenConversation"
       />
@@ -222,7 +247,7 @@ useEmitter(CMD_RESOLVE_CONVERSATION, onCmdResolveConversation);
     <div
       v-if="showActionsDropdown"
       v-on-clickaway="closeDropdown"
-      class="border rounded-lg shadow-lg border-n-strong dark:border-n-strong box-content p-2 w-fit z-10 bg-n-alpha-3 backdrop-blur-[100px] absolute block left-auto top-full mt-0.5 start-0 xl:start-auto xl:end-0 max-w-[12.5rem] min-w-[9.75rem] [&_ul>li]:mb-0"
+      class="border rounded-lg shadow-lg border-n-strong dark:border-n-strong box-content p-2 w-fit z-10 bg-n-alpha-3 backdrop-blur-[100px] absolute block top-full mt-0.5 end-0 max-w-[12.5rem] min-w-[9.75rem] [&_ul>li]:mb-0"
     >
       <WootDropdownMenu class="mb-0">
         <WootDropdownItem v-if="!isPending">

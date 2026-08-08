@@ -612,6 +612,12 @@ const menuItems = computed(() => {
       icon: 'i-lucide-bolt',
       children: [
         {
+          name: 'Settings Account Settings',
+          label: t('SIDEBAR.ACCOUNT_SETTINGS'),
+          icon: 'i-lucide-briefcase',
+          to: accountScopedRoute('general_settings_index'),
+        },
+        {
           name: 'Settings Dashboard',
           label: t('SIDEBAR.DASHBOARD'),
           icon: 'i-lucide-layout-dashboard',
@@ -682,12 +688,6 @@ const menuItems = computed(() => {
               }),
             },
           ],
-        },
-        {
-          name: 'Settings Account Settings',
-          label: t('SIDEBAR.ACCOUNT_SETTINGS'),
-          icon: 'i-lucide-briefcase',
-          to: accountScopedRoute('general_settings_index'),
         },
         // {
         //   name: 'Settings Captain',

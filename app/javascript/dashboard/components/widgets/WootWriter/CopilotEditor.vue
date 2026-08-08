@@ -206,14 +206,16 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-2 mb-4">
-    <div class="overflow-y-auto max-h-56">
+  <div class="copilot-editor__content mb-4 w-full min-w-0 space-y-2">
+    <div
+      class="copilot-editor__suggestion max-h-56 w-full min-w-0 overflow-x-hidden overflow-y-auto"
+    >
       <p
         v-dompurify-html="formatMessage(generatedContent, false)"
-        class="text-n-iris-12 text-sm prose-sm font-normal !mb-4"
+        class="text-n-iris-12 w-full min-w-0 break-words text-sm prose-sm font-normal [overflow-wrap:anywhere] !mb-4"
       />
     </div>
-    <div class="editor-root relative editor--copilot space-x-2">
+    <div class="editor-root editor--copilot relative w-full min-w-0 space-x-2">
       <div ref="editor" />
       <div class="flex items-center justify-end absolute right-2 bottom-2">
         <NextButton
@@ -237,7 +239,8 @@ onMounted(() => {
   .ProseMirror-woot-style {
     min-height: 5rem;
     max-height: 7.5rem !important;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     @apply px-2 !important;
 
     .empty-node {

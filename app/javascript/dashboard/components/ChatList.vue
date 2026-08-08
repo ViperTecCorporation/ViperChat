@@ -9,6 +9,7 @@ import {
 
 import ChatListHeader from './ChatListHeader.vue';
 import ConversationList from './ConversationList.vue';
+import PushNotificationBanner from './PushNotificationBanner.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import ConversationFilter from 'next/filter/ConversationFilter.vue';
 import SaveCustomView from 'next/filter/SaveCustomView.vue';
@@ -67,7 +68,7 @@ const props = defineProps({
   isOnExpandedLayout: { default: false, type: Boolean },
 });
 
-const emit = defineEmits(['conversationLoad']);
+const emit = defineEmits(['conversationLoad', 'listContextChange']);
 const { uiSettings } = useUISettings();
 const { t } = useI18n();
 const router = useRouter();
@@ -286,6 +287,23 @@ const activeAssigneeTabCount = computed(() => {
       ?.count || 0;
   return count;
 });
+
+const activeAssigneeTabItem = computed(() =>
+  assigneeTabItems.value.find(item => item.key === activeAssigneeTab.value)
+);
+
+watch(
+  () => [activeAssigneeTab.value, activeAssigneeTabItem.value?.count],
+  () => {
+    const {
+      key = '',
+      name = '',
+      count = 0,
+    } = activeAssigneeTabItem.value || {};
+    emit('listContextChange', { key, name, count });
+  },
+  { immediate: true }
+);
 
 const conversationListPagination = computed(() => {
   const conversationsPerPage = 25;
@@ -1040,6 +1058,8 @@ watch(conversationFilters, (newVal, oldVal) => {
       is-compact
       @chat-tab-change="updateAssigneeTab"
     />
+
+    <PushNotificationBanner :account-id="currentAccountId" />
 
     <p
       v-if="!chatListLoading && !conversationList.length"

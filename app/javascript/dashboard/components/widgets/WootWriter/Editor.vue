@@ -80,6 +80,7 @@ const props = defineProps({
   modelValue: { type: String, default: '' },
   editorId: { type: String, default: '' },
   placeholder: { type: String, default: '' },
+  ariaLabel: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   isPrivate: { type: Boolean, default: false },
   enableSuggestions: { type: Boolean, default: true },
@@ -408,7 +409,9 @@ function handleEmptyBodyWithSignature() {
 
   // Check if empty paragraph already exists to prevent duplicates when toggling signatures
   if (isEmptyParagraph(doc.firstChild)) {
-    focusEditorInputField('start');
+    if (props.focusOnMount) {
+      focusEditorInputField('start');
+    }
     return;
   }
 
@@ -418,8 +421,10 @@ function handleEmptyBodyWithSignature() {
   const paragraphTransaction = tr.insert(0, paragraph);
   editorView.dispatch(paragraphTransaction);
 
-  // Set the focus at the start of the input field
-  focusEditorInputField('start');
+  // Set the focus at the start only when the consumer allows auto-focus.
+  if (props.focusOnMount) {
+    focusEditorInputField('start');
+  }
 }
 
 function focusEditor(content) {
@@ -761,6 +766,9 @@ function createEditorView() {
   editorView = new EditorView(editor.value, {
     state: state,
     editable: () => !props.disabled,
+    attributes: {
+      'aria-label': props.ariaLabel || props.placeholder,
+    },
     nodeViews: {
       image: imageResizeView,
     },
@@ -846,6 +854,11 @@ watch(
 watch(
   computed(() => props.disabled),
   () => editorView?.setProps({})
+);
+
+watch(
+  computed(() => props.ariaLabel || props.placeholder),
+  label => editorView?.dom.setAttribute('aria-label', label)
 );
 
 watch(

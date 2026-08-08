@@ -120,6 +120,14 @@
           "ERROR": "Falha ao atualizar configuração de mensagens apagadas"
         }
       },
+      "MESSAGE_COMPOSER": {
+        "TITLE": "Usar editor clássico de mensagens",
+        "NOTE": "Ative para voltar ao editor anterior. Desativado, o ViperChat usa o novo editor compacto para canais de conversa; caixas de e-mail continuam usando o editor clássico.",
+        "API": {
+          "SUCCESS": "Preferência do editor atualizada com sucesso",
+          "ERROR": "Falha ao atualizar a preferência do editor"
+        }
+      },
       "WAITING_CONVERSATIONS_SECTION": {
         "TITLE": "Conversas aguardando",
         "NOTE": "Abrir automaticamente as conversas que estão aguardando resposta na aba Aguardando."

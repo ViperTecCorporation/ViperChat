@@ -27,14 +27,10 @@ class Captain::BaseTaskService
     raise NotImplementedError, "#{self.class} must implement #event_name"
   end
 
-  def conversation
-    @conversation ||= account.conversations.find_by(display_id: conversation_display_id)
-  end
+  def conversation = @conversation ||= account.conversations.find_by(display_id: conversation_display_id)
 
   def api_base
-    endpoint = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence || 'https://api.openai.com/'
-    endpoint = endpoint.chomp('/')
-    "#{endpoint}/v1"
+    "#{(configured_openai_endpoint || 'https://api.openai.com/').chomp('/')}/v1"
   end
 
   def make_api_call(messages:, model: nil, feature: nil, schema: nil, tools: [])
@@ -177,16 +173,27 @@ class Captain::BaseTaskService
   end
 
   def llm_credential
-    @llm_credential ||= if use_account_openai_hook?
+    @llm_credential ||= if use_account_openai_hook? && !custom_openai_endpoint?
                           hook_llm_credential || system_llm_credential
                         else
                           system_llm_credential
                         end
   end
 
-  def use_account_openai_hook?
-    false
+  # Account hooks do not store an endpoint, so they cannot safely be paired
+  # with a custom system endpoint such as OpenRouter.
+  def custom_openai_endpoint?
+    endpoint = configured_openai_endpoint
+    endpoint.present? && URI.parse(endpoint).host != 'api.openai.com'
+  rescue URI::InvalidURIError
+    true
   end
+
+  def configured_openai_endpoint
+    @configured_openai_endpoint ||= InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence
+  end
+
+  def use_account_openai_hook? = false
 
   def hook_llm_credential
     key = openai_hook&.settings&.dig('api_key').presence

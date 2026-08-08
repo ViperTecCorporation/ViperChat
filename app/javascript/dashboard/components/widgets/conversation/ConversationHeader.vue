@@ -26,6 +26,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  backListCount: {
+    type: Number,
+    default: 0,
+  },
+  backListLabel: {
+    type: String,
+    default: '',
+  },
 });
 
 const { t } = useI18n();
@@ -123,15 +131,18 @@ const copyConversationId = async () => {
 <template>
   <div
     ref="conversationHeader"
-    class="flex flex-col gap-3 items-center justify-between flex-1 w-full min-w-0 xl:flex-row px-3 pt-3 pb-2 h-24 xl:h-12"
+    class="flex flex-row gap-2 items-center justify-between flex-1 w-full min-w-0 px-2 py-2 h-14 sm:flex-col sm:gap-3 sm:px-3 sm:pt-3 sm:pb-2 sm:h-24 xl:flex-row xl:h-12"
   >
     <div
-      class="flex items-center justify-start w-full xl:w-auto max-w-full min-w-0 xl:flex-1"
+      class="flex items-center justify-start flex-1 max-w-full min-w-0 sm:w-full sm:flex-none xl:w-auto xl:flex-1"
     >
       <BackButton
         v-if="showBackButton"
         :back-url="backButtonUrl"
-        class="ltr:mr-2 rtl:ml-2"
+        :badge-count="backListCount"
+        :accessible-label="backListLabel"
+        mobile-icon-only
+        class="ltr:mr-1 rtl:ml-1"
       />
       <Avatar
         :name="conversationTitle"
@@ -183,7 +194,7 @@ const copyConversationId = async () => {
       </div>
     </div>
     <div
-      class="flex flex-row items-center justify-start xl:justify-end flex-shrink-0 gap-2 w-full xl:w-auto header-actions-wrap"
+      class="flex flex-row items-center justify-end flex-shrink-0 gap-1 w-auto header-actions-wrap sm:w-full sm:justify-start sm:gap-2 xl:w-auto xl:justify-end"
     >
       <SLACardLabel
         v-if="hasSlaPolicyId"
