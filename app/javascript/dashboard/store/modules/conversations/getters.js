@@ -131,20 +131,28 @@ const getters = {
     return _state.allConversations.filter(conversation => {
       const isWaiting = !!conversation.waiting_since;
       const shouldFilter = applyPageFilters(conversation, activeFilters);
-      if (!isWaiting || !shouldFilter) return false;
+      return isWaiting && shouldFilter;
+    });
+  },
+  getAnsweredChats: (_state, _, __, rootGetters) => activeFilters => {
+    const currentUser = rootGetters.getCurrentUser;
+    const currentUserId = rootGetters.getCurrentUser.id;
+    const currentAccountId = rootGetters.getCurrentAccountId;
 
-      const lastActivity = _state.agentActivityTimestamps[conversation.id];
-      if (lastActivity) {
-        const waitingSinceMs = conversation.waiting_since * 1000;
-        if (
-          waitingSinceMs > lastActivity &&
-          Date.now() - waitingSinceMs < 12000
-        ) {
-          return false;
-        }
-      }
+    const permissions = getUserPermissions(currentUser, currentAccountId);
+    const userRole = getUserRole(currentUser, currentAccountId);
 
-      return true;
+    return _state.allConversations.filter(conversation => {
+      const isAnswered = !!conversation.first_reply_created_at;
+      const shouldFilter = applyPageFilters(conversation, activeFilters);
+      const allowedForRole = applyRoleFilter(
+        conversation,
+        userRole,
+        permissions,
+        currentUserId
+      );
+
+      return isAnswered && shouldFilter && allowedForRole;
     });
   },
   getAllStatusChats: (_state, _, __, rootGetters) => activeFilters => {

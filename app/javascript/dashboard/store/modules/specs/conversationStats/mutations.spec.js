@@ -19,6 +19,7 @@ describe('#mutations', () => {
         groupCount: 1,
         allCount: 2,
         internalCount: 0,
+        answeredCount: 0,
         updatedOn: expect.any(Date),
       });
     });

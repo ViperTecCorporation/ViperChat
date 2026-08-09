@@ -17,6 +17,7 @@
     "ASSIGNEE_TYPE_TABS": {
       "all": "Todas",
       "waiting": "Não atendidas",
+      "answered": "Respondidas",
       "me": "Minhas",
       "unassigned": "Não atribuídas",
       "groups": "Grupos",
@@ -85,9 +86,6 @@
       },
       "priority_desc_created_at_asc": {
         "TEXT": "Prioridade: Maior primeiro, Criação: Mais antiga primeiro"
-      },
-      "unread": {
-        "TEXT": "Não lidas: Maior quantidade primeiro"
       }
     },
     "ATTACHMENTS": {

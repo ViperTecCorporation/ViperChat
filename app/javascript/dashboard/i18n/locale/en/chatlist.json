@@ -17,6 +17,7 @@
     "ASSIGNEE_TYPE_TABS": {
       "all": "All",
       "waiting": "Unattended",
+      "answered": "Answered",
       "me": "Mine",
       "unassigned": "Unassigned",
       "groups": "Groups",

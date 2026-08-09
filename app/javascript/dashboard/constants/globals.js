@@ -3,6 +3,7 @@ export default {
   ASSIGNEE_TYPE: {
     WAITING: 'waiting',
     ME: 'me',
+    ANSWERED: 'answered',
     UNASSIGNED: 'unassigned',
     ALL: 'all',
     GROUPS: 'groups',
