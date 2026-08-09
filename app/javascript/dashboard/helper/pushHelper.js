@@ -4,6 +4,8 @@ import auth from '../api/auth';
 import { useAlert } from 'dashboard/composables';
 
 export const verifyServiceWorkerExistence = (callback = () => {}) => {
+  if (window.chatwootConfig?.isNativeApp) return;
+
   if (!('serviceWorker' in navigator)) {
     // Service Worker isn't supported on this browser, disable or hide UI.
     return;

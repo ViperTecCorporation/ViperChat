@@ -78,9 +78,11 @@ export const configureInstallation = async serverUrl => {
     installationId: discovery.installationId,
     baseUrl,
     instanceName: discovery.instanceName,
+    version: discovery.version,
     apiVersion: discovery.apiVersion,
     features: discovery.features,
     limits: discovery.limits,
+    config: discovery.config,
   };
 
   const savedInstallations = await loadInstallations();

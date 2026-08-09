@@ -1,4 +1,8 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import {
+  createRouter,
+  createWebHashHistory,
+  createWebHistory,
+} from 'vue-router';
 
 import { frontendURL } from '../helper/URLHelper';
 import dashboard from './dashboard/dashboard.routes';
@@ -13,13 +17,21 @@ const routes = [...dashboard.routes];
 const onboardingPath = step =>
   step === 'inbox_setup' ? 'onboarding/inbox-setup' : 'onboarding';
 
-export const router = createRouter({ history: createWebHistory(), routes });
+const history = window.chatwootConfig?.isNativeApp
+  ? createWebHashHistory()
+  : createWebHistory();
+
+export const router = createRouter({ history, routes });
 
 export const validateAuthenticateRoutePermission = async (to, next) => {
   const { isLoggedIn, getCurrentUser: user } = store.getters;
 
   if (!isLoggedIn) {
-    window.location.assign('/app/login');
+    if (window.chatwootConfig?.isNativeApp) {
+      window.location.reload();
+    } else {
+      window.location.assign('/app/login');
+    }
     return '';
   }
 

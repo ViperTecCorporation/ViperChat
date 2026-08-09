@@ -4,7 +4,9 @@ O aplicativo Android usa Capacitor com um bundle Vue local. Ele não carrega uma
 
 ## Estado atual
 
-A primeira entrega permite instalar o APK, identificar o runtime, informar uma URL HTTPS, validar `/.well-known/viper-chat` e persistir instalações públicas por `installationId`. Credenciais e tokens ainda não são armazenados; login, share e push nativo serão habilitados incrementalmente.
+A segunda entrega permite instalar o APK, informar uma URL HTTPS, validar `/.well-known/viper-chat`, autenticar por e-mail e senha e abrir o mesmo dashboard Vue usado no Web/PWA. As credenciais de sessão são criptografadas pelo Android Keystore e isoladas por `installationId`; a senha nunca é persistida.
+
+MFA, login social/SSO, upload direto, share e push nativo continuam desabilitados até suas respectivas etapas.
 
 ## Comandos
 
@@ -26,6 +28,6 @@ O build Android usa JDK 21, Android SDK 36 e Gradle Wrapper. A assinatura debug 
 
 - Android application ID: `net.vipertec.viperchat`
 - Nome: `ViperChat`
-- Versão inicial: `4.16.11-viper` (`versionCode` 4161100)
+- Versão atual: `4.16.11-viper.2` (`versionCode` 4161101)
 
 Veja também [android.md](android.md) e [self-hosted.md](self-hosted.md).

@@ -29,9 +29,15 @@ export default {
     return fetchPromise;
   },
   hasAuthCookie() {
-    return !!Cookies.get('cw_d_session_info');
+    return Boolean(
+      window.viperNativeSession || Cookies.get('cw_d_session_info')
+    );
   },
   getAuthData() {
+    if (window.viperNativeSession) {
+      return window.viperNativeSession;
+    }
+
     if (this.hasAuthCookie()) {
       const savedAuthInfo = Cookies.get('cw_d_session_info');
       return JSON.parse(savedAuthInfo || '{}');

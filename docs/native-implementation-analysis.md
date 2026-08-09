@@ -66,7 +66,7 @@ WebRTC foreground é tecnicamente compatível com a base atual. Chamadas confiá
 
 ## Estado da implementação incremental
 
-- Etapa 1, fundação Android: shell Vue local, runtime detection, armazenamento de instalações e APK debug concluídos.
+- Etapa 1, fundação Android: shell Vue local, runtime detection, armazenamento de instalações, login seguro e dashboard compartilhado no APK concluídos.
 - Etapa 2, discovery: endpoint, capabilities e limites implementados; o teste Rails precisa ser executado em um ambiente com o runtime Ruby do projeto.
-- Autenticação, dashboard completo, share nativo, registry/relay de push e navegação profunda permanecem desativados até suas respectivas etapas.
+- MFA/SSO, share nativo, registry/relay de push e navegação profunda permanecem desativados até suas respectivas etapas.
 - `nativeShare` e `nativePush` não são anunciados como disponíveis antes de existirem ponta a ponta.

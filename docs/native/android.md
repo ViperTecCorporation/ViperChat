@@ -10,6 +10,12 @@ Declaradas explicitamente:
 
 O plugin de push acrescenta permissões técnicas de rede, wake lock e recebimento FCM. Câmera, localização e leitura ampla do armazenamento não são declaradas nesta fase.
 
+## Sessão
+
+O plugin local `SecureStorage` usa uma chave AES-256 gerada dentro do Android Keystore e AES-GCM para criptografar os headers de autenticação antes de gravá-los. O backup do aplicativo está desabilitado para impedir a restauração de dados criptografados sem a chave correspondente.
+
+As sessões usam o namespace `viper:{installationId}:auth`. Senha, histórico de conversa e corpo de mensagens não são gravados nesse storage.
+
 Galeria e documentos deverão usar Photo Picker e Storage Access Framework. O Android concede acesso temporário apenas aos itens selecionados ou compartilhados. Câmera, localização e Bluetooth serão adicionados junto das respectivas funcionalidades e solicitados no contexto de uso.
 
 ## Instalação manual
