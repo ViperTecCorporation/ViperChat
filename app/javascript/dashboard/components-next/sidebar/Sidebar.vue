@@ -14,6 +14,7 @@ import { useWindowSize, useEventListener } from '@vueuse/core';
 import Button from 'dashboard/components-next/button/Button.vue';
 import SidebarGroup from './SidebarGroup.vue';
 import SidebarProfileMenu from './SidebarProfileMenu.vue';
+import SidebarNotificationBell from './SidebarNotificationBell.vue';
 import SidebarChangelogCard from './SidebarChangelogCard.vue';
 import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import ChannelLeaf from './ChannelLeaf.vue';
@@ -646,14 +647,6 @@ const menuItems = computed(() => {
               }),
             },
             {
-              name: 'Dashboard Inbox',
-              label: t('SIDEBAR.INBOX'),
-              icon: 'i-lucide-inbox',
-              to: accountScopedRoute('inbox_view'),
-              activeOn: ['inbox_view', 'inbox_view_conversation'],
-              badgeCount: notificationUnreadCount.value,
-            },
-            {
               name: 'Dashboard Campaigns',
               label: t('SIDEBAR.CAMPAIGNS'),
               icon: 'i-lucide-megaphone',
@@ -999,6 +992,13 @@ const menuItems = computed(() => {
             @click="toggleSidebarWidth"
           />
         </div>
+        <SidebarNotificationBell
+          :is-collapsed="isEffectivelyCollapsed"
+          :label="t('SIDEBAR.NOTIFICATIONS')"
+          :to="accountScopedRoute('inbox_view')"
+          :unread-count="notificationUnreadCount"
+          @navigate="closeMobileSidebar"
+        />
         <SidebarProfileMenu
           :is-collapsed="isEffectivelyCollapsed"
           @open-key-shortcut-modal="emit('openKeyShortcutModal')"
