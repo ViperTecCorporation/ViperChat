@@ -105,6 +105,52 @@ describe Whatsapp::Providers::UnoapiService do
       expect(service.send_message('5511912008012', message)).to eq('uno-standard-message-id')
     end
 
+    it 'quotes an interactive message without prefixing the agent name' do
+      original_message = create(
+        :message,
+        account: whatsapp_channel.account,
+        inbox: whatsapp_channel.inbox,
+        conversation: conversation,
+        message_type: :incoming,
+        source_id: 'uno-interactive-source-id',
+        content: 'Escolha uma opção'
+      )
+      reply_message = create(
+        :message,
+        account: whatsapp_channel.account,
+        inbox: whatsapp_channel.inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        sender: create(:user, account: whatsapp_channel.account, name: 'Rodrigo'),
+        content: 'Básico',
+        content_attributes: {
+          in_reply_to: original_message.id,
+          whatsapp_interactive_reply: { id: 'plan_basic', title: 'Básico', type: 'list_reply' }
+        }
+      )
+      whatsapp_channel.update!(provider_config: whatsapp_channel.provider_config.merge('send_agent_name' => true))
+
+      stub = stub_request(:post, 'https://uno.example.com/v13.0/random_id/messages')
+             .with(
+               body: {
+                 messaging_product: 'whatsapp',
+                 recipient_type: 'individual',
+                 context: { message_id: 'uno-interactive-source-id' },
+                 to: '5511912008012',
+                 text: { body: 'Básico' },
+                 type: 'text'
+               }.to_json
+             )
+             .to_return(
+               status: 200,
+               body: { messages: [{ id: 'uno-interactive-reply-id' }] }.to_json,
+               headers: { 'Content-Type' => 'application/json' }
+             )
+
+      expect(service.send_message('5511912008012', reply_message)).to eq('uno-interactive-reply-id')
+      expect(stub).to have_been_requested.once
+    end
+
     it 'marks the message failed when the configured PIX key is missing' do
       whatsapp_channel.update!(
         provider_config: whatsapp_channel.provider_config.except('pix_merchant_name', 'pix_key', 'pix_key_type')
