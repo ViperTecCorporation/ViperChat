@@ -283,6 +283,7 @@
           "LABEL": "Chave da API",
           "SUBTITLE": "Configure a chave API do WhatsApp.",
           "PLACEHOLDER": "Chave da API",
+          "GLOBAL_PLACEHOLDER": "Token global da UnoAPI configurado",
           "ERROR": "Por favor, insira um valor válido."
         },
         "PIX_PAYMENT": {
@@ -339,31 +340,42 @@
         },
         "SEND_AGENT_NAME": {
           "LABEL": "Enviar nome do agente",
+          "HELP": "Adiciona o nome do agente do Chatwoot antes das mensagens de texto individuais. Em grupos, o remetente já é identificado.",
           "PLACEHOLDER": "Marque para enviar o nome do agente.",
           "ERROR": "Marque para enviar o nome do agente."
         },
         "IGNORE_HISTORY": {
           "LABEL": "Ignorar histórico ao conectar",
+          "HELP": "Não encaminha mensagens antigas enquanto o histórico do WhatsApp é sincronizado após a conexão.",
           "PLACEHOLDER": "Marque para ignorar o histórico ao conectar.",
           "ERROR": "Marque para ignorar o histórico ao conectar."
         },
+        "HISTORY_MAX_AGE_DAYS": {
+          "LABEL": "Janela do histórico (dias)",
+          "HELP": "Idade máxima das mensagens de histórico importadas quando o histórico não é ignorado. O WhatsApp pode limitar o histórico disponível.",
+          "ERROR": "Informe um valor entre 1 e 3650 dias."
+        },
         "IGNORE_GROUPS": {
           "LABEL": "Ignorar mensagens de grupos",
+          "HELP": "Não encaminha ao Chatwoot as mensagens recebidas em grupos.",
           "PLACEHOLDER": "Marque para ignorar mensagens de grupos.",
           "ERROR": "Marque para ignorar mensagens de grupos."
         },
         "IGNORE_NEWSLETTER_MESSAGES": {
           "LABEL": "Ignorar mensagens de newsletter",
+          "HELP": "Descarta mensagens recebidas em canais e newsletters do WhatsApp.",
           "PLACEHOLDER": "Selecione para ignorar mensagens de newsletter.",
           "ERROR": "Selecione para ignorar mensagens de newsletter."
         },
         "IGNORE_GROUP_INDIVIDUAL_RECEIPTS": {
           "LABEL": "Ignorar recibos individuais de grupos",
+          "HELP": "Suprime recibos de entrega e leitura de cada participante do grupo, evitando vários eventos de status para a mesma mensagem.",
           "PLACEHOLDER": "Selecione para ignorar recibos individuais de grupos.",
           "ERROR": "Selecione para ignorar recibos individuais de grupos."
         },
         "GROUP_ONLY_DELIVERED_STATUS": {
           "LABEL": "Status de entregue apenas em grupos",
+          "HELP": "Em mensagens de grupo, encaminha somente o status de entregue e filtra outros recibos, como lido ou reproduzido.",
           "PLACEHOLDER": "Selecione para usar apenas status de entregue em grupos.",
           "ERROR": "Selecione para usar apenas status de entregue em grupos."
         },
@@ -380,41 +392,49 @@
         },
         "IGNORE_BROADCAST_STATUSES": {
           "LABEL": "Ignorar status de broadcast",
+          "HELP": "Não encaminha ao Chatwoot publicações do Status do WhatsApp.",
           "PLACEHOLDER": "Selecione para ignorar status de broadcast.",
           "ERROR": "Selecione para ignorar status de broadcast."
         },
         "IGNORE_BROADCAST_MESSAGES": {
           "LABEL": "Ignorar mensagens de broadcast",
+          "HELP": "Não encaminha mensagens recebidas por listas de transmissão do WhatsApp.",
           "PLACEHOLDER": "Selecione para ignorar mensagens de broadcast.",
           "ERROR": "Selecione para ignorar mensagens de broadcast."
         },
         "IGNORE_OWN_MESSAGES": {
           "LABEL": "Ignorar mensagens próprias",
+          "HELP": "Descarta mensagens enviadas pelo aparelho conectado ou pela própria sessão da UnoAPI.",
           "PLACEHOLDER": "Selecione para ignorar mensagens próprias.",
           "ERROR": "Selecione para ignorar mensagens próprias."
         },
         "IGNORE_YOURSELF_MESSAGES": {
           "LABEL": "Ignorar suas mensagens",
+          "HELP": "Descarta conversas cujo destinatário é o mesmo número da sessão conectada.",
           "PLACEHOLDER": "Selecione para ignorar suas mensagens.",
           "ERROR": "Selecione para ignorar suas mensagens."
         },
         "IGNORE_EXTERNAL_ECHO_AUTOMATIONS": {
           "LABEL": "Ignorar mensagens de eco nas automações",
+          "HELP": "Impede que mensagens identificadas como eco externo disparem regras de automação do Chatwoot. A mensagem continua visível na conversa.",
           "PLACEHOLDER": "Selecione para impedir que ecos acionem automações.",
           "ERROR": "Selecione se os ecos devem ser ignorados nas automações."
         },
         "READ_ON_RECEIPT": {
           "LABEL": "Ler ao receber",
+          "HELP": "Marca automaticamente como lidas no WhatsApp as mensagens assim que forem recebidas.",
           "PLACEHOLDER": "Selecione para ler ao receber.",
           "ERROR": "Selecione para ler ao receber."
         },
         "READ_ON_REPLY": {
           "LABEL": "Ler ao responder",
+          "HELP": "Marca a conversa como lida no WhatsApp quando o Chatwoot envia uma resposta pela UnoAPI.",
           "PLACEHOLDER": "Selecione para ler ao responder.",
           "ERROR": "Selecione para ler ao responder."
         },
         "WEBHOOK_SEND_NEW_MESSAGES": {
           "LABEL": "Enviar webhook para novas mensagens",
+          "HELP": "Envia o evento principal sempre que uma mensagem é criada. Deve permanecer ativado para o Chatwoot receber novas mensagens.",
           "PLACEHOLDER": "Marque para enviar webhook para novas mensagens.",
           "ERROR": "Marque para enviar webhook para novas mensagens."
         },
@@ -429,6 +449,7 @@
         },
         "SEND_TRANSCRIBE_AUDIO": {
           "LABEL": "Enviar transcrição de áudio",
+          "HELP": "Inclui a transcrição do áudio no webhook quando o recurso estiver configurado e disponível.",
           "PLACEHOLDER": "Marque para enviar transcrição de áudio.",
           "ERROR": "Marque para enviar transcrição de áudio."
         },
@@ -445,31 +466,37 @@
         },
         "SEND_CONNECTION_STATUS": {
           "LABEL": "Mostrar status da conexão",
+          "HELP": "Envia eventos de conexão e desconexão da sessão para a aplicação cadastrada.",
           "PLACEHOLDER": "Selecione para mostrar o status da conexão.",
           "ERROR": "Selecione para mostrar o status da conexão."
         },
         "MARK_ONLINE_ON_CONNECT": {
           "LABEL": "Marcar online ao conectar",
+          "HELP": "Publica a presença online da sessão no WhatsApp logo após conectar.",
           "PLACEHOLDER": "Selecione para marcar a conta como online ao conectar.",
           "ERROR": "Selecione para marcar a conta como online ao conectar."
         },
         "NOTIFY_FAILED_MESSAGES": {
           "LABEL": "Notificar mensagens com falha",
+          "HELP": "Emite um evento com status de falha quando o provedor rejeita uma ação de mensagem.",
           "PLACEHOLDER": "Selecione para notificar mensagens com falha.",
           "ERROR": "Selecione para notificar mensagens com falha."
         },
         "COMPOSING_MESSAGE": {
           "LABEL": "Compor mensagem",
+          "HELP": "Publica a presença de digitando no WhatsApp antes de enviar uma mensagem.",
           "PLACEHOLDER": "Selecione para compor mensagens.",
           "ERROR": "Selecione para compor mensagens."
         },
         "SEND_REACTION_AS_REPLY": {
           "LABEL": "Mostrar reação como resposta",
+          "HELP": "Representa reações recebidas também como eventos de resposta, facilitando integrações que não processam eventos de reação.",
           "PLACEHOLDER": "Selecione para mostrar a reação como resposta.",
           "ERROR": "Selecione para mostrar a reação como resposta."
         },
         "SEND_PROFILE_PICTURE": {
           "LABEL": "Mostrar foto de perfil",
+          "HELP": "Inclui fotos atualizadas de contatos e grupos nos webhooks, respeitando o intervalo de cache da UnoAPI.",
           "PLACEHOLDER": "Selecione para mostrar a foto de perfil.",
           "ERROR": "Selecione para mostrar a foto de perfil."
         },

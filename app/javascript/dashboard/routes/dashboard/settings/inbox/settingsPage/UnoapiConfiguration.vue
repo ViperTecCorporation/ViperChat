@@ -4,15 +4,23 @@ import { io } from 'socket.io-client';
 import { useVuelidate } from '@vuelidate/core';
 import { useAlert } from 'dashboard/composables';
 import inboxMixin from 'shared/mixins/inboxMixin';
-import { required } from '@vuelidate/validators';
+import { integer, maxValue, minValue, required } from '@vuelidate/validators';
 import { mapGetters } from 'vuex';
 // import { createConsumer } from '@rails/actioncable';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SwitchControl from 'dashboard/components-next/switch/Switch.vue';
 import UnoapiContactSync from './UnoapiContactSync.vue';
+import UnoapiSettingLabel from './UnoapiSettingLabel.vue';
+
+const optional = () => true;
 
 export default {
-  components: { NextButton, SwitchControl, UnoapiContactSync },
+  components: {
+    NextButton,
+    SwitchControl,
+    UnoapiContactSync,
+    UnoapiSettingLabel,
+  },
   mixins: [inboxMixin],
   props: {
     inbox: {
@@ -37,6 +45,7 @@ export default {
       groupOnlyDeliveredStatus: true,
       useGroupConversationSchema: true,
       ignoreHistoryMessages: true,
+      historyMaxAgeDays: 7,
       webhookSendNewMessages: true,
       sendAgentName: true,
       sendTranscribeAudio: true,
@@ -63,10 +72,18 @@ export default {
     };
   },
   computed: {
-    ...mapGetters({ uiFlags: 'inboxes/getUIFlags' }),
+    ...mapGetters({
+      uiFlags: 'inboxes/getUIFlags',
+      globalConfig: 'globalConfig/get',
+    }),
+    apiKeyPlaceholder() {
+      return this.globalConfig.unoapiAuthTokenConfigured
+        ? this.$t('INBOX_MGMT.ADD.WHATSAPP.API_KEY.GLOBAL_PLACEHOLDER')
+        : this.$t('INBOX_MGMT.ADD.WHATSAPP.API_KEY.PLACEHOLDER');
+    },
   },
   validations: {
-    apiKey: { required },
+    apiKey: { optional },
     connectionType: { required },
     ignoreGroupMessages: { required },
     ignoreNewsletterMessages: { required },
@@ -74,13 +91,19 @@ export default {
     groupOnlyDeliveredStatus: { required },
     useGroupConversationSchema: { required },
     ignoreHistoryMessages: { required },
+    historyMaxAgeDays: {
+      required,
+      integer,
+      minValue: minValue(1),
+      maxValue: maxValue(3650),
+    },
     webhookSendNewMessages: { required },
     sendAgentName: { required },
     sendTranscribeAudio: { required },
     groqApiKey: { required },
     readOnReceipt: { required },
     readOnReply: { required },
-    url: { required },
+    url: { optional },
     ignoreBroadcastStatuses: { required },
     ignoreBroadcastMessages: { required },
     ignoreOwnMessages: { required },
@@ -104,8 +127,11 @@ export default {
   },
   methods: {
     setDefaults() {
-      this.apiKey = this.inbox.provider_config.api_key;
-      this.url = this.inbox.provider_config.url;
+      this.apiKey = this.inbox.provider_config.api_key || '';
+      this.url =
+        this.inbox.provider_config.url ||
+        this.globalConfig.unoapiApiUrl ||
+        'https://unoapi.cloud';
       this.connectionType =
         this.inbox.provider_config.connection_type === 'pairing_code'
           ? 'pairing_code'
@@ -125,6 +151,8 @@ export default {
         this.inbox.provider_config.use_group_conversation_schema ?? true;
       this.ignoreHistoryMessages =
         this.inbox.provider_config.ignore_history_messages;
+      this.historyMaxAgeDays =
+        this.inbox.provider_config.history_max_age_days ?? 7;
       this.webhookSendNewMessages =
         this.inbox.provider_config.webhook_send_new_messages ?? true;
       this.sendAgentName = this.inbox.provider_config.send_agent_name;
@@ -158,9 +186,7 @@ export default {
       this.disconnect = false;
     },
     listenerQrCode() {
-      const url = `${this.inbox.provider_config.url}`
-        .replace('https', 'wss')
-        .replace('http', 'ws');
+      const url = `${this.url}`.replace('https', 'wss').replace('http', 'ws');
       const socket = io(url, { path: '/ws' });
       socket.on('broadcast', data => {
         if (data.phone !== this.inbox.provider_config.phone_number_id) {
@@ -246,7 +272,7 @@ export default {
             contact_export_enabled: this.contactExportEnabled,
             provider_config: {
               ...providerConfig,
-              api_key: this.apiKey,
+              api_key: this.apiKey || null,
               connection_type: this.connectionType,
               pix_merchant_name: this.pixMerchantName || null,
               pix_key: this.pixKey || null,
@@ -257,12 +283,14 @@ export default {
               group_only_delivered_status: this.groupOnlyDeliveredStatus,
               use_group_conversation_schema: this.useGroupConversationSchema,
               ignore_history_messages: this.ignoreHistoryMessages,
+              history_max_age_days: Number(this.historyMaxAgeDays) || 7,
               ignore_group_messages: this.ignoreGroupMessages,
               webhook_send_new_messages: this.webhookSendNewMessages,
               send_agent_name: this.sendAgentName,
               send_transcribe_audio: this.sendTranscribeAudio,
               groq_api_key: this.groqApiKey,
-              url: this.url,
+              url:
+                this.url === this.globalConfig.unoapiApiUrl ? null : this.url,
               read_on_receipt: this.readOnReceipt,
               read_on_reply: this.readOnReply,
               ignore_broadcast_statuses: this.ignoreBroadcastStatuses,
@@ -320,7 +348,7 @@ export default {
           <input
             v-model.trim="apiKey"
             type="text"
-            :placeholder="$t('INBOX_MGMT.ADD.WHATSAPP.API_KEY.PLACEHOLDER')"
+            :placeholder="apiKeyPlaceholder"
             @blur="v$.apiKey.$touch"
           />
           <span v-if="v$.apiKey.$error" class="message">
@@ -419,7 +447,12 @@ export default {
             v-model="webhookSendNewMessages"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.LABEL') }}
+          <UnoapiSettingLabel
+            :label="
+              $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.LABEL')
+            "
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.HELP')"
+          />
           <span v-if="v$.webhookSendNewMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.WEBHOOK_SEND_NEW_MESSAGES.ERROR') }}
           </span>
@@ -441,7 +474,10 @@ export default {
             v-model="sendTranscribeAudio"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_TRANSCRIBE_AUDIO.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_TRANSCRIBE_AUDIO.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_TRANSCRIBE_AUDIO.HELP')"
+          />
           <span v-if="v$.sendTranscribeAudio.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_TRANSCRIBE_AUDIO.ERROR') }}
           </span>
@@ -485,7 +521,10 @@ export default {
             v-model="sendAgentName"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_AGENT_NAME.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_AGENT_NAME.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_AGENT_NAME.HELP')"
+          />
           <span v-if="v$.sendAgentName.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_AGENT_NAME.ERROR') }}
           </span>
@@ -501,7 +540,10 @@ export default {
             v-model="ignoreGroupMessages"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUPS.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUPS.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUPS.HELP')"
+          />
           <span v-if="v$.ignoreGroupMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUPS.ERROR') }}
           </span>
@@ -517,7 +559,14 @@ export default {
             v-model="ignoreNewsletterMessages"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.LABEL') }}
+          <UnoapiSettingLabel
+            :label="
+              $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.LABEL')
+            "
+            :help="
+              $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.HELP')
+            "
+          />
           <span v-if="v$.ignoreNewsletterMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_NEWSLETTER_MESSAGES.ERROR') }}
           </span>
@@ -533,9 +582,18 @@ export default {
             v-model="ignoreGroupIndividualReceipts"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{
-            $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUP_INDIVIDUAL_RECEIPTS.LABEL')
-          }}
+          <UnoapiSettingLabel
+            :label="
+              $t(
+                'INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUP_INDIVIDUAL_RECEIPTS.LABEL'
+              )
+            "
+            :help="
+              $t(
+                'INBOX_MGMT.ADD.WHATSAPP.IGNORE_GROUP_INDIVIDUAL_RECEIPTS.HELP'
+              )
+            "
+          />
           <span v-if="v$.ignoreGroupIndividualReceipts.$error" class="message">
             {{
               $t(
@@ -555,7 +613,14 @@ export default {
             v-model="groupOnlyDeliveredStatus"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.GROUP_ONLY_DELIVERED_STATUS.LABEL') }}
+          <UnoapiSettingLabel
+            :label="
+              $t('INBOX_MGMT.ADD.WHATSAPP.GROUP_ONLY_DELIVERED_STATUS.LABEL')
+            "
+            :help="
+              $t('INBOX_MGMT.ADD.WHATSAPP.GROUP_ONLY_DELIVERED_STATUS.HELP')
+            "
+          />
           <span v-if="v$.groupOnlyDeliveredStatus.$error" class="message">
             {{
               $t('INBOX_MGMT.ADD.WHATSAPP.GROUP_ONLY_DELIVERED_STATUS.ERROR')
@@ -573,17 +638,14 @@ export default {
             v-model="useGroupConversationSchema"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          <span class="inline-flex items-center gap-1">
-            {{
+          <UnoapiSettingLabel
+            :label="
               $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.LABEL')
-            }}
-            <i
-              v-tooltip.top="
-                $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.HELP')
-              "
-              class="i-lucide-circle-help size-3.5 cursor-help text-slate-500"
-            />
-          </span>
+            "
+            :help="
+              $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.HELP')
+            "
+          />
           <span v-if="v$.useGroupConversationSchema.$error" class="message">
             {{
               $t('INBOX_MGMT.ADD.WHATSAPP.USE_GROUP_CONVERSATION_SCHEMA.ERROR')
@@ -601,9 +663,31 @@ export default {
             v-model="ignoreHistoryMessages"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_HISTORY.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_HISTORY.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_HISTORY.HELP')"
+          />
           <span v-if="v$.ignoreHistoryMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_HISTORY.ERROR') }}
+          </span>
+        </label>
+      </div>
+
+      <div v-if="!ignoreHistoryMessages" class="w-full max-w-xs pb-4 pl-10">
+        <label :class="{ error: v$.historyMaxAgeDays.$error }">
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.HISTORY_MAX_AGE_DAYS.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.HISTORY_MAX_AGE_DAYS.HELP')"
+          />
+          <input
+            v-model.number="historyMaxAgeDays"
+            type="number"
+            min="1"
+            max="3650"
+            @blur="v$.historyMaxAgeDays.$touch"
+          />
+          <span v-if="v$.historyMaxAgeDays.$error" class="message">
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.HISTORY_MAX_AGE_DAYS.ERROR') }}
           </span>
         </label>
       </div>
@@ -617,7 +701,10 @@ export default {
             v-model="readOnReceipt"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_RECEIPT.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_RECEIPT.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_RECEIPT.HELP')"
+          />
           <span v-if="v$.readOnReceipt.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_RECEIPT.ERROR') }}
           </span>
@@ -633,7 +720,10 @@ export default {
             v-model="readOnReply"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_REPLY.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_REPLY.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_REPLY.HELP')"
+          />
           <span v-if="v$.readOnReply.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.READ_ON_REPLY.ERROR') }}
           </span>
@@ -649,7 +739,12 @@ export default {
             v-model="ignoreBroadcastStatuses"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_STATUSES.LABEL') }}
+          <UnoapiSettingLabel
+            :label="
+              $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_STATUSES.LABEL')
+            "
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_STATUSES.HELP')"
+          />
           <span v-if="v$.ignoreBroadcastStatuses.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_STATUSES.ERROR') }}
           </span>
@@ -665,7 +760,12 @@ export default {
             v-model="ignoreBroadcastMessages"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_MESSAGES.LABEL') }}
+          <UnoapiSettingLabel
+            :label="
+              $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_MESSAGES.LABEL')
+            "
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_MESSAGES.HELP')"
+          />
           <span v-if="v$.ignoreBroadcastMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_BROADCAST_MESSAGES.ERROR') }}
           </span>
@@ -681,7 +781,10 @@ export default {
             v-model="ignoreOwnMessages"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_OWN_MESSAGES.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_OWN_MESSAGES.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_OWN_MESSAGES.HELP')"
+          />
           <span v-if="v$.ignoreOwnMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_OWN_MESSAGES.ERROR') }}
           </span>
@@ -697,7 +800,12 @@ export default {
             v-model="ignoreYourselfMessages"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_YOURSELF_MESSAGES.LABEL') }}
+          <UnoapiSettingLabel
+            :label="
+              $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_YOURSELF_MESSAGES.LABEL')
+            "
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_YOURSELF_MESSAGES.HELP')"
+          />
           <span v-if="v$.ignoreYourselfMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_YOURSELF_MESSAGES.ERROR') }}
           </span>
@@ -713,9 +821,18 @@ export default {
             v-model="ignoreExternalEchoAutomations"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{
-            $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_EXTERNAL_ECHO_AUTOMATIONS.LABEL')
-          }}
+          <UnoapiSettingLabel
+            :label="
+              $t(
+                'INBOX_MGMT.ADD.WHATSAPP.IGNORE_EXTERNAL_ECHO_AUTOMATIONS.LABEL'
+              )
+            "
+            :help="
+              $t(
+                'INBOX_MGMT.ADD.WHATSAPP.IGNORE_EXTERNAL_ECHO_AUTOMATIONS.HELP'
+              )
+            "
+          />
           <span v-if="v$.ignoreExternalEchoAutomations.$error" class="message">
             {{
               $t(
@@ -735,7 +852,10 @@ export default {
             v-model="sendConnectionStatus"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_CONNECTION_STATUS.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_CONNECTION_STATUS.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_CONNECTION_STATUS.HELP')"
+          />
           <span v-if="v$.sendConnectionStatus.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_CONNECTION_STATUS.ERROR') }}
           </span>
@@ -751,7 +871,10 @@ export default {
             v-model="markOnlineOnConnect"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.MARK_ONLINE_ON_CONNECT.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.MARK_ONLINE_ON_CONNECT.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.MARK_ONLINE_ON_CONNECT.HELP')"
+          />
           <span v-if="v$.markOnlineOnConnect.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.MARK_ONLINE_ON_CONNECT.ERROR') }}
           </span>
@@ -767,7 +890,10 @@ export default {
             v-model="notifyFailedMessages"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.NOTIFY_FAILED_MESSAGES.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.NOTIFY_FAILED_MESSAGES.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.NOTIFY_FAILED_MESSAGES.HELP')"
+          />
           <span v-if="v$.notifyFailedMessages.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.NOTIFY_FAILED_MESSAGES.ERROR') }}
           </span>
@@ -783,7 +909,10 @@ export default {
             v-model="composingMessage"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.COMPOSING_MESSAGE.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.COMPOSING_MESSAGE.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.COMPOSING_MESSAGE.HELP')"
+          />
           <span v-if="v$.composingMessage.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.COMPOSING_MESSAGE.ERROR') }}
           </span>
@@ -799,7 +928,10 @@ export default {
             v-model="sendReactionAsReply"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_REACTION_AS_REPLY.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_REACTION_AS_REPLY.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_REACTION_AS_REPLY.HELP')"
+          />
           <span v-if="v$.sendReactionAsReply.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_REACTION_AS_REPLY.ERROR') }}
           </span>
@@ -815,7 +947,10 @@ export default {
             v-model="sendProfilePicture"
             style="flex: 0 0 auto; margin-right: 10px"
           />
-          {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_PROFILE_PICTURE.LABEL') }}
+          <UnoapiSettingLabel
+            :label="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_PROFILE_PICTURE.LABEL')"
+            :help="$t('INBOX_MGMT.ADD.WHATSAPP.SEND_PROFILE_PICTURE.HELP')"
+          />
           <span v-if="v$.sendProfilePicture.$error" class="message">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.SEND_PROFILE_PICTURE.ERROR') }}
           </span>

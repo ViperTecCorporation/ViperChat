@@ -65,12 +65,12 @@ class Whatsapp::UnoapiWebhookSetupService
   end
 
   def url(whatsapp_channel)
-    "#{whatsapp_channel.provider_config['url']}/v15.0/#{whatsapp_channel.provider_config['business_account_id']}"
+    "#{whatsapp_channel.unoapi_api_url}/v15.0/#{whatsapp_channel.provider_config['business_account_id']}"
   end
 
   def headers(whatsapp_channel)
     {
-      Authorization: ENV.fetch('UNOAPI_AUTH_TOKEN', whatsapp_channel.provider_config['api_key']),
+      Authorization: whatsapp_channel.unoapi_auth_token,
       'Content-Type': 'application/json'
     }
   end
@@ -111,6 +111,7 @@ class Whatsapp::UnoapiWebhookSetupService
       ignoreBroadcastStatuses: provider_config['ignore_broadcast_statuses'],
       ignoreBroadcastMessages: provider_config['ignore_broadcast_messages'],
       ignoreHistoryMessages: provider_config['ignore_history_messages'],
+      historyMaxAgeDays: provider_config.fetch('history_max_age_days', 7).to_i.clamp(1, 3650),
       ignoreOwnMessages: provider_config['ignore_own_messages'],
       ignoreYourselfMessages: provider_config['ignore_yourself_messages'],
       sendConnectionStatus: provider_config['send_connection_status'],
@@ -129,7 +130,7 @@ class Whatsapp::UnoapiWebhookSetupService
       webhooks: merged_webhooks(whatsapp_channel, default_webhook),
       sendReactionAsReply: provider_config['send_reaction_as_reply'],
       sendProfilePicture: provider_config['send_profile_picture'],
-      authToken: provider_config['api_key'],
+      authToken: whatsapp_channel.unoapi_auth_token,
     }
   end
   # rubocop:enable Metrics/MethodLength

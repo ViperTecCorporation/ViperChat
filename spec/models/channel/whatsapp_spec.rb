@@ -65,6 +65,56 @@ RSpec.describe Channel::Whatsapp do
     end
   end
 
+  describe 'UnoAPI connection configuration' do
+    let(:channel) do
+      build(
+        :channel_whatsapp,
+        provider: 'unoapi',
+        provider_config: {
+          'url' => 'https://inbox.uno.example.com/',
+          'api_key' => 'inbox-token'
+        }
+      )
+    end
+
+    before do
+      allow(GlobalConfigService).to receive(:load).with('UNOAPI_API_URL', nil).and_return('https://global.uno.example.com/')
+      allow(GlobalConfigService).to receive(:load).with('UNOAPI_AUTH_TOKEN', nil).and_return('global-token')
+    end
+
+    it 'prefers inbox-specific values over the Super Admin defaults' do
+      with_modified_env UNOAPI_API_URL: nil, UNOAPI_AUTH_TOKEN: nil do
+        expect(channel.unoapi_api_url).to eq('https://inbox.uno.example.com')
+        expect(channel.unoapi_auth_token).to eq('inbox-token')
+      end
+    end
+
+    it 'uses the Super Admin values when the inbox values are blank' do
+      channel.provider_config = channel.provider_config.merge('url' => '', 'api_key' => '')
+
+      with_modified_env UNOAPI_API_URL: nil, UNOAPI_AUTH_TOKEN: nil do
+        expect(channel.unoapi_api_url).to eq('https://global.uno.example.com')
+        expect(channel.unoapi_auth_token).to eq('global-token')
+      end
+    end
+
+    it 'keeps inbox-specific values above environment deployment defaults' do
+      with_modified_env UNOAPI_API_URL: 'https://environment.uno.example.com/', UNOAPI_AUTH_TOKEN: 'environment-token' do
+        expect(channel.unoapi_api_url).to eq('https://inbox.uno.example.com')
+        expect(channel.unoapi_auth_token).to eq('inbox-token')
+      end
+    end
+
+    it 'uses environment values before the Super Admin defaults when the inbox values are blank' do
+      channel.provider_config = channel.provider_config.merge('url' => '', 'api_key' => '')
+
+      with_modified_env UNOAPI_API_URL: 'https://environment.uno.example.com/', UNOAPI_AUTH_TOKEN: 'environment-token' do
+        expect(channel.unoapi_api_url).to eq('https://environment.uno.example.com')
+        expect(channel.unoapi_auth_token).to eq('environment-token')
+      end
+    end
+  end
+
   describe 'UnoAPI contact synchronization' do
     let(:channel) do
       create(

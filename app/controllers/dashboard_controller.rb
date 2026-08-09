@@ -105,14 +105,23 @@ class DashboardController < ActionController::Base
       FACEBOOK_API_VERSION: GlobalConfigService.load('FACEBOOK_API_VERSION', 'v18.0'),
       WHATSAPP_APP_ID: GlobalConfigService.load('WHATSAPP_APP_ID', ''),
       WHATSAPP_CONFIGURATION_ID: GlobalConfigService.load('WHATSAPP_CONFIGURATION_ID', ''),
+      UNOAPI_API_URL: unoapi_api_url,
+      UNOAPI_AUTH_TOKEN_CONFIGURED: unoapi_auth_token_configured?,
       IS_ENTERPRISE: ChatwootApp.enterprise?,
       AZURE_APP_ID: GlobalConfigService.load('AZURE_APP_ID', ''),
       MAXIMUM_FILE_UPLOAD_SIZE: GlobalConfigService.load('MAXIMUM_FILE_UPLOAD_SIZE', '150'),
-      # UNOAPI_AUTH_TOKEN: GlobalConfigService.load('UNOAPI_AUTH_TOKEN', ''),
       GIT_SHA: GIT_HASH,
       ALLOWED_LOGIN_METHODS: allowed_login_methods,
       ACTIVE_PLATFORM_BANNERS: active_platform_banners
     }
+  end
+
+  def unoapi_api_url
+    ENV['UNOAPI_API_URL'].presence || GlobalConfigService.load('UNOAPI_API_URL', '')
+  end
+
+  def unoapi_auth_token_configured?
+    ENV['UNOAPI_AUTH_TOKEN'].present? || GlobalConfigService.load('UNOAPI_AUTH_TOKEN', '').present?
   end
 
   def active_platform_banners

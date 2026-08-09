@@ -22,6 +22,7 @@ describe Whatsapp::UnoapiWebhookSetupService do
         'ignore_broadcast_messages' => true,
         'ignore_broadcast_statuses' => true,
         'ignore_history_messages' => false,
+        'history_max_age_days' => 15,
         'ignore_own_messages' => false,
         'ignore_yourself_messages' => false,
         'send_connection_status' => true,
@@ -70,6 +71,7 @@ describe Whatsapp::UnoapiWebhookSetupService do
     expect(payload['connectionType']).to eq('qrcode')
     expect(payload['markOnlineOnConnect']).to be(false)
     expect(payload['readOnReply']).to be(true)
+    expect(payload['historyMaxAgeDays']).to eq(15)
     expect(payload['useRedis']).to be(true)
     expect(payload['useS3']).to be(true)
     expect(webhook['urlAbsolute']).to eq('https://chatwoot.vipertec.net/webhooks/whatsapp/5566996222471')
@@ -78,6 +80,40 @@ describe Whatsapp::UnoapiWebhookSetupService do
     expect(webhook['sendNewMessages']).to be(true)
     expect(payload).not_to have_key('contact_sync_enabled')
     expect(payload).not_to have_key('sync_contacts')
+  end
+
+  it 'uses seven days as the history window when the inbox has no override' do
+    channel.provider_config.delete('history_max_age_days')
+    calls = []
+    allow(HTTParty).to receive(:post) do |url, options|
+      calls << [url, options]
+      calls.length == 1 ? register_response : message_response
+    end
+
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net' do
+      service.perform(channel)
+    end
+
+    payload = JSON.parse(calls.first.last[:body])
+    expect(payload['historyMaxAgeDays']).to eq(7)
+  end
+
+  it 'uses the global token in the session payload without copying it into the inbox' do
+    channel.provider_config['api_key'] = nil
+    allow(GlobalConfigService).to receive(:load).with('UNOAPI_AUTH_TOKEN', nil).and_return('global-secret-token')
+    calls = []
+    allow(HTTParty).to receive(:post) do |url, options|
+      calls << [url, options]
+      calls.length == 1 ? register_response : message_response
+    end
+
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net', UNOAPI_AUTH_TOKEN: nil do
+      service.perform(channel)
+    end
+
+    payload = JSON.parse(calls.first.last[:body])
+    expect(payload['authToken']).to eq('global-secret-token')
+    expect(channel.provider_config['api_key']).to be_nil
   end
 
   it 'sends pairing_code when selected in the provider configuration' do

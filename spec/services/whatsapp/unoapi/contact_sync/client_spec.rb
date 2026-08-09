@@ -31,6 +31,25 @@ describe Whatsapp::Unoapi::ContactSync::Client do
     expect(client.session_online?).to be(true)
   end
 
+  it 'uses the Super Admin URL and token when the inbox configuration is blank' do
+    channel.provider_config = channel.provider_config.merge('url' => '', 'api_key' => '')
+    allow(GlobalConfigService).to receive(:load).with('UNOAPI_API_URL', nil).and_return('https://global.uno.example.com/')
+    allow(GlobalConfigService).to receive(:load).with('UNOAPI_AUTH_TOKEN', nil).and_return('global-secret')
+
+    request = stub_request(:get, 'https://global.uno.example.com/sessions')
+              .with(headers: { 'Authorization' => 'global-secret' })
+              .to_return(
+                status: 200,
+                body: { data: [{ phone: '5566996222471', status: 'online' }] }.to_json,
+                headers: { 'Content-Type' => 'application/json' }
+              )
+
+    with_modified_env UNOAPI_API_URL: nil, UNOAPI_AUTH_TOKEN: nil do
+      expect(client.session_online?).to be(true)
+    end
+    expect(request).to have_been_requested.once
+  end
+
   it 'fetches a contact page from the unversioned endpoint with the maximum supported limit' do
     request = stub_request(:get, 'https://uno.example.com/5566996222471/contacts?cursor=42&limit=200')
               .with(headers: { 'Authorization' => 'secret' })

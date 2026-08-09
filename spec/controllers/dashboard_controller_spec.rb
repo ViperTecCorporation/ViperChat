@@ -76,6 +76,20 @@ RSpec.describe 'Dashboard', type: :request do
 
         expect(response).not_to redirect_to('/installation/onboarding')
       end
+
+      it 'exposes the UnoAPI URL and only the presence of the global token' do
+        allow(GlobalConfigService).to receive(:load).and_call_original
+        allow(GlobalConfigService).to receive(:load).with('UNOAPI_API_URL', '').and_return('https://uno.example.com')
+        allow(GlobalConfigService).to receive(:load).with('UNOAPI_AUTH_TOKEN', '').and_return('global-secret-token')
+
+        with_modified_env UNOAPI_API_URL: nil, UNOAPI_AUTH_TOKEN: nil do
+          get '/'
+        end
+
+        expect(response.body).to include('"UNOAPI_API_URL":"https://uno.example.com"')
+        expect(response.body).to include('"UNOAPI_AUTH_TOKEN_CONFIGURED":true')
+        expect(response.body).not_to include('global-secret-token')
+      end
     end
   end
 end

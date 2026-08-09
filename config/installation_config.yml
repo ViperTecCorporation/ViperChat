@@ -459,10 +459,15 @@
 # ------- End of Instagram Channel Related Config ------- #
 
 # MARK: UNOAPI Channel Config
+- name: UNOAPI_API_URL
+  value:
+  display_title: 'UNO API URL'
+  description: 'Default UNO API base URL. An URL configured in the inbox takes precedence over this value.'
 - name: UNOAPI_AUTH_TOKEN
   value:
   display_title: 'UNO API Auth Token'
-  description: 'The Auth Token for UNO API. Find more details on how to configure UNOAPI here: https://github.com/clairton/unoapi-cloud/tree/main'
+  description: 'Default Auth Token for UNO API. A token configured in the inbox takes precedence over this value.'
+  type: secret
 # End of UNOAPI Channel Config
 # ------- TikTok Channel Related Config ------- #
 - name: TIKTOK_API_VERSION
