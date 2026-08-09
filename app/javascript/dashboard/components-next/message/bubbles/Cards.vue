@@ -5,6 +5,7 @@ import { useMessageContext } from '../provider.js';
 
 const { content, contentAttributes } = useMessageContext();
 const failedImages = ref(new Set());
+const copiedValue = ref('');
 
 const stringValue = value => (typeof value === 'string' ? value : '');
 
@@ -40,12 +41,22 @@ const items = computed(() => {
           text: stringValue(action.text),
           uri: safeHttpUrl(action.uri),
           payload: stringValue(action.payload),
+          phoneNumber: stringValue(action.phoneNumber || action.phone_number),
+          code: stringValue(action.code),
         }))
-        .filter(action => action.text || action.uri || action.payload);
+        .filter(
+          action =>
+            action.text ||
+            action.uri ||
+            action.payload ||
+            action.phoneNumber ||
+            action.code
+        );
 
       return {
         title: stringValue(item.title),
         description: stringValue(item.description),
+        footer: stringValue(item.footer),
         mediaUrl: safeHttpUrl(item.mediaUrl || item.media_url),
         actions,
       };
@@ -54,6 +65,12 @@ const items = computed(() => {
 
 const markImageAsFailed = index => {
   failedImages.value = new Set([...failedImages.value, index]);
+};
+
+const copyValue = async value => {
+  if (!value || !navigator?.clipboard) return;
+  await navigator.clipboard.writeText(value);
+  copiedValue.value = value;
 };
 </script>
 
@@ -98,6 +115,9 @@ const markImageAsFailed = index => {
           >
             {{ item.description }}
           </p>
+          <p v-if="item.footer" class="m-0 text-xs text-n-slate-10">
+            {{ item.footer }}
+          </p>
           <div v-if="item.actions.length" class="mt-auto grid gap-2 pt-1">
             <template
               v-for="(action, actionIndex) in item.actions"
@@ -119,6 +139,25 @@ const markImageAsFailed = index => {
                 class="min-h-8 cursor-not-allowed rounded-md border border-n-weak px-3 py-1.5 text-sm font-medium text-n-slate-10 opacity-70"
               >
                 {{ action.text || action.payload }}
+              </button>
+              <a
+                v-else-if="action.type === 'call' && action.phoneNumber"
+                :href="`tel:${action.phoneNumber.replace(/[^\d+]/g, '')}`"
+                class="skip-context-menu inline-flex min-h-8 items-center justify-center rounded-md border border-n-weak px-3 py-1.5 text-center text-sm font-medium text-n-brand hover:bg-n-alpha-2"
+              >
+                {{ action.text || action.phoneNumber }}
+              </a>
+              <button
+                v-else-if="action.type === 'copy' && action.code"
+                type="button"
+                class="min-h-8 rounded-md border border-n-weak px-3 py-1.5 text-sm font-medium text-n-brand hover:bg-n-alpha-2"
+                @click="copyValue(action.code)"
+              >
+                {{
+                  copiedValue === action.code
+                    ? $t('CONVERSATION.UNOAPI.COPIED')
+                    : action.text || $t('CONVERSATION.UNOAPI.COPY')
+                }}
               </button>
             </template>
           </div>

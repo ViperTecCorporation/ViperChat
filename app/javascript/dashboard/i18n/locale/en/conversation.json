@@ -16,6 +16,20 @@
     "VIEW_TRANSLATED": "View translated",
     "EDITED": "edited",
     "MESSAGE_EDITED": "Edited message",
+    "UNOAPI": {
+      "ORDER": "Order {id}",
+      "ORDER_RECEIVED": "Order received",
+      "QUANTITY": "{quantity}× {name}",
+      "TOTAL": "Total",
+      "VIEW_PRODUCT": "View product",
+      "CARD_ENDING": "Ending in {digits}",
+      "OPEN_PAYMENT": "Open payment",
+      "OPEN_LINK": "Open link",
+      "PAYMENT": "Payment {id}",
+      "COPY_DIGITABLE_LINE": "Copy digitable line",
+      "COPY": "Copy",
+      "COPIED": "Copied"
+    },
     "GROUP": {
       "MEMBERS": "members",
       "MEMBERS_TITLE": "Group members",

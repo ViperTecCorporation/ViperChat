@@ -121,6 +121,12 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
 
   private
 
+  def should_prefix_sender_name?(message)
+    return false if message.content_attributes&.dig('whatsapp_interactive_reply').present?
+
+    super
+  end
+
   def api_key
     whatsapp_channel.unoapi_auth_token
   end
