@@ -64,6 +64,46 @@ describe Whatsapp::Providers::WhatsappCloudService do
         expect(service.send_message('+123456789', message)).to eq 'message_id'
       end
 
+      it 'uses an explicit disabled inbox setting instead of the enabled account feature' do
+        whatsapp_channel.account.enable_features!('send_agent_name_in_whatsapp_message')
+        whatsapp_channel.update!(provider_config: whatsapp_channel.provider_config.merge('send_agent_name' => false))
+
+        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              recipient_type: 'individual',
+              context: nil,
+              to: '+123456789',
+              text: { body: message.content },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', message)).to eq 'message_id'
+      end
+
+      it 'falls back to the account feature when the inbox setting is absent' do
+        whatsapp_channel.account.enable_features!('send_agent_name_in_whatsapp_message')
+        whatsapp_channel.update!(provider_config: whatsapp_channel.provider_config.except('send_agent_name'))
+
+        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+          .with(
+            body: {
+              messaging_product: 'whatsapp',
+              recipient_type: 'individual',
+              context: nil,
+              to: '+123456789',
+              text: { body: "*#{message.sender_name}*: #{message.content}" },
+              type: 'text'
+            }.to_json
+          )
+          .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_message('+123456789', message)).to eq 'message_id'
+      end
+
       it 'calls message endpoints with group recipient type for group conversations' do
         conversation.update!(group: true, group_source_id: '120363040468224422@g.us', group_title: 'Equipe Comercial')
         expected_body = "*#{message.sender_name}*: test"

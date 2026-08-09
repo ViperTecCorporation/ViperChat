@@ -18,6 +18,18 @@ describe Whatsapp::Providers::UnoapiService do
     )
   end
 
+  describe '#validate_provider_config?' do
+    it 'registers a connecting session before validating its newly generated token' do
+      whatsapp_channel.provider_config['connect'] = true
+      setup_service = instance_double(Whatsapp::UnoapiWebhookSetupService, perform: true)
+      allow(Whatsapp::UnoapiWebhookSetupService).to receive(:new).and_return(setup_service)
+
+      expect(HTTParty).not_to receive(:get)
+      expect(service.validate_provider_config?).to be(true)
+      expect(setup_service).to have_received(:perform).with(whatsapp_channel)
+    end
+  end
+
   describe '#send_message' do
     let(:conversation) do
       create(:conversation, account: whatsapp_channel.account, inbox: whatsapp_channel.inbox)

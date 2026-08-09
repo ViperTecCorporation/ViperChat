@@ -31,14 +31,9 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   def create
     ActiveRecord::Base.transaction do
       channel = create_channel
-      @inbox = Current.account.inboxes.build(
-        {
-          name: inbox_name(channel),
-          channel: channel
-        }.merge(
-          permitted_params.except(:channel)
-        )
-      )
+      defaults = { name: inbox_name(channel), channel: channel,
+                   lock_to_single_conversation: channel.try(:provider) == 'unoapi' }
+      @inbox = Current.account.inboxes.build(defaults.merge(permitted_params.except(:channel)))
       @inbox.save!
     end
   end

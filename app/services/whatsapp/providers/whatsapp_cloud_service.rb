@@ -269,9 +269,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   def should_prefix_sender_name?(message)
     return true if message.conversation.group?
 
-    feature = whatsapp_channel.inbox.account.feature_enabled?('send_agent_name_in_whatsapp_message')
     config = whatsapp_channel.provider_config['send_agent_name']
-    feature || config
+    return ActiveModel::Type::Boolean.new.cast(config) unless config.nil?
+
+    whatsapp_channel.inbox.account.feature_enabled?('send_agent_name_in_whatsapp_message')
   end
 
   def send_attachment_message(phone_number, message, attachment, include_caption: true)

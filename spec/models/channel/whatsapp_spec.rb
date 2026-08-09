@@ -113,6 +113,16 @@ RSpec.describe Channel::Whatsapp do
         expect(channel.unoapi_auth_token).to eq('environment-token')
       end
     end
+
+    it 'uses only deployment or Super Admin credentials to authorize registration' do
+      with_modified_env UNOAPI_AUTH_TOKEN: nil do
+        expect(channel.unoapi_registration_auth_token).to eq('global-token')
+      end
+
+      with_modified_env UNOAPI_AUTH_TOKEN: 'environment-token' do
+        expect(channel.unoapi_registration_auth_token).to eq('environment-token')
+      end
+    end
   end
 
   describe 'UnoAPI contact synchronization' do

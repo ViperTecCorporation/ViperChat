@@ -8,6 +8,8 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
   end
 
   def validate_provider_config?
+    return Whatsapp::UnoapiWebhookSetupService.new.perform(whatsapp_channel) if whatsapp_channel.provider_config['connect']
+
     url = "#{business_account_path}/message_templates?access_token=#{whatsapp_channel.unoapi_auth_token}"
     return Whatsapp::UnoapiWebhookSetupService.new.perform(whatsapp_channel) if HTTParty.get(url).success?
   end

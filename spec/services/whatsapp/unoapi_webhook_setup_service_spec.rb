@@ -116,6 +116,26 @@ describe Whatsapp::UnoapiWebhookSetupService do
     expect(channel.provider_config['api_key']).to be_nil
   end
 
+  it 'authorizes registration with the global token and persists the generated inbox token in the session payload' do
+    channel.provider_config['api_key'] = 'generated-session-token'
+    allow(GlobalConfigService).to receive(:load).with('UNOAPI_AUTH_TOKEN', nil).and_return('global-admin-token')
+    calls = []
+    allow(HTTParty).to receive(:post) do |url, options|
+      calls << [url, options]
+      calls.length == 1 ? register_response : message_response
+    end
+
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net', UNOAPI_AUTH_TOKEN: nil do
+      service.perform(channel)
+    end
+
+    register_options = calls.first.last
+    message_options = calls.second.last
+    expect(register_options[:headers][:Authorization]).to eq('global-admin-token')
+    expect(JSON.parse(register_options[:body])['authToken']).to eq('generated-session-token')
+    expect(message_options[:headers][:Authorization]).to eq('generated-session-token')
+  end
+
   it 'sends pairing_code when selected in the provider configuration' do
     channel.provider_config['connection_type'] = 'pairing_code'
     calls = []

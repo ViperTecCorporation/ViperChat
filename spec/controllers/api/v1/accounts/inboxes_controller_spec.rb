@@ -545,6 +545,67 @@ RSpec.describe 'Inboxes API', type: :request do
         expect(response.body).to include('+123456789')
       end
 
+      it 'creates UnoAPI inboxes locked to a single conversation by default' do
+        provider_service = instance_double(
+          Whatsapp::Providers::UnoapiService,
+          validate_provider_config?: true,
+          sync_templates: nil
+        )
+        allow(Whatsapp::Providers::UnoapiService).to receive(:new).and_return(provider_service)
+
+        post "/api/v1/accounts/#{account.id}/inboxes",
+             headers: admin.create_new_auth_token,
+             params: {
+               name: 'UnoAPI Inbox',
+               channel: {
+                 type: 'whatsapp',
+                 phone_number: '+5566999999001',
+                 provider: 'unoapi',
+                 provider_config: {
+                   api_key: 'test-key',
+                   url: 'https://uno.example.com',
+                   phone_number_id: '5566999999001',
+                   business_account_id: '5566999999001'
+                 }
+               }
+             },
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body['lock_to_single_conversation']).to be(true)
+      end
+
+      it 'preserves an explicitly disabled single conversation setting for a new UnoAPI inbox' do
+        provider_service = instance_double(
+          Whatsapp::Providers::UnoapiService,
+          validate_provider_config?: true,
+          sync_templates: nil
+        )
+        allow(Whatsapp::Providers::UnoapiService).to receive(:new).and_return(provider_service)
+
+        post "/api/v1/accounts/#{account.id}/inboxes",
+             headers: admin.create_new_auth_token,
+             params: {
+               name: 'UnoAPI Multiple Conversations',
+               lock_to_single_conversation: false,
+               channel: {
+                 type: 'whatsapp',
+                 phone_number: '+5566999999002',
+                 provider: 'unoapi',
+                 provider_config: {
+                   api_key: 'test-key',
+                   url: 'https://uno.example.com',
+                   phone_number_id: '5566999999002',
+                   business_account_id: '5566999999002'
+                 }
+               }
+             },
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body['lock_to_single_conversation']).to be(false)
+      end
+
       it 'creates the webwidget inbox that allow messages after conversation is resolved' do
         post "/api/v1/accounts/#{account.id}/inboxes",
              headers: admin.create_new_auth_token,

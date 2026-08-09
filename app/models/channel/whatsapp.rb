@@ -91,6 +91,12 @@ class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLengt
     resolve_unoapi_config('UNOAPI_AUTH_TOKEN', 'api_key')
   end
 
+  def unoapi_registration_auth_token
+    return unless provider == 'unoapi'
+
+    ENV['UNOAPI_AUTH_TOKEN'].presence || GlobalConfigService.load('UNOAPI_AUTH_TOKEN', nil).presence
+  end
+
   def messaging_window_enabled?
     provider_config['url'] == 'https://graph.facebook.com'
   end

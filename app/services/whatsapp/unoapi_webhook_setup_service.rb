@@ -31,7 +31,7 @@ class Whatsapp::UnoapiWebhookSetupService
     url = url(whatsapp_channel)
     Rails.logger.debug { "Connecting #{phone_number} from unoapi with url #{url}" }
     body = params(whatsapp_channel, phone_number)
-    response = HTTParty.post("#{url}/register", headers: headers(whatsapp_channel), body: body.to_json)
+    response = HTTParty.post("#{url}/register", headers: registration_headers(whatsapp_channel), body: body.to_json)
     Rails.logger.debug { "Response #{response}" }
     if response.success?
       connected = send_message(whatsapp_channel)
@@ -73,6 +73,11 @@ class Whatsapp::UnoapiWebhookSetupService
       Authorization: whatsapp_channel.unoapi_auth_token,
       'Content-Type': 'application/json'
     }
+  end
+
+  def registration_headers(whatsapp_channel)
+    token = whatsapp_channel.unoapi_registration_auth_token.presence || whatsapp_channel.unoapi_auth_token
+    { Authorization: token, 'Content-Type': 'application/json' }
   end
 
   # rubocop:disable Metrics/MethodLength
@@ -143,7 +148,7 @@ class Whatsapp::UnoapiWebhookSetupService
   end
 
   def fetch_existing_webhooks(whatsapp_channel)
-    response = HTTParty.get(url(whatsapp_channel), headers: headers(whatsapp_channel))
+    response = HTTParty.get(url(whatsapp_channel), headers: registration_headers(whatsapp_channel))
     return [] unless response.success?
 
     config = response.parsed_response
