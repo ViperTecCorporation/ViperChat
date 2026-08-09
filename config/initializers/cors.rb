@@ -6,6 +6,7 @@
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
     origins '*'
+    resource '/.well-known/viper-chat', headers: :any, methods: [:get, :options]
     resource '/packs/*', headers: :any, methods: [:get, :options]
     resource '/audio/*', headers: :any, methods: [:get, :options]
     # Make the public endpoints accessible to the frontend
@@ -18,6 +19,13 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
     if ActiveModel::Type::Boolean.new.cast(ENV.fetch('ENABLE_API_CORS', false))
       resource '/api/*', headers: :any, methods: :any, expose: %w[access-token client uid expiry]
     end
+  end
+
+  allow do
+    origins(*ENV.fetch('NATIVE_APP_ALLOWED_ORIGINS', 'https://localhost,capacitor://localhost').split(',').map(&:strip))
+    resource '/auth/*', headers: :any, methods: :any, expose: %w[access-token client uid expiry token-type]
+    resource '/api/*', headers: :any, methods: :any, expose: %w[access-token client uid expiry token-type]
+    resource '/resend_confirmation', headers: :any, methods: :any
   end
 end
 
