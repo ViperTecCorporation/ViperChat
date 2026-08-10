@@ -951,16 +951,22 @@ watch(conversationFilters, (newVal, oldVal) => {
   }
 });
 
-watch(conversationStats, newStats => {
-  if (!hasInitializedTabSelection.value && newStats && newStats.updatedOn) {
-    hasInitializedTabSelection.value = true;
-    if (newStats.waitingCount > 0) {
-      updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.WAITING);
-    } else {
-      updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.ME);
+watch(
+  () => conversationStats.value.updatedOn,
+  () => {
+    if (
+      !hasInitializedTabSelection.value &&
+      conversationStats.value.updatedOn
+    ) {
+      hasInitializedTabSelection.value = true;
+      if (conversationStats.value.waitingCount > 0) {
+        updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.WAITING);
+      } else {
+        updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.ME);
+      }
     }
   }
-});
+);
 </script>
 
 <template>
