@@ -1,9 +1,14 @@
 import { Device } from '@capacitor/device';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { PushNotifications } from '@capacitor/push-notifications';
 import NotificationSubscriptionsAPI from 'dashboard/api/notificationSubscription';
 
+const MESSAGE_CHANNEL_ID = 'viperchat_messages';
+const MAX_NOTIFICATION_ID = 2147483647;
+
 let listenersRegistered = false;
 let routerInstance;
+let foregroundNotificationId = Date.now() % MAX_NOTIFICATION_ID;
 
 const parseNotificationData = notification => {
   const rawPayload = notification?.data?.payload;
@@ -34,9 +39,46 @@ const openNotification = notification => {
   });
 };
 
+const nextForegroundNotificationId = () => {
+  foregroundNotificationId =
+    (foregroundNotificationId + 1) % MAX_NOTIFICATION_ID;
+  return foregroundNotificationId;
+};
+
+const createMessageChannel = async () => {
+  const { platform, osVersion } = await Device.getInfo();
+  if (platform !== 'android' || Number.parseInt(osVersion, 10) < 8) return;
+
+  await LocalNotifications.createChannel({
+    id: MESSAGE_CHANNEL_ID,
+    name: 'Mensagens',
+    description: 'Novas mensagens e atualizações de conversas',
+    importance: 4,
+    visibility: 1,
+    vibration: true,
+  });
+};
+
+const showForegroundNotification = notification =>
+  LocalNotifications.schedule({
+    notifications: [
+      {
+        id: nextForegroundNotificationId(),
+        title: notification.title || 'ViperChat',
+        body: notification.body || '',
+        largeBody: notification.body || '',
+        channelId: MESSAGE_CHANNEL_ID,
+        autoCancel: true,
+        extra: parseNotificationData(notification),
+      },
+    ],
+  });
+
 const registerListeners = async installation => {
   if (listenersRegistered) return;
   listenersRegistered = true;
+
+  await createMessageChannel();
 
   await PushNotifications.addListener('registration', async token => {
     const device = await Device.getId();
@@ -60,6 +102,14 @@ const registerListeners = async installation => {
   await PushNotifications.addListener(
     'pushNotificationActionPerformed',
     event => openNotification(event.notification)
+  );
+  await PushNotifications.addListener(
+    'pushNotificationReceived',
+    showForegroundNotification
+  );
+  await LocalNotifications.addListener(
+    'localNotificationActionPerformed',
+    event => openNotification({ data: event.notification.extra })
   );
 };
 
@@ -85,4 +135,7 @@ export const initializeNativePush = async ({ installation, router }) => {
   return permission;
 };
 
-export const nativePushServiceTestUtils = { parseNotificationData };
+export const nativePushServiceTestUtils = {
+  parseNotificationData,
+  showForegroundNotification,
+};
