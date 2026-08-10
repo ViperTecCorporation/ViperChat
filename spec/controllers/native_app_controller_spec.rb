@@ -5,6 +5,7 @@ RSpec.describe 'Viper Chat native discovery', type: :request do
     before do
       allow(ChatwootHub).to receive(:installation_identifier).and_return('inst-123')
       allow(Chatwoot).to receive(:config).and_return({ version: '4.16.11-viper' })
+      allow(Chatwoot).to receive(:mfa_enabled?).and_return(true)
       allow(VapidService).to receive(:public_key).and_return('vapid-public-key')
       allow(GlobalConfigService).to receive(:load).and_call_original
       allow(GlobalConfigService).to receive(:load).with('INSTALLATION_NAME', 'ViperChat').and_return('Viper Tec')
@@ -26,7 +27,7 @@ RSpec.describe 'Viper Chat native discovery', type: :request do
         'features' => include(
           'nativeApp' => true,
           'nativePush' => false,
-          'nativeShare' => false,
+          'nativeShare' => true,
           'webPush' => true,
           'voiceNotes' => true,
           'nativeVoiceCalls' => false,
@@ -38,6 +39,7 @@ RSpec.describe 'Viper Chat native discovery', type: :request do
         },
         'config' => {
           'directUploadsEnabled' => true,
+          'mfaEnabled' => true,
           'allowedLoginMethods' => ['email'],
           'selectedLocale' => I18n.default_locale.to_s
         }

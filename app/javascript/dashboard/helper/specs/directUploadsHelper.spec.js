@@ -1,4 +1,7 @@
-import { setDirectUploadAuthHeaders } from '../directUploadsHelper';
+import {
+  getDirectUploadUrl,
+  setDirectUploadAuthHeaders,
+} from '../directUploadsHelper';
 import Auth from 'dashboard/api/auth';
 
 vi.mock('dashboard/api/auth', () => ({
@@ -57,5 +60,15 @@ describe('setDirectUploadAuthHeaders', () => {
     setDirectUploadAuthHeaders(xhr);
 
     expect(xhr.setRequestHeader).not.toHaveBeenCalled();
+  });
+});
+
+describe('getDirectUploadUrl', () => {
+  it('uses the remote installation origin in the native app', () => {
+    window.chatwootConfig = { apiHost: 'https://chat.example.com' };
+
+    expect(getDirectUploadUrl('/rails/active_storage/direct_uploads')).toBe(
+      'https://chat.example.com/rails/active_storage/direct_uploads'
+    );
   });
 });

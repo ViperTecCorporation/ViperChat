@@ -15,6 +15,7 @@ import {
   loadSession,
   login,
   validateSession,
+  verifyMfa,
 } from './authenticationService';
 
 const installation = {
@@ -82,6 +83,42 @@ describe('authenticationService', () => {
 
     await expect(validateSession(installation)).resolves.toBeNull();
     await expect(loadSession('inst-123')).resolves.toBeNull();
+  });
+
+  it('completes an MFA login without persisting the password', async () => {
+    const responses = [
+      {
+        ok: false,
+        status: 206,
+        headers: responseHeaders({}),
+        json: async () => ({ mfa_required: true, mfa_token: 'mfa-123' }),
+      },
+      {
+        ok: true,
+        status: 200,
+        headers: responseHeaders(authHeaders),
+        json: async () => ({ data: { id: 7 } }),
+      },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => responses.shift())
+    );
+
+    await expect(
+      login({ installation, email: 'agent@example.com', password: 'secret' })
+    ).resolves.toEqual({ mfaRequired: true, mfaToken: 'mfa-123' });
+    await verifyMfa({
+      installation,
+      mfaToken: 'mfa-123',
+      otpCode: '123456',
+    });
+
+    await expect(loadSession('inst-123')).resolves.toEqual({
+      headers: authHeaders,
+      user: { id: 7 },
+    });
+    expect(fetch.mock.calls[1][1].body).not.toContain('secret');
   });
 
   it('does not persist passwords or unrelated response headers', () => {

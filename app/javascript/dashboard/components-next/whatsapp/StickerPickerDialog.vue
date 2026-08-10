@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { DirectUpload } from 'activestorage';
+import { getDirectUploadUrl } from 'dashboard/helper/directUploadsHelper';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -133,7 +134,10 @@ const handleFileChange = async event => {
   if (!file) return;
 
   isUploading.value = true;
-  const upload = new DirectUpload(file, '/rails/active_storage/direct_uploads');
+  const upload = new DirectUpload(
+    file,
+    getDirectUploadUrl('/rails/active_storage/direct_uploads')
+  );
 
   upload.create(async (error, blob) => {
     if (error) {

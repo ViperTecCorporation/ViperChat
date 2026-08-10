@@ -28,7 +28,7 @@ export const configureNativeEnvironment = ({ installation, session }) => {
     allowedLoginMethods: installation.config?.allowedLoginMethods || ['email'],
     signupEnabled: 'false',
     isEnterprise: 'false',
-    isMfaEnabled: 'false',
+    isMfaEnabled: String(Boolean(installation.config?.mfaEnabled)),
     inboxEventsEnabled: 'false',
     isNativeApp: true,
   };
@@ -51,7 +51,7 @@ export const configureNativeEnvironment = ({ installation, session }) => {
       installation.config?.logoThumbnail,
       '/brand-assets/logo_thumbnail.svg'
     ),
-    DIRECT_UPLOADS_ENABLED: false,
+    DIRECT_UPLOADS_ENABLED: Boolean(installation.config?.directUploadsEnabled),
     MAXIMUM_FILE_UPLOAD_SIZE:
       (installation.limits?.maxAttachmentBytes || 0) / 1024 / 1024,
     DEPLOYMENT_ENV: 'native',
@@ -59,6 +59,7 @@ export const configureNativeEnvironment = ({ installation, session }) => {
     ACTIVE_PLATFORM_BANNERS: [],
   };
   window.browserConfig = { browser_name: 'ViperChat Android' };
+  window.viperNativeInstallation = installation;
   window.errorLoggingConfig = '';
   window.viperNativeSession = session.headers;
   window.viperNativeAuth = {

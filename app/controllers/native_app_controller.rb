@@ -22,7 +22,7 @@ class NativeAppController < ApplicationController
     {
       nativeApp: true,
       nativePush: native_push_enabled?,
-      nativeShare: false,
+      nativeShare: true,
       webPush: VapidService.public_key.present?,
       voiceNotes: true,
       nativeVoiceCalls: false,
@@ -45,6 +45,7 @@ class NativeAppController < ApplicationController
       directUploadsEnabled: ActiveModel::Type::Boolean.new.cast(
         GlobalConfigService.load('DIRECT_UPLOADS_ENABLED', 'false')
       ),
+      mfaEnabled: Chatwoot.mfa_enabled?,
       allowedLoginMethods: ['email'],
       selectedLocale: I18n.default_locale.to_s
     }

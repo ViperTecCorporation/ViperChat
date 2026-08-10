@@ -6,7 +6,11 @@ import {
   loadActiveInstallation,
   removeInstallation,
 } from './platform/installationService';
-import { clearSession, login } from './platform/authenticationService';
+import {
+  clearSession,
+  login,
+  verifyMfa,
+} from './platform/authenticationService';
 import { getRuntimeInfo } from './platform/runtimeService';
 
 const serverUrl = ref(getDefaultServerUrl());
@@ -15,6 +19,7 @@ const errorMessage = ref('');
 const isConnecting = ref(false);
 const isLoggingIn = ref(false);
 const credentials = ref({ email: '', password: '' });
+const mfa = ref({ token: '', code: '', useBackupCode: false });
 const runtime = getRuntimeInfo();
 const copy = {
   mark: 'V',
@@ -55,9 +60,31 @@ const signIn = async () => {
   isLoggingIn.value = true;
 
   try {
-    await login({
+    const result = await login({
       installation: installation.value,
       ...credentials.value,
+    });
+    if (result.mfaRequired) {
+      mfa.value.token = result.mfaToken;
+      return;
+    }
+    window.location.reload();
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    isLoggingIn.value = false;
+  }
+};
+
+const confirmMfa = async () => {
+  errorMessage.value = '';
+  isLoggingIn.value = true;
+  try {
+    await verifyMfa({
+      installation: installation.value,
+      mfaToken: mfa.value.token,
+      otpCode: mfa.value.code,
+      backupCode: mfa.value.useBackupCode ? mfa.value.code : '',
     });
     window.location.reload();
   } catch (error) {
@@ -74,6 +101,7 @@ const changeServer = async () => {
   await removeInstallation(installation.value.installationId);
   installation.value = null;
   credentials.value = { email: '', password: '' };
+  mfa.value = { token: '', code: '', useBackupCode: false };
   errorMessage.value = '';
   serverUrl.value = getDefaultServerUrl();
 };
@@ -142,7 +170,11 @@ const changeServer = async () => {
         </p>
       </div>
 
-      <form v-if="installation" class="mt-6 space-y-4" @submit.prevent="signIn">
+      <form
+        v-if="installation && !mfa.token"
+        class="mt-6 space-y-4"
+        @submit.prevent="signIn"
+      >
         <label class="block">
           <span class="mb-1 block text-sm font-medium text-n-slate-12">
             {{ copy.email }}
@@ -187,6 +219,43 @@ const changeServer = async () => {
           @click="changeServer"
         >
           {{ copy.changeServer }}
+        </button>
+      </form>
+
+      <form
+        v-if="installation && mfa.token"
+        class="mt-6 space-y-4"
+        @submit.prevent="confirmMfa"
+      >
+        <p class="text-sm text-n-slate-11">
+          Confirme o segundo fator para concluir o login.
+        </p>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium text-n-slate-12">
+            {{ mfa.useBackupCode ? 'Código de recuperação' : 'Código de 6 dígitos' }}
+          </span>
+          <input
+            v-model.trim="mfa.code"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            required
+            class="h-11 w-full rounded-lg border border-n-weak bg-n-alpha-2 px-3 text-n-slate-12 outline-none focus:border-n-brand"
+          />
+        </label>
+        <label class="flex items-center gap-2 text-sm text-n-slate-11">
+          <input v-model="mfa.useBackupCode" type="checkbox" />
+          Usar código de recuperação
+        </label>
+        <p v-if="errorMessage" role="alert" class="text-sm text-n-ruby-11">
+          {{ errorMessage }}
+        </p>
+        <button
+          type="submit"
+          :disabled="isLoggingIn"
+          class="h-11 w-full rounded-lg bg-n-brand px-4 font-medium text-white disabled:opacity-60"
+        >
+          {{ isLoggingIn ? 'Confirmando…' : 'Confirmar' }}
         </button>
       </form>
 

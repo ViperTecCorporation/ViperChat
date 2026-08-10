@@ -70,9 +70,7 @@ export const login = async ({ installation, email, password }) => {
   const body = await readResponseBody(response);
 
   if (response.status === 206 && body.mfa_required) {
-    throw new Error(
-      'Esta conta exige MFA. O fluxo MFA será habilitado na próxima etapa.'
-    );
+    return { mfaRequired: true, mfaToken: body.mfa_token };
   }
 
   if (!response.ok) {
@@ -86,7 +84,41 @@ export const login = async ({ installation, email, password }) => {
     throw new Error('O servidor não retornou uma sessão compatível.');
   }
 
-  return saveSession(installation.installationId, {
+  await saveSession(installation.installationId, {
+    headers,
+    user: body.data,
+  });
+  return { mfaRequired: false };
+};
+
+export const verifyMfa = async ({
+  installation,
+  mfaToken,
+  otpCode,
+  backupCode,
+}) => {
+  const response = await fetch(`${installation.baseUrl}/auth/sign_in`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      mfa_token: mfaToken,
+      otp_code: backupCode ? undefined : otpCode,
+      backup_code: backupCode || undefined,
+    }),
+  });
+  const body = await readResponseBody(response);
+  if (!response.ok) {
+    throw new Error(body.message || body.error || 'Código MFA inválido.');
+  }
+
+  const headers = extractAuthHeaders(response.headers);
+  if (!headers['access-token'] || !headers.client || !headers.uid) {
+    throw new Error('O servidor não retornou uma sessão compatível.');
+  }
+  await saveSession(installation.installationId, {
     headers,
     user: body.data,
   });
