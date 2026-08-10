@@ -32,4 +32,5 @@ O build Android usa JDK 21, Android SDK 36 e Gradle Wrapper. A assinatura debug 
 - Nome: `ViperChat`
 - Versão atual: `4.16.11-viper.4` (`versionCode` 4161103)
 
-Veja também [android.md](android.md) e [self-hosted.md](self-hosted.md).
+Veja também [android.md](android.md), [self-hosted.md](self-hosted.md) e
+[push-relay.md](push-relay.md).

@@ -61,6 +61,7 @@ coverage
 # ignore packages
 node_modules
 package-lock.json
+!/services/viper-push-relay/package-lock.json
 
 *.dump
 
@@ -109,3 +110,4 @@ Procfile.worktree
 # Local workspace artifacts
 /.pnpm-store/
 /tmp/
+/secrets/

@@ -27,3 +27,5 @@ Content-Type: application/json
 ```
 
 O relay deve responder com qualquer status 2xx. Web Push e inscrições `browser_push` continuam no fluxo original e não passam por esse endpoint.
+
+Todas as instalações Android do projeto Firebase podem compartilhar um único relay central. O token acima autentica a comunicação servidor-servidor entre cada Chatwoot e o relay; ele não é incluído no APK. Veja o procedimento de publicação em [push-relay.md](push-relay.md).
