@@ -84,6 +84,10 @@ docker compose \
 
 O container escuta internamente em `3100`; no host a porta fica limitada a
 `127.0.0.1:3100`, apropriada para um Cloudflare Tunnel executado na mesma VPS.
+O filesystem do container permanece somente leitura e a credencial Firebase é
+montada com `:ro`. Em hosts com Docker instalado via Snap, não acrescente
+`cap_drop: ALL` ou `no-new-privileges`: essa combinação impede a execução do
+entrypoint oficial da imagem Node.
 
 ## Cloudflare Tunnel
 
