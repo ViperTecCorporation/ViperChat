@@ -973,7 +973,10 @@ watch(
     if (!hasSetInitialTab.value && conversationStats.value.updatedOn) {
       hasSetInitialTab.value = true;
       isFirstLoad.value = false;
-      if (conversationStats.value.waitingCount > 0) {
+      if (
+        uiSettings.value.open_waiting_conversations_by_default &&
+        conversationStats.value.waitingCount > 0
+      ) {
         updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.WAITING);
       } else {
         updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.ME);
