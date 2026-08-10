@@ -158,6 +158,20 @@ export const validateSession = async installation => {
   );
 };
 
+// A cold Android launch can briefly lose network connectivity while the
+// activity is being created from a share intent. Keep the encrypted session in
+// that transient case; only an explicit 401 from validateSession clears it.
+export const restoreSession = async installation => {
+  const cachedSession = await loadSession(installation.installationId);
+  if (!cachedSession?.headers) return null;
+
+  try {
+    return await validateSession(installation);
+  } catch {
+    return cachedSession;
+  }
+};
+
 export const updateSessionHeaders = async (installationId, headers) => {
   sessionWriteQueue = sessionWriteQueue
     .catch(() => null)

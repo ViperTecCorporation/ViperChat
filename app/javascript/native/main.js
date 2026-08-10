@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import 'dashboard/assets/scss/app.scss';
 import { refreshActiveInstallation } from './platform/installationService';
-import { validateSession } from './platform/authenticationService';
+import { restoreSession } from './platform/authenticationService';
 import { configureNativeEnvironment } from './platform/nativeEnvironmentService';
 
 const mountNativeShell = async () => {
@@ -10,25 +10,28 @@ const mountNativeShell = async () => {
 };
 
 const start = async () => {
-  const installation = await refreshActiveInstallation();
+  let installation;
+  try {
+    installation = await refreshActiveInstallation();
+  } catch {
+    await mountNativeShell();
+    return;
+  }
+
   if (!installation) {
     await mountNativeShell();
     return;
   }
 
-  try {
-    const session = await validateSession(installation);
-    if (!session) {
-      await mountNativeShell();
-      return;
-    }
-
-    configureNativeEnvironment({ installation, session });
-    const { mountDashboard } = await import('../entrypoints/dashboard');
-    await mountDashboard();
-  } catch {
+  const session = await restoreSession(installation);
+  if (!session) {
     await mountNativeShell();
+    return;
   }
+
+  configureNativeEnvironment({ installation, session });
+  const { mountDashboard } = await import('../entrypoints/dashboard');
+  await mountDashboard();
 };
 
 start();

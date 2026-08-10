@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
+import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import {
   consumePendingShare,
   dismissPendingShare,
@@ -19,6 +20,19 @@ const pendingShare = usePendingNativeShare();
 const conversations = computed(() =>
   (store.getters.getAllConversations || []).slice(0, 12)
 );
+const conversationContact = conversation => conversation.meta?.sender || {};
+const conversationName = conversation =>
+  conversation.group_title ||
+  conversationContact(conversation).name ||
+  conversationContact(conversation).phone_number ||
+  'Conversa';
+const conversationThumbnail = conversation =>
+  conversation.group_picture ||
+  conversation.additional_attributes?.group_picture ||
+  conversationContact(conversation).thumbnail ||
+  '';
+const conversationInbox = conversation =>
+  store.getters['inboxes/getInbox'](conversation.inbox_id)?.name || '';
 const selectedConversationId = computed(() => route.params.conversation_id);
 const summary = computed(() => {
   const fileCount = pendingShare.value?.files.length || 0;
@@ -73,15 +87,30 @@ const attachToComposer = async () => {
       <p class="mb-2 text-xs font-medium text-n-slate-11">
         Escolha uma conversa
       </p>
-      <div class="max-h-48 space-y-1 overflow-y-auto">
+      <div class="max-h-72 space-y-1 overflow-y-auto">
         <button
           v-for="conversation in conversations"
           :key="conversation.id"
-          class="w-full rounded-lg px-3 py-2 text-left text-sm text-n-slate-12 hover:bg-n-alpha-2"
+          class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-n-alpha-2"
           @click="chooseConversation(conversation)"
         >
-          #{{ conversation.display_id || conversation.id }} ·
-          {{ conversation.meta?.sender?.name || 'Conversa' }}
+          <Avatar
+            :name="conversationName(conversation)"
+            :src="conversationThumbnail(conversation)"
+            :size="32"
+            rounded-full
+          />
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium text-n-slate-12">
+              {{ conversationName(conversation) }}
+            </span>
+            <span class="block truncate text-xs text-n-slate-10">
+              #{{ conversation.display_id || conversation.id }}
+              <template v-if="conversationInbox(conversation)">
+                · {{ conversationInbox(conversation) }}
+              </template>
+            </span>
+          </span>
         </button>
       </div>
     </div>

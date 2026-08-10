@@ -4,6 +4,8 @@ import { DEVELOPMENT_RELAY_TOKEN, loadConfig } from '../src/config.js';
 
 const originalEnvironment = {
   FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+  GOOGLE_APPLICATION_CREDENTIALS:
+    process.env.GOOGLE_APPLICATION_CREDENTIALS,
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
   VIPER_PUSH_RELAY_TOKEN: process.env.VIPER_PUSH_RELAY_TOKEN,
@@ -38,4 +40,16 @@ test('rejects short configured tokens', () => {
   process.env.VIPER_PUSH_RELAY_TOKEN = 'too-short';
 
   assert.throws(() => loadConfig(), /at least 32 characters/);
+});
+
+test('fails at startup when configured Firebase credentials are unreadable', () => {
+  process.env.NODE_ENV = 'production';
+  process.env.FIREBASE_PROJECT_ID = 'viperchat-test';
+  process.env.VIPER_PUSH_RELAY_TOKEN = 'a'.repeat(32);
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = '/missing/firebase.json';
+
+  assert.throws(
+    () => loadConfig(),
+    /GOOGLE_APPLICATION_CREDENTIALS is not readable/
+  );
 });

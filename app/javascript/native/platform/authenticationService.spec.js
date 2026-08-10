@@ -14,6 +14,7 @@ import {
   authenticationServiceTestUtils,
   loadSession,
   login,
+  restoreSession,
   updateSessionHeaders,
   validateSession,
   verifyMfa,
@@ -83,6 +84,42 @@ describe('authenticationService', () => {
     );
 
     await expect(validateSession(installation)).resolves.toBeNull();
+    await expect(loadSession('inst-123')).resolves.toBeNull();
+  });
+
+  it('keeps the encrypted session during a transient cold-start failure', async () => {
+    const cachedSession = { headers: authHeaders, user: { id: 7 } };
+    secureValues.set(
+      authenticationServiceTestUtils.sessionKey('inst-123'),
+      JSON.stringify(cachedSession)
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Network request failed');
+      })
+    );
+
+    await expect(restoreSession(installation)).resolves.toEqual(cachedSession);
+    await expect(loadSession('inst-123')).resolves.toEqual(cachedSession);
+  });
+
+  it('does not restore a session rejected by the server', async () => {
+    secureValues.set(
+      authenticationServiceTestUtils.sessionKey('inst-123'),
+      JSON.stringify({ headers: authHeaders, user: { id: 7 } })
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 401,
+        headers: responseHeaders({}),
+        json: async () => ({}),
+      }))
+    );
+
+    await expect(restoreSession(installation)).resolves.toBeNull();
     await expect(loadSession('inst-123')).resolves.toBeNull();
   });
 

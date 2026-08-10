@@ -34,10 +34,13 @@ Copie a conta de serviço Firebase para:
 secrets/firebase-service-account.json
 ```
 
-Restrinja a leitura e gere o segredo compartilhado:
+O processo da imagem roda como UID/GID `1000`. Restrinja a credencial ao root e
+ao grupo do processo; `chmod 600` deixa o relay sem acesso e faz os envios
+falharem com HTTP 502:
 
 ```bash
-chmod 600 secrets/firebase-service-account.json
+chown root:1000 secrets/firebase-service-account.json
+chmod 640 secrets/firebase-service-account.json
 openssl rand -hex 32
 ```
 
@@ -88,6 +91,10 @@ O filesystem do container permanece somente leitura e a credencial Firebase é
 montada com `:ro`. Em hosts com Docker instalado via Snap, não acrescente
 `cap_drop: ALL` ou `no-new-privileges`: essa combinação impede a execução do
 entrypoint oficial da imagem Node.
+
+O relay agora valida a leitura da credencial durante a inicialização. Assim, um
+arquivo com proprietário ou modo incorreto impede o container de ficar
+saudável, em vez de aceitar tráfego e falhar somente no primeiro push.
 
 ## Cloudflare Tunnel
 
