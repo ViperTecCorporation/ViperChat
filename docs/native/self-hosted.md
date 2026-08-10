@@ -16,6 +16,12 @@ Variáveis do push nativo:
 - `VIPER_PUSH_RELAY_URL`
 - `VIPER_PUSH_RELAY_TOKEN`
 
+As imagens oficiais do ViperChat trazem o push nativo habilitado e usam por padrão
+`https://relay.vipertec.net/v1/push` com a credencial compartilhada da ViperTec.
+Os três valores continuam aceitando sobrescrita no ambiente de execução, inclusive
+`VIPER_NATIVE_PUSH_ENABLED=false` para desativar o recurso ou URL/token próprios
+para usar um relay privado.
+
 `nativePush` só fica verdadeiro quando as três estão configuradas. O token nunca aparece no discovery. Cada notificação destinada a uma inscrição `viper_native` é enviada ao relay com `Authorization: Bearer`, identidade da instalação, token/dispositivo/plataforma e os campos `title`, `body` e `data`.
 
 Contrato esperado do relay:

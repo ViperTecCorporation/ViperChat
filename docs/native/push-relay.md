@@ -44,7 +44,9 @@ chmod 640 secrets/firebase-service-account.json
 openssl rand -hex 32
 ```
 
-Configure no `.env` do Compose, usando o valor gerado nos dois componentes:
+As imagens oficiais do ViperChat já usam o relay público da ViperTec por padrão.
+As variáveis abaixo são necessárias somente para sobrescrever o cliente Chatwoot
+ou operar o próprio container do relay:
 
 ```dotenv
 VIPER_NATIVE_PUSH_ENABLED=true
