@@ -27,8 +27,7 @@ public class NativeSharePlugin extends Plugin {
     @PluginMethod
     public void getPendingShare(PluginCall call) {
         Intent intent = getActivity().getIntent();
-        String action = intent == null ? null : intent.getAction();
-        if (!Intent.ACTION_SEND.equals(action) && !Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+        if (!isShareIntent(intent)) {
             call.resolve(new JSObject().put("available", false));
             return;
         }
@@ -36,16 +35,25 @@ public class NativeSharePlugin extends Plugin {
         try {
             JSObject result = new JSObject();
             result.put("available", true);
-            result.put("text", intent.getStringExtra(Intent.EXTRA_TEXT));
-            result.put("subject", intent.getStringExtra(Intent.EXTRA_SUBJECT));
+            result.put("text", getTextExtra(intent, Intent.EXTRA_TEXT));
+            result.put("subject", getTextExtra(intent, Intent.EXTRA_SUBJECT));
             result.put("files", copySharedFiles(intent));
             intent.setAction(Intent.ACTION_MAIN);
+            intent.setClipData(null);
             intent.removeExtra(Intent.EXTRA_STREAM);
             intent.removeExtra(Intent.EXTRA_TEXT);
             intent.removeExtra(Intent.EXTRA_SUBJECT);
             call.resolve(result);
         } catch (Exception error) {
             call.reject("Não foi possível importar o conteúdo compartilhado.", error);
+        }
+    }
+
+    @Override
+    protected void handleOnNewIntent(Intent intent) {
+        getActivity().setIntent(intent);
+        if (isShareIntent(intent)) {
+            notifyListeners("shareReceived", new JSObject().put("available", true), true);
         }
     }
 
@@ -123,12 +131,26 @@ public class NativeSharePlugin extends Plugin {
         try (Cursor cursor = getContext().getContentResolver().query(uri, null, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) {
                 int column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                if (column >= 0) return cursor.getString(column);
+                if (column >= 0) {
+                    String displayName = cursor.getString(column);
+                    if (displayName != null && !displayName.isBlank()) return displayName;
+                }
             }
         } catch (Exception ignored) {
             // Fall back to the URI path below.
         }
         String segment = uri.getLastPathSegment();
-        return segment == null ? "arquivo" : segment;
+        return segment == null || segment.isBlank() ? "arquivo" : segment;
+    }
+
+    private boolean isShareIntent(Intent intent) {
+        if (intent == null) return false;
+        String action = intent.getAction();
+        return Intent.ACTION_SEND.equals(action) || Intent.ACTION_SEND_MULTIPLE.equals(action);
+    }
+
+    private String getTextExtra(Intent intent, String key) {
+        CharSequence value = intent.getCharSequenceExtra(key);
+        return value == null ? null : value.toString();
     }
 }

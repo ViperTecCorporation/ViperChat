@@ -5,6 +5,7 @@ import { readonly, ref } from 'vue';
 const NativeShare = registerPlugin('NativeShare');
 const pendingShare = ref(null);
 let appStateListener;
+let nativeShareListener;
 
 const importFile = async sharedFile => {
   const response = await fetch(Capacitor.convertFileSrc(sharedFile.uri));
@@ -34,6 +35,10 @@ export const refreshPendingShare = async () => {
 export const initializeNativeShare = async () => {
   if (!window.chatwootConfig?.isNativeApp) return;
   await refreshPendingShare();
+  nativeShareListener ||= await NativeShare.addListener(
+    'shareReceived',
+    refreshPendingShare
+  );
   appStateListener ||= await App.addListener('appStateChange', state => {
     if (state.isActive) refreshPendingShare();
   });
