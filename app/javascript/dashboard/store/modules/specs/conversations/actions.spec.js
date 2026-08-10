@@ -448,10 +448,39 @@ describe('#actions', () => {
         data: dataReceived,
       });
       await actions.fetchFilteredConversations({ commit }, dataToSend);
-      expect(commit).toHaveBeenCalledTimes(2);
+      expect(commit).toHaveBeenCalledTimes(3);
       expect(commit.mock.calls).toEqual([
         ['SET_LIST_LOADING_STATUS'],
         ['SET_ALL_CONVERSATION', dataReceived.payload],
+        ['CLEAR_LIST_LOADING_STATUS'],
+      ]);
+    });
+
+    it('clears the loading state when the request fails', async () => {
+      axios.post.mockRejectedValue(new Error('Request failed'));
+
+      await actions.fetchFilteredConversations({ commit }, dataToSend);
+
+      expect(commit.mock.calls).toEqual([
+        ['SET_LIST_LOADING_STATUS'],
+        ['CLEAR_LIST_LOADING_STATUS'],
+      ]);
+    });
+  });
+
+  describe('#fetchAllConversations', () => {
+    it('clears the loading state when the request fails', async () => {
+      axios.get.mockRejectedValue(new Error('Request failed'));
+
+      await actions.fetchAllConversations({
+        commit,
+        dispatch,
+        state: { conversationFilters: {} },
+      });
+
+      expect(commit.mock.calls).toEqual([
+        ['SET_LIST_LOADING_STATUS'],
+        ['CLEAR_LIST_LOADING_STATUS'],
       ]);
     });
   });

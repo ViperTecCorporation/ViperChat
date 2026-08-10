@@ -25,7 +25,7 @@ const start = async () => {
 
     configureNativeEnvironment({ installation, session });
     const { mountDashboard } = await import('../entrypoints/dashboard');
-    mountDashboard();
+    await mountDashboard();
   } catch {
     await mountNativeShell();
   }

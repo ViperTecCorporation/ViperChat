@@ -16,9 +16,15 @@ const absoluteAssetUrl = (baseUrl, value, fallback) => {
   }
 };
 
+export const resolveNativeAccountId = user => {
+  const accountId = Number(user?.account_id || user?.accounts?.[0]?.id);
+  return Number.isInteger(accountId) && accountId > 0 ? accountId : null;
+};
+
 export const configureNativeEnvironment = ({ installation, session }) => {
   const websocketURL = installation.baseUrl.replace(/^http/, 'ws');
   const selectedLocale = installation.config?.selectedLocale || 'pt_BR';
+  const accountId = resolveNativeAccountId(session.user);
 
   window.chatwootConfig = {
     apiHost: installation.baseUrl,
@@ -60,6 +66,7 @@ export const configureNativeEnvironment = ({ installation, session }) => {
   };
   window.browserConfig = { browser_name: 'ViperChat Android' };
   window.viperNativeInstallation = installation;
+  window.viperNativeAccountId = accountId;
   window.errorLoggingConfig = '';
   window.viperNativeSession = session.headers;
   window.viperNativeAuth = {
@@ -78,4 +85,8 @@ export const configureNativeEnvironment = ({ installation, session }) => {
     },
     clear: () => clearSession(installation.installationId),
   };
+
+  if (accountId && !window.location.hash.includes('/app/accounts/')) {
+    window.location.hash = `/app/accounts/${accountId}/dashboard`;
+  }
 };

@@ -109,7 +109,10 @@ initializeChatwootEvents();
 initializeAnalyticsEvents();
 initalizeRouter();
 
-export const mountDashboard = () => {
+export const mountDashboard = async () => {
+  if (window.chatwootConfig?.isNativeApp) {
+    await router.isReady();
+  }
   app.mount('#app');
 };
 
