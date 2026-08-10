@@ -74,6 +74,7 @@ const resolveAttributesModalRef = ref(null);
 
 const activeAssigneeTab = ref(wootConstants.ASSIGNEE_TYPE.ME);
 const isFirstLoad = ref(true);
+const hasSetInitialTab = ref(false);
 const activeStatus = ref(wootConstants.STATUS_TYPE.OPEN);
 const activeSortBy = ref(wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC);
 const showAdvancedFilters = ref(false);
@@ -642,6 +643,7 @@ function fetchConversations() {
 
 function resetAndFetchData() {
   isFirstLoad.value = true;
+  hasSetInitialTab.value = false;
   appliedFilter.value = [];
   resetBulkActions();
   store.dispatch('conversationPage/reset');
@@ -684,6 +686,7 @@ function updateAssigneeTab(selectedTab) {
 }
 
 function onTabChange(selectedTab) {
+  hasSetInitialTab.value = true;
   isFirstLoad.value = false;
   updateAssigneeTab(selectedTab);
 }
@@ -967,7 +970,8 @@ watch(
 watch(
   () => conversationStats.value.updatedOn,
   () => {
-    if (isFirstLoad.value && conversationStats.value.updatedOn) {
+    if (!hasSetInitialTab.value && conversationStats.value.updatedOn) {
+      hasSetInitialTab.value = true;
       isFirstLoad.value = false;
       if (conversationStats.value.waitingCount > 0) {
         updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.WAITING);
