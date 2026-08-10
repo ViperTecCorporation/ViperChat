@@ -14,7 +14,7 @@ RSpec.describe 'Viper Chat native discovery', type: :request do
       allow(GlobalConfigService).to receive(:load).with('LOGO', '/brand-assets/logo.svg').and_return('/custom/logo.svg')
       allow(GlobalConfigService).to receive(:load).with('LOGO_DARK', '/brand-assets/logo_dark.svg').and_return('/custom/logo-dark.svg')
       allow(GlobalConfigService).to receive(:load).with('LOGO_THUMBNAIL', '/brand-assets/logo_thumbnail.svg')
-                                                   .and_return('/custom/logo-thumbnail.svg')
+                                                  .and_return('/custom/logo-thumbnail.svg')
     end
 
     it 'returns the versioned native capabilities without authentication' do
