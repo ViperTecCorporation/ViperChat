@@ -388,18 +388,6 @@ const onCardDragChange = async (event, targetStage) => {
   }
 };
 
-// Navigation to conversation detail
-const openConversation = conversationId => {
-  if (!conversationId) return;
-  router.push({
-    name: 'inbox_conversation',
-    params: {
-      accountId: store.getters.getCurrentAccountId,
-      conversationId: conversationId,
-    },
-  });
-};
-
 // Quick Resolve action inside the card
 const resolveConversation = async conversationId => {
   try {
@@ -1043,7 +1031,6 @@ const importOpenConversations = async () => {
                 <KanbanCard
                   :conversation="element"
                   :pipeline-agents="activePipeline?.agents || []"
-                  @click="openConversation"
                   @resolve="resolveConversation"
                   @assign="handleAssign"
                   @remove-pipeline="handleRemovePipeline"

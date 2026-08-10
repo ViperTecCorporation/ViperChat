@@ -2,6 +2,7 @@
 /* eslint-disable no-console */
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useStore } from 'dashboard/composables/store';
+import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
@@ -17,13 +18,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
-  'click',
-  'resolve',
-  'assign',
-  'removePipeline',
-  'toggleSort',
-]);
+const emit = defineEmits(['click', 'resolve', 'assign', 'removePipeline']);
 
 const { t } = useI18n();
 const store = useStore();
@@ -127,7 +122,8 @@ const timeBadge = computed(() => {
 });
 
 const formattedTimestamp = computed(() => {
-  const timeVal = props.conversation.last_activity_at || props.conversation.timestamp;
+  const timeVal =
+    props.conversation.last_activity_at || props.conversation.timestamp;
   if (!timeVal) return null;
   const date = new Date(timeVal * 1000 || timeVal);
   const now = new Date();
@@ -148,7 +144,9 @@ const formattedTimestamp = computed(() => {
 });
 
 const messageCount = computed(() => {
-  return props.conversation.message_count || props.conversation.unread_count || 0;
+  return (
+    props.conversation.message_count || props.conversation.unread_count || 0
+  );
 });
 
 const teamName = computed(() => {
@@ -383,6 +381,33 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick);
 });
+
+const router = useRouter();
+const route = useRoute();
+
+const openConversation = () => {
+  if (!props.conversation || !props.conversation.id) return;
+
+  emit('click', props.conversation.id);
+
+  const accountId =
+    route.params.accountId ||
+    props.conversation.account_id ||
+    store.getters.getCurrentAccountId;
+  const conversationId = props.conversation.id;
+
+  router
+    .push({
+      name: 'inbox_conversation',
+      params: {
+        accountId: accountId,
+        conversationId: conversationId,
+      },
+    })
+    .catch(() => {
+      router.push(`/app/accounts/${accountId}/conversations/${conversationId}`);
+    });
+};
 </script>
 
 <template>
@@ -395,7 +420,8 @@ onUnmounted(() => {
     "
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
-    @click="props.conversation?.id ? emit('click', props.conversation.id) : null"
+    @click="openConversation"
+    @dblclick="openConversation"
   >
     <!-- Drag Indicator (grip dots, top-left) -->
     <div
