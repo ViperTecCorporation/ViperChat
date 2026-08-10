@@ -141,7 +141,7 @@ class ConversationFinder
     when 'waiting'
       @conversations = waiting_conversations
     when 'answered'
-      @conversations = @conversations.where.not(first_reply_created_at: nil)
+      @conversations = @conversations.where.not(first_reply_created_at: nil).where(waiting_since: nil)
     when 'groups'
       @conversations = @conversations.group_conversations
     when 'assigned'
@@ -237,7 +237,7 @@ class ConversationFinder
                       )
                     end
 
-    answered_scope = count_scope.where.not(first_reply_created_at: nil)
+    answered_scope = count_scope.where.not(first_reply_created_at: nil).where(waiting_since: nil)
 
     [
       count_scope.assigned_to(current_user).count,

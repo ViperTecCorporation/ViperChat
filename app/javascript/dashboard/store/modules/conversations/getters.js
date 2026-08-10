@@ -143,7 +143,8 @@ const getters = {
     const userRole = getUserRole(currentUser, currentAccountId);
 
     return _state.allConversations.filter(conversation => {
-      const isAnswered = !!conversation.first_reply_created_at;
+      const isAnswered =
+        !!conversation.first_reply_created_at && !conversation.waiting_since;
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       const allowedForRole = applyRoleFilter(
         conversation,
