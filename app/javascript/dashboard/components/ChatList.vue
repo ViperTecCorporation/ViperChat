@@ -501,10 +501,11 @@ function setFiltersFromUISettings() {
   )
     ? orderBy
     : wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC;
-  activeAssigneeTab.value =
-    isWaitingConversationsDefaultEnabled.value && !props.conversationType
-      ? wootConstants.ASSIGNEE_TYPE.WAITING
-      : wootConstants.ASSIGNEE_TYPE.ME;
+  if (isWaitingConversationsDefaultEnabled.value && !props.conversationType) {
+    activeAssigneeTab.value = wootConstants.ASSIGNEE_TYPE.WAITING;
+  } else {
+    activeAssigneeTab.value = wootConstants.ASSIGNEE_TYPE.ME;
+  }
 }
 
 function emitConversationLoaded() {

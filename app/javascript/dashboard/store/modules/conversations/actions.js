@@ -57,6 +57,8 @@ const actions = {
       );
     } catch (error) {
       // Handle error
+    } finally {
+      commit(types.CLEAR_LIST_LOADING_STATUS);
     }
   },
 
@@ -72,6 +74,8 @@ const actions = {
       );
     } catch (error) {
       // Handle error
+    } finally {
+      commit(types.CLEAR_LIST_LOADING_STATUS);
     }
   },
 

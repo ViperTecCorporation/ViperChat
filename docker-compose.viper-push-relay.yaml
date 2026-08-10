@@ -1,0 +1,27 @@
+services:
+  viper-push-relay:
+    image: ghcr.io/viperteccorporation/viper-push-relay:${VIPER_PUSH_RELAY_IMAGE_TAG:-develop}
+    restart: always
+    ports:
+      - '127.0.0.1:${VIPER_PUSH_RELAY_PORT:-3100}:3100'
+    environment:
+      NODE_ENV: production
+      PORT: '3100'
+      FIREBASE_PROJECT_ID: ${VIPER_FIREBASE_PROJECT_ID:-viperchat-f0ce4}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
+      VIPER_PUSH_RELAY_TOKEN: ${VIPER_PUSH_RELAY_TOKEN:?configure VIPER_PUSH_RELAY_TOKEN in .env}
+    volumes:
+      - ${VIPER_FIREBASE_CREDENTIALS_PATH:-./secrets/firebase-service-account.json}:/run/secrets/firebase-service-account.json:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3100/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

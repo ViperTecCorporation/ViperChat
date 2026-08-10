@@ -30,7 +30,10 @@ import { REPLY_EDITOR_MODES } from 'dashboard/components/widgets/WootWriter/cons
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import AudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder.vue';
 import ScheduledMessageSequenceEditor from 'dashboard/routes/dashboard/conversation/components/ScheduledMessageSequenceEditor.vue';
-import { setDirectUploadAuthHeaders } from 'dashboard/helper/directUploadsHelper';
+import {
+  getDirectUploadUrl,
+  setDirectUploadAuthHeaders,
+} from 'dashboard/helper/directUploadsHelper';
 import { AUDIO_FORMATS } from 'shared/constants/messages';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { CMD_AI_ASSIST } from 'dashboard/helper/commandbar/events';
@@ -734,6 +737,7 @@ export default {
       this.onNewConversationModalActive
     );
     emitter.on(BUS_EVENTS.INSERT_INTO_NORMAL_EDITOR, this.addIntoEditor);
+    emitter.on(BUS_EVENTS.NATIVE_SHARE_RECEIVED, this.onNativeShareReceived);
     emitter.on(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   unmounted() {
@@ -743,6 +747,7 @@ export default {
     document.removeEventListener('keydown', this.handleScheduleShortcut);
     emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
     emitter.off(BUS_EVENTS.INSERT_INTO_NORMAL_EDITOR, this.addIntoEditor);
+    emitter.off(BUS_EVENTS.NATIVE_SHARE_RECEIVED, this.onNativeShareReceived);
     emitter.off(
       BUS_EVENTS.NEW_CONVERSATION_MODAL,
       this.onNewConversationModalActive
@@ -750,6 +755,34 @@ export default {
     emitter.off(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   methods: {
+    onNativeShareReceived({ text, subject, files = [] }) {
+      const sharedText = [subject, text].filter(Boolean).join('\n');
+      if (sharedText) this.addIntoEditor(sharedText);
+
+      files.forEach(file => {
+        const isAllowed = isFileTypeAllowedForChannel(file, {
+          channelType: this.channelType || this.inbox?.channel_type,
+          medium: this.inbox?.medium,
+          conversationType: this.conversationType,
+          isInstagramChannel: this.isAnInstagramChannel,
+          isOnPrivateNote: this.isOnPrivateNote,
+        });
+        if (!isAllowed) {
+          useAlert(
+            this.$t('CONVERSATION.FILE_TYPE_NOT_SUPPORTED', {
+              fileName: file.name,
+            })
+          );
+          return;
+        }
+        this.onFileUpload({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          file,
+        });
+      });
+    },
     handleScheduleShortcut(event) {
       if (
         (event.ctrlKey || event.metaKey) &&
@@ -1220,7 +1253,9 @@ export default {
       this.scheduleUploadCount += 1;
       const upload = new DirectUpload(
         file.file,
-        `/api/v1/accounts/${this.accountId}/conversations/${this.currentChat.id}/direct_uploads`,
+        getDirectUploadUrl(
+          `/api/v1/accounts/${this.accountId}/conversations/${this.currentChat.id}/direct_uploads`
+        ),
         {
           directUploadWillCreateBlobWithXHR: xhr => {
             setDirectUploadAuthHeaders(xhr);

@@ -35,7 +35,8 @@ import 'floating-vue/dist/style.css';
 
 const i18n = createI18n({
   legacy: false, // https://github.com/intlify/vue-i18n/issues/1902
-  locale: 'en',
+  locale: window.chatwootConfig?.selectedLocale || 'pt_BR',
+  fallbackLocale: 'en',
   messages: i18nMessages,
   warnHtmlMessage: false,
 });
@@ -109,6 +110,13 @@ initializeChatwootEvents();
 initializeAnalyticsEvents();
 initalizeRouter();
 
-window.onload = () => {
+export const mountDashboard = async () => {
+  if (window.chatwootConfig?.isNativeApp) {
+    await router.isReady();
+  }
   app.mount('#app');
 };
+
+if (!window.chatwootConfig?.isNativeApp) {
+  window.onload = mountDashboard;
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ViperChat</string>
+    <string name="title_activity_main">ViperChat</string>
+    <string name="package_name">net.vipertec.viperchat</string>
+    <string name="custom_url_scheme">net.vipertec.viperchat</string>
+</resources>

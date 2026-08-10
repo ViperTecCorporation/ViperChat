@@ -13,6 +13,7 @@ import MultiselectDropdownItems from 'shared/components/ui/MultiselectDropdownIt
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 import FileUpload from 'vue-upload-component';
 import { DirectUpload } from 'activestorage';
+import { getDirectUploadUrl } from 'dashboard/helper/directUploadsHelper';
 import {
   ALLOWED_FILE_TYPES,
   MAXIMUM_FILE_UPLOAD_SIZE,
@@ -146,7 +147,7 @@ const onFileUpload = file => {
   isUploadingAttachment.value = true;
   const upload = new DirectUpload(
     file.file,
-    '/rails/active_storage/direct_uploads',
+    getDirectUploadUrl('/rails/active_storage/direct_uploads'),
     {
       directUploadWillCreateBlobWithXHR: xhr => {
         if (currentUser.value?.access_token) {

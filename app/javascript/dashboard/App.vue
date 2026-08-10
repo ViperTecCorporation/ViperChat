@@ -20,6 +20,8 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import NativeShareInbox from '../native/components/NativeShareInbox.vue';
+import NativePushPrompt from '../native/components/NativePushPrompt.vue';
 
 export default {
   name: 'App',
@@ -32,6 +34,8 @@ export default {
     PaymentPendingBanner,
     WootSnackbarBox,
     PendingEmailVerificationBanner,
+    NativeShareInbox,
+    NativePushPrompt,
   },
   setup() {
     const router = useRouter();
@@ -65,6 +69,9 @@ export default {
     }),
     hideOnOnboardingView() {
       return !isOnOnboardingView(this.$route);
+    },
+    isNativeApp() {
+      return Boolean(window.chatwootConfig?.isNativeApp);
     },
   },
 
@@ -175,6 +182,8 @@ export default {
     </router-view>
     <WootSnackbarBox />
     <NetworkNotification />
+    <NativeShareInbox v-if="isNativeApp" />
+    <NativePushPrompt v-if="isNativeApp" />
   </div>
   <LoadingState v-else />
 </template>

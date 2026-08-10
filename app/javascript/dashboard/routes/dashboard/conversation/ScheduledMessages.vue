@@ -15,7 +15,10 @@ import { getAllowedFileTypesByChannel } from '@chatwoot/utils';
 import scheduledMessagesApi from 'dashboard/api/scheduledMessages';
 import SearchAPI from 'dashboard/api/search';
 import { useAlert } from 'dashboard/composables';
-import { setDirectUploadAuthHeaders } from 'dashboard/helper/directUploadsHelper';
+import {
+  getDirectUploadUrl,
+  setDirectUploadAuthHeaders,
+} from 'dashboard/helper/directUploadsHelper';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -616,7 +619,7 @@ const uploadAttachment = ({ file, index, voiceMessage }) => {
   isUploading.value = true;
   const upload = new DirectUpload(
     file.file,
-    '/rails/active_storage/direct_uploads',
+    getDirectUploadUrl('/rails/active_storage/direct_uploads'),
     {
       directUploadWillCreateBlobWithXHR: xhr => {
         if (currentUser.value.access_token) {

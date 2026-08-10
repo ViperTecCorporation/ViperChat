@@ -61,6 +61,7 @@ coverage
 # ignore packages
 node_modules
 package-lock.json
+!/services/viper-push-relay/package-lock.json
 
 *.dump
 
@@ -85,6 +86,7 @@ yarn-debug.log*
 
 # Vite Ruby
 /public/vite*
+/dist-mobile/
 # Vite uses dotenv and suggests to ignore local-only env files. See
 # https://vitejs.dev/guide/env-and-mode.html#env-files
 *.local
@@ -108,3 +110,4 @@ Procfile.worktree
 # Local workspace artifacts
 /.pnpm-store/
 /tmp/
+/secrets/

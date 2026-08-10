@@ -15,11 +15,18 @@ class ApiClient {
 
   // eslint-disable-next-line class-methods-use-this
   get accountIdFromRoute() {
-    const isInsideAccountScopedURLs =
-      window.location.pathname.includes('/app/accounts');
+    const isNativeApp = Boolean(window.chatwootConfig?.isNativeApp);
+    const routePath = isNativeApp
+      ? window.location.hash.replace(/^#/, '')
+      : window.location.pathname;
+    const accountRouteMatch = routePath.match(/\/app\/accounts\/(\d+)/);
 
-    if (isInsideAccountScopedURLs) {
-      return window.location.pathname.split('/')[3];
+    if (accountRouteMatch) {
+      return accountRouteMatch[1];
+    }
+
+    if (isNativeApp && window.viperNativeAccountId) {
+      return String(window.viperNativeAccountId);
     }
 
     return '';

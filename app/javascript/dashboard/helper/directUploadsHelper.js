@@ -1,5 +1,12 @@
 import Auth from 'dashboard/api/auth';
 
+export const getDirectUploadUrl = path => {
+  const apiHost = window.chatwootConfig?.apiHost;
+  if (!apiHost) return path;
+
+  return new URL(path, `${apiHost}/`).toString();
+};
+
 export const setDirectUploadAuthHeaders = xhr => {
   const {
     'access-token': accessToken,

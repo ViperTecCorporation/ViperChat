@@ -10,6 +10,7 @@ class Notification::PushNotificationService
       send_browser_push(subscription)
       send_fcm_push(subscription)
       send_push_via_chatwoot_hub(subscription)
+      send_viper_native_push(subscription)
     end
   end
 
@@ -106,6 +107,22 @@ class Notification::PushNotificationService
     return unless subscription.fcm?
 
     ChatwootHub.send_push(fcm_options(subscription))
+  end
+
+  def send_viper_native_push(subscription)
+    return unless native_push_enabled?
+    return unless subscription.viper_native?
+
+    Notification::ViperPushRelayService.new(notification: notification, subscription: subscription).perform
+    Rails.logger.info("Viper native push sent to #{user.email} with title #{notification.push_message_title}")
+  rescue StandardError => e
+    Rails.logger.error("Viper native push failed for subscription #{subscription.id}: #{e.class} - #{e.message}")
+  end
+
+  def native_push_enabled?
+    ActiveModel::Type::Boolean.new.cast(ENV.fetch('VIPER_NATIVE_PUSH_ENABLED', false)) &&
+      ENV['VIPER_PUSH_RELAY_URL'].present? &&
+      ENV['VIPER_PUSH_RELAY_TOKEN'].present?
   end
 
   def firebase_credentials_present?

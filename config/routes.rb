@@ -715,6 +715,7 @@ Rails.application.routes.draw do
   get 'notion/callback', to: 'notion/callbacks#show'
   # ----------------------------------------------------------------------
   # Routes for external service verifications
+  get '.well-known/viper-chat' => 'native_app#discovery'
   get '.well-known/assetlinks.json' => 'android_app#assetlinks'
   get '.well-known/apple-app-site-association' => 'apple_app#site_association'
   get '.well-known/microsoft-identity-association.json' => 'microsoft#identity_association'
