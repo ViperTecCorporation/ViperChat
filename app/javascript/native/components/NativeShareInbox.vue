@@ -1,7 +1,8 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
+import SearchAPI from 'dashboard/api/search';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
@@ -16,11 +17,29 @@ const store = useStore();
 const route = useRoute();
 const router = useRouter();
 const pendingShare = usePendingNativeShare();
+const searchQuery = ref('');
+const searchResults = ref([]);
+const isSearching = ref(false);
+const searchError = ref('');
+const copy = Object.freeze({
+  title: 'Conteúdo recebido',
+  close: 'Fechar',
+  attach: 'Anexar nesta conversa',
+  choose: 'Escolha uma conversa',
+  searchPlaceholder: 'Pesquisar nome, telefone ou conversa',
+  searching: 'Pesquisando…',
+  searchEmpty: 'Nenhuma conversa encontrada.',
+  searchError: 'Não foi possível pesquisar as conversas.',
+});
 
-const conversations = computed(() =>
+const recentConversations = computed(() =>
   (store.getters.getAllConversations || []).slice(0, 12)
 );
-const conversationContact = conversation => conversation.meta?.sender || {};
+const conversations = computed(() =>
+  searchQuery.value.trim() ? searchResults.value : recentConversations.value
+);
+const conversationContact = conversation =>
+  conversation.contact || conversation.meta?.sender || {};
 const conversationName = conversation =>
   conversation.group_title ||
   conversationContact(conversation).name ||
@@ -32,7 +51,14 @@ const conversationThumbnail = conversation =>
   conversationContact(conversation).thumbnail ||
   '';
 const conversationInbox = conversation =>
-  store.getters['inboxes/getInbox'](conversation.inbox_id)?.name || '';
+  conversation.inbox?.name ||
+  store.getters['inboxes/getInbox'](conversation.inbox_id)?.name ||
+  '';
+const conversationMeta = conversation => {
+  const id = conversation.display_id || conversation.id;
+  const inbox = conversationInbox(conversation);
+  return inbox ? `#${id} · ${inbox}` : `#${id}`;
+};
 const selectedConversationId = computed(() => route.params.conversation_id);
 const summary = computed(() => {
   const fileCount = pendingShare.value?.files.length || 0;
@@ -43,6 +69,35 @@ const summary = computed(() => {
 });
 
 onMounted(initializeNativeShare);
+
+let searchTimer;
+const searchConversations = value => {
+  searchQuery.value = value;
+  searchError.value = '';
+  window.clearTimeout(searchTimer);
+
+  const query = value.trim();
+  if (!query) {
+    searchResults.value = [];
+    isSearching.value = false;
+    return;
+  }
+
+  isSearching.value = true;
+  searchTimer = window.setTimeout(async () => {
+    try {
+      const { data } = await SearchAPI.conversations({ q: query });
+      searchResults.value = data.payload?.conversations || [];
+    } catch {
+      searchResults.value = [];
+      searchError.value = copy.searchError;
+    } finally {
+      isSearching.value = false;
+    }
+  }, 300);
+};
+
+onBeforeUnmount(() => window.clearTimeout(searchTimer));
 
 const chooseConversation = conversation => {
   router.push({
@@ -64,14 +119,16 @@ const attachToComposer = async () => {
   <aside
     v-if="pendingShare"
     class="fixed inset-x-3 bottom-3 z-[1000] mx-auto max-w-md rounded-xl border border-n-weak bg-n-solid-2 p-4 shadow-xl"
+    @click.stop
+    @pointerdown.stop
   >
     <div class="flex items-start justify-between gap-3">
       <div>
-        <p class="font-medium text-n-slate-12">Conteúdo recebido</p>
+        <p class="font-medium text-n-slate-12">{{ copy.title }}</p>
         <p class="mt-1 text-sm text-n-slate-10">{{ summary }}</p>
       </div>
       <button class="text-sm text-n-slate-10" @click="dismissPendingShare">
-        Fechar
+        {{ copy.close }}
       </button>
     </div>
 
@@ -80,17 +137,43 @@ const attachToComposer = async () => {
       class="mt-4 h-10 w-full rounded-lg bg-n-brand font-medium text-white"
       @click="attachToComposer"
     >
-      Anexar nesta conversa
+      {{ copy.attach }}
     </button>
 
     <div v-else class="mt-4">
       <p class="mb-2 text-xs font-medium text-n-slate-11">
-        Escolha uma conversa
+        {{ copy.choose }}
       </p>
       <div class="max-h-72 space-y-1 overflow-y-auto">
+        <label class="relative mb-3 block">
+          <span
+            class="i-lucide-search absolute left-3 top-1/2 size-4 -translate-y-1/2 text-n-slate-10"
+          />
+          <input
+            :value="searchQuery"
+            type="search"
+            autocomplete="off"
+            :placeholder="copy.searchPlaceholder"
+            class="h-10 w-full rounded-lg border border-n-weak bg-n-alpha-2 pl-9 pr-3 text-sm text-n-slate-12 outline-none focus:border-n-brand"
+            @input="searchConversations($event.target.value)"
+          />
+        </label>
+        <p v-if="isSearching" class="px-3 py-4 text-sm text-n-slate-10">
+          {{ copy.searching }}
+        </p>
+        <p v-else-if="searchError" class="px-3 py-4 text-sm text-n-ruby-11">
+          {{ searchError }}
+        </p>
+        <p
+          v-else-if="searchQuery.trim() && !conversations.length"
+          class="px-3 py-4 text-sm text-n-slate-10"
+        >
+          {{ copy.searchEmpty }}
+        </p>
         <button
           v-for="conversation in conversations"
           :key="conversation.id"
+          type="button"
           class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-n-alpha-2"
           @click="chooseConversation(conversation)"
         >
@@ -105,10 +188,7 @@ const attachToComposer = async () => {
               {{ conversationName(conversation) }}
             </span>
             <span class="block truncate text-xs text-n-slate-10">
-              #{{ conversation.display_id || conversation.id }}
-              <template v-if="conversationInbox(conversation)">
-                · {{ conversationInbox(conversation) }}
-              </template>
+              {{ conversationMeta(conversation) }}
             </span>
           </span>
         </button>

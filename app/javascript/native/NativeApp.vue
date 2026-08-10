@@ -12,6 +12,7 @@ import {
   verifyMfa,
 } from './platform/authenticationService';
 import { getRuntimeInfo } from './platform/runtimeService';
+import Button from 'dashboard/components-next/button/Button.vue';
 import viperLogoUrl from '../../../public/brand-assets/logo_thumbnail.svg?url';
 
 const serverUrl = ref(getDefaultServerUrl());
@@ -221,13 +222,15 @@ const changeServer = async () => {
           {{ errorMessage }}
         </p>
 
-        <button
+        <Button
           type="submit"
           :disabled="isLoggingIn"
-          class="h-11 w-full rounded-lg bg-n-brand px-4 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {{ isLoggingIn ? copy.loggingIn : copy.login }}
-        </button>
+          :is-loading="isLoggingIn"
+          :label="copy.login"
+          color="blue"
+          size="lg"
+          class="w-full"
+        />
 
         <button
           type="button"
