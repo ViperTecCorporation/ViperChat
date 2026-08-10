@@ -174,10 +174,6 @@ const hideUnassignedForAgents = computed(() => {
   );
 });
 
-const isWaitingConversationsDefaultEnabled = computed(() => {
-  return uiSettings.value.open_waiting_conversations_by_default ?? false;
-});
-
 const hasAppliedFilters = computed(() => {
   return appliedFilters.value.length !== 0;
 });
@@ -221,9 +217,6 @@ const assigneeTabItems = computed(() => {
     item => item.permissions
   )
     .filter(({ key }) => {
-      if (!isWaitingConversationsDefaultEnabled.value && key === 'waiting') {
-        return false;
-      }
       if (hideAllChatsForAgents.value && key === 'all') {
         return false;
       }
