@@ -503,11 +503,6 @@ function setFiltersFromUISettings() {
     : wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC;
   if (isWaitingConversationsDefaultEnabled.value && !props.conversationType) {
     activeAssigneeTab.value = wootConstants.ASSIGNEE_TYPE.WAITING;
-  } else if (
-    window.chatwootConfig?.isNativeApp &&
-    !hideAllChatsForAgents.value
-  ) {
-    activeAssigneeTab.value = wootConstants.ASSIGNEE_TYPE.ALL;
   } else {
     activeAssigneeTab.value = wootConstants.ASSIGNEE_TYPE.ME;
   }
