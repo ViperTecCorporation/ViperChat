@@ -73,7 +73,7 @@ const store = useStore();
 const resolveAttributesModalRef = ref(null);
 
 const activeAssigneeTab = ref(wootConstants.ASSIGNEE_TYPE.ME);
-const hasInitializedTabSelection = ref(false);
+const isFirstLoad = ref(true);
 const activeStatus = ref(wootConstants.STATUS_TYPE.OPEN);
 const activeSortBy = ref(wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC);
 const showAdvancedFilters = ref(false);
@@ -641,7 +641,7 @@ function fetchConversations() {
 }
 
 function resetAndFetchData() {
-  hasInitializedTabSelection.value = false;
+  isFirstLoad.value = true;
   appliedFilter.value = [];
   resetBulkActions();
   store.dispatch('conversationPage/reset');
@@ -681,6 +681,11 @@ function updateAssigneeTab(selectedTab) {
     store.dispatch('emptyAllConversations');
     fetchConversations();
   }
+}
+
+function onTabChange(selectedTab) {
+  isFirstLoad.value = false;
+  updateAssigneeTab(selectedTab);
 }
 
 function onBasicFilterChange(value, type) {
@@ -952,13 +957,18 @@ watch(conversationFilters, (newVal, oldVal) => {
 });
 
 watch(
+  () => route.params,
+  () => {
+    isFirstLoad.value = true;
+  },
+  { deep: true }
+);
+
+watch(
   () => conversationStats.value.updatedOn,
   () => {
-    if (
-      !hasInitializedTabSelection.value &&
-      conversationStats.value.updatedOn
-    ) {
-      hasInitializedTabSelection.value = true;
+    if (isFirstLoad.value && conversationStats.value.updatedOn) {
+      isFirstLoad.value = false;
       if (conversationStats.value.waitingCount > 0) {
         updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.WAITING);
       } else {
@@ -1020,7 +1030,7 @@ watch(
       :items="assigneeTabItems"
       :active-tab="activeAssigneeTab"
       is-compact
-      @chat-tab-change="updateAssigneeTab"
+      @chat-tab-change="onTabChange"
     />
 
     <p
