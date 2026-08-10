@@ -1,6 +1,6 @@
 import { createApp } from 'vue';
 import 'dashboard/assets/scss/app.scss';
-import { loadActiveInstallation } from './platform/installationService';
+import { refreshActiveInstallation } from './platform/installationService';
 import { validateSession } from './platform/authenticationService';
 import { configureNativeEnvironment } from './platform/nativeEnvironmentService';
 
@@ -10,7 +10,7 @@ const mountNativeShell = async () => {
 };
 
 const start = async () => {
-  const installation = await loadActiveInstallation();
+  const installation = await refreshActiveInstallation();
   if (!installation) {
     await mountNativeShell();
     return;

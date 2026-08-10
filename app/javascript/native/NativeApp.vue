@@ -12,6 +12,7 @@ import {
   verifyMfa,
 } from './platform/authenticationService';
 import { getRuntimeInfo } from './platform/runtimeService';
+import viperLogoUrl from '../../../public/brand-assets/logo_thumbnail.svg?url';
 
 const serverUrl = ref(getDefaultServerUrl());
 const installation = ref(null);
@@ -21,8 +22,17 @@ const isLoggingIn = ref(false);
 const credentials = ref({ email: '', password: '' });
 const mfa = ref({ token: '', code: '', useBackupCode: false });
 const runtime = getRuntimeInfo();
+const brandLogoUrl = () => {
+  const logo = installation.value?.config?.logoThumbnail;
+  if (!logo) return viperLogoUrl;
+
+  try {
+    return new URL(logo, `${installation.value.baseUrl}/`).toString();
+  } catch {
+    return viperLogoUrl;
+  }
+};
 const copy = {
-  mark: 'V',
   title: 'ViperChat',
   description: 'Conecte o aplicativo à instalação da sua empresa.',
   server: 'Servidor',
@@ -35,6 +45,12 @@ const copy = {
   loggingIn: 'Entrando…',
   changeServer: 'Trocar servidor',
   runtime: 'Runtime:',
+  mfaDescription: 'Confirme o segundo fator para concluir o login.',
+  recoveryCode: 'Código de recuperação',
+  otpCode: 'Código de 6 dígitos',
+  useRecoveryCode: 'Usar código de recuperação',
+  confirming: 'Confirmando…',
+  confirm: 'Confirmar',
 };
 
 onMounted(async () => {
@@ -115,11 +131,11 @@ const changeServer = async () => {
       class="w-full max-w-md rounded-2xl border border-n-weak bg-n-solid-2 p-6 shadow-lg"
     >
       <div class="mb-8 flex flex-col items-center text-center">
-        <div
-          class="mb-4 flex size-16 items-center justify-center rounded-2xl bg-n-brand text-2xl font-bold text-white"
-        >
-          {{ copy.mark }}
-        </div>
+        <img
+          :src="brandLogoUrl()"
+          alt="ViperChat"
+          class="mb-4 size-20 rounded-2xl object-contain"
+        />
         <h1 class="text-2xl font-semibold text-n-slate-12">
           {{ copy.title }}
         </h1>
@@ -228,11 +244,11 @@ const changeServer = async () => {
         @submit.prevent="confirmMfa"
       >
         <p class="text-sm text-n-slate-11">
-          Confirme o segundo fator para concluir o login.
+          {{ copy.mfaDescription }}
         </p>
         <label class="block">
           <span class="mb-1 block text-sm font-medium text-n-slate-12">
-            {{ mfa.useBackupCode ? 'Código de recuperação' : 'Código de 6 dígitos' }}
+            {{ mfa.useBackupCode ? copy.recoveryCode : copy.otpCode }}
           </span>
           <input
             v-model.trim="mfa.code"
@@ -245,7 +261,7 @@ const changeServer = async () => {
         </label>
         <label class="flex items-center gap-2 text-sm text-n-slate-11">
           <input v-model="mfa.useBackupCode" type="checkbox" />
-          Usar código de recuperação
+          {{ copy.useRecoveryCode }}
         </label>
         <p v-if="errorMessage" role="alert" class="text-sm text-n-ruby-11">
           {{ errorMessage }}
@@ -255,7 +271,7 @@ const changeServer = async () => {
           :disabled="isLoggingIn"
           class="h-11 w-full rounded-lg bg-n-brand px-4 font-medium text-white disabled:opacity-60"
         >
-          {{ isLoggingIn ? 'Confirmando…' : 'Confirmar' }}
+          {{ isLoggingIn ? copy.confirming : copy.confirm }}
         </button>
       </form>
 

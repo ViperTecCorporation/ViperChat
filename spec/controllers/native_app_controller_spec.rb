@@ -11,6 +11,10 @@ RSpec.describe 'Viper Chat native discovery', type: :request do
       allow(GlobalConfigService).to receive(:load).with('INSTALLATION_NAME', 'ViperChat').and_return('Viper Tec')
       allow(GlobalConfigService).to receive(:load).with('MAXIMUM_FILE_UPLOAD_SIZE', '150').and_return('50')
       allow(GlobalConfigService).to receive(:load).with('DIRECT_UPLOADS_ENABLED', 'false').and_return('true')
+      allow(GlobalConfigService).to receive(:load).with('LOGO', '/brand-assets/logo.svg').and_return('/custom/logo.svg')
+      allow(GlobalConfigService).to receive(:load).with('LOGO_DARK', '/brand-assets/logo_dark.svg').and_return('/custom/logo-dark.svg')
+      allow(GlobalConfigService).to receive(:load).with('LOGO_THUMBNAIL', '/brand-assets/logo_thumbnail.svg')
+                                                   .and_return('/custom/logo-thumbnail.svg')
     end
 
     it 'returns the versioned native capabilities without authentication' do
@@ -41,7 +45,10 @@ RSpec.describe 'Viper Chat native discovery', type: :request do
           'directUploadsEnabled' => true,
           'mfaEnabled' => true,
           'allowedLoginMethods' => ['email'],
-          'selectedLocale' => I18n.default_locale.to_s
+          'selectedLocale' => 'pt_BR',
+          'logo' => '/custom/logo.svg',
+          'logoDark' => '/custom/logo-dark.svg',
+          'logoThumbnail' => '/custom/logo-thumbnail.svg'
         }
       )
     end

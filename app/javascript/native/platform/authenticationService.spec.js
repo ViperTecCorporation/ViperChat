@@ -14,6 +14,7 @@ import {
   authenticationServiceTestUtils,
   loadSession,
   login,
+  updateSessionHeaders,
   validateSession,
   verifyMfa,
 } from './authenticationService';
@@ -127,5 +128,25 @@ describe('authenticationService', () => {
         responseHeaders({ ...authHeaders, server: 'nginx' })
       )
     ).toEqual(authHeaders);
+  });
+
+  it('serializes rotated token updates without losing newer header fields', async () => {
+    secureValues.set(
+      authenticationServiceTestUtils.sessionKey('inst-123'),
+      JSON.stringify({ headers: authHeaders, user: { id: 7 } })
+    );
+
+    await Promise.all([
+      updateSessionHeaders('inst-123', { 'access-token': 'token-456' }),
+      updateSessionHeaders('inst-123', { expiry: '2100000000' }),
+    ]);
+
+    await expect(loadSession('inst-123')).resolves.toMatchObject({
+      headers: {
+        ...authHeaders,
+        'access-token': 'token-456',
+        expiry: '2100000000',
+      },
+    });
   });
 });

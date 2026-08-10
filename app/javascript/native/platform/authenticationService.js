@@ -8,6 +8,8 @@ const AUTH_HEADER_NAMES = [
   'uid',
 ];
 
+let sessionWriteQueue = Promise.resolve();
+
 const sessionKey = installationId => `viper:${installationId}:auth`;
 
 const readResponseBody = async response => {
@@ -157,10 +159,14 @@ export const validateSession = async installation => {
 };
 
 export const updateSessionHeaders = async (installationId, headers) => {
-  const session = await loadSession(installationId);
-  if (!session) return null;
-
-  return saveSession(installationId, mergeSessionHeaders(session, headers));
+  sessionWriteQueue = sessionWriteQueue
+    .catch(() => null)
+    .then(async () => {
+      const session = await loadSession(installationId);
+      if (!session) return null;
+      return saveSession(installationId, mergeSessionHeaders(session, headers));
+    });
+  return sessionWriteQueue;
 };
 
 export const authenticationServiceTestUtils = {

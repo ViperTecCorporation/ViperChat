@@ -15,6 +15,7 @@ import {
   installationServiceTestUtils,
   loadActiveInstallation,
   loadInstallations,
+  refreshActiveInstallation,
   removeInstallation,
   switchInstallation,
 } from './installationService';
@@ -106,5 +107,32 @@ describe('installationService', () => {
     await expect(loadInstallations()).resolves.toEqual([
       expect.objectContaining({ installationId: 'inst-two' }),
     ]);
+  });
+
+  it('refreshes native capabilities when the saved server configuration changes', async () => {
+    let nativePush = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          product: 'viper-chat',
+          installationId: 'inst-123',
+          instanceName: 'ViperChat',
+          version: '4.16.12-viper',
+          apiVersion: 1,
+          features: { nativePush },
+          config: { selectedLocale: 'pt_BR' },
+        }),
+      }))
+    );
+
+    await configureInstallation('https://chat.example.com');
+    nativePush = true;
+
+    await expect(refreshActiveInstallation()).resolves.toMatchObject({
+      features: { nativePush: true },
+      config: { selectedLocale: 'pt_BR' },
+    });
   });
 });

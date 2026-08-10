@@ -61,8 +61,7 @@ export const loadActiveInstallation = async () => {
   );
 };
 
-export const configureInstallation = async serverUrl => {
-  const baseUrl = normalizeServerUrl(serverUrl);
+const fetchDiscovery = async baseUrl => {
   const response = await fetch(`${baseUrl}/.well-known/viper-chat`, {
     headers: { Accept: 'application/json' },
   });
@@ -73,18 +72,21 @@ export const configureInstallation = async serverUrl => {
 
   const discovery = await response.json();
   validateDiscovery(discovery);
+  return discovery;
+};
 
-  const installation = {
-    installationId: discovery.installationId,
-    baseUrl,
-    instanceName: discovery.instanceName,
-    version: discovery.version,
-    apiVersion: discovery.apiVersion,
-    features: discovery.features,
-    limits: discovery.limits,
-    config: discovery.config,
-  };
+const buildInstallation = (baseUrl, discovery) => ({
+  installationId: discovery.installationId,
+  baseUrl,
+  instanceName: discovery.instanceName,
+  version: discovery.version,
+  apiVersion: discovery.apiVersion,
+  features: discovery.features,
+  limits: discovery.limits,
+  config: discovery.config,
+});
 
+const persistInstallation = async installation => {
   const savedInstallations = await loadInstallations();
   const installations = [
     ...savedInstallations.filter(
@@ -105,6 +107,29 @@ export const configureInstallation = async serverUrl => {
   ]);
 
   return installation;
+};
+
+export const configureInstallation = async serverUrl => {
+  const baseUrl = normalizeServerUrl(serverUrl);
+  const discovery = await fetchDiscovery(baseUrl);
+  return persistInstallation(buildInstallation(baseUrl, discovery));
+};
+
+export const refreshActiveInstallation = async () => {
+  const installation = await loadActiveInstallation();
+  if (!installation) return null;
+
+  try {
+    const discovery = await fetchDiscovery(installation.baseUrl);
+    if (discovery.installationId !== installation.installationId) {
+      return installation;
+    }
+    return persistInstallation(
+      buildInstallation(installation.baseUrl, discovery)
+    );
+  } catch {
+    return installation;
+  }
 };
 
 export const switchInstallation = async installationId => {

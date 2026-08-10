@@ -47,7 +47,10 @@ class NativeAppController < ApplicationController
       ),
       mfaEnabled: Chatwoot.mfa_enabled?,
       allowedLoginMethods: ['email'],
-      selectedLocale: I18n.default_locale.to_s
+      selectedLocale: ENV.fetch('DEFAULT_LOCALE', 'pt_BR'),
+      logo: GlobalConfigService.load('LOGO', '/brand-assets/logo.svg'),
+      logoDark: GlobalConfigService.load('LOGO_DARK', '/brand-assets/logo_dark.svg'),
+      logoThumbnail: GlobalConfigService.load('LOGO_THUMBNAIL', '/brand-assets/logo_thumbnail.svg')
     }
   end
 
