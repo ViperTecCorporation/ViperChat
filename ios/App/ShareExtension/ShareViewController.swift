@@ -79,8 +79,20 @@ final class ShareViewController: UIViewController {
 
             statusLabel.text = "Abrindo o ViperChat…"
             let appURL = URL(string: "viperchat://share")!
-            extensionContext?.open(appURL) { [weak self] _ in
-                self?.extensionContext?.completeRequest(returningItems: nil)
+            extensionContext?.open(appURL) { [weak self] opened in
+                guard let self else { return }
+                if opened {
+                    self.extensionContext?.completeRequest(returningItems: nil)
+                    return
+                }
+
+                self.logger.notice("iOS retained the user in the share extension")
+                DispatchQueue.main.async {
+                    self.statusLabel.text = "Mídia preparada. Abra o ViperChat para escolher a conversa."
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        self.extensionContext?.completeRequest(returningItems: nil)
+                    }
+                }
             }
         } catch {
             logger.error("Share import failed: \(error.localizedDescription, privacy: .public)")
