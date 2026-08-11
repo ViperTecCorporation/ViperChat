@@ -21,6 +21,8 @@ pnpm native:open:ios
 
 O bundle ID é `net.vipertec.viperchat` e o deployment target inicial é iOS 15. O ícone e a tela de abertura usam a identidade ViperChat.
 
+Para testar login e persistência de sessão no simulador, execute o aplicativo pelo Xcode ou gere o build com assinatura local (`Sign to Run Locally`). `CODE_SIGNING_ALLOWED=NO` deve ser usado somente para validar a compilação, pois um aplicativo sem `application-identifier` não consegue acessar o Keychain.
+
 ## Sessão e permissões
 
 O plugin local `SecureStorage` persiste os headers de autenticação no Keychain com acesso restrito ao aparelho. A senha não é armazenada.
