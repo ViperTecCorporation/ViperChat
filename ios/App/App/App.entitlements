@@ -8,5 +8,10 @@
 	<array>
 		<string>group.net.vipertec.viperchat</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)net.vipertec.viperchat</string>
+		<string>$(AppIdentifierPrefix)net.vipertec.viperchat.shared</string>
+	</array>
 </dict>
 </plist>

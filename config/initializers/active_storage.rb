@@ -10,6 +10,9 @@ Rails.application.config.active_storage.content_types_allowed_inline += %w[
   audio/x-m4a
   audio/wav
   audio/x-wav
+  video/mp4
+  video/quicktime
+  video/x-m4v
 ]
 
 module ActiveStorageDirectUploadMetadataFilter

@@ -6,6 +6,8 @@ json.created_at conversation.created_at.to_i
 json.contact do
   json.id conversation.contact.id
   json.name conversation.contact.name
+  json.phone_number conversation.contact.phone_number
+  json.thumbnail conversation.contact.avatar_url
 end
 json.inbox do
   json.id conversation.inbox.id

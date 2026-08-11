@@ -14,6 +14,15 @@ final class SecureStoragePlugin: CAPPlugin, CAPBridgedPlugin {
 
     private let service = "net.vipertec.viperchat.secure-storage"
 
+    private var sharedAccessGroup: String? {
+        guard let prefix = Bundle.main.object(
+            forInfoDictionaryKey: "AppIdentifierPrefix"
+        ) as? String, !prefix.isEmpty else {
+            return nil
+        }
+        return "\(prefix)net.vipertec.viperchat.shared"
+    }
+
     @objc func set(_ call: CAPPluginCall) {
         guard let key = call.getString("key"), !key.isEmpty,
               let value = call.getString("value"),
@@ -22,7 +31,7 @@ final class SecureStoragePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let query = keychainQuery(for: key)
+        let query = keychainQuery(for: key, shared: true)
         SecItemDelete(query as CFDictionary)
 
         var attributes = query
@@ -43,18 +52,23 @@ final class SecureStoragePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        var query = keychainQuery(for: key)
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        let sharedResult = readValue(for: key, shared: true)
+        var status = sharedResult.status
+        var data = sharedResult.data
+        if status == errSecItemNotFound {
+            let legacyResult = readValue(for: key, shared: false)
+            status = legacyResult.status
+            data = legacyResult.data
+            if status == errSecSuccess, let data {
+                migrateLegacyValue(data, for: key)
+            }
+        }
         if status == errSecItemNotFound {
             call.resolve(["value": NSNull()])
             return
         }
         guard status == errSecSuccess,
-              let data = item as? Data,
+              let data,
               let value = String(data: data, encoding: .utf8) else {
             call.reject("Unable to read the secure value", String(status))
             return
@@ -68,19 +82,48 @@ final class SecureStoragePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let status = SecItemDelete(keychainQuery(for: key) as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            call.reject("Unable to remove the secure value", String(status))
+        let statuses = [
+            SecItemDelete(keychainQuery(for: key, shared: true) as CFDictionary),
+            SecItemDelete(keychainQuery(for: key, shared: false) as CFDictionary)
+        ]
+        guard statuses.allSatisfy({ $0 == errSecSuccess || $0 == errSecItemNotFound }) else {
+            call.reject("Unable to remove the secure value", String(statuses.first { $0 != errSecSuccess && $0 != errSecItemNotFound }!))
             return
         }
         call.resolve()
     }
 
-    private func keychainQuery(for key: String) -> [String: Any] {
-        [
+    private func keychainQuery(for key: String, shared: Bool) -> [String: Any] {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key
         ]
+        if shared, let sharedAccessGroup {
+            query[kSecAttrAccessGroup as String] = sharedAccessGroup
+        }
+        return query
+    }
+
+    private func readValue(for key: String, shared: Bool) -> (status: OSStatus, data: Data?) {
+        var query = keychainQuery(for: key, shared: shared)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        return (status, item as? Data)
+    }
+
+    private func migrateLegacyValue(_ data: Data, for key: String) {
+        let sharedQuery = keychainQuery(for: key, shared: true)
+        SecItemDelete(sharedQuery as CFDictionary)
+
+        var attributes = sharedQuery
+        attributes[kSecValueData as String] = data
+        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        if SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess {
+            SecItemDelete(keychainQuery(for: key, shared: false) as CFDictionary)
+        }
     }
 }

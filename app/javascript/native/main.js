@@ -1,7 +1,10 @@
 import { createApp } from 'vue';
 import 'dashboard/assets/scss/app.scss';
 import { refreshActiveInstallation } from './platform/installationService';
-import { restoreSession } from './platform/authenticationService';
+import {
+  restoreSession,
+  syncShareContext,
+} from './platform/authenticationService';
 import { configureNativeEnvironment } from './platform/nativeEnvironmentService';
 
 const mountNativeShell = async () => {
@@ -29,6 +32,7 @@ const start = async () => {
     return;
   }
 
+  await syncShareContext({ installation, user: session.user });
   configureNativeEnvironment({ installation, session });
   const { mountDashboard } = await import('../entrypoints/dashboard');
   await mountDashboard();
