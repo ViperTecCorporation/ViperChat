@@ -23,6 +23,13 @@ const isLoggingIn = ref(false);
 const credentials = ref({ email: '', password: '' });
 const mfa = ref({ token: '', code: '', useBackupCode: false });
 const runtime = getRuntimeInfo();
+const reloadAtDefaultScale = () => {
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+  window.scrollTo(0, 0);
+  window.requestAnimationFrame(() => window.location.reload());
+};
 const brandLogoUrl = () => {
   const logo = installation.value?.config?.logoThumbnail;
   if (!logo) return viperLogoUrl;
@@ -85,7 +92,7 @@ const signIn = async () => {
       mfa.value.token = result.mfaToken;
       return;
     }
-    window.location.reload();
+    reloadAtDefaultScale();
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
@@ -103,7 +110,7 @@ const confirmMfa = async () => {
       otpCode: mfa.value.code,
       backupCode: mfa.value.useBackupCode ? mfa.value.code : '',
     });
-    window.location.reload();
+    reloadAtDefaultScale();
   } catch (error) {
     errorMessage.value = error.message;
   } finally {
@@ -155,7 +162,7 @@ const changeServer = async () => {
             type="url"
             autocomplete="url"
             required
-            class="h-11 w-full rounded-lg border border-n-weak bg-n-alpha-2 px-3 text-n-slate-12 outline-none focus:border-n-brand"
+            class="h-11 w-full rounded-lg border border-n-weak bg-n-alpha-2 px-3 text-base text-n-slate-12 outline-none focus:border-n-brand"
           />
         </label>
 
@@ -201,7 +208,7 @@ const changeServer = async () => {
             type="email"
             autocomplete="email"
             required
-            class="h-11 w-full rounded-lg border border-n-weak bg-n-alpha-2 px-3 text-n-slate-12 outline-none focus:border-n-brand"
+            class="h-11 w-full rounded-lg border border-n-weak bg-n-alpha-2 px-3 text-base text-n-slate-12 outline-none focus:border-n-brand"
           />
         </label>
 
@@ -214,7 +221,7 @@ const changeServer = async () => {
             type="password"
             autocomplete="current-password"
             required
-            class="h-11 w-full rounded-lg border border-n-weak bg-n-alpha-2 px-3 text-n-slate-12 outline-none focus:border-n-brand"
+            class="h-11 w-full rounded-lg border border-n-weak bg-n-alpha-2 px-3 text-base text-n-slate-12 outline-none focus:border-n-brand"
           />
         </label>
 
@@ -259,7 +266,7 @@ const changeServer = async () => {
             inputmode="numeric"
             autocomplete="one-time-code"
             required
-            class="h-11 w-full rounded-lg border border-n-weak bg-n-alpha-2 px-3 text-n-slate-12 outline-none focus:border-n-brand"
+            class="h-11 w-full rounded-lg border border-n-weak bg-n-alpha-2 px-3 text-base text-n-slate-12 outline-none focus:border-n-brand"
           />
         </label>
         <label class="flex items-center gap-2 text-sm text-n-slate-11">

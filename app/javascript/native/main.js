@@ -1,5 +1,6 @@
 import { createApp } from 'vue';
 import 'dashboard/assets/scss/app.scss';
+import './native.scss';
 import { refreshActiveInstallation } from './platform/installationService';
 import {
   restoreSession,
