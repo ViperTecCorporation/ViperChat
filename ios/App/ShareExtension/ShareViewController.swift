@@ -1,10 +1,15 @@
 import UIKit
 import UniformTypeIdentifiers
+import OSLog
 
 final class ShareViewController: UIViewController {
     private let appGroup = "group.net.vipertec.viperchat"
     private let pendingShareKey = "viper.pending-share"
     private let maximumFiles = 10
+    private let logger = Logger(
+        subsystem: "net.vipertec.viperchat.share",
+        category: "ShareExtension"
+    )
 
     private lazy var statusLabel: UILabel = {
         let label = UILabel()
@@ -78,6 +83,7 @@ final class ShareViewController: UIViewController {
                 self?.extensionContext?.completeRequest(returningItems: nil)
             }
         } catch {
+            logger.error("Share import failed: \(error.localizedDescription, privacy: .public)")
             finishWithError("Não foi possível importar este conteúdo.")
         }
     }
@@ -94,42 +100,52 @@ final class ShareViewController: UIViewController {
         }
         guard let identifier else { return nil }
 
-        let sourceURL: URL = try await withCheckedThrowingContinuation { continuation in
+        let type = UTType(identifier)
+        let suggestedName = provider.suggestedName
+
+        // The URL supplied by loadFileRepresentation is valid only while its
+        // completion handler is running. Copy it into the App Group before
+        // returning from the callback so Photos cannot remove the temporary
+        // representation first.
+        return try await withCheckedThrowingContinuation { continuation in
             provider.loadFileRepresentation(forTypeIdentifier: identifier) { url, error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else if let url {
-                    continuation.resume(returning: url)
+                    do {
+                        var name = suggestedName ?? url.lastPathComponent
+                        if URL(fileURLWithPath: name).pathExtension.isEmpty,
+                           let extensionName = type?.preferredFilenameExtension {
+                            name += ".\(extensionName)"
+                        }
+                        let safeName = name.replacingOccurrences(
+                            of: "[^A-Za-z0-9._-]",
+                            with: "_",
+                            options: .regularExpression
+                        )
+                        let destination = directory.appendingPathComponent(
+                            "\(UUID().uuidString)-\(safeName.isEmpty ? "arquivo" : safeName)"
+                        )
+                        try FileManager.default.copyItem(at: url, to: destination)
+                        let size = (try? destination.resourceValues(
+                            forKeys: [.fileSizeKey]
+                        ).fileSize) ?? 0
+
+                        continuation.resume(returning: [
+                            "name": name,
+                            "type": type?.preferredMIMEType ?? "application/octet-stream",
+                            "size": size,
+                            "path": destination.path,
+                            "uri": destination.absoluteString
+                        ])
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
                 } else {
                     continuation.resume(throwing: CocoaError(.fileReadUnknown))
                 }
             }
         }
-
-        let type = UTType(identifier)
-        var name = provider.suggestedName ?? sourceURL.lastPathComponent
-        if URL(fileURLWithPath: name).pathExtension.isEmpty,
-           let extensionName = type?.preferredFilenameExtension {
-            name += ".\(extensionName)"
-        }
-        let safeName = name.replacingOccurrences(
-            of: "[^A-Za-z0-9._-]",
-            with: "_",
-            options: .regularExpression
-        )
-        let destination = directory.appendingPathComponent(
-            "\(UUID().uuidString)-\(safeName.isEmpty ? "arquivo" : safeName)"
-        )
-        try FileManager.default.copyItem(at: sourceURL, to: destination)
-        let size = (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-
-        return [
-            "name": name,
-            "type": type?.preferredMIMEType ?? "application/octet-stream",
-            "size": size,
-            "path": destination.path,
-            "uri": destination.absoluteString
-        ]
     }
 
     private func importText(from provider: NSItemProvider) async throws -> String? {
