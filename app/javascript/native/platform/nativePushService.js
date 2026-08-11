@@ -1,6 +1,6 @@
+import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { Device } from '@capacitor/device';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { PushNotifications } from '@capacitor/push-notifications';
 import NotificationSubscriptionsAPI from 'dashboard/api/notificationSubscription';
 
 const MESSAGE_CHANNEL_ID = 'viperchat_messages';
@@ -74,38 +74,38 @@ const showForegroundNotification = notification =>
     ],
   });
 
+const registerToken = async (installation, pushToken) => {
+  const [device, deviceInfo] = await Promise.all([
+    Device.getId(),
+    Device.getInfo(),
+  ]);
+  await NotificationSubscriptionsAPI.create({
+    notification_subscription: {
+      subscription_type: 'viper_native',
+      subscription_attributes: {
+        push_token: pushToken,
+        device_id: `${installation.installationId}:${device.identifier}`,
+        installation_id: installation.installationId,
+        platform: deviceInfo.platform,
+      },
+    },
+  });
+};
+
 const registerListeners = async installation => {
   if (listenersRegistered) return;
   listenersRegistered = true;
 
   await createMessageChannel();
 
-  await PushNotifications.addListener('registration', async token => {
-    const device = await Device.getId();
-    await NotificationSubscriptionsAPI.create({
-      notification_subscription: {
-        subscription_type: 'viper_native',
-        subscription_attributes: {
-          push_token: token.value,
-          device_id: `${installation.installationId}:${device.identifier}`,
-          installation_id: installation.installationId,
-          platform: 'android',
-        },
-      },
-    });
-  });
-
-  await PushNotifications.addListener('registrationError', error => {
-    // eslint-disable-next-line no-console
-    console.error('[ViperChat] Native push registration failed', error);
-  });
-  await PushNotifications.addListener(
-    'pushNotificationActionPerformed',
-    event => openNotification(event.notification)
+  await FirebaseMessaging.addListener('tokenReceived', event =>
+    registerToken(installation, event.token)
   );
-  await PushNotifications.addListener(
-    'pushNotificationReceived',
-    showForegroundNotification
+  await FirebaseMessaging.addListener('notificationActionPerformed', event =>
+    openNotification(event.notification)
+  );
+  await FirebaseMessaging.addListener('notificationReceived', event =>
+    showForegroundNotification(event.notification)
   );
   await LocalNotifications.addListener(
     'localNotificationActionPerformed',
@@ -114,15 +114,16 @@ const registerListeners = async installation => {
 };
 
 export const getNativePushPermission = () =>
-  PushNotifications.checkPermissions();
+  FirebaseMessaging.checkPermissions();
 
 export const enableNativePush = async ({ installation, router }) => {
   routerInstance = router;
   await registerListeners(installation);
-  const permission = await PushNotifications.requestPermissions();
+  const permission = await FirebaseMessaging.requestPermissions();
   if (permission.receive !== 'granted') return permission;
 
-  await PushNotifications.register();
+  const { token } = await FirebaseMessaging.getToken();
+  await registerToken(installation, token);
   return permission;
 };
 
@@ -131,7 +132,10 @@ export const initializeNativePush = async ({ installation, router }) => {
   routerInstance = router;
   await registerListeners(installation);
   const permission = await getNativePushPermission();
-  if (permission.receive === 'granted') await PushNotifications.register();
+  if (permission.receive === 'granted') {
+    const { token } = await FirebaseMessaging.getToken();
+    await registerToken(installation, token);
+  }
   return permission;
 };
 

@@ -30,7 +30,7 @@ O `Info.plist` declara câmera, microfone, localização durante o uso e bibliot
 ## Dependências externas pendentes
 
 - conta Apple gratuita para executar no iPhone e Apple Developer Program para TestFlight/App Store;
-- aplicativo iOS cadastrado no Firebase e seu `GoogleService-Info.plist` para obter token FCM e entregar push pelo relay central;
+- configuração local `GoogleService-Info.plist` do aplicativo iOS para obter token FCM e entregar push pelo relay central;
 - certificados APNs associados ao projeto Firebase;
 - App Group e Share Extension para receber texto, imagens e arquivos de outros aplicativos;
 - CallKit e PushKit para chamadas recebidas com o aplicativo suspenso ou encerrado.

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { localListeners, localNotifications, pushListeners, pushNotifications } =
+const { firebaseMessaging, localListeners, localNotifications, pushListeners } =
   vi.hoisted(() => {
     const pushListenerCallbacks = {};
     const localListenerCallbacks = {};
@@ -15,12 +15,13 @@ const { localListeners, localNotifications, pushListeners, pushNotifications } =
         createChannel: vi.fn(async () => {}),
         schedule: vi.fn(async () => ({ notifications: [] })),
       },
-      pushNotifications: {
+      firebaseMessaging: {
         addListener: vi.fn(async (event, callback) => {
           pushListenerCallbacks[event] = callback;
         }),
         checkPermissions: vi.fn(async () => ({ receive: 'granted' })),
-        register: vi.fn(async () => {}),
+        getToken: vi.fn(async () => ({ token: 'fcm-token' })),
+        requestPermissions: vi.fn(async () => ({ receive: 'granted' })),
       },
     };
   });
@@ -36,8 +37,8 @@ vi.mock('@capacitor/local-notifications', () => ({
   LocalNotifications: localNotifications,
 }));
 
-vi.mock('@capacitor/push-notifications', () => ({
-  PushNotifications: pushNotifications,
+vi.mock('@capacitor-firebase/messaging', () => ({
+  FirebaseMessaging: firebaseMessaging,
 }));
 
 vi.mock('dashboard/api/notificationSubscription', () => ({
@@ -65,13 +66,15 @@ describe('nativePushService', () => {
       router,
     });
 
-    await pushListeners.pushNotificationReceived({
-      title: 'Nova mensagem',
-      body: 'Mensagem de teste',
-      data: {
-        payload: JSON.stringify({
-          data: { notification: { account_id: 1, conversation_id: 42 } },
-        }),
+    await pushListeners.notificationReceived({
+      notification: {
+        title: 'Nova mensagem',
+        body: 'Mensagem de teste',
+        data: {
+          payload: JSON.stringify({
+            data: { notification: { account_id: 1, conversation_id: 42 } },
+          }),
+        },
       },
     });
 

@@ -19,6 +19,7 @@
 		A11000012FEA000100000001 /* ViperBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000112FEA000100000001 /* ViperBridgeViewController.swift */; };
 		A11000022FEA000100000001 /* SecureStoragePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000122FEA000100000001 /* SecureStoragePlugin.swift */; };
 		A11000032FEA000100000001 /* NativeSharePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000132FEA000100000001 /* NativeSharePlugin.swift */; };
+		A11000042FEA000100000001 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A11000142FEA000100000001 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +37,7 @@
 		A11000112FEA000100000001 /* ViperBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViperBridgeViewController.swift; sourceTree = "<group>"; };
 		A11000122FEA000100000001 /* SecureStoragePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStoragePlugin.swift; sourceTree = "<group>"; };
 		A11000132FEA000100000001 /* NativeSharePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSharePlugin.swift; sourceTree = "<group>"; };
+		A11000142FEA000100000001 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -74,6 +76,7 @@
 				A11000112FEA000100000001 /* ViperBridgeViewController.swift */,
 				A11000122FEA000100000001 /* SecureStoragePlugin.swift */,
 				A11000132FEA000100000001 /* NativeSharePlugin.swift */,
+				A11000142FEA000100000001 /* GoogleService-Info.plist */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -157,6 +160,7 @@
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
+				A11000042FEA000100000001 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
