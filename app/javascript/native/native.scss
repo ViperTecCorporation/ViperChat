@@ -15,8 +15,7 @@ body {
 
 // Keep content out of the rounded screen edges while making those areas feel
 // like part of the active installation theme instead of unstyled WebView gaps.
-body::before,
-body::after {
+body::before {
   position: fixed;
   right: 0;
   left: 0;
@@ -30,9 +29,4 @@ body::after {
 body::before {
   top: 0;
   height: env(safe-area-inset-top, 0);
-}
-
-body::after {
-  bottom: 0;
-  height: env(safe-area-inset-bottom, 0);
 }
