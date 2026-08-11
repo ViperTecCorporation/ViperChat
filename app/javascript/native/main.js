@@ -7,6 +7,9 @@ import {
   syncShareContext,
 } from './platform/authenticationService';
 import { configureNativeEnvironment } from './platform/nativeEnvironmentService';
+import { startNativeSystemBarSync } from './platform/nativeSystemBarService';
+
+startNativeSystemBarSync();
 
 const mountNativeShell = async () => {
   const { default: NativeApp } = await import('./NativeApp.vue');
