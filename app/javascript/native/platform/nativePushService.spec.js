@@ -45,7 +45,11 @@ vi.mock('dashboard/api/notificationSubscription', () => ({
   default: { create: vi.fn(async () => {}) },
 }));
 
-import { initializeNativePush } from './nativePushService';
+import {
+  enableNativePush,
+  initializeNativePush,
+  nativePushServiceTestUtils,
+} from './nativePushService';
 
 describe('nativePushService', () => {
   const router = {
@@ -55,6 +59,24 @@ describe('nativePushService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    nativePushServiceTestUtils.reset();
+    firebaseMessaging.getToken.mockResolvedValue({ token: 'fcm-token' });
+  });
+
+  it('keeps the granted permission when the platform cannot issue a token', async () => {
+    firebaseMessaging.getToken.mockRejectedValueOnce(
+      new Error('APNs token is not available')
+    );
+
+    const result = await enableNativePush({
+      installation: {
+        installationId: 'installation-123',
+        features: { nativePush: true },
+      },
+      router,
+    });
+
+    expect(result).toEqual({ receive: 'granted', registered: false });
   });
 
   it('shows foreground pushes and opens their conversation when tapped', async () => {

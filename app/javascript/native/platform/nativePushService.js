@@ -75,6 +75,7 @@ const showForegroundNotification = notification =>
   });
 
 const registerToken = async (installation, pushToken) => {
+  if (!pushToken) return false;
   const [device, deviceInfo] = await Promise.all([
     Device.getId(),
     Device.getInfo(),
@@ -90,6 +91,22 @@ const registerToken = async (installation, pushToken) => {
       },
     },
   });
+  return true;
+};
+
+const registerCurrentToken = async installation => {
+  try {
+    const { token } = await FirebaseMessaging.getToken();
+    return await registerToken(installation, token);
+  } catch (error) {
+    // Permission and token delivery are independent. In particular, iOS
+    // simulators can grant notification permission without issuing an APNs/FCM
+    // token. Keep the granted UI state and retry registration on the next app
+    // activation instead of leaving the permission banner stuck on screen.
+    // eslint-disable-next-line no-console
+    console.error('[ViperChat] Native push token registration failed', error);
+    return false;
+  }
 };
 
 const registerListeners = async installation => {
@@ -98,9 +115,12 @@ const registerListeners = async installation => {
 
   await createMessageChannel();
 
-  await FirebaseMessaging.addListener('tokenReceived', event =>
-    registerToken(installation, event.token)
-  );
+  await FirebaseMessaging.addListener('tokenReceived', event => {
+    registerToken(installation, event.token).catch(error => {
+      // eslint-disable-next-line no-console
+      console.error('[ViperChat] Native push token update failed', error);
+    });
+  });
   await FirebaseMessaging.addListener('notificationActionPerformed', event =>
     openNotification(event.notification)
   );
@@ -122,9 +142,8 @@ export const enableNativePush = async ({ installation, router }) => {
   const permission = await FirebaseMessaging.requestPermissions();
   if (permission.receive !== 'granted') return permission;
 
-  const { token } = await FirebaseMessaging.getToken();
-  await registerToken(installation, token);
-  return permission;
+  const registered = await registerCurrentToken(installation);
+  return { ...permission, registered };
 };
 
 export const initializeNativePush = async ({ installation, router }) => {
@@ -133,13 +152,18 @@ export const initializeNativePush = async ({ installation, router }) => {
   await registerListeners(installation);
   const permission = await getNativePushPermission();
   if (permission.receive === 'granted') {
-    const { token } = await FirebaseMessaging.getToken();
-    await registerToken(installation, token);
+    const registered = await registerCurrentToken(installation);
+    return { ...permission, registered };
   }
   return permission;
 };
 
 export const nativePushServiceTestUtils = {
   parseNotificationData,
+  registerCurrentToken,
+  reset: () => {
+    listenersRegistered = false;
+    routerInstance = undefined;
+  },
   showForegroundNotification,
 };

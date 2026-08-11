@@ -29,12 +29,14 @@ O plugin local `SecureStorage` persiste os headers de autenticação no Keychain
 
 O `Info.plist` declara câmera, microfone, localização durante o uso e biblioteca de fotos. O iOS mostra cada prompt somente quando a funcionalidade correspondente é acionada; o seletor de documentos não exige acesso amplo aos arquivos.
 
+A extensão `ShareExtension` aparece no menu de compartilhamento do Fotos e de outros aplicativos. Ela copia até dez imagens, vídeos ou arquivos para o App Group `group.net.vipertec.viperchat` e entrega o conteúdo ao mesmo seletor de conversa e uploader do aplicativo.
+
 ## Dependências externas pendentes
 
 - conta Apple gratuita para executar no iPhone e Apple Developer Program para TestFlight/App Store;
 - configuração local `GoogleService-Info.plist` do aplicativo iOS para obter token FCM e entregar push pelo relay central;
-- certificados APNs associados ao projeto Firebase;
-- App Group e Share Extension para receber texto, imagens e arquivos de outros aplicativos;
+- chave ou certificado APNs associado ao projeto Firebase;
+- App Group `group.net.vipertec.viperchat` registrado na conta Apple para assinar o app e a Share Extension em aparelhos físicos;
 - CallKit e PushKit para chamadas recebidas com o aplicativo suspenso ou encerrado.
 
 O `GoogleService-Info.plist`, certificados e chaves de assinatura não devem ser versionados.
