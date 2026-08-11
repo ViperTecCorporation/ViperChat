@@ -17,6 +17,8 @@
     "native:sync:android": "pnpm build:native && cap sync android",
     "native:build:android": "pnpm native:sync:android && cd android && ./gradlew assembleDebug",
     "native:open:android": "cap open android",
+    "native:sync:ios": "pnpm build:native && cap sync ios",
+    "native:open:ios": "cap open ios",
     "prepare": "husky install",
     "size": "size-limit",
     "story:dev": "histoire dev",
@@ -132,6 +134,7 @@
   "devDependencies": {
     "@capacitor/android": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
     "@egoist/tailwindcss-icons": "^1.9.2",
     "@histoire/plugin-vue": "0.17.15",
     "@iconify-json/logos": "^1.2.10",
