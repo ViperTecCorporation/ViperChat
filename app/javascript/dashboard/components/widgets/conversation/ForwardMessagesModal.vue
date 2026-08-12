@@ -15,6 +15,7 @@ import {
   buildContactableInboxesList,
 } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper.js';
 import ConversationApi from 'dashboard/api/conversations';
+import SearchAPI from 'dashboard/api/search';
 
 const props = defineProps({
   selectedMessages: {
@@ -160,9 +161,49 @@ const handleContactSearch = async value => {
   showContactsDropdown.value = true;
   contacts.value = [];
   try {
-    contacts.value = await searchContacts({
-      query,
-    });
+    const [contactResults, conversationResponse] = await Promise.all([
+      searchContacts({ query }),
+      SearchAPI.conversations({ q: query }),
+    ]);
+    const conversationResults =
+      conversationResponse?.data?.payload?.conversations || [];
+    const groupResults = conversationResults
+      .filter(
+        conversation =>
+          conversation.group &&
+          String(conversation.id) !== String(props.conversationId)
+      )
+      .map(conversation => {
+        const groupSourceId = conversation.groupSourceId || '';
+        const groupTitle =
+          conversation.groupTitle ||
+          conversation.contact?.name ||
+          groupSourceId;
+        const inbox = conversation.inbox || {};
+
+        return {
+          ...conversation.contact,
+          id: conversation.contact?.id,
+          name: groupTitle,
+          email: groupSourceId || conversation.contact?.email,
+          targetConversationId: conversation.id,
+          groupSourceId,
+          groupTitle,
+          contactInboxes: [
+            {
+              ...inbox,
+              phoneNumber: groupSourceId,
+              sourceId: groupSourceId,
+            },
+          ],
+        };
+      });
+    const groupContactIds = new Set(groupResults.map(group => group.id));
+
+    contacts.value = [
+      ...groupResults,
+      ...contactResults.filter(contact => !groupContactIds.has(contact.id)),
+    ];
   } catch (error) {
     useAlert(t('COMPOSE_NEW_CONVERSATION.CONTACT_SEARCH.ERROR_MESSAGE'));
   } finally {
@@ -191,6 +232,11 @@ const handleSelectedContact = async ({ value, action, ...rest }) => {
   };
 
   selectedContact.value = contact;
+
+  if (contact.targetConversationId) {
+    targetInbox.value = contactableInboxesList.value[0] || null;
+    return;
+  }
 
   if (contact?.id) {
     isFetchingInboxes.value = true;
@@ -250,11 +296,16 @@ const handleForward = async () => {
   try {
     const { data } = await ConversationApi.forwardMessages(
       props.conversationId,
-      {
-        message_ids: props.selectedMessages.map(message => message.id),
-        target_contact_id: selectedContact.value.id,
-        target_inbox_id: targetInbox.value.id,
-      }
+      selectedContact.value.targetConversationId
+        ? {
+            message_ids: props.selectedMessages.map(message => message.id),
+            target_conversation_id: selectedContact.value.targetConversationId,
+          }
+        : {
+            message_ids: props.selectedMessages.map(message => message.id),
+            target_contact_id: selectedContact.value.id,
+            target_inbox_id: targetInbox.value.id,
+          }
     );
     emit('forwarded', data);
     show.value = false;

@@ -1,6 +1,9 @@
 json.id conversation.display_id
 json.account_id conversation.account_id
 json.created_at conversation.created_at.to_i
+json.group conversation.group?
+json.group_title conversation.group_title
+json.group_source_id conversation.group_source_id
 json.message do
   json.partial! 'message', formats: [:json], message: conversation.messages.try(:first)
 end
