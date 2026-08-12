@@ -741,6 +741,7 @@ export default {
     emitter.on(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   unmounted() {
+    this.revokeAttachmentPreviews();
     clearTimeout(this.groupMentionFetchTimeout);
     document.removeEventListener('paste', this.onPaste);
     document.removeEventListener('keydown', this.handleKeyEvents);
@@ -965,7 +966,7 @@ export default {
       // Reset audio recorder UI state
       this.resetAudioRecorderInput();
       // Reset attached files
-      this.attachedFiles = [];
+      this.clearAttachedFiles();
       this.attachedContacts = [];
     },
     saveDraft(conversationId, replyType) {
@@ -1483,7 +1484,7 @@ export default {
     setReplyMode(mode = REPLY_EDITOR_MODES.REPLY) {
       // Clear attachments when switching between private note and reply modes
       // This is to prevent from breaking the upload rules
-      if (this.attachedFiles.length > 0) this.attachedFiles = [];
+      if (this.attachedFiles.length > 0) this.clearAttachedFiles();
       if (this.attachedContacts.length > 0) this.attachedContacts = [];
 
       const { can_reply: canReply } = this.currentChat;
@@ -1521,7 +1522,7 @@ export default {
           effectiveChannelType
         );
       }
-      this.attachedFiles = [];
+      this.clearAttachedFiles();
       this.attachedContacts = [];
       this.isRecordingAudio = false;
       this.resetReplyToMessage();
@@ -1603,20 +1604,34 @@ export default {
         useAlert(this.$t('CONVERSATION.REPLYBOX.TIP_ATTACH_SINGLE'));
         return;
       }
-      const reader = new FileReader();
-      reader.readAsDataURL(file.file);
-      reader.onloadend = () => {
-        this.attachedFiles.push({
-          currentChatId: this.currentChat.id,
-          resource: blob || file,
-          isPrivate: this.isPrivate,
-          thumb: reader.result,
-          blobSignedId: blob ? blob.signed_id : undefined,
-          isRecordedAudio: file?.isRecordedAudio || false,
-        });
-      };
+      const previewObjectUrl = URL.createObjectURL(file.file);
+      this.attachedFiles.push({
+        currentChatId: this.currentChat.id,
+        resource: blob || file,
+        isPrivate: this.isPrivate,
+        thumb: previewObjectUrl,
+        previewObjectUrl,
+        blobSignedId: blob ? blob.signed_id : undefined,
+        isRecordedAudio: file?.isRecordedAudio || false,
+      });
+    },
+    revokeAttachmentPreview(attachment) {
+      if (attachment?.previewObjectUrl) {
+        URL.revokeObjectURL(attachment.previewObjectUrl);
+      }
+    },
+    revokeAttachmentPreviews(attachments = this.attachedFiles) {
+      attachments.forEach(this.revokeAttachmentPreview);
+    },
+    clearAttachedFiles() {
+      this.revokeAttachmentPreviews();
+      this.attachedFiles = [];
     },
     removeAttachment(attachments) {
+      const retainedAttachments = new Set(attachments);
+      this.attachedFiles
+        .filter(attachment => !retainedAttachments.has(attachment))
+        .forEach(this.revokeAttachmentPreview);
       this.attachedFiles = attachments;
     },
     serializeAttachedContact(contact) {
@@ -1847,6 +1862,10 @@ export default {
       this.recordingAudioState = '';
       this.hasRecordedAudio = false;
       // Only clear the recorded audio when we click toggle button.
+      const recordedAudioFiles = this.attachedFiles.filter(
+        file => file?.isRecordedAudio
+      );
+      recordedAudioFiles.forEach(this.revokeAttachmentPreview);
       this.attachedFiles = this.attachedFiles.filter(
         file => !file?.isRecordedAudio
       );
