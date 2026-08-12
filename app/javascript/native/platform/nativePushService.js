@@ -1,14 +1,16 @@
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
+import { App } from '@capacitor/app';
 import { Device } from '@capacitor/device';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import NotificationSubscriptionsAPI from 'dashboard/api/notificationSubscription';
 
 const MESSAGE_CHANNEL_ID = 'viperchat_messages';
-const MAX_NOTIFICATION_ID = 2147483647;
+const MAX_ANDROID_NOTIFICATION_SLOTS = 20;
+const HASH_MODULUS = 2147483647;
 
 let listenersRegistered = false;
+let appStateListener;
 let routerInstance;
-let foregroundNotificationId = Date.now() % MAX_NOTIFICATION_ID;
 
 const parseNotificationData = notification => {
   const rawPayload = notification?.data?.payload;
@@ -39,10 +41,22 @@ const openNotification = notification => {
   });
 };
 
-const nextForegroundNotificationId = () => {
-  foregroundNotificationId =
-    (foregroundNotificationId + 1) % MAX_NOTIFICATION_ID;
-  return foregroundNotificationId;
+const foregroundNotificationId = notification => {
+  const data = parseNotificationData(notification);
+  const key = `${data?.account_id || ''}:${data?.primary_actor?.id || data?.conversation_id || data?.primary_actor_id || ''}`;
+  let hash = 0;
+
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) % HASH_MODULUS;
+  }
+  return (hash % MAX_ANDROID_NOTIFICATION_SLOTS) + 1;
+};
+
+const clearAndroidNotifications = async () => {
+  const { platform } = await Device.getInfo();
+  if (platform === 'android') {
+    await LocalNotifications.removeAllDeliveredNotifications();
+  }
 };
 
 const createMessageChannel = async () => {
@@ -63,7 +77,7 @@ const showForegroundNotification = notification =>
   LocalNotifications.schedule({
     notifications: [
       {
-        id: nextForegroundNotificationId(),
+        id: foregroundNotificationId(notification),
         title: notification.title || 'ViperChat',
         body: notification.body || '',
         largeBody: notification.body || '',
@@ -131,6 +145,15 @@ const registerListeners = async installation => {
     'localNotificationActionPerformed',
     event => openNotification({ data: event.notification.extra })
   );
+  appStateListener ||= await App.addListener('appStateChange', state => {
+    clearAndroidNotifications().catch(error => {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[ViperChat] Failed to clear delivered notifications after app became ${state.isActive ? 'active' : 'inactive'}`,
+        error
+      );
+    });
+  });
 };
 
 export const getNativePushPermission = () =>
@@ -150,6 +173,7 @@ export const initializeNativePush = async ({ installation, router }) => {
   if (!installation.features?.nativePush) return { receive: 'denied' };
   routerInstance = router;
   await registerListeners(installation);
+  await clearAndroidNotifications();
   const permission = await getNativePushPermission();
   if (permission.receive === 'granted') {
     const registered = await registerCurrentToken(installation);
@@ -163,6 +187,7 @@ export const nativePushServiceTestUtils = {
   registerCurrentToken,
   reset: () => {
     listenersRegistered = false;
+    appStateListener = undefined;
     routerInstance = undefined;
   },
   showForegroundNotification,

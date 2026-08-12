@@ -1,30 +1,46 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { firebaseMessaging, localListeners, localNotifications, pushListeners } =
-  vi.hoisted(() => {
-    const pushListenerCallbacks = {};
-    const localListenerCallbacks = {};
+const {
+  appListeners,
+  firebaseMessaging,
+  localListeners,
+  localNotifications,
+  pushListeners,
+} = vi.hoisted(() => {
+  const appListenerCallbacks = {};
+  const pushListenerCallbacks = {};
+  const localListenerCallbacks = {};
 
-    return {
-      pushListeners: pushListenerCallbacks,
-      localListeners: localListenerCallbacks,
-      localNotifications: {
-        addListener: vi.fn(async (event, callback) => {
-          localListenerCallbacks[event] = callback;
-        }),
-        createChannel: vi.fn(async () => {}),
-        schedule: vi.fn(async () => ({ notifications: [] })),
-      },
-      firebaseMessaging: {
-        addListener: vi.fn(async (event, callback) => {
-          pushListenerCallbacks[event] = callback;
-        }),
-        checkPermissions: vi.fn(async () => ({ receive: 'granted' })),
-        getToken: vi.fn(async () => ({ token: 'fcm-token' })),
-        requestPermissions: vi.fn(async () => ({ receive: 'granted' })),
-      },
-    };
-  });
+  return {
+    appListeners: appListenerCallbacks,
+    pushListeners: pushListenerCallbacks,
+    localListeners: localListenerCallbacks,
+    localNotifications: {
+      addListener: vi.fn(async (event, callback) => {
+        localListenerCallbacks[event] = callback;
+      }),
+      createChannel: vi.fn(async () => {}),
+      removeAllDeliveredNotifications: vi.fn(async () => {}),
+      schedule: vi.fn(async () => ({ notifications: [] })),
+    },
+    firebaseMessaging: {
+      addListener: vi.fn(async (event, callback) => {
+        pushListenerCallbacks[event] = callback;
+      }),
+      checkPermissions: vi.fn(async () => ({ receive: 'granted' })),
+      getToken: vi.fn(async () => ({ token: 'fcm-token' })),
+      requestPermissions: vi.fn(async () => ({ receive: 'granted' })),
+    },
+  };
+});
+
+vi.mock('@capacitor/app', () => ({
+  App: {
+    addListener: vi.fn(async (event, callback) => {
+      appListeners[event] = callback;
+    }),
+  },
+}));
 
 vi.mock('@capacitor/device', () => ({
   Device: {
@@ -103,6 +119,9 @@ describe('nativePushService', () => {
     expect(localNotifications.createChannel).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'viperchat_messages', importance: 4 })
     );
+    expect(
+      localNotifications.removeAllDeliveredNotifications
+    ).toHaveBeenCalledOnce();
     expect(localNotifications.schedule).toHaveBeenCalledWith({
       notifications: [
         expect.objectContaining({
@@ -124,5 +143,41 @@ describe('nativePushService', () => {
       name: 'inbox_conversation',
       params: { accountId: 1, conversation_id: 42 },
     });
+  });
+
+  it('clears delivered Android notifications whenever the app becomes active', async () => {
+    await initializeNativePush({
+      installation: {
+        installationId: 'installation-123',
+        features: { nativePush: true },
+      },
+      router,
+    });
+
+    await appListeners.appStateChange({ isActive: true });
+
+    expect(
+      localNotifications.removeAllDeliveredNotifications
+    ).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses at most 20 foreground notification slots', async () => {
+    await Promise.all(
+      Array.from({ length: 100 }, (_, index) =>
+        nativePushServiceTestUtils.showForegroundNotification({
+          title: 'Nova mensagem',
+          body: `Mensagem ${index}`,
+          data: {
+            account_id: 1,
+            conversation_id: index + 1,
+          },
+        })
+      )
+    );
+
+    const ids = localNotifications.schedule.mock.calls.map(
+      ([request]) => request.notifications[0].id
+    );
+    expect(new Set(ids).size).toBeLessThanOrEqual(20);
   });
 });
