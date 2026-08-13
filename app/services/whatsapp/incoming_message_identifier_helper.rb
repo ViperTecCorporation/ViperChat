@@ -64,7 +64,10 @@ module Whatsapp::IncomingMessageIdentifierHelper
   end
 
   def whatsapp_source_id(identifier)
-    identifier.to_s.presence
+    source_id = identifier.to_s.presence
+    return source_id unless inbox.channel.provider == 'unoapi'
+
+    Whatsapp::Unoapi::LidIdentity.canonicalize(source_id) || source_id
   end
 
   def contact_attributes_from_contact_params(contact_params, source_identifier)

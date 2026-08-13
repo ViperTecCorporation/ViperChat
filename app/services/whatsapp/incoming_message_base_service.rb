@@ -654,7 +654,7 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def contact_bsuid(contact_params)
-    contact_params[:user_id].presence || messages_data&.first&.[](:from_user_id).presence
+    whatsapp_source_id(contact_params[:user_id].presence || messages_data&.first&.[](:from_user_id).presence)
   end
 
   def contact_username(contact_params)

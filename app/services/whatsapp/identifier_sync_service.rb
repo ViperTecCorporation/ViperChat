@@ -2,11 +2,57 @@ class Whatsapp::IdentifierSyncService
   pattr_initialize [:contact_inbox!, :contact]
 
   def perform(source_ids: [], username: nil, phone_number: nil)
+    source_ids = normalize_source_ids(source_ids)
+    replace_stale_unoapi_lids(source_ids)
     create_contact_inboxes(source_ids)
     update_contact(username, phone_number)
   end
 
   private
+
+  def normalize_source_ids(source_ids)
+    return source_ids unless unoapi_inbox?
+
+    source_ids.map { |source_id| Whatsapp::Unoapi::LidIdentity.canonicalize(source_id) || source_id }
+  end
+
+  def replace_stale_unoapi_lids(source_ids)
+    return unless unoapi_inbox?
+
+    canonical_lid = canonical_lid_from(source_ids)
+    return if canonical_lid.blank?
+
+    canonical_link = inbox.contact_inboxes.find_by(source_id: canonical_lid)
+    stale_lid_links(canonical_lid).find_each do |stale_link|
+      canonical_link = replace_stale_lid_link(stale_link, canonical_link, canonical_lid)
+    end
+  end
+
+  def replace_stale_lid_link(stale_link, canonical_link, canonical_lid)
+    if canonical_link.present?
+      stale_link.conversations.update_all(contact_inbox_id: canonical_link.id) # rubocop:disable Rails/SkipsModelValidations
+      stale_link.destroy!
+      canonical_link
+    else
+      stale_link.update!(source_id: canonical_lid)
+      stale_link
+    end
+  rescue ActiveRecord::RecordNotUnique
+    canonical_link = inbox.contact_inboxes.find_by(source_id: canonical_lid)
+    retry
+  end
+
+  def stale_lid_links(canonical_lid)
+    inbox.contact_inboxes.where(contact: synced_contact).where("source_id ILIKE '%@lid'").where.not(source_id: canonical_lid)
+  end
+
+  def canonical_lid_from(source_ids)
+    source_ids.filter_map { |source_id| Whatsapp::Unoapi::LidIdentity.canonicalize(source_id) }.first
+  end
+
+  def unoapi_inbox?
+    inbox.channel_type == 'Channel::Whatsapp' && inbox.channel.provider == 'unoapi'
+  end
 
   def create_contact_inboxes(source_ids)
     source_ids.compact_blank.uniq.each do |source_id|

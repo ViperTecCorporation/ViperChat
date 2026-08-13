@@ -24,7 +24,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
     process_response(response, message)
   end
 
-  def send_reaction(phone_number, message_id, emoji)
+  def send_reaction(phone_number, message_id, emoji, _message = nil)
     response = HTTParty.post(
       "#{api_base_path}/messages",
       headers: api_headers,
