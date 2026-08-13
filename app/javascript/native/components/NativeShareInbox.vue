@@ -41,21 +41,29 @@ const conversations = computed(() =>
 const conversationContact = conversation =>
   conversation.contact || conversation.meta?.sender || {};
 const conversationName = conversation =>
+  conversation.groupTitle ||
   conversation.group_title ||
   conversationContact(conversation).name ||
+  conversationContact(conversation).phoneNumber ||
   conversationContact(conversation).phone_number ||
   'Conversa';
 const conversationThumbnail = conversation =>
+  conversation.groupPicture ||
   conversation.group_picture ||
+  conversation.additionalAttributes?.groupPicture ||
   conversation.additional_attributes?.group_picture ||
   conversationContact(conversation).thumbnail ||
   '';
+const conversationAvatarKey = conversation =>
+  `${conversation.id}:${conversationContact(conversation).id || ''}:${conversationThumbnail(conversation)}`;
 const conversationInbox = conversation =>
   conversation.inbox?.name ||
+  store.getters['inboxes/getInbox'](conversation.inboxId)?.name ||
   store.getters['inboxes/getInbox'](conversation.inbox_id)?.name ||
   '';
 const conversationMeta = conversation => {
-  const id = conversation.display_id || conversation.id;
+  const id =
+    conversation.displayId || conversation.display_id || conversation.id;
   const inbox = conversationInbox(conversation);
   return inbox ? `#${id} · ${inbox}` : `#${id}`;
 };
@@ -71,10 +79,13 @@ const summary = computed(() => {
 onMounted(initializeNativeShare);
 
 let searchTimer;
+let searchRequestId = 0;
 const searchConversations = value => {
   searchQuery.value = value;
   searchError.value = '';
   window.clearTimeout(searchTimer);
+  searchRequestId += 1;
+  const requestId = searchRequestId;
 
   const query = value.trim();
   if (!query) {
@@ -83,21 +94,29 @@ const searchConversations = value => {
     return;
   }
 
+  searchResults.value = [];
   isSearching.value = true;
   searchTimer = window.setTimeout(async () => {
     try {
       const { data } = await SearchAPI.conversations({ q: query });
+      if (requestId !== searchRequestId) return;
+
       searchResults.value = data.payload?.conversations || [];
     } catch {
+      if (requestId !== searchRequestId) return;
+
       searchResults.value = [];
       searchError.value = copy.searchError;
     } finally {
-      isSearching.value = false;
+      if (requestId === searchRequestId) isSearching.value = false;
     }
   }, 300);
 };
 
-onBeforeUnmount(() => window.clearTimeout(searchTimer));
+onBeforeUnmount(() => {
+  searchRequestId += 1;
+  window.clearTimeout(searchTimer);
+});
 
 const chooseConversation = conversation => {
   router.push({
@@ -178,6 +197,7 @@ const attachToComposer = async () => {
           @click="chooseConversation(conversation)"
         >
           <Avatar
+            :key="conversationAvatarKey(conversation)"
             :name="conversationName(conversation)"
             :src="conversationThumbnail(conversation)"
             :size="32"
