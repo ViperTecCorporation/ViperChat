@@ -116,6 +116,39 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
     expect(maria_group_contact.contact.whatsapp_username).to eq('@maria.vendas')
   end
 
+  it 'prefers picture ids for the group and its participants' do
+    stub_request(:get, participants_url).to_return(
+      status: 200,
+      body: {
+        participants: [
+          {
+            wa_id: '556699999999',
+            user_id: '123456789012345@lid',
+            name: 'Maria',
+            picture: 'https://cdn.example.com/profile/maria.jpg',
+            picture_id: 'participant-picture-id'
+          }
+        ]
+      }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+    stub_request(:get, details_url).to_return(
+      status: 200,
+      body: {
+        subject: 'Equipe Comercial',
+        picture: 'https://cdn.example.com/groups/group.jpg',
+        picture_id: 'group-picture-id'
+      }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+
+    expect { service.perform }.to have_enqueued_job(Avatar::AvatarFromUnoapiJob).twice
+
+    expect(conversation.reload.additional_attributes).to include('group_picture_id' => 'group-picture-id')
+    participant = conversation.group_contacts.joins(:contact).find_by!(contacts: { name: 'Maria' })
+    expect(participant.metadata).to include('picture_id' => 'participant-picture-id')
+  end
+
   it 'stores false when the connected session is not an admin in the group' do
     stub_request(:get, participants_url).to_return(
       status: 200,

@@ -112,6 +112,7 @@ class Whatsapp::IncomingMessageBaseService
     contact_attributes = {
       name: contact_display_name(contact_params),
       avatar_url: contact_params.dig(:profile, :picture).presence,
+      avatar_picture_id: contact_picture_id(contact_params),
       avatar_metadata: avatar_metadata_from(contact_params, contact_params[:profile]),
       bsuid: contact_bsuid(contact_params),
       whatsapp_username: contact_username(contact_params)
@@ -382,6 +383,7 @@ class Whatsapp::IncomingMessageBaseService
     contact_attributes = {
       name: contact_display_name(contact_params),
       avatar_url: contact_params.dig(:profile, :picture).presence,
+      avatar_picture_id: contact_picture_id(contact_params),
       avatar_metadata: avatar_metadata_from(contact_params, contact_params[:profile]),
       bsuid: contact_bsuid(contact_params),
       whatsapp_username: contact_username(contact_params)
@@ -405,6 +407,12 @@ class Whatsapp::IncomingMessageBaseService
 
     # Update existing contact name for LID-suffix placeholders or low-quality names
     update_contact_with_profile_name(contact_params)
+  end
+
+  def contact_picture_id(contact_params)
+    contact_params.dig(:profile, :picture_id).presence ||
+      contact_params[:picture_id].presence ||
+      contact_params[:profile_picture_id].presence
   end
 
   def set_conversation

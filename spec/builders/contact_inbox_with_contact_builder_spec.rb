@@ -242,6 +242,46 @@ describe ContactInboxWithContactBuilder do
       )
     end
 
+    it 'prefers the authenticated UnoAPI picture id and keeps the url as fallback' do
+      unoapi_channel = create(
+        :channel_whatsapp,
+        account: account,
+        provider: 'unoapi',
+        provider_config: {
+          'url' => 'https://uno.example.com',
+          'api_key' => 'secret',
+          'phone_number_id' => '5566996222471'
+        },
+        sync_templates: false,
+        validate_provider_config: false
+      )
+      unoapi_inbox = unoapi_channel.inbox
+      unoapi_contact_inbox = create(:contact_inbox, contact: contact, inbox: unoapi_inbox)
+      picture_url = 'https://cdn.example.com/profile/maria.jpg'
+
+      expect do
+        described_class.new(
+          source_id: unoapi_contact_inbox.source_id,
+          inbox: unoapi_inbox,
+          contact_attributes: {
+            name: 'Maria',
+            avatar_url: picture_url,
+            avatar_picture_id: 'picture-123',
+            avatar_metadata: { etag: 'v1' }
+          }
+        ).perform
+      end.to have_enqueued_job(Avatar::AvatarFromUnoapiJob).with(
+        contact,
+        unoapi_channel,
+        'picture-123',
+        hash_including(
+          'avatar_metadata' => { 'etag' => 'v1' },
+          'fallback_url' => picture_url,
+          'signature' => kind_of(String)
+        )
+      )
+    end
+
     it 'clears invalid legacy email before enriching an existing contact' do
       contact.update_columns(email: '123456789012345') # rubocop:disable Rails/SkipsModelValidations
 

@@ -957,6 +957,21 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(message.content).to eq('Bom dia pessoal')
       end
 
+      it 'prefers authenticated picture ids for the structured group and sender' do
+        picture_id_params = params.deep_dup
+        contact = picture_id_params[:entry][0][:changes][0][:value][:contacts][0]
+        contact[:profile][:picture_id] = 'sender-picture-id'
+        contact[:group_picture_id] = 'group-picture-id'
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: picture_id_params).perform
+        end.to have_enqueued_job(Avatar::AvatarFromUnoapiJob).twice
+
+        conversation = whatsapp_channel.inbox.conversations.find_by!(group_source_id: '120363040468224422@g.us')
+        expect(conversation.additional_attributes).to include('group_picture_id' => 'group-picture-id')
+        expect(conversation.group_contacts.first.metadata).to include('picture_id' => 'sender-picture-id')
+      end
+
       it 'preserves the existing group picture when a structured webhook sends an empty picture' do
         group_contact = create(:contact, account: whatsapp_channel.account, name: 'Equipe Comercial')
         group_contact_inbox = create(

@@ -407,7 +407,26 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter # rubocop:disable Metrics/C
   end
 
   def enqueue_avatar(contact)
-    picture = @payload[:picture].to_s.strip
-    Avatar::AvatarFromUrlJob.enqueue_if_needed(contact, picture) if picture.present?
+    picture = contact_picture_url
+    picture_id = contact_picture_id
+    metadata = contact_picture_metadata
+
+    if picture_id.present?
+      Avatar::AvatarFromUnoapiJob.enqueue_if_needed(contact, @channel, picture_id, metadata, picture.presence)
+    elsif picture.present?
+      Avatar::AvatarFromUrlJob.enqueue_if_needed(contact, picture, metadata)
+    end
+  end
+
+  def contact_picture_url
+    (@payload[:picture].presence || @payload.dig(:profile, :picture).presence).to_s.strip
+  end
+
+  def contact_picture_id
+    @payload[:picture_id].presence || @payload[:profile_picture_id].presence || @payload.dig(:profile, :picture_id).presence
+  end
+
+  def contact_picture_metadata
+    @payload[:picture_metadata].presence || @payload[:profile_picture_metadata].presence || @payload.dig(:profile, :picture_metadata)
   end
 end

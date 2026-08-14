@@ -42,6 +42,27 @@ describe Whatsapp::Unoapi::ContactSync::ContactImporter do
       .to contain_exactly('273877414502425@lid', '5566998765432')
   end
 
+  it 'prefers picture_id during directory sync and preserves picture as fallback' do
+    allow(Avatar::AvatarFromUnoapiJob).to receive(:enqueue_if_needed)
+    picture_payload = payload.merge(
+      picture: 'https://cdn.example.com/profile/maria.jpg',
+      picture_id: 'profile-picture-123',
+      picture_metadata: { etag: 'v1' }
+    )
+
+    described_class.new(channel: channel, payload: picture_payload).perform
+
+    contact = account.contacts.find_by!(bsuid: payload[:user_id])
+    expect(Avatar::AvatarFromUnoapiJob).to have_received(:enqueue_if_needed).with(
+      contact,
+      channel,
+      'profile-picture-123',
+      { etag: 'v1' },
+      'https://cdn.example.com/profile/maria.jpg'
+    )
+    expect(Avatar::AvatarFromUrlJob).not_to have_received(:enqueue_if_needed)
+  end
+
   it 'collapses an existing mobile alias without the ninth digit even with the same update timestamp' do # rubocop:disable RSpec/ExampleLength
     channel.inbox.update!(lock_to_single_conversation: true)
     mobile_lid = '117398703231205@lid'
