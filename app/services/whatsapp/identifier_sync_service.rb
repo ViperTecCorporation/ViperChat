@@ -47,7 +47,10 @@ class Whatsapp::IdentifierSyncService
   end
 
   def canonical_lid_from(source_ids)
-    source_ids.filter_map { |source_id| Whatsapp::Unoapi::LidIdentity.canonicalize(source_id) }.first
+    source_ids.filter_map { |source_id| Whatsapp::Unoapi::LidIdentity.canonicalize(source_id) }.find do |source_id|
+      link = inbox.contact_inboxes.find_by(source_id: source_id)
+      link.blank? || link.contact_id == synced_contact.id
+    end
   end
 
   def unoapi_inbox?

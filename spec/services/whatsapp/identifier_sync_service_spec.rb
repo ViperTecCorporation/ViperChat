@@ -33,4 +33,33 @@ describe Whatsapp::IdentifierSyncService do
     expect(other_channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id)).to eq(['111111111111@lid'])
     expect(channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id)).to include('222222222222@lid')
   end
+
+  it 'does not move a conversation to a LID belonging to another contact' do
+    old_link = create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '111111111111@lid')
+    conversation = create(:conversation, account: channel.account, inbox: channel.inbox, contact: contact, contact_inbox: old_link)
+    other_contact = create(:contact, account: channel.account)
+    other_link = create(:contact_inbox, inbox: channel.inbox, contact: other_contact, source_id: '222222222222@lid')
+
+    described_class.new(contact_inbox: phone_link, contact: contact).perform(source_ids: ['222222222222@lid'])
+
+    expect(conversation.reload.contact_inbox).to eq(old_link)
+    expect(old_link.reload.contact).to eq(contact)
+    expect(other_link.reload.contact).to eq(other_contact)
+  end
+
+  it 'uses a valid contact LID after a conflicting session LID' do
+    old_link = create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '111111111111@lid')
+    conversation = create(:conversation, account: channel.account, inbox: channel.inbox, contact: contact, contact_inbox: old_link)
+    other_contact = create(:contact, account: channel.account)
+    other_link = create(:contact_inbox, inbox: channel.inbox, contact: other_contact, source_id: '222222222222@lid')
+    contact_link = create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '333333333333@lid')
+
+    described_class.new(contact_inbox: phone_link, contact: contact).perform(
+      source_ids: ['222222222222@lid', '333333333333@lid']
+    )
+
+    expect(conversation.reload.contact_inbox).to eq(contact_link)
+    expect(ContactInbox.exists?(old_link.id)).to be(false)
+    expect(other_link.reload.contact).to eq(other_contact)
+  end
 end
