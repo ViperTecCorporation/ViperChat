@@ -18,7 +18,7 @@
       <% feature_key, display_name = key_array %>
       <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm outline outline-1 outline-n-container">
         <span class="text-sm text-slate-700"><%= display_name %></span>
-        <span><%= check_box "enabled_features", "feature_#{feature_key}", { checked: SuperAdmin::AccountFeaturesHelper.boolean_enabled?(val), class: "h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-600" }, true, false %></span>
+        <span><%= check_box "enabled_features", "feature_#{feature_key}", { checked: SuperAdmin::AccountFeaturesHelper.boolean_enabled?(val), class: "h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-600" }, 'true', 'false' %></span>
       </div>
     <% end %>
   </div>
@@ -36,7 +36,7 @@
           <span class="text-sm text-slate-700"><%= display_name %></span>
         </div>
         <% should_disable = ChatwootHub.pricing_plan == 'community' %>
-        <span><%= check_box "enabled_features", "feature_#{feature_key}", { checked: SuperAdmin::AccountFeaturesHelper.boolean_enabled?(val), disabled: should_disable, class: "h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-600" }, true, false %></span>
+        <span><%= check_box "enabled_features", "feature_#{feature_key}", { checked: SuperAdmin::AccountFeaturesHelper.boolean_enabled?(val), disabled: should_disable, class: "h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-600" }, 'true', 'false' %></span>
       </div>
     <% end %>
   </div>
