@@ -38,3 +38,22 @@ Para uma APK realmente receber push, adicione o `google-services.json` do projet
 4. Informe uma instalação que já publique o endpoint de discovery.
 
 Uma conta Google Play não é necessária para esse fluxo. A atualização de um APK debug exige que o novo arquivo use a mesma chave debug; builds de release/Play Store usarão outra chave e devem ser tratados como canal separado.
+
+## Bundle assinado para a Play Store
+
+O build de release lê a chave de upload pelas variáveis abaixo ou por um arquivo `.env` privado em `%USERPROFILE%\.android\keystores\.env`:
+
+```dotenv
+VIPERCHAT_UPLOAD_KEYSTORE=C:\caminho\privado\viperchat-upload.jks
+VIPERCHAT_UPLOAD_KEY_ALIAS=viperchat-upload
+VIPERCHAT_UPLOAD_STORE_PASSWORD=senha-da-chave
+VIPERCHAT_UPLOAD_KEY_PASSWORD=senha-do-alias
+```
+
+No WSL ou em outro ambiente, informe o arquivo explicitamente sem copiá-lo para o repositório:
+
+```bash
+VIPERCHAT_UPLOAD_ENV_FILE=/caminho/privado/.env pnpm native:bundle:android
+```
+
+O bundle assinado é gerado em `android/app/build/outputs/bundle/release/app-release.aab`. O build falha se uma tarefa de release for executada sem todas as credenciais ou se o keystore não existir.

@@ -1,5 +1,46 @@
 apply plugin: 'com.android.application'
 
+def releaseSigningValues = [:]
+def releaseSigningEnvironmentFile = [
+    System.getenv('VIPERCHAT_UPLOAD_ENV_FILE'),
+    System.getenv('USERPROFILE') ? "${System.getenv('USERPROFILE')}\\.android\\keystores\\.env" : null,
+    "${System.getProperty('user.home')}/.android/keystores/.env"
+].find { candidate -> candidate && new File(candidate).isFile() }
+
+if (releaseSigningEnvironmentFile) {
+    new File(releaseSigningEnvironmentFile).eachLine { line ->
+        def normalizedLine = line.trim()
+        if (normalizedLine && !normalizedLine.startsWith('#') && normalizedLine.contains('=')) {
+            def separator = normalizedLine.indexOf('=')
+            releaseSigningValues[normalizedLine.substring(0, separator)] = normalizedLine.substring(separator + 1)
+        }
+    }
+}
+
+def releaseSigningValue = { name ->
+    System.getenv(name) ?: releaseSigningValues[name]
+}
+def releaseSigningKeys = [
+    'VIPERCHAT_UPLOAD_KEYSTORE',
+    'VIPERCHAT_UPLOAD_KEY_ALIAS',
+    'VIPERCHAT_UPLOAD_STORE_PASSWORD',
+    'VIPERCHAT_UPLOAD_KEY_PASSWORD'
+]
+def missingReleaseSigningKeys = releaseSigningKeys.findAll { !releaseSigningValue(it) }
+def releaseSigningConfigured = missingReleaseSigningKeys.isEmpty()
+def releaseSigningStoreFile = null
+
+if (releaseSigningConfigured) {
+    def releaseSigningStorePath = releaseSigningValue('VIPERCHAT_UPLOAD_KEYSTORE')
+    if (File.separator == '/' && releaseSigningStorePath ==~ /^[A-Za-z]:[\\\/].*/) {
+        def drive = releaseSigningStorePath.substring(0, 1).toLowerCase()
+        def relativePath = releaseSigningStorePath.substring(2).replace('\\', '/')
+        releaseSigningStorePath = "/mnt/${drive}${relativePath}"
+    }
+    releaseSigningStoreFile = new File(releaseSigningStorePath)
+    releaseSigningConfigured = releaseSigningStoreFile.isFile()
+}
+
 android {
     namespace = "net.vipertec.viperchat"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,11 +57,36 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            release {
+                storeFile releaseSigningStoreFile
+                storePassword releaseSigningValue('VIPERCHAT_UPLOAD_STORE_PASSWORD')
+                keyAlias releaseSigningValue('VIPERCHAT_UPLOAD_KEY_ALIAS')
+                keyPassword releaseSigningValue('VIPERCHAT_UPLOAD_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+}
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def releaseRequested = taskGraph.allTasks.any { task ->
+        task.project == project && task.name.toLowerCase().contains('release')
+    }
+    if (releaseRequested && !releaseSigningConfigured) {
+        throw new GradleException(
+            "Release signing is not configured. Set ${releaseSigningKeys.join(', ')} " +
+                'or point VIPERCHAT_UPLOAD_ENV_FILE to the private signing .env file.'
+        )
     }
 }
 

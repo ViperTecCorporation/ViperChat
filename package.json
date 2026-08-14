@@ -16,6 +16,7 @@
     "build:native": "vite build --config vite.mobile.config.ts",
     "native:sync:android": "pnpm build:native && cap sync android",
     "native:build:android": "pnpm native:sync:android && cd android && ./gradlew assembleDebug",
+    "native:bundle:android": "pnpm native:sync:android && cd android && ./gradlew bundleRelease",
     "native:open:android": "cap open android",
     "native:sync:ios": "pnpm build:native && cap sync ios",
     "native:open:ios": "cap open ios",

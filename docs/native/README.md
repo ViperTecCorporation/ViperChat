@@ -16,6 +16,7 @@ A fundação iOS já contém o projeto Xcode, identidade visual, permissões dec
 pnpm build:native
 pnpm native:sync:android
 pnpm native:build:android
+pnpm native:bundle:android
 pnpm native:sync:ios
 pnpm native:open:ios
 ```
