@@ -1,3 +1,5 @@
+require 'cgi'
+
 class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsappCloudService
   def perform
     log_catalog_event('unoapi_catalog_received', raw_catalog_diagnostics) if catalog_message?
@@ -149,9 +151,36 @@ class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsapp
   end
 
   def download_attachment_file(attachment_payload)
-    downloaded_file = super
+    downloaded_file = download_attachment_from_unoapi(attachment_payload) || super
     return if downloaded_file.blank?
 
     Whatsapp::Unoapi::AudioTranscoder.new(downloaded_file).perform
+  end
+
+  def download_attachment_from_unoapi(attachment_payload)
+    url = unoapi_media_download_url(attachment_payload)
+    return if url.blank?
+
+    downloaded_file = Down.download(url, headers: inbox.channel.api_headers)
+    filename = attachment_payload[:filename]
+    downloaded_file.define_singleton_method(:original_filename) { filename } if filename.present?
+    downloaded_file
+  rescue Down::Error => e
+    Rails.logger.warn(
+      "UnoAPI media proxy download failed for #{attachment_payload[:id]} (#{e.class}); falling back to media URL"
+    )
+    nil
+  end
+
+  def unoapi_media_download_url(attachment_payload)
+    session_id, media_id = attachment_payload[:id].to_s.split('/', 2)
+    extension = File.extname(File.basename(attachment_payload[:filename].to_s))
+    return if inbox.channel.unoapi_api_url.blank? || session_id.blank? || media_id.blank?
+    return unless session_id.match?(/\A[0-9A-Za-z_-]+\z/) && media_id.match?(/\A[0-9A-Za-z_-]+\z/)
+    return unless extension.match?(/\A\.[0-9A-Za-z]{1,10}\z/)
+
+    encoded_session = CGI.escape(session_id)
+    encoded_filename = CGI.escape("#{media_id}#{extension.downcase}")
+    "#{inbox.channel.unoapi_api_url}/v15.0/download/#{encoded_session}/#{encoded_filename}"
   end
 end
