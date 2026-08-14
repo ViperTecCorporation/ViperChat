@@ -1,4 +1,5 @@
 import { clearSession, updateSessionHeaders } from './authenticationService';
+import { openNativeSuperAdmin } from './nativeBrowserService';
 
 const AUTH_HEADER_NAMES = new Set([
   'access-token',
@@ -84,6 +85,13 @@ export const configureNativeEnvironment = ({ installation, session }) => {
       return updateSessionHeaders(installation.installationId, headerObject);
     },
     clear: () => clearSession(installation.installationId),
+  };
+  window.viperNativeNavigation = {
+    openSuperAdmin: () =>
+      openNativeSuperAdmin({
+        installation,
+        headers: window.viperNativeSession,
+      }),
   };
 
   if (accountId && !window.location.hash.includes('/app/accounts/')) {

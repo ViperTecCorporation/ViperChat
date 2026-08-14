@@ -492,6 +492,7 @@ Rails.application.routes.draw do
             post :backup_codes
           end
           resources :sessions, only: [:index, :destroy]
+          resource :super_admin_session, only: [:create]
         end
       end
 
@@ -726,6 +727,7 @@ Rails.application.routes.draw do
   require 'sidekiq/web'
   require 'sidekiq/cron/web'
 
+  get 'super_admin/native_session', to: 'super_admin/native_sessions#show', as: :super_admin_native_session
   devise_for :super_admins, path: 'super_admin', controllers: { sessions: 'super_admin/devise/sessions' }
   devise_scope :super_admin do
     get 'super_admin/logout', to: 'super_admin/devise/sessions#destroy'
