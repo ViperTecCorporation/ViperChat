@@ -122,10 +122,7 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
   private
 
   def outgoing_message_payload(request_body, message)
-    lid = Whatsapp::Unoapi::LidIdentity.for_message(message, inbox: whatsapp_channel.inbox)
-    return request_body if lid.blank?
-
-    request_body.merge(user_id: lid)
+    Whatsapp::Unoapi::OutgoingIdentityPayload.new(request_body: request_body, message: message, inbox: whatsapp_channel.inbox).perform
   end
 
   def should_prefix_sender_name?(message)

@@ -254,6 +254,106 @@ describe Whatsapp::Providers::UnoapiService do
       expect(service.send_message('120363040468224422@g.us', message)).to eq('group-message-id')
       expect(stub).to have_been_requested.once
     end
+
+    describe 'outgoing identity composition' do
+      def composed_payload(request_body = { to: '5511912345678', type: 'text' })
+        service.send(:outgoing_message_payload, request_body, message)
+      end
+
+      it 'sends phone, canonical LID and normalized username together' do
+        contact.update!(whatsapp_username: '@Contato.Exemplo')
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: contact, source_id: '20173562093816:70@lid')
+
+        expect(composed_payload).to include(
+          to: '5511912345678',
+          user_id: '20173562093816@lid',
+          username: 'contato.exemplo'
+        )
+      end
+
+      it 'sends phone and username without fabricating a LID' do
+        contact.update!(whatsapp_username: '@contato.exemplo')
+
+        expect(composed_payload).to include(to: '5511912345678', username: 'contato.exemplo')
+        expect(composed_payload).not_to have_key(:user_id)
+      end
+
+      it 'sends phone and LID without fabricating a username' do
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: contact, source_id: '20173562093816@lid')
+
+        expect(composed_payload).to include(to: '5511912345678', user_id: '20173562093816@lid')
+        expect(composed_payload).not_to have_key(:username)
+      end
+
+      it 'keeps a phone-only payload without extra identities' do
+        expect(composed_payload).to include(to: '5511912345678')
+        expect(composed_payload).not_to have_key(:user_id)
+        expect(composed_payload).not_to have_key(:username)
+      end
+
+      it 'uses the canonical LID as to when no recipient or username is available' do
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: contact, source_id: '20173562093816:70@lid')
+
+        expect(composed_payload(to: nil, type: 'text')).to include(
+          to: '20173562093816@lid',
+          user_id: '20173562093816@lid'
+        )
+      end
+
+      it 'uses the normalized username as the final to fallback' do
+        contact.update!(whatsapp_username: '  @Contato.Exemplo  ')
+
+        expect(composed_payload(to: nil, type: 'text')).to include(
+          to: 'contato.exemplo',
+          username: 'contato.exemplo'
+        )
+      end
+
+      it 'does not send a blank username' do
+        contact.update!(whatsapp_username: '  ')
+
+        expect(composed_payload(to: nil, type: 'text')).not_to have_key(:username)
+      end
+
+      it 'uses only the conversation contact username' do
+        contact.update!(whatsapp_username: '@contato.correto')
+        create(:contact, account: whatsapp_channel.account, whatsapp_username: '@outro.contato')
+
+        expect(composed_payload).to include(username: 'contato.correto')
+      end
+
+      it 'preserves group payloads without individual identities' do
+        contact.update!(whatsapp_username: '@contato.exemplo')
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: contact, source_id: '20173562093816@lid')
+        conversation.update!(group: true, group_source_id: '120363040468224422@g.us')
+        request_body = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'group',
+          to: '120363040468224422@g.us',
+          type: 'text'
+        }
+
+        expect(composed_payload(request_body)).to eq(request_body)
+      end
+
+      it 'composes the same identities for text, media, interactive and PIX payloads' do
+        contact.update!(whatsapp_username: '@contato.exemplo')
+        create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: contact, source_id: '20173562093816@lid')
+
+        payloads = [
+          { to: '5511912345678', type: 'text' },
+          { 'to' => '5511912345678', 'type' => 'image' },
+          { to: '5511912345678', type: 'interactive' },
+          { to: '5511912345678', type: 'interactive', interactive: { type: 'button' } }
+        ]
+
+        payloads.each do |request_body|
+          payload = composed_payload(request_body)
+          expect(payload.values_at(:user_id, :username)).to eq(['20173562093816@lid', 'contato.exemplo'])
+          expect(JSON.parse(payload.to_json)['to']).to eq('5511912345678')
+        end
+      end
+    end
   end
 
   it 'fetches group participants from the Uno v15 group endpoint' do
