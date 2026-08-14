@@ -1583,6 +1583,12 @@ export default {
       };
       return file && this.onFileUpload(autoRecordedFile);
     },
+    onAudioRecorderError() {
+      // getUserMedia can reject after Android's runtime permission dialog.
+      // Always leave the recorder state so the user can retry immediately.
+      this.resetAudioRecorderInput();
+      useAlert(this.$t('CONVERSATION.REPLYBOX.TIP_AUDIORECORDER_ERROR'));
+    },
     toggleTyping(status) {
       const conversationId = this.currentChat.id;
       const isPrivate = this.isPrivate;
@@ -2019,6 +2025,7 @@ export default {
               progress-color="#6F3935"
               @recorder-progress-changed="onRecordProgressChanged"
               @finish-record="onFinishRecorder"
+              @record-error="onAudioRecorderError"
               @play="recordingAudioState = 'playing'"
               @pause="recordingAudioState = 'paused'"
             />
@@ -2079,6 +2086,7 @@ export default {
             :audio-record-format="audioRecordFormat"
             @recorder-progress-changed="onRecordProgressChanged"
             @finish-record="onFinishRecorder"
+            @record-error="onAudioRecorderError"
             @play="recordingAudioState = 'playing'"
             @pause="recordingAudioState = 'paused'"
           />
