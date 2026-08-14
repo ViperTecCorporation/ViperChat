@@ -107,6 +107,24 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         expect(account).to be_feature_conversation_unread_counts
       end
 
+      it 'persists explicit false values instead of restoring installation defaults' do
+        account.enable_features!('agent_conversation_viewed', 'assignment_v2')
+        sign_in(super_admin, scope: :super_admin)
+
+        patch "/super_admin/accounts/#{account.id}",
+              params: {
+                account: { name: account.name, locale: account.locale, status: account.status },
+                enabled_features: {
+                  feature_agent_conversation_viewed: 'false',
+                  feature_assignment_v2: 'false'
+                }
+              }
+
+        expect(response).to have_http_status(:redirect)
+        expect(account.reload).not_to be_feature_agent_conversation_viewed
+        expect(account).not_to be_feature_assignment_v2
+      end
+
       it 'updates Captain model overrides without changing unrelated settings' do
         account.update!(
           captain_models: { 'editor' => 'gpt-4.1' },
