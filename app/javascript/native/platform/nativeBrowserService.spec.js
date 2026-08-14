@@ -6,7 +6,22 @@ vi.mock('@capacitor/browser', () => ({
   Browser: { open: browserOpen },
 }));
 
-import { openNativeSuperAdmin } from './nativeBrowserService';
+import {
+  openNativeSuperAdmin,
+  openViperChatPrivacyPolicy,
+  VIPERCHAT_PRIVACY_URL,
+} from './nativeBrowserService';
+
+describe('openViperChatPrivacyPolicy', () => {
+  it('opens the public ViperChat privacy policy', async () => {
+    await openViperChatPrivacyPolicy();
+
+    expect(browserOpen).toHaveBeenCalledWith({
+      url: VIPERCHAT_PRIVACY_URL,
+      presentationStyle: 'popover',
+    });
+  });
+});
 
 describe('openNativeSuperAdmin', () => {
   const installation = { baseUrl: 'https://chat.example.com' };

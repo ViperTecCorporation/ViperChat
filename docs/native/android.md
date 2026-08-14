@@ -6,7 +6,7 @@ Declaradas explicitamente:
 
 - `INTERNET`, necessária para validar e acessar a instalação;
 - `POST_NOTIFICATIONS`, preparada para a etapa de push nativo;
-- `RECORD_AUDIO`, necessária para notas de voz e para o futuro WebRTC.
+- `RECORD_AUDIO` e `MODIFY_AUDIO_SETTINGS`, necessárias para disponibilizar a captura de áudio ao WebView nas notas de voz e no futuro WebRTC.
 - `CAMERA`, solicitada pelo Android somente quando o usuário abre captura de foto/vídeo;
 - `ACCESS_COARSE_LOCATION` e `ACCESS_FINE_LOCATION`, solicitadas somente quando uma ação de localização for usada.
 

@@ -1,5 +1,8 @@
 import { Browser } from '@capacitor/browser';
 
+export const VIPERCHAT_PRIVACY_URL =
+  'https://vipertec.com.br/privacy/viperchat';
+
 const readResponseBody = async response => {
   try {
     return await response.json();
@@ -7,6 +10,12 @@ const readResponseBody = async response => {
     return {};
   }
 };
+
+export const openViperChatPrivacyPolicy = () =>
+  Browser.open({
+    url: VIPERCHAT_PRIVACY_URL,
+    presentationStyle: 'popover',
+  });
 
 export const openNativeSuperAdmin = async ({ installation, headers }) => {
   const response = await fetch(

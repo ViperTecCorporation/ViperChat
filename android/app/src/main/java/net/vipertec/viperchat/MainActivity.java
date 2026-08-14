@@ -27,30 +27,36 @@ public class MainActivity extends BridgeActivity {
     @SuppressWarnings("deprecation")
     private void configureStatusBar() {
         int brandColor = Color.rgb(111, 57, 53);
+        View decorView = getWindow().getDecorView();
+        View webView = getBridge().getWebView();
+        int initialPaddingLeft = webView.getPaddingLeft();
+        int initialPaddingRight = webView.getPaddingRight();
+        int initialPaddingBottom = webView.getPaddingBottom();
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             getWindow().setStatusBarColor(brandColor);
-        } else {
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-            View webView = getBridge().getWebView();
             webView.setBackgroundColor(brandColor);
-            ViewCompat.setOnApplyWindowInsetsListener(webView, (view, windowInsets) -> {
+            ViewCompat.setOnApplyWindowInsetsListener(decorView, (view, windowInsets) -> {
                 Insets statusBar = windowInsets.getInsets(
                         WindowInsetsCompat.Type.statusBars()
                                 | WindowInsetsCompat.Type.displayCutout()
                 );
-                view.setPadding(
-                        view.getPaddingLeft(),
+                webView.setPadding(
+                        initialPaddingLeft,
                         statusBar.top,
-                        view.getPaddingRight(),
-                        view.getPaddingBottom()
+                        initialPaddingRight,
+                        initialPaddingBottom
                 );
                 return windowInsets;
             });
-            ViewCompat.requestApplyInsets(webView);
+            ViewCompat.requestApplyInsets(decorView);
         }
 
-        WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
+        WindowCompat.getInsetsController(getWindow(), decorView)
                 .setAppearanceLightStatusBars(false);
     }
 

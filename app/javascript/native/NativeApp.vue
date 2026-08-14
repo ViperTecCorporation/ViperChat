@@ -12,6 +12,7 @@ import {
   verifyMfa,
 } from './platform/authenticationService';
 import { getRuntimeInfo } from './platform/runtimeService';
+import { openViperChatPrivacyPolicy } from './platform/nativeBrowserService';
 import Button from 'dashboard/components-next/button/Button.vue';
 import viperLogoUrl from '../../../public/brand-assets/logo_thumbnail.svg?url';
 
@@ -53,6 +54,7 @@ const copy = {
   loggingIn: 'Entrando…',
   changeServer: 'Trocar servidor',
   runtime: 'Runtime:',
+  privacyPolicy: 'Política de Privacidade',
   mfaDescription: 'Confirme o segundo fator para concluir o login.',
   recoveryCode: 'Código de recuperação',
   otpCode: 'Código de 6 dígitos',
@@ -288,6 +290,13 @@ const changeServer = async () => {
       <p class="mt-6 text-center text-xs text-n-slate-9">
         {{ copy.runtime }} {{ runtime.platform }}
       </p>
+      <button
+        type="button"
+        class="mt-3 w-full text-center text-xs text-n-slate-10 underline hover:text-n-slate-12"
+        @click="openViperChatPrivacyPolicy"
+      >
+        {{ copy.privacyPolicy }}
+      </button>
     </section>
   </main>
 </template>

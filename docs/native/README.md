@@ -34,7 +34,7 @@ O build Android usa JDK 21, Android SDK 36 e Gradle Wrapper. A assinatura debug 
 - Android application ID: `net.vipertec.viperchat`
 - iOS bundle ID: `net.vipertec.viperchat`
 - Nome: `ViperChat`
-- Versão atual: `4.16.12-viper.10` (`versionCode` 4161210)
+- Versão atual: `4.16.12-viper.15` (`versionCode` 4161215)
 
 Veja também [android.md](android.md), [ios.md](ios.md), [self-hosted.md](self-hosted.md) e
 [push-relay.md](push-relay.md).
