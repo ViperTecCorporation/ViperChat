@@ -120,6 +120,14 @@
           "ERROR": "Failed to update deleted message setting"
         }
       },
+      "MESSAGE_COMPOSER": {
+        "TITLE": "Use classic message editor",
+        "NOTE": "Enable this to return to the previous editor. When disabled, ViperChat uses the new compact editor for chat channels; email inboxes keep the classic editor.",
+        "API": {
+          "SUCCESS": "Editor preference updated successfully",
+          "ERROR": "Failed to update the editor preference"
+        }
+      },
       "WAITING_CONVERSATIONS_SECTION": {
         "TITLE": "Waiting conversations",
         "NOTE": "Open conversations that are waiting for a reply in the Waiting tab by default."

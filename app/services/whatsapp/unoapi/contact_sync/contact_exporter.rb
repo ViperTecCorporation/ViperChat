@@ -50,6 +50,7 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter # rubocop:disable Metrics/C
   def export_payload
     phone_number = @contact.phone_number.to_s.gsub(/\D/, '')
     return unless phone_number.match?(/\A[1-9]\d{6,14}\z/)
+    return unless exportable_phone?(phone_number)
 
     user_id = lid
     full_name = export_name(phone_number, user_id).first(256)
@@ -73,6 +74,15 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter # rubocop:disable Metrics/C
     chatwoot_phone = chatwoot_phone(verified_lid, network_phone, payload[:phone_number])
     persist_verified_identity!(verified_lid, network_phone, chatwoot_phone, payload[:phone_number])
     payload.merge(phone_number: chatwoot_phone, user_id: verified_lid)
+  end
+
+  def exportable_phone?(phone_number)
+    return true if Phonelib.parse("+#{phone_number}").valid?
+    return false unless phone_number.match?(/\A55\d{10}\z/)
+
+    candidate = "#{phone_number[0, 4]}9#{phone_number[4..]}"
+    phone = Phonelib.parse("+#{candidate}")
+    phone.valid? && phone.type == :mobile
   end
 
   def verified_phone(verification, fallback)

@@ -293,6 +293,7 @@ RSpec.describe 'Accounts API', type: :request do
           { inbox_id: 2, send_to_groups: false }
         ],
         show_deleted_message_content: true,
+        use_legacy_message_composer: true,
         timezone: 'Asia/Kolkata',
         industry: 'Technology',
         company_size: '1-10'
@@ -324,6 +325,7 @@ RSpec.describe 'Accounts API', type: :request do
           auto_resolve_message
           auto_resolve_ignore_waiting
           show_deleted_message_content
+          use_legacy_message_composer
         ].each do |attribute|
           expect(account.reload.settings[attribute]).to eq(params[attribute.to_sym])
         end

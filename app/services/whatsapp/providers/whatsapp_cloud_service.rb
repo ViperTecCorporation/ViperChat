@@ -58,7 +58,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   def sync_templates
     # ensuring that channels with wrong provider config wouldn't keep trying to sync templates
     whatsapp_channel.mark_message_templates_updated
-    templates = fetch_whatsapp_templates("#{business_account_path}/message_templates?access_token=#{whatsapp_channel.provider_config['api_key']}")
+    templates = fetch_whatsapp_templates("#{business_account_path}/message_templates?access_token=#{api_key}")
     whatsapp_channel.update(message_templates: templates, message_templates_last_updated: Time.now.utc) if templates.present?
   end
 
@@ -83,11 +83,11 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
   def validate_provider_config?
     config = whatsapp_channel.provider_config
-    response = HTTParty.get("#{business_account_path}/message_templates?access_token=#{config['api_key']}")
+    response = HTTParty.get("#{business_account_path}/message_templates?access_token=#{api_key}")
     return log_transfer_failure('waba_or_token_check', response) unless response.success?
     return true unless whatsapp_channel.provider_config_changed?
 
-    phone_response = HTTParty.get("#{business_account_path}/phone_numbers?fields=id&limit=100&access_token=#{config['api_key']}")
+    phone_response = HTTParty.get("#{business_account_path}/phone_numbers?fields=id&limit=100&access_token=#{api_key}")
     ids = phone_response.parsed_response.is_a?(Hash) ? Array(phone_response.parsed_response['data']) : []
     return true if phone_response.success? && ids.any? { |number| number['id'] == config['phone_number_id'].to_s }
 
@@ -95,7 +95,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def api_headers
-    { 'Authorization' => "Bearer #{whatsapp_channel.provider_config['api_key']}", 'Content-Type' => 'application/json' }
+    { 'Authorization' => "Bearer #{api_key}", 'Content-Type' => 'application/json' }
   end
 
   def create_csat_template(template_config)
@@ -158,6 +158,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   private
+
+  def api_key
+    whatsapp_channel.provider_config['api_key']
+  end
 
   def message_update_recipient_id(message)
     (message[:sender] || {})[:phone_number].presence ||
@@ -265,9 +269,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   def should_prefix_sender_name?(message)
     return true if message.conversation.group?
 
-    feature = whatsapp_channel.inbox.account.feature_enabled?('send_agent_name_in_whatsapp_message')
     config = whatsapp_channel.provider_config['send_agent_name']
-    feature || config
+    return ActiveModel::Type::Boolean.new.cast(config) unless config.nil?
+
+    whatsapp_channel.inbox.account.feature_enabled?('send_agent_name_in_whatsapp_message')
   end
 
   def send_attachment_message(phone_number, message, attachment, include_caption: true)

@@ -30,6 +30,14 @@ export default {
       type: Boolean,
       default: true,
     },
+    backListCount: {
+      type: Number,
+      default: 0,
+    },
+    backListLabel: {
+      type: String,
+      default: '',
+    },
   },
   data() {
     return { activeIndex: 0 };
@@ -103,6 +111,8 @@ export default {
       v-if="currentChat.id"
       :chat="currentChat"
       :show-back-button="isOnExpandedLayout && !isInboxView"
+      :back-list-count="backListCount"
+      :back-list-label="backListLabel"
       :class="{
         'border-b border-b-n-weak !pt-2': !dashboardApps.length,
       }"

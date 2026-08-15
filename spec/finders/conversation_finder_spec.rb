@@ -107,6 +107,17 @@ describe ConversationFinder do
         expect(result[:count][:unassigned_count]).to be 1
         expect(result[:count][:group_count]).to be 1
       end
+
+      it 'does not include conversations assigned to a team' do
+        team = create(:team, account: account)
+        team_conversation = create(:conversation, account: account, inbox: inbox, team: team)
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).not_to include(team_conversation.id)
+        expect(result[:count][:assigned_count]).to be 4
+        expect(result[:count][:unassigned_count]).to be 1
+      end
     end
 
     context 'with assignee_type groups' do
@@ -225,6 +236,17 @@ describe ConversationFinder do
       it 'filter conversations by assignee type assigned' do
         result = conversation_finder.perform
         expect(result[:conversations].length).to be 3
+      end
+
+      it 'includes conversations assigned only to a team' do
+        team = create(:team, account: account)
+        team_conversation = create(:conversation, account: account, inbox: inbox, team: team)
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).to include(team_conversation.id)
+        expect(result[:count][:assigned_count]).to be 4
+        expect(result[:count][:unassigned_count]).to be 1
       end
 
       it 'returns the correct meta' do

@@ -153,6 +153,7 @@ Rails.application.routes.draw do
               get :unread_counts, to: 'conversations/unread_counts#index'
               post :filter
               post :groups, to: 'conversations/groups#create'
+              post :assign_by_source, to: 'conversations/source_assignments#create'
             end
             scope module: :conversations do
               resources :messages, only: [:index, :create, :destroy, :update] do
@@ -714,6 +715,7 @@ Rails.application.routes.draw do
   get 'notion/callback', to: 'notion/callbacks#show'
   # ----------------------------------------------------------------------
   # Routes for external service verifications
+  get '.well-known/viper-chat' => 'native_app#discovery'
   get '.well-known/assetlinks.json' => 'android_app#assetlinks'
   get '.well-known/apple-app-site-association' => 'apple_app#site_association'
   get '.well-known/microsoft-identity-association.json' => 'microsoft#identity_association'

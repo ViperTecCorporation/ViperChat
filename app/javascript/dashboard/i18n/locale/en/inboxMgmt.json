@@ -278,31 +278,42 @@
         },
         "SEND_AGENT_NAME": {
           "LABEL": "Send agent name",
+          "HELP": "Prefixes outgoing one-to-one text messages with the Chatwoot agent name. Group messages already identify their sender.",
           "PLACEHOLDER": "Check to send agent name.",
           "ERROR": "Check to send agent name."
         },
         "IGNORE_HISTORY": {
           "LABEL": "Ignore history on connect",
+          "HELP": "Does not forward old messages while WhatsApp history is being synchronized after connecting.",
           "PLACEHOLDER": "Check to ignore history on connect.",
           "ERROR": "Check to ignore history on connect."
         },
+        "HISTORY_MAX_AGE_DAYS": {
+          "LABEL": "History window (days)",
+          "HELP": "Maximum age of history messages imported when history is not ignored. WhatsApp may limit the history available.",
+          "ERROR": "Enter a value between 1 and 3650 days."
+        },
         "IGNORE_GROUPS": {
           "LABEL": "Ignore groups messages",
+          "HELP": "Does not forward messages received in groups to Chatwoot webhooks.",
           "PLACEHOLDER": "Check to ignore groups messages.",
           "ERROR": "Check to ignore groups messages."
         },
         "IGNORE_NEWSLETTER_MESSAGES": {
           "LABEL": "Ignore newsletter messages",
+          "HELP": "Discards messages received from WhatsApp channels and newsletters.",
           "PLACEHOLDER": "Select to ignore newsletter messages.",
           "ERROR": "Select to ignore newsletter messages."
         },
         "IGNORE_GROUP_INDIVIDUAL_RECEIPTS": {
           "LABEL": "Ignore group individual receipts",
+          "HELP": "Suppresses per-participant delivery and read receipts in groups, avoiding repeated status events for the same message.",
           "PLACEHOLDER": "Select to ignore group individual receipts.",
           "ERROR": "Select to ignore group individual receipts."
         },
         "GROUP_ONLY_DELIVERED_STATUS": {
           "LABEL": "Group only delivered status",
+          "HELP": "For group messages, forwards only the delivered status and filters other receipt statuses such as read or played.",
           "PLACEHOLDER": "Select to group only delivered status.",
           "ERROR": "Select to group only delivered status."
         },
@@ -319,36 +330,49 @@
         },
         "IGNORE_BROADCAST_STATUSES": {
           "LABEL": "Ignore broadcast statuses",
+          "HELP": "Does not forward WhatsApp Status publications to Chatwoot.",
           "PLACEHOLDER": "Select to ignore broadcast statuses.",
           "ERROR": "Select to ignore broadcast statuses."
         },
         "IGNORE_BROADCAST_MESSAGES": {
           "LABEL": "Ignore broadcast messages",
+          "HELP": "Does not forward messages received from WhatsApp broadcast lists.",
           "PLACEHOLDER": "Select to ignore broadcast messages.",
           "ERROR": "Select to ignore broadcast messages."
         },
         "IGNORE_OWN_MESSAGES": {
           "LABEL": "Ignore own messages",
+          "HELP": "Discards messages sent by the connected phone or by the UnoAPI session itself.",
           "PLACEHOLDER": "Select to ignore own messages.",
           "ERROR": "Select to ignore own messages."
         },
         "IGNORE_YOURSELF_MESSAGES": {
           "LABEL": "Ignore your messages",
+          "HELP": "Discards conversations whose recipient is the same number as the connected session.",
           "PLACEHOLDER": "Select to ignore your messages.",
           "ERROR": "Select to ignore your messages."
         },
+        "IGNORE_EXTERNAL_ECHO_AUTOMATIONS": {
+          "LABEL": "Ignore echo messages in automations",
+          "HELP": "Prevents messages identified as external echoes from triggering Chatwoot automation rules. The message remains visible in the conversation.",
+          "PLACEHOLDER": "Select to prevent echoes from triggering automations.",
+          "ERROR": "Select whether echoes should be ignored in automations."
+        },
         "READ_ON_RECEIPT": {
           "LABEL": "Read on receipt",
+          "HELP": "Automatically marks incoming WhatsApp messages as read when they are received.",
           "PLACEHOLDER": "Select to read on receipt.",
           "ERROR": "Select to read on receipt."
         },
         "READ_ON_REPLY": {
           "LABEL": "Read on reply",
+          "HELP": "Marks the WhatsApp conversation as read when Chatwoot sends a reply through UnoAPI.",
           "PLACEHOLDER": "Select to read on reply.",
           "ERROR": "Select to read on reply."
         },
         "WEBHOOK_SEND_NEW_MESSAGES": {
           "LABEL": "Webhook send new messages",
+          "HELP": "Sends the main event whenever a message is created. This must remain enabled for Chatwoot to receive new messages.",
           "PLACEHOLDER": "Check to send new messages through webhook.",
           "ERROR": "Check to send new messages through webhook."
         },
@@ -363,6 +387,7 @@
         },
         "SEND_TRANSCRIBE_AUDIO": {
           "LABEL": "Send audio transcription",
+          "HELP": "Includes audio transcription in the webhook payload when transcription is configured and available.",
           "PLACEHOLDER": "Check to send audio transcription.",
           "ERROR": "Check to send audio transcription."
         },
@@ -379,31 +404,37 @@
         },
         "SEND_CONNECTION_STATUS": {
           "LABEL": "Show connection status",
+          "HELP": "Sends session connection and disconnection events to the registered application.",
           "PLACEHOLDER": "Select to show connection status.",
           "ERROR": "Select to show connection status."
         },
         "MARK_ONLINE_ON_CONNECT": {
           "LABEL": "Mark online when connected",
+          "HELP": "Publishes the session as online on WhatsApp immediately after connecting.",
           "PLACEHOLDER": "Select to mark the account online when connected.",
           "ERROR": "Select to mark the account online when connected."
         },
         "NOTIFY_FAILED_MESSAGES": {
           "LABEL": "Notify failed messages",
+          "HELP": "Emits a failed status event when the provider rejects a message action.",
           "PLACEHOLDER": "Select to notify failed messages.",
           "ERROR": "Select to notify failed messages."
         },
         "COMPOSING_MESSAGE": {
           "LABEL": "Compose message",
+          "HELP": "Publishes the typing presence on WhatsApp before sending a message.",
           "PLACEHOLDER": "Select to compose message.",
           "ERROR": "Select to compose message."
         },
         "SEND_REACTION_AS_REPLY": {
           "LABEL": "Show reaction as reply",
+          "HELP": "Represents received reactions as reply events as well, making them visible to integrations that do not process reaction events.",
           "PLACEHOLDER": "Select to show reaction as reply.",
           "ERROR": "Select to show reaction as reply."
         },
         "SEND_PROFILE_PICTURE": {
           "LABEL": "Show profile picture",
+          "HELP": "Includes updated contact and group profile pictures in webhooks, respecting the UnoAPI cache interval.",
           "PLACEHOLDER": "Select to show profile picture.",
           "ERROR": "Select to show profile picture."
         },
@@ -457,6 +488,7 @@
           "LABEL": "API key",
           "SUBTITLE": "Configure the WhatsApp API key.",
           "PLACEHOLDER": "API key",
+          "GLOBAL_PLACEHOLDER": "Global UnoAPI token configured",
           "ERROR": "Please enter a valid value."
         },
         "API_CALLBACK": {
@@ -499,20 +531,20 @@
           "ERROR_MESSAGE": "We were not able to save the WhatsApp channel"
         }
       },
-        "VOICE": {
-          "TITLE": "Voice Channel",
-          "DESC": "Integrate Twilio Voice or your own WebRTC provider to support customers via calls.",
-          "PROVIDERS": {
-            "LABEL": "Provider",
-            "TWILIO": "Twilio",
-            "CUSTOM": "Custom"
-          },
-          "PHONE_NUMBER": {
-            "LABEL": "Phone Number",
-            "PLACEHOLDER": "Enter your phone number (e.g. +1234567890)",
-            "ERROR": "Please provide a valid phone number in E.164 format (e.g. +1234567890)"
-          },
-          "TWILIO": {
+      "VOICE": {
+        "TITLE": "Voice Channel",
+        "DESC": "Integrate Twilio Voice or your own WebRTC provider to support customers via calls.",
+        "PROVIDERS": {
+          "LABEL": "Provider",
+          "TWILIO": "Twilio",
+          "CUSTOM": "Custom"
+        },
+        "PHONE_NUMBER": {
+          "LABEL": "Phone Number",
+          "PLACEHOLDER": "Enter your phone number (e.g. +1234567890)",
+          "ERROR": "Please provide a valid phone number in E.164 format (e.g. +1234567890)"
+        },
+        "TWILIO": {
           "ACCOUNT_SID": {
             "LABEL": "Account SID",
             "PLACEHOLDER": "Enter your Twilio Account SID",
@@ -532,87 +564,87 @@
             "LABEL": "API Key Secret",
             "PLACEHOLDER": "Enter your Twilio API Key Secret",
             "REQUIRED": "API Key Secret is required"
-            }
+          }
+        },
+        "CUSTOM": {
+          "WEBRTC_WS_URL": {
+            "LABEL": "WebRTC WSS URL",
+            "PLACEHOLDER": "wss://webrtc.example.com/ws",
+            "REQUIRED": "WebRTC WSS URL is required"
           },
-          "CUSTOM": {
-            "WEBRTC_WS_URL": {
-              "LABEL": "WebRTC WSS URL",
-              "PLACEHOLDER": "wss://webrtc.example.com/ws",
-              "REQUIRED": "WebRTC WSS URL is required"
-            },
-            "SIP_DOMAIN": {
-              "LABEL": "SIP Domain",
-              "PLACEHOLDER": "sip.example.com",
-              "REQUIRED": "SIP domain is required"
-            },
-            "SIP_OUTBOUND_PROXY": {
-              "LABEL": "SIP Outbound Proxy",
-              "PLACEHOLDER": "sip:proxy.example.com"
-            },
-            "SIP_TRANSPORT": {
-              "LABEL": "SIP Transport",
-              "WSS": "WSS",
-              "WS": "WS"
-            },
-            "STUN_SERVERS": {
-              "LABEL": "STUN servers (one per line)",
-              "PLACEHOLDER": "stun:stun.l.google.com:19302\nstun:example.com:3478"
-            },
-            "TURN_URL": {
-              "LABEL": "TURN server URL",
-              "PLACEHOLDER": "turn:turn.example.com:3478"
-            },
-            "TURN_USERNAME": {
-              "LABEL": "TURN username",
-              "PLACEHOLDER": "turn-user"
-            },
-            "TURN_PASSWORD": {
-              "LABEL": "TURN password",
-              "PLACEHOLDER": "turn-password"
-            },
-            "AUTH_TYPE": {
-              "LABEL": "Auth type",
-              "JWT": "JWT",
-              "PASSWORD": "Username/password"
-            },
-            "TRANSFER_MODE": {
-              "LABEL": "Transfer Mode",
-              "SIP_REFER": "SIP REFER",
-              "ARI": "ARI (server API)"
-            },
-            "TRANSFER_API_URL": {
-              "LABEL": "Transfer API URL",
-              "PLACEHOLDER": "https://pbx.example.com/api/transfer",
-              "REQUIRED": "Transfer API URL is required"
-            },
-            "TRANSFER_API_TOKEN": {
-              "LABEL": "Transfer API Token",
-              "PLACEHOLDER": "Enter your transfer API token"
-            },
-            "USE_AGENT_JWT": "Use agent WebRTC JWT from profile",
-            "JWT_ISSUER": {
-              "LABEL": "JWT Issuer",
-              "PLACEHOLDER": "issuer"
-            },
-            "JWT_AUDIENCE": {
-              "LABEL": "JWT Audience",
-              "PLACEHOLDER": "audience"
-            },
-            "JWT_SECRET": {
-              "LABEL": "JWT Secret",
-              "PLACEHOLDER": "secret",
-              "REQUIRED": "JWT Secret is required"
-            },
-            "JWT_TTL": {
-              "LABEL": "JWT TTL (seconds)",
-              "PLACEHOLDER": "3600"
-            }
+          "SIP_DOMAIN": {
+            "LABEL": "SIP Domain",
+            "PLACEHOLDER": "sip.example.com",
+            "REQUIRED": "SIP domain is required"
           },
-          "CONFIGURATION": {
-            "TWILIO_VOICE_URL_TITLE": "Twilio Voice URL",
-            "TWILIO_VOICE_URL_SUBTITLE": "Configure this URL as the Voice URL on your Twilio phone number and TwiML App.",
-            "TWILIO_STATUS_URL_TITLE": "Twilio Status Callback URL",
-            "TWILIO_STATUS_URL_SUBTITLE": "Configure this URL as the Status Callback URL on your Twilio phone number."
+          "SIP_OUTBOUND_PROXY": {
+            "LABEL": "SIP Outbound Proxy",
+            "PLACEHOLDER": "sip:proxy.example.com"
+          },
+          "SIP_TRANSPORT": {
+            "LABEL": "SIP Transport",
+            "WSS": "WSS",
+            "WS": "WS"
+          },
+          "STUN_SERVERS": {
+            "LABEL": "STUN servers (one per line)",
+            "PLACEHOLDER": "stun:stun.l.google.com:19302\nstun:example.com:3478"
+          },
+          "TURN_URL": {
+            "LABEL": "TURN server URL",
+            "PLACEHOLDER": "turn:turn.example.com:3478"
+          },
+          "TURN_USERNAME": {
+            "LABEL": "TURN username",
+            "PLACEHOLDER": "turn-user"
+          },
+          "TURN_PASSWORD": {
+            "LABEL": "TURN password",
+            "PLACEHOLDER": "turn-password"
+          },
+          "AUTH_TYPE": {
+            "LABEL": "Auth type",
+            "JWT": "JWT",
+            "PASSWORD": "Username/password"
+          },
+          "TRANSFER_MODE": {
+            "LABEL": "Transfer Mode",
+            "SIP_REFER": "SIP REFER",
+            "ARI": "ARI (server API)"
+          },
+          "TRANSFER_API_URL": {
+            "LABEL": "Transfer API URL",
+            "PLACEHOLDER": "https://pbx.example.com/api/transfer",
+            "REQUIRED": "Transfer API URL is required"
+          },
+          "TRANSFER_API_TOKEN": {
+            "LABEL": "Transfer API Token",
+            "PLACEHOLDER": "Enter your transfer API token"
+          },
+          "USE_AGENT_JWT": "Use agent WebRTC JWT from profile",
+          "JWT_ISSUER": {
+            "LABEL": "JWT Issuer",
+            "PLACEHOLDER": "issuer"
+          },
+          "JWT_AUDIENCE": {
+            "LABEL": "JWT Audience",
+            "PLACEHOLDER": "audience"
+          },
+          "JWT_SECRET": {
+            "LABEL": "JWT Secret",
+            "PLACEHOLDER": "secret",
+            "REQUIRED": "JWT Secret is required"
+          },
+          "JWT_TTL": {
+            "LABEL": "JWT TTL (seconds)",
+            "PLACEHOLDER": "3600"
+          }
+        },
+        "CONFIGURATION": {
+          "TWILIO_VOICE_URL_TITLE": "Twilio Voice URL",
+          "TWILIO_VOICE_URL_SUBTITLE": "Configure this URL as the Voice URL on your Twilio phone number and TwiML App.",
+          "TWILIO_STATUS_URL_TITLE": "Twilio Status Callback URL",
+          "TWILIO_STATUS_URL_SUBTITLE": "Configure this URL as the Status Callback URL on your Twilio phone number."
         },
         "SUBMIT_BUTTON": "Create Voice Channel",
         "API": {

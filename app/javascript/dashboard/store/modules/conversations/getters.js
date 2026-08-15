@@ -1,5 +1,11 @@
 import { MESSAGE_TYPE } from 'shared/constants/messages';
-import { applyPageFilters, applyRoleFilter, sortComparator } from './helpers';
+import {
+  applyPageFilters,
+  applyRoleFilter,
+  isConversationMine,
+  isConversationUnassigned,
+  sortComparator,
+} from './helpers';
 import filterQueryGenerator from 'dashboard/helper/filterQueryGenerator';
 import { matchesFilters } from './helpers/filterHelpers';
 import {
@@ -79,12 +85,15 @@ const getters = {
   },
   getMineChats: (_state, _, __, rootGetters) => activeFilters => {
     const currentUserID = rootGetters.getCurrentUser?.id;
+    const currentUserTeamIds = (rootGetters['teams/getMyTeams'] || []).map(
+      team => team.id
+    );
 
     return _state.allConversations.filter(conversation => {
-      const { assignee } = conversation.meta;
-      const isAssignedToMe = assignee && assignee.id === currentUserID;
       const shouldFilter = applyPageFilters(conversation, activeFilters);
-      const isChatMine = isAssignedToMe && shouldFilter;
+      const isChatMine =
+        isConversationMine(conversation, currentUserID, currentUserTeamIds) &&
+        shouldFilter;
 
       return isChatMine;
     });
@@ -102,7 +111,7 @@ const getters = {
   },
   getUnAssignedChats: _state => activeFilters => {
     return _state.allConversations.filter(conversation => {
-      const isUnAssigned = !conversation.meta.assignee && !conversation.group;
+      const isUnAssigned = isConversationUnassigned(conversation);
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       return isUnAssigned && shouldFilter;
     });

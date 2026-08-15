@@ -18,6 +18,7 @@ import BuildInfo from './components/BuildInfo.vue';
 import AccountDelete from './components/AccountDelete.vue';
 import AudioTranscription from './components/AudioTranscription.vue';
 import DeletedMessageContent from './components/DeletedMessageContent.vue';
+import LegacyMessageComposer from './components/LegacyMessageComposer.vue';
 import SectionLayout from './components/SectionLayout.vue';
 
 export default {
@@ -29,6 +30,7 @@ export default {
     AccountDelete,
     AudioTranscription,
     DeletedMessageContent,
+    LegacyMessageComposer,
     SectionLayout,
     SwitchControl,
     WithLabel,
@@ -272,6 +274,7 @@ export default {
     </div>
     <AudioTranscription v-if="showAudioTranscriptionConfig" />
     <DeletedMessageContent />
+    <LegacyMessageComposer />
     <SectionLayout
       with-border
       :title="$t('GENERAL_SETTINGS.FORM.WAITING_CONVERSATIONS_SECTION.TITLE')"

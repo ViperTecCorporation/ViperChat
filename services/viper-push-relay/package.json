@@ -1,0 +1,16 @@
+{
+  "name": "@vipertec/viper-push-relay",
+  "version": "1.0.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "google-auth-library": "10.9.0"
+  }
+}

@@ -3,7 +3,10 @@ import { useAlert } from 'dashboard/composables';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { getMaxUploadSizeByChannel } from '@chatwoot/utils';
 import { DirectUpload } from 'activestorage';
-import { setDirectUploadAuthHeaders } from 'dashboard/helper/directUploadsHelper';
+import {
+  getDirectUploadUrl,
+  setDirectUploadAuthHeaders,
+} from 'dashboard/helper/directUploadsHelper';
 import { resolveMaximumFileUploadSize } from 'shared/helpers/FileHelper';
 import { MAXIMUM_FILE_UPLOAD_SIZE } from 'shared/constants/messages';
 
@@ -74,7 +77,9 @@ export default {
 
       const upload = new DirectUpload(
         file.file,
-        `/api/v1/accounts/${this.accountId}/conversations/${this.currentChat.id}/direct_uploads`,
+        getDirectUploadUrl(
+          `/api/v1/accounts/${this.accountId}/conversations/${this.currentChat.id}/direct_uploads`
+        ),
         {
           directUploadWillCreateBlobWithXHR: xhr => {
             setDirectUploadAuthHeaders(xhr);

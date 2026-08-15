@@ -92,3 +92,62 @@ describe('ReplyBox Captain shortcuts', () => {
     );
   });
 });
+
+describe('ReplyBox compact composer', () => {
+  it('does not focus the message editor automatically on mobile', () => {
+    expect(
+      ReplyBox.computed.shouldFocusMessageEditorOnMount.call({
+        windowWidth: 767,
+      })
+    ).toBe(false);
+  });
+
+  it('keeps automatic focus on tablet and desktop', () => {
+    expect(
+      ReplyBox.computed.shouldFocusMessageEditorOnMount.call({
+        windowWidth: 768,
+      })
+    ).toBe(true);
+  });
+
+  it('uses the compact composer by default for chat inboxes', () => {
+    expect(
+      ReplyBox.computed.useCompactMessageComposer.call({
+        isAnEmailChannel: false,
+        accountSettings: {},
+      })
+    ).toBe(true);
+  });
+
+  it('uses the legacy composer when the account enables it', () => {
+    expect(
+      ReplyBox.computed.useCompactMessageComposer.call({
+        isAnEmailChannel: false,
+        accountSettings: { use_legacy_message_composer: true },
+      })
+    ).toBe(false);
+  });
+
+  it('always keeps email on the legacy composer', () => {
+    expect(
+      ReplyBox.computed.useCompactMessageComposer.call({
+        isAnEmailChannel: true,
+        accountSettings: {},
+      })
+    ).toBe(false);
+  });
+
+  it('uses the compact schedule placeholder for WhatsApp', () => {
+    const context = {
+      isEditorDisabled: false,
+      useCompactMessageComposer: true,
+      isPrivate: false,
+      inbox: { channel_type: 'Channel::Whatsapp' },
+      $t: key => key,
+    };
+
+    expect(ReplyBox.computed.messagePlaceHolder.call(context)).toBe(
+      'CONVERSATION.REPLYBOX.COMPACT.PLACEHOLDER_WITH_SCHEDULE'
+    );
+  });
+});

@@ -7,6 +7,12 @@
       "404": "There are no active conversations in this group."
     },
     "FAILED_TO_SEND": "Failed to send",
+    "PUSH_NOTIFICATIONS": {
+      "DISABLED": "Message notifications are turned off.",
+      "ACTIVATE": "Turn on",
+      "CLOSE": "Dismiss notification warning",
+      "BLOCKED": "Notifications are blocked in your browser. Allow them in this site's settings."
+    },
     "TAB_HEADING": "Conversations",
     "MENTION_HEADING": "Mentions",
     "UNATTENDED_HEADING": "Unattended",

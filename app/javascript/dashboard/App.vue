@@ -20,6 +20,8 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import NativeShareInbox from '../native/components/NativeShareInbox.vue';
+import NativePushPrompt from '../native/components/NativePushPrompt.vue';
 
 export default {
   name: 'App',
@@ -32,6 +34,8 @@ export default {
     PaymentPendingBanner,
     WootSnackbarBox,
     PendingEmailVerificationBanner,
+    NativeShareInbox,
+    NativePushPrompt,
   },
   setup() {
     const router = useRouter();
@@ -66,9 +70,19 @@ export default {
     hideOnOnboardingView() {
       return !isOnOnboardingView(this.$route);
     },
+    isNativeApp() {
+      return Boolean(window.chatwootConfig?.isNativeApp);
+    },
   },
 
   watch: {
+    uiSettings: {
+      deep: true,
+      immediate: true,
+      handler(settings) {
+        this.initializeColorTheme(settings);
+      },
+    },
     currentAccountId: {
       immediate: true,
       handler(accountId) {
@@ -79,7 +93,6 @@ export default {
     },
   },
   mounted() {
-    this.initializeColorTheme();
     this.listenToThemeChanges();
     // If user locale is set, use it; otherwise use account locale
     this.setLocale(
@@ -95,12 +108,15 @@ export default {
     }
   },
   methods: {
-    initializeColorTheme() {
-      setColorTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    initializeColorTheme(settings = this.uiSettings) {
+      setColorTheme(
+        window.matchMedia('(prefers-color-scheme: dark)').matches,
+        settings
+      );
     },
     listenToThemeChanges() {
       const mql = window.matchMedia('(prefers-color-scheme: dark)');
-      mql.onchange = e => setColorTheme(e.matches);
+      mql.onchange = e => setColorTheme(e.matches, this.uiSettings);
     },
     setLocale(locale) {
       if (locale) {
@@ -166,6 +182,8 @@ export default {
     </router-view>
     <WootSnackbarBox />
     <NetworkNotification />
+    <NativeShareInbox v-if="isNativeApp" />
+    <NativePushPrompt v-if="isNativeApp" />
   </div>
   <LoadingState v-else />
 </template>

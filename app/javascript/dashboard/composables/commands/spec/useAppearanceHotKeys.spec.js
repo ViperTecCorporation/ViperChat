@@ -3,18 +3,26 @@ import { useI18n } from 'vue-i18n';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { setColorTheme } from 'dashboard/helper/themeHelper.js';
+import { useUISettings } from 'dashboard/composables/useUISettings';
 
 vi.mock('vue-i18n');
 vi.mock('shared/helpers/localStorage');
 vi.mock('dashboard/helper/themeHelper.js');
+vi.mock('dashboard/composables/useUISettings');
 
 describe('useAppearanceHotKeys', () => {
+  const updateUISettings = vi.fn();
+
   beforeEach(() => {
     useI18n.mockReturnValue({
       t: vi.fn(key => key),
     });
 
     window.matchMedia = vi.fn().mockReturnValue({ matches: false });
+    useUISettings.mockReturnValue({
+      uiSettings: { value: { brand_theme: 'viper' } },
+      updateUISettings,
+    });
   });
 
   it('should return goToAppearanceHotKeys computed property', () => {
@@ -61,7 +69,13 @@ describe('useAppearanceHotKeys', () => {
       LOCAL_STORAGE_KEYS.COLOR_SCHEME,
       'light'
     );
-    expect(setColorTheme).toHaveBeenCalledWith(false);
+    expect(updateUISettings).toHaveBeenCalledWith({
+      appearance_mode: 'light',
+    });
+    expect(setColorTheme).toHaveBeenCalledWith(false, {
+      appearance_mode: 'light',
+      brand_theme: 'viper',
+    });
   });
 
   it('should handle system dark mode preference', () => {
@@ -78,6 +92,10 @@ describe('useAppearanceHotKeys', () => {
       LOCAL_STORAGE_KEYS.COLOR_SCHEME,
       'auto'
     );
-    expect(setColorTheme).toHaveBeenCalledWith(true);
+    expect(updateUISettings).toHaveBeenCalledWith({ appearance_mode: 'auto' });
+    expect(setColorTheme).toHaveBeenCalledWith(true, {
+      appearance_mode: 'auto',
+      brand_theme: 'viper',
+    });
   });
 });

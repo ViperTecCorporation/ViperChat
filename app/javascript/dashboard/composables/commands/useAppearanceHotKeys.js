@@ -9,6 +9,7 @@ import {
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { setColorTheme } from 'dashboard/helper/themeHelper.js';
+import { useUISettings } from 'dashboard/composables/useUISettings';
 
 const getThemeOptions = t => [
   {
@@ -28,16 +29,19 @@ const getThemeOptions = t => [
   },
 ];
 
-const setAppearance = theme => {
+const setAppearance = (theme, uiSettings, updateUISettings) => {
   LocalStorage.set(LOCAL_STORAGE_KEYS.COLOR_SCHEME, theme);
+  const nextSettings = { ...uiSettings, appearance_mode: theme };
+  updateUISettings({ appearance_mode: theme });
   const isOSOnDarkMode = window.matchMedia(
     '(prefers-color-scheme: dark)'
   ).matches;
-  setColorTheme(isOSOnDarkMode);
+  setColorTheme(isOSOnDarkMode, nextSettings);
 };
 
 export function useAppearanceHotKeys() {
   const { t } = useI18n();
+  const { uiSettings, updateUISettings } = useUISettings();
 
   const themeOptions = computed(() => getThemeOptions(t));
 
@@ -49,7 +53,7 @@ export function useAppearanceHotKeys() {
       section: t('COMMAND_BAR.SECTIONS.APPEARANCE'),
       icon: theme.icon,
       handler: () => {
-        setAppearance(theme.key);
+        setAppearance(theme.key, uiSettings.value, updateUISettings);
       },
     }));
     return [

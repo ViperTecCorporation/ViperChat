@@ -4,6 +4,8 @@ import auth from '../api/auth';
 import { useAlert } from 'dashboard/composables';
 
 export const verifyServiceWorkerExistence = (callback = () => {}) => {
+  if (window.chatwootConfig?.isNativeApp) return;
+
   if (!('serviceWorker' in navigator)) {
     // Service Worker isn't supported on this browser, disable or hide UI.
     return;
@@ -53,7 +55,10 @@ export const sendRegistrationToServer = subscription => {
   return null;
 };
 
-export const registerSubscription = (onSuccess = () => {}) => {
+export const registerSubscription = (
+  onSuccess = () => {},
+  onError = () => {}
+) => {
   if (!window.chatwootConfig.vapidPublicKey) {
     return;
   }
@@ -72,20 +77,21 @@ export const registerSubscription = (onSuccess = () => {}) => {
       // eslint-disable-next-line no-console
       console.error('Push subscription registration failed:', error);
       useAlert('This browser does not support desktop notification');
+      onError(error);
     });
 };
 
-export const requestPushPermissions = ({ onSuccess }) => {
+export const requestPushPermissions = ({ onSuccess, onError = () => {} }) => {
   if (!('Notification' in window)) {
     // eslint-disable-next-line no-console
     console.warn('Notification is not supported');
     useAlert('This browser does not support desktop notification');
   } else if (Notification.permission === 'granted') {
-    registerSubscription(onSuccess);
+    registerSubscription(onSuccess, onError);
   } else if (Notification.permission !== 'denied') {
     Notification.requestPermission(permission => {
       if (permission === 'granted') {
-        registerSubscription(onSuccess);
+        registerSubscription(onSuccess, onError);
       }
     });
   }

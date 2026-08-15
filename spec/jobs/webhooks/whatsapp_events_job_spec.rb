@@ -239,6 +239,24 @@ RSpec.describe Webhooks::WhatsappEventsJob do
     end
   end
 
+  context 'when UnoAPI sends an echo' do
+    let(:channel) { create(:channel_whatsapp, provider: 'unoapi', sync_templates: false, validate_provider_config: false) }
+
+    it 'uses the UnoAPI incoming service so structured echoes are normalized' do
+      echo_params = params.deep_dup
+      echo_params[:entry].first[:changes].first[:field] = 'smb_message_echoes'
+      echo_params[:entry].first[:changes].first[:value][:message_echoes] = [{
+        from: channel.phone_number.delete('+'), to: '5566996222471', id: 'uno-echo', type: 'text', text: { body: 'Olá' }
+      }]
+      allow(Whatsapp::IncomingMessageUnoapiService).to receive(:new).and_return(process_service)
+
+      expect(Whatsapp::IncomingMessageUnoapiService).to receive(:new).with(
+        inbox: channel.inbox, params: echo_params, outgoing_echo: true
+      ).and_return(process_service)
+      job.perform_now(echo_params)
+    end
+  end
+
   context 'when whatsapp business params' do
     it 'enqueue Whatsapp::IncomingMessageWhatsappCloudService based on the number in payload' do
       other_channel = create(:channel_whatsapp, phone_number: '+1987654', provider: 'whatsapp_cloud', sync_templates: false,

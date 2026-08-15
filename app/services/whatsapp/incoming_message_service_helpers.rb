@@ -109,15 +109,7 @@ module Whatsapp::IncomingMessageServiceHelpers
     when 'flow'
       action = interactive[:action] || {}
       flow_cta = action[:flow_cta] || action[:button]
-      flow_id = action[:flow_id] || action[:id]
-      flow_name = action[:flow_name]
-      flow_token = action[:flow_token]
-      flow_screen = action.dig(:flow_action_payload, :screen)
       parts << "Button: #{flow_cta}" if flow_cta.present?
-      parts << "Flow: #{flow_name}" if flow_name.present?
-      parts << "Flow ID: #{flow_id}" if flow_id.present?
-      parts << "Screen: #{flow_screen}" if flow_screen.present?
-      parts << "Token: #{flow_token}" if flow_token.present?
     end
 
     parts.reject(&:blank?).join("\n")
@@ -143,7 +135,7 @@ module Whatsapp::IncomingMessageServiceHelpers
   end
 
   def whatsapp_carousel_items(message)
-    cards = message.dig(:interactive, :carousel, :cards)
+    cards = message.dig(:interactive, :action, :carousel, :cards).presence || message.dig(:interactive, :carousel, :cards)
     return [] unless cards.is_a?(Array)
 
     cards.filter_map { |card| whatsapp_carousel_item(card) }
@@ -159,6 +151,7 @@ module Whatsapp::IncomingMessageServiceHelpers
       media_url: card.dig(:header, :image, :link).to_s,
       actions: whatsapp_carousel_actions(card.dig(:action, :buttons))
     }
+    item[:footer] = card.dig(:footer, :text).to_s if card.dig(:footer, :text).present?
     return if item.values_at(:title, :description, :media_url).all?(&:blank?) && item[:actions].blank?
 
     item
@@ -184,6 +177,14 @@ module Whatsapp::IncomingMessageServiceHelpers
       text = button.dig(:reply, :title).to_s
       payload = button.dig(:reply, :id).to_s
       { type: 'postback', text: text, payload: payload } unless text.blank? && payload.blank?
+    when 'cta_call'
+      text = button.dig(:call, :title).to_s
+      phone = button.dig(:call, :phone_number).to_s
+      { type: 'call', text: text, phone_number: phone } unless text.blank? && phone.blank?
+    when 'cta_copy'
+      text = button.dig(:copy_code, :title).to_s
+      code = button.dig(:copy_code, :code).to_s
+      { type: 'copy', text: text, code: code } unless text.blank? && code.blank?
     end
   end
 
@@ -267,7 +268,8 @@ module Whatsapp::IncomingMessageServiceHelpers
   end
 
   def process_in_reply_to(message)
-    @in_reply_to_external_id = message['context']&.[]('id')
+    context = message['context']
+    @in_reply_to_external_id = context&.[]('id').presence || context&.[]('message_id').presence
   end
 
   def referral_attributes(message)

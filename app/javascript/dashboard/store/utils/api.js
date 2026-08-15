@@ -82,6 +82,11 @@ export const clearCookiesOnLogout = () => {
   clearBrowserSessionCookies();
   clearLocalStorageOnLogout();
   clearSessionStorageOnLogout();
+  if (window.viperNativeAuth) {
+    window.viperNativeSession = null;
+    window.viperNativeAuth.clear().finally(() => window.location.reload());
+    return;
+  }
   const globalConfig = window.globalConfig || {};
   const logoutRedirectLink = globalConfig.LOGOUT_REDIRECT_LINK || '/';
   window.location = logoutRedirectLink;

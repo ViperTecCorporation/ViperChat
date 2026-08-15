@@ -255,6 +255,50 @@
     "CHANGELOG": "Notas de versão",
     "LOGOUT": "Encerrar sessão"
   },
+  "THEME_SETTINGS": {
+    "TITLE": "Alterar tema",
+    "DESCRIPTION": "Personalize sua experiência no ViperChat",
+    "APPEARANCE": {
+      "LABEL": "Aparência",
+      "SYSTEM": "Sistema",
+      "LIGHT": "Claro",
+      "DARK": "Escuro"
+    },
+    "BRAND": {
+      "LABEL": "Cor principal",
+      "ORIGINAL": "Azul original",
+      "CUSTOM": "Personalizada"
+    },
+    "CUSTOM_COLOR": "Sua cor",
+    "LIGHT_COLOR": "Cor no tema claro",
+    "DARK_COLOR": "Cor no tema escuro",
+    "SEPARATE_DARK_COLOR": "Usar uma cor diferente no tema escuro",
+    "ADVANCED": "Opções avançadas",
+    "INTENSITY": {
+      "LABEL": "Intensidade",
+      "SOFT": "Suave",
+      "BALANCED": "Equilibrada",
+      "VIBRANT": "Vibrante"
+    },
+    "CONTRAST": {
+      "APPROVED": "Contraste AA aprovado",
+      "WILL_ADJUST": "O contraste será ajustado"
+    },
+    "PREVIEW": "Prévia",
+    "PREVIEW_REAL_TIME": "visualização em tempo real",
+    "PREVIEW_MINE": "Minhas",
+    "PREVIEW_ALL": "Todas",
+    "PREVIEW_MESSAGE": "Olá! Como posso ajudar?",
+    "PREVIEW_ACTION": "Nova conversa",
+    "RECENT_COLORS": "Cores recentes",
+    "USER_SCOPED": "Esta preferência fica salva apenas para o seu usuário.",
+    "RESTORE": "Restaurar padrão",
+    "SAVE": "Salvar tema",
+    "MESSAGES": {
+      "SAVED": "Tema salvo com sucesso",
+      "ERROR": "Não foi possível salvar o tema"
+    }
+  },
   "APP_GLOBAL": {
     "TRIAL_MESSAGE": "dias de teste restantes.",
     "TRAIL_BUTTON": "Comprar agora",

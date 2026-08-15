@@ -126,7 +126,7 @@ class Api::V1::AccountsController < Api::BaseController
 
   def permitted_settings_attributes
     [:auto_resolve_after, :auto_resolve_message, :auto_resolve_ignore_waiting, :audio_transcriptions,
-     :show_deleted_message_content, :auto_resolve_label]
+     :show_deleted_message_content, :auto_resolve_label, :use_legacy_message_composer]
   end
 
   def check_signup_enabled

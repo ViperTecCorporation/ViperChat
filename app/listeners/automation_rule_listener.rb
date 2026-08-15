@@ -81,6 +81,15 @@ class AutomationRuleListener < BaseListener
 
   def ignore_message_created_event?(event)
     message = event.data[:message]
-    performed_by_automation?(event) || message.activity? || message.auto_reply_email?
+    performed_by_automation?(event) || message.activity? || message.auto_reply_email? || unoapi_external_echo?(message)
+  end
+
+  def unoapi_external_echo?(message)
+    return false if message.content_attributes['external_echo'].blank?
+
+    channel = message.inbox&.channel
+    return false unless channel.is_a?(Channel::Whatsapp) && channel.provider == 'unoapi'
+
+    ActiveModel::Type::Boolean.new.cast(channel.provider_config['ignore_external_echo_automations'])
   end
 end

@@ -1,6 +1,6 @@
 class Whatsapp::Unoapi::CatalogMessageNormalizer
   CATALOG_TYPES = %w[product order].freeze
-  SENSITIVE_KEYS = %w[token order_token sensitive_string_value media_key direct_path].freeze
+  SENSITIVE_KEYS = %w[token order_token sensitive_string_value media_key direct_path credential_id].freeze
 
   def initialize(message:)
     @message = message.with_indifferent_access

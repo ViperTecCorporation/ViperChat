@@ -39,14 +39,19 @@ class Whatsapp::Unoapi::ContactSync::ExportJob < MutexApplicationJob
     contacts = channel.account.contacts.where(id: contact_ids).index_by(&:id)
     client = Whatsapp::Unoapi::ContactSync::Client.new(channel)
     contact_ids.each do |contact_id|
-      Whatsapp::Unoapi::ContactSync::ContactExporter.new(
-        channel: channel,
-        contact: contacts.fetch(contact_id),
-        client: client
-      ).perform
+      export_contact(channel, contacts.fetch(contact_id), client)
     end
 
     schedule_next_batch(channel, contact_ids.last) if contact_ids.size == BATCH_SIZE
+  end
+
+  def export_contact(channel, contact, client)
+    Whatsapp::Unoapi::ContactSync::ContactExporter.new(channel: channel, contact: contact, client: client).perform
+  rescue Whatsapp::Unoapi::ContactSync::Client::TransientError => e
+    Rails.logger.error(
+      "[UNOAPI CONTACT EXPORT] channel_id=#{channel.id} contact_id=#{contact.id} " \
+      "transient_error=#{e.class}: #{e.message}"
+    )
   end
 
   def schedule_next_batch(channel, after_contact_id)

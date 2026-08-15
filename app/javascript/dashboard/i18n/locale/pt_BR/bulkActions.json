@@ -1,12 +1,17 @@
 {
   "BULK_ACTION": {
     "CONVERSATIONS_SELECTED": "{conversationCount} conversas selecionadas",
+    "CLEAR_SELECTION": "Limpar seleção",
+    "NONE": "Nenhum",
+    "ASSIGN_AGENT_CONFIRMATION_LABEL": "Tem certeza de que deseja atribuir {n} conversa a {agentName}? | Tem certeza de que deseja atribuir {n} conversas a {agentName}?",
+    "UNASSIGN_AGENT_CONFIRMATION_LABEL": "Tem certeza de que deseja remover a atribuição de {n} conversa? | Tem certeza de que deseja remover a atribuição de {n} conversas?",
     "AGENT_SELECT_LABEL": "Selecionar agente",
     "ASSIGN_CONFIRMATION_LABEL": "Você tem certeza que quer atribuir {conversationCount} {conversationLabel} para",
     "UNASSIGN_CONFIRMATION_LABEL": "Você tem certeza que quer remover a atribuição de {conversationCount} {conversationLabel}?",
     "GO_BACK_LABEL": "Voltar atrás",
     "ASSIGN_LABEL": "Atribua",
     "YES": "Sim",
+    "CANCEL": "Cancelar",
     "SEARCH_INPUT_PLACEHOLDER": "Pesquisar",
     "ASSIGN_AGENT_TOOLTIP": "Atribuir Agente",
     "ASSIGN_TEAM_TOOLTIP": "Atribuir time",
@@ -28,14 +33,20 @@
     },
     "LABELS": {
       "ASSIGN_LABELS": "Atribuir rótulo",
+      "REMOVE_LABELS": "Remover etiquetas",
       "NO_LABELS_FOUND": "Nenhuma etiqueta encontrada",
       "ASSIGN_SELECTED_LABELS": "Atribuir etiquetas selecionadas",
+      "REMOVE_SELECTED_LABELS": "Remover etiquetas selecionadas",
       "ASSIGN_SUCCESFUL": "Rótulos atribuídos com sucesso.",
-      "ASSIGN_FAILED": "Falha ao atribuir etiquetas. Por favor, tente novamente."
+      "ASSIGN_FAILED": "Falha ao atribuir etiquetas. Por favor, tente novamente.",
+      "REMOVE_SUCCESFUL": "Etiquetas removidas com sucesso.",
+      "REMOVE_FAILED": "Falha ao remover etiquetas. Tente novamente."
     },
     "TEAMS": {
       "TEAM_SELECT_LABEL": "Selecionar time",
       "NONE": "Nenhum",
+      "ASSIGN_TEAM_CONFIRMATION_LABEL": "Tem certeza de que deseja atribuir {n} conversa ao time {teamName}? | Tem certeza de que deseja atribuir {n} conversas ao time {teamName}?",
+      "UNASSIGN_TEAM_CONFIRMATION_LABEL": "Tem certeza de que deseja remover o time de {n} conversa? | Tem certeza de que deseja remover o time de {n} conversas?",
       "NO_TEAMS_AVAILABLE": "Ainda não há times adicionados a esta conta.",
       "ASSIGN_SELECTED_TEAMS": "Atribuir time selecionado.",
       "ASSIGN_SUCCESFUL": "Times atribuídos com sucesso.",

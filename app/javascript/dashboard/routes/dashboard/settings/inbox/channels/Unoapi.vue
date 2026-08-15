@@ -2,16 +2,24 @@
 import { mapGetters } from 'vuex';
 import { useVuelidate } from '@vuelidate/core';
 import { useAlert } from 'dashboard/composables';
-import { required } from '@vuelidate/validators';
+import {
+  integer,
+  maxValue,
+  minValue,
+  required,
+  requiredIf,
+} from '@vuelidate/validators';
 import router from '../../../../index';
 import { isPhoneE164OrEmpty } from 'shared/helpers/Validators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SwitchControl from 'dashboard/components-next/switch/Switch.vue';
+import UnoapiSettingLabel from '../settingsPage/UnoapiSettingLabel.vue';
 
 export default {
   components: {
     NextButton,
     SwitchControl,
+    UnoapiSettingLabel,
   },
   setup() {
     return { v$: useVuelidate() };
@@ -22,24 +30,48 @@ export default {
       phoneNumber: '',
       apiKey: '',
       url: 'https://unoapi.cloud',
-      ignoreGroupMessages: true,
+      ignoreGroupMessages: false,
       ignoreHistoryMessages: true,
+      historyMaxAgeDays: 7,
       sendAgentName: true,
       webhookSendNewMessages: true,
     };
   },
   computed: {
-    ...mapGetters({ uiFlags: 'inboxes/getUIFlags' }),
+    ...mapGetters({
+      uiFlags: 'inboxes/getUIFlags',
+      globalConfig: 'globalConfig/get',
+    }),
+    apiKeyPlaceholder() {
+      return this.globalConfig.unoapiAuthTokenConfigured
+        ? this.$t('INBOX_MGMT.ADD.WHATSAPP.API_KEY.GLOBAL_PLACEHOLDER')
+        : this.$t('INBOX_MGMT.ADD.WHATSAPP.API_KEY.PLACEHOLDER');
+    },
   },
-  validations: {
-    inboxName: { required },
-    phoneNumber: { required, isPhoneE164OrEmpty },
-    apiKey: { required },
-    ignoreGroupMessages: { required },
-    ignoreHistoryMessages: { required },
-    sendAgentName: { required },
-    webhookSendNewMessages: { required },
-    url: { required },
+  validations() {
+    return {
+      inboxName: { required },
+      phoneNumber: { required, isPhoneE164OrEmpty },
+      apiKey: {
+        required: requiredIf(
+          () => !this.globalConfig.unoapiAuthTokenConfigured
+        ),
+      },
+      ignoreGroupMessages: { required },
+      ignoreHistoryMessages: { required },
+      historyMaxAgeDays: {
+        required,
+        integer,
+        minValue: minValue(1),
+        maxValue: maxValue(3650),
+      },
+      sendAgentName: { required },
+      webhookSendNewMessages: { required },
+      url: { required },
+    };
+  },
+  mounted() {
+    this.url = this.globalConfig.unoapiApiUrl || this.url;
   },
   methods: {
     generateToken() {
@@ -53,8 +85,8 @@ export default {
       }
 
       if (this.apiKey) {
-        // eslint-disable-next-line no-alert
         if (
+          // eslint-disable-next-line no-alert
           window.confirm('A token already exists. Do you want to replace it?')
         ) {
           this.apiKey = token;
@@ -76,19 +108,40 @@ export default {
             name: this.inboxName,
             channel: {
               type: 'whatsapp',
+              contact_sync_enabled: true,
+              contact_export_enabled: true,
               phone_number: this.phoneNumber,
               provider: 'unoapi',
               provider_config: {
-                api_key: this.apiKey,
+                api_key: this.apiKey || null,
                 phone_number: this.phoneNumber,
                 phone_number_id: this.phoneNumber.replace('+', ''),
                 business_account_id: this.phoneNumber.replace('+', ''),
                 ignore_history_messages: this.ignoreHistoryMessages,
+                history_max_age_days: Number(this.historyMaxAgeDays) || 7,
                 ignore_group_messages: this.ignoreGroupMessages,
+                ignore_newsletter_messages: true,
+                ignore_group_individual_receipts: true,
+                group_only_delivered_status: true,
                 use_group_conversation_schema: true,
                 send_agent_name: this.sendAgentName,
                 webhook_send_new_messages: this.webhookSendNewMessages,
-                url: this.url,
+                send_transcribe_audio: true,
+                read_on_receipt: false,
+                read_on_reply: true,
+                ignore_broadcast_statuses: true,
+                ignore_broadcast_messages: true,
+                ignore_own_messages: false,
+                ignore_yourself_messages: false,
+                ignore_external_echo_automations: false,
+                send_connection_status: true,
+                mark_online_on_connect: false,
+                notify_failed_messages: true,
+                composing_message: false,
+                send_reaction_as_reply: true,
+                send_profile_picture: true,
+                url:
+                  this.url === this.globalConfig.unoapiApiUrl ? null : this.url,
               },
             },
           }
@@ -153,7 +206,7 @@ export default {
         <input
           v-model.trim="apiKey"
           type="text"
-          :placeholder="$t('INBOX_MGMT.ADD.WHATSAPP.API_KEY.PLACEHOLDER')"
+          :placeholder="apiKeyPlaceholder"
           @blur="v$.apiKey.$touch"
         />
         <span v-if="v$.apiKey.$error" class="message">
@@ -214,6 +267,28 @@ export default {
         {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_HISTORY.LABEL') }}
         <span v-if="v$.ignoreHistoryMessages.$error" class="message">
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.IGNORE_HISTORY.ERROR') }}
+        </span>
+      </label>
+    </div>
+
+    <div
+      v-if="!ignoreHistoryMessages"
+      class="w-[65%] flex-shrink-0 flex-grow-0 max-w-[65%] pl-10"
+    >
+      <label :class="{ error: v$.historyMaxAgeDays.$error }">
+        <UnoapiSettingLabel
+          :label="$t('INBOX_MGMT.ADD.WHATSAPP.HISTORY_MAX_AGE_DAYS.LABEL')"
+          :help="$t('INBOX_MGMT.ADD.WHATSAPP.HISTORY_MAX_AGE_DAYS.HELP')"
+        />
+        <input
+          v-model.number="historyMaxAgeDays"
+          type="number"
+          min="1"
+          max="3650"
+          @blur="v$.historyMaxAgeDays.$touch"
+        />
+        <span v-if="v$.historyMaxAgeDays.$error" class="message">
+          {{ $t('INBOX_MGMT.ADD.WHATSAPP.HISTORY_MAX_AGE_DAYS.ERROR') }}
         </span>
       </label>
     </div>

@@ -8,7 +8,9 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
   end
 
   def validate_provider_config?
-    url = "#{business_account_path}/message_templates?access_token=#{ENV.fetch('UNOAPI_AUTH_TOKEN', whatsapp_channel.provider_config['api_key'])}"
+    return Whatsapp::UnoapiWebhookSetupService.new.perform(whatsapp_channel) if whatsapp_channel.provider_config['connect']
+
+    url = "#{business_account_path}/message_templates?access_token=#{whatsapp_channel.unoapi_auth_token}"
     return Whatsapp::UnoapiWebhookSetupService.new.perform(whatsapp_channel) if HTTParty.get(url).success?
   end
 
@@ -118,6 +120,20 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
   end
 
   private
+
+  def should_prefix_sender_name?(message)
+    return false if message.content_attributes&.dig('whatsapp_interactive_reply').present?
+
+    super
+  end
+
+  def api_key
+    whatsapp_channel.unoapi_auth_token
+  end
+
+  def api_base_path
+    whatsapp_channel.unoapi_api_url
+  end
 
   def pix_payment_request?(message)
     message.content_attributes&.dig('whatsapp_interactive', 'type') == 'payment_request'

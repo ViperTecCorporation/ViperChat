@@ -81,12 +81,12 @@ class Whatsapp::Unoapi::ContactSync::Client
   end
 
   def base_url
-    @channel.provider_config.fetch('url').delete_suffix('/')
+    @channel.unoapi_api_url
   end
 
   def headers
     {
-      'Authorization' => ENV.fetch('UNOAPI_AUTH_TOKEN', @channel.provider_config.fetch('api_key')),
+      'Authorization' => @channel.unoapi_auth_token,
       'Content-Type' => 'application/json'
     }
   end

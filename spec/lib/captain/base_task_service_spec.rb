@@ -337,6 +337,26 @@ RSpec.describe Captain::BaseTaskService do
       it 'uses api key from hook' do
         expect(service.send(:api_key)).to eq('hook-key')
       end
+
+      context 'with a custom system endpoint' do
+        before do
+          create(:installation_config, name: 'CAPTAIN_OPEN_AI_ENDPOINT', value: 'https://openrouter.ai/api')
+        end
+
+        it 'uses the system key configured for the custom endpoint' do
+          expect(service.send(:api_key)).to eq('test-key')
+        end
+      end
+
+      context 'with the official OpenAI endpoint configured explicitly' do
+        before do
+          create(:installation_config, name: 'CAPTAIN_OPEN_AI_ENDPOINT', value: 'https://api.openai.com')
+        end
+
+        it 'continues using the account hook key' do
+          expect(service.send(:api_key)).to eq('hook-key')
+        end
+      end
     end
 
     it 'uses account OpenAI hook for editor task services' do

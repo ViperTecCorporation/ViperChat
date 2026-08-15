@@ -9,6 +9,7 @@ import {
 
 import ChatListHeader from './ChatListHeader.vue';
 import ConversationList from './ConversationList.vue';
+import PushNotificationBanner from './PushNotificationBanner.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import ConversationFilter from 'next/filter/ConversationFilter.vue';
 import SaveCustomView from 'next/filter/SaveCustomView.vue';
@@ -50,6 +51,10 @@ import {
   filterItemsByPermission,
 } from 'dashboard/helper/permissionsHelper.js';
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
+import {
+  isConversationMine,
+  isConversationUnassigned,
+} from '../store/modules/conversations/helpers';
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
@@ -63,7 +68,7 @@ const props = defineProps({
   isOnExpandedLayout: { default: false, type: Boolean },
 });
 
-const emit = defineEmits(['conversationLoad']);
+const emit = defineEmits(['conversationLoad', 'listContextChange']);
 const { uiSettings } = useUISettings();
 const { t } = useI18n();
 const router = useRouter();
@@ -104,6 +109,7 @@ const appliedFilters = useMapGetter('getAppliedConversationFiltersV2');
 const folders = useMapGetter('customViews/getConversationCustomViews');
 const agentList = useMapGetter('agents/getAgents');
 const teamsList = useMapGetter('teams/getTeams');
+const myTeamsList = useMapGetter('teams/getMyTeams');
 const inboxesList = useMapGetter('inboxes/getInboxes');
 const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
@@ -282,6 +288,23 @@ const activeAssigneeTabCount = computed(() => {
   return count;
 });
 
+const activeAssigneeTabItem = computed(() =>
+  assigneeTabItems.value.find(item => item.key === activeAssigneeTab.value)
+);
+
+watch(
+  () => [activeAssigneeTab.value, activeAssigneeTabItem.value?.count],
+  () => {
+    const {
+      key = '',
+      name = '',
+      count = 0,
+    } = activeAssigneeTabItem.value || {};
+    emit('listContextChange', { key, name, count });
+  },
+  { immediate: true }
+);
+
 const conversationListPagination = computed(() => {
   const conversationsPerPage = 25;
   const hasChatsOnView =
@@ -372,12 +395,17 @@ const pageTitle = computed(() => {
 
 function filterByAssigneeTab(conversations) {
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ME) {
-    return conversations.filter(
-      c => c.meta?.assignee?.id === currentUser.value?.id
+    const currentUserTeamIds = myTeamsList.value.map(team => team.id);
+    return conversations.filter(conversation =>
+      isConversationMine(
+        conversation,
+        currentUser.value?.id,
+        currentUserTeamIds
+      )
     );
   }
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
-    return conversations.filter(c => !c.meta?.assignee && !c.group);
+    return conversations.filter(isConversationUnassigned);
   }
   return [...conversations];
 }
@@ -473,10 +501,11 @@ function setFiltersFromUISettings() {
   )
     ? orderBy
     : wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC;
-  activeAssigneeTab.value =
-    isWaitingConversationsDefaultEnabled.value && !props.conversationType
-      ? wootConstants.ASSIGNEE_TYPE.WAITING
-      : wootConstants.ASSIGNEE_TYPE.ME;
+  if (isWaitingConversationsDefaultEnabled.value && !props.conversationType) {
+    activeAssigneeTab.value = wootConstants.ASSIGNEE_TYPE.WAITING;
+  } else {
+    activeAssigneeTab.value = wootConstants.ASSIGNEE_TYPE.ME;
+  }
 }
 
 function emitConversationLoaded() {
@@ -897,7 +926,10 @@ useEmitter('fetch_conversation_stats', () => {
   store.dispatch('conversationStats/get', conversationFilters.value);
 });
 
-onMounted(() => {
+onMounted(async () => {
+  if (!teamsList.value.length) {
+    await store.dispatch('teams/get');
+  }
   setFiltersFromUISettings();
   store.dispatch('setChatListFilters', conversationFilters.value);
   store.dispatch('setChatStatusFilter', activeStatus.value);
@@ -1027,6 +1059,8 @@ watch(conversationFilters, (newVal, oldVal) => {
       is-compact
       @chat-tab-change="updateAssigneeTab"
     />
+
+    <PushNotificationBanner :account-id="currentAccountId" />
 
     <p
       v-if="!chatListLoading && !conversationList.length"

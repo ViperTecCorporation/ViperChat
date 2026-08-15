@@ -14,6 +14,7 @@ import { useWindowSize, useEventListener } from '@vueuse/core';
 import Button from 'dashboard/components-next/button/Button.vue';
 import SidebarGroup from './SidebarGroup.vue';
 import SidebarProfileMenu from './SidebarProfileMenu.vue';
+import SidebarNotificationBell from './SidebarNotificationBell.vue';
 import SidebarChangelogCard from './SidebarChangelogCard.vue';
 import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import ChannelLeaf from './ChannelLeaf.vue';
@@ -612,6 +613,12 @@ const menuItems = computed(() => {
       icon: 'i-lucide-bolt',
       children: [
         {
+          name: 'Settings Account Settings',
+          label: t('SIDEBAR.ACCOUNT_SETTINGS'),
+          icon: 'i-lucide-briefcase',
+          to: accountScopedRoute('general_settings_index'),
+        },
+        {
           name: 'Settings Dashboard',
           label: t('SIDEBAR.DASHBOARD'),
           icon: 'i-lucide-layout-dashboard',
@@ -638,14 +645,6 @@ const menuItems = computed(() => {
               to: accountScopedRoute('captain_assistants_index', {
                 navigationPath: 'captain_assistants_overview_index',
               }),
-            },
-            {
-              name: 'Dashboard Inbox',
-              label: t('SIDEBAR.INBOX'),
-              icon: 'i-lucide-inbox',
-              to: accountScopedRoute('inbox_view'),
-              activeOn: ['inbox_view', 'inbox_view_conversation'],
-              badgeCount: notificationUnreadCount.value,
             },
             {
               name: 'Dashboard Campaigns',
@@ -682,12 +681,6 @@ const menuItems = computed(() => {
               }),
             },
           ],
-        },
-        {
-          name: 'Settings Account Settings',
-          label: t('SIDEBAR.ACCOUNT_SETTINGS'),
-          icon: 'i-lucide-briefcase',
-          to: accountScopedRoute('general_settings_index'),
         },
         // {
         //   name: 'Settings Captain',
@@ -999,6 +992,13 @@ const menuItems = computed(() => {
             @click="toggleSidebarWidth"
           />
         </div>
+        <SidebarNotificationBell
+          :is-collapsed="isEffectivelyCollapsed"
+          :label="t('SIDEBAR.NOTIFICATIONS')"
+          :to="accountScopedRoute('inbox_view')"
+          :unread-count="notificationUnreadCount"
+          @navigate="closeMobileSidebar"
+        />
         <SidebarProfileMenu
           :is-collapsed="isEffectivelyCollapsed"
           @open-key-shortcut-modal="emit('openKeyShortcutModal')"

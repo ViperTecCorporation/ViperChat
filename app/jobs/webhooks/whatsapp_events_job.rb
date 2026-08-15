@@ -74,7 +74,8 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
   end
 
   def handle_message_echo(channel, params)
-    Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: channel.inbox, params: params, outgoing_echo: true).perform
+    service = channel.provider == 'unoapi' ? Whatsapp::IncomingMessageUnoapiService : Whatsapp::IncomingMessageWhatsappCloudService
+    service.new(inbox: channel.inbox, params: params, outgoing_echo: true).perform
   end
 
   def handle_message_events(channel, params)

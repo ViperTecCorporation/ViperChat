@@ -267,6 +267,50 @@
     "CHANGELOG": "Changelog",
     "LOGOUT": "Log out"
   },
+  "THEME_SETTINGS": {
+    "TITLE": "Change theme",
+    "DESCRIPTION": "Personalize your ViperChat experience",
+    "APPEARANCE": {
+      "LABEL": "Appearance",
+      "SYSTEM": "System",
+      "LIGHT": "Light",
+      "DARK": "Dark"
+    },
+    "BRAND": {
+      "LABEL": "Primary color",
+      "ORIGINAL": "Original blue",
+      "CUSTOM": "Custom"
+    },
+    "CUSTOM_COLOR": "Your color",
+    "LIGHT_COLOR": "Light theme color",
+    "DARK_COLOR": "Dark theme color",
+    "SEPARATE_DARK_COLOR": "Use a different color in dark mode",
+    "ADVANCED": "Advanced options",
+    "INTENSITY": {
+      "LABEL": "Intensity",
+      "SOFT": "Soft",
+      "BALANCED": "Balanced",
+      "VIBRANT": "Vibrant"
+    },
+    "CONTRAST": {
+      "APPROVED": "AA contrast approved",
+      "WILL_ADJUST": "Contrast will be adjusted"
+    },
+    "PREVIEW": "Preview",
+    "PREVIEW_REAL_TIME": "real-time preview",
+    "PREVIEW_MINE": "Mine",
+    "PREVIEW_ALL": "All",
+    "PREVIEW_MESSAGE": "Hello! How can I help?",
+    "PREVIEW_ACTION": "New conversation",
+    "RECENT_COLORS": "Recent colors",
+    "USER_SCOPED": "This preference is saved only for your user.",
+    "RESTORE": "Restore default",
+    "SAVE": "Save theme",
+    "MESSAGES": {
+      "SAVED": "Theme saved successfully",
+      "ERROR": "Unable to save theme"
+    }
+  },
   "APP_GLOBAL": {
     "TRIAL_MESSAGE": "days trial remaining.",
     "TRAIL_BUTTON": "Buy Now",

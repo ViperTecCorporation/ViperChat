@@ -11,6 +11,18 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  height: {
+    type: Number,
+    default: 100,
+  },
+  waveColor: {
+    type: String,
+    default: '#1F93FF',
+  },
+  progressColor: {
+    type: String,
+    default: '#6E6F73',
+  },
 });
 
 const emit = defineEmits([
@@ -63,9 +75,9 @@ const getRecordPluginOptions = audioFormat => {
 const initWaveSurfer = () => {
   wavesurfer.value = WaveSurfer.create({
     container: waveformContainer.value,
-    waveColor: '#1F93FF',
-    progressColor: '#6E6F73',
-    height: 100,
+    waveColor: props.waveColor,
+    progressColor: props.progressColor,
+    height: props.height,
     barWidth: 2,
     barGap: 1,
     barRadius: 2,

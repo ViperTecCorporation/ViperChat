@@ -31,7 +31,7 @@ class Whatsapp::UnoapiWebhookSetupService
     url = url(whatsapp_channel)
     Rails.logger.debug { "Connecting #{phone_number} from unoapi with url #{url}" }
     body = params(whatsapp_channel, phone_number)
-    response = HTTParty.post("#{url}/register", headers: headers(whatsapp_channel), body: body.to_json)
+    response = HTTParty.post("#{url}/register", headers: registration_headers(whatsapp_channel), body: body.to_json)
     Rails.logger.debug { "Response #{response}" }
     if response.success?
       connected = send_message(whatsapp_channel)
@@ -65,14 +65,19 @@ class Whatsapp::UnoapiWebhookSetupService
   end
 
   def url(whatsapp_channel)
-    "#{whatsapp_channel.provider_config['url']}/v15.0/#{whatsapp_channel.provider_config['business_account_id']}"
+    "#{whatsapp_channel.unoapi_api_url}/v15.0/#{whatsapp_channel.provider_config['business_account_id']}"
   end
 
   def headers(whatsapp_channel)
     {
-      Authorization: ENV.fetch('UNOAPI_AUTH_TOKEN', whatsapp_channel.provider_config['api_key']),
+      Authorization: whatsapp_channel.unoapi_auth_token,
       'Content-Type': 'application/json'
     }
+  end
+
+  def registration_headers(whatsapp_channel)
+    token = whatsapp_channel.unoapi_registration_auth_token.presence || whatsapp_channel.unoapi_auth_token
+    { Authorization: token, 'Content-Type': 'application/json' }
   end
 
   # rubocop:disable Metrics/MethodLength
@@ -83,6 +88,21 @@ class Whatsapp::UnoapiWebhookSetupService
     connection_type = provider_config['connection_type']
     connection_type = 'qrcode' unless %w[qrcode pairing_code].include?(connection_type)
     label = "#{whatsapp_channel.inbox.name} - account #{whatsapp_channel.account_id}"
+    default_webhook = {
+      sendNewMessages: true,
+      id: 'default',
+      urlAbsolute: callback_url,
+      token: provider_config['webhook_verify_token'],
+      header: :Authorization,
+      sendGroupMessages: true,
+      sendNewsletterMessages: false,
+      sendOutgoingMessages: true,
+      sendIncomingMessages: true,
+      sendUpdateMessages: true,
+      sendTranscribeAudio: send_transcribe_audio,
+      addToBlackListOnOutgoingMessageWithTtl: '',
+      timeoutMs: 360_000
+    }
 
     {
       autoConnect: true,
@@ -96,6 +116,7 @@ class Whatsapp::UnoapiWebhookSetupService
       ignoreBroadcastStatuses: provider_config['ignore_broadcast_statuses'],
       ignoreBroadcastMessages: provider_config['ignore_broadcast_messages'],
       ignoreHistoryMessages: provider_config['ignore_history_messages'],
+      historyMaxAgeDays: provider_config.fetch('history_max_age_days', 7).to_i.clamp(1, 3650),
       ignoreOwnMessages: provider_config['ignore_own_messages'],
       ignoreYourselfMessages: provider_config['ignore_yourself_messages'],
       sendConnectionStatus: provider_config['send_connection_status'],
@@ -111,29 +132,32 @@ class Whatsapp::UnoapiWebhookSetupService
       groqApiTranscribeModel: 'whisper-large-v3',
       groqApiBaseUrl: 'https://api.groq.com/openai/v1',
       label: label,
-      webhooks: [
-        {
-          sendNewMessages: true,
-          id: 'default',
-          urlAbsolute: callback_url,
-          token: provider_config['webhook_verify_token'],
-          header: :Authorization,
-          sendGroupMessages: true,
-          sendNewsletterMessages: false,
-          sendOutgoingMessages: true,
-          sendIncomingMessages: true,
-          sendUpdateMessages: true,
-          sendTranscribeAudio: send_transcribe_audio,
-          addToBlackListOnOutgoingMessageWithTtl: '',
-          timeoutMs: 360_000
-        }
-      ],
+      webhooks: merged_webhooks(whatsapp_channel, default_webhook),
       sendReactionAsReply: provider_config['send_reaction_as_reply'],
       sendProfilePicture: provider_config['send_profile_picture'],
-      authToken: provider_config['api_key'],
+      authToken: whatsapp_channel.unoapi_auth_token,
     }
   end
   # rubocop:enable Metrics/MethodLength
+
+  def merged_webhooks(whatsapp_channel, default_webhook)
+    existing_webhooks = fetch_existing_webhooks(whatsapp_channel)
+    additional_webhooks = existing_webhooks.reject { |webhook| webhook['id'].to_s == 'default' }
+
+    [default_webhook, *additional_webhooks]
+  end
+
+  def fetch_existing_webhooks(whatsapp_channel)
+    response = HTTParty.get(url(whatsapp_channel), headers: registration_headers(whatsapp_channel))
+    return [] unless response.success?
+
+    config = response.parsed_response
+    config = JSON.parse(response.body) unless config.is_a?(Hash)
+    Array(config['webhooks'])
+  rescue StandardError => e
+    Rails.logger.warn("[UNOAPI] Could not load existing webhooks before register: #{e.class}")
+    []
+  end
 
   def webhook_callback_url(phone_number)
     "#{ENV.fetch('FRONTEND_URL', nil)}/webhooks/whatsapp/#{phone_number}"

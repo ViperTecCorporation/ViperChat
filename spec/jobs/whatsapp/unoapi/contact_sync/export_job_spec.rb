@@ -52,4 +52,19 @@ describe Whatsapp::Unoapi::ContactSync::ExportJob do
 
     expect(Whatsapp::Unoapi::ContactSync::ContactExporter).not_to have_received(:new)
   end
+
+  it 'continues the batch when one contact verification times out' do
+    next_contact = create(:contact, account: account, phone_number: '+5566999223344')
+    create(:contact_inbox, inbox: channel.inbox, contact: next_contact, source_id: '5566999223344')
+    timed_out_exporter = instance_double(Whatsapp::Unoapi::ContactSync::ContactExporter)
+    successful_exporter = instance_double(Whatsapp::Unoapi::ContactSync::ContactExporter, perform: :processed)
+    allow(timed_out_exporter).to receive(:perform)
+      .and_raise(Whatsapp::Unoapi::ContactSync::Client::TransientError, 'UnoAPI HTTP 500: query timeout')
+    allow(Whatsapp::Unoapi::ContactSync::ContactExporter).to receive(:new)
+      .and_return(timed_out_exporter, successful_exporter)
+
+    expect { job.perform(channel.id) }.not_to raise_error
+    expect(timed_out_exporter).to have_received(:perform)
+    expect(successful_exporter).to have_received(:perform)
+  end
 end

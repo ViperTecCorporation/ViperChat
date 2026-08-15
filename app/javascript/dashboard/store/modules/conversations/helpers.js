@@ -44,6 +44,25 @@ export const filterByTeam = (shouldFilter, teamId, chatTeamId) => {
   return teamId ? isOnTeam && shouldFilter : shouldFilter;
 };
 
+export const isConversationMine = (
+  conversation,
+  currentUserId,
+  currentUserTeamIds = []
+) => {
+  const { assignee, team } = conversation.meta || {};
+  const isAssignedToUser = Number(assignee?.id) === Number(currentUserId);
+  const isAssignedToUserTeam = currentUserTeamIds.some(
+    teamId => Number(teamId) === Number(team?.id)
+  );
+
+  return isAssignedToUser || isAssignedToUserTeam;
+};
+
+export const isConversationUnassigned = conversation =>
+  !conversation.meta?.assignee &&
+  !conversation.meta?.team &&
+  !conversation.group;
+
 export const filterByLabel = (shouldFilter, labels, chatLabels) => {
   const isOnLabel = labels.every(label => chatLabels.includes(label));
   return labels.length ? isOnLabel && shouldFilter : shouldFilter;

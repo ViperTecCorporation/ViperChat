@@ -44,6 +44,8 @@ import FormBubble from './bubbles/Form.vue';
 import VoiceCallBubble from './bubbles/VoiceCall.vue';
 import StickerBubble from './bubbles/Sticker.vue';
 import CardsBubble from './bubbles/Cards.vue';
+import UnoapiInteractiveBubble from './bubbles/UnoapiInteractive.vue';
+import UnoapiCatalogBubble from './bubbles/UnoapiCatalog.vue';
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
@@ -380,6 +382,17 @@ const componentToRender = computed(() => {
   if (props.isEmailInbox && !props.private) {
     const emailInboxTypes = [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING];
     if (emailInboxTypes.includes(props.messageType)) return EmailBubble;
+  }
+
+  if (props.contentAttributes?.unoapiMessageType) {
+    return UnoapiCatalogBubble;
+  }
+
+  if (
+    props.contentAttributes?.whatsappInteractive &&
+    props.contentAttributes.whatsappInteractive.type !== 'carousel'
+  ) {
+    return UnoapiInteractiveBubble;
   }
 
   if (props.contentType === CONTENT_TYPES.INPUT_CSAT) {

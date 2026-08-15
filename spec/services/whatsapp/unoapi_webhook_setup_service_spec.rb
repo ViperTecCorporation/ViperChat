@@ -22,6 +22,7 @@ describe Whatsapp::UnoapiWebhookSetupService do
         'ignore_broadcast_messages' => true,
         'ignore_broadcast_statuses' => true,
         'ignore_history_messages' => false,
+        'history_max_age_days' => 15,
         'ignore_own_messages' => false,
         'ignore_yourself_messages' => false,
         'send_connection_status' => true,
@@ -38,8 +39,12 @@ describe Whatsapp::UnoapiWebhookSetupService do
   end
   let(:register_response) { instance_double(HTTParty::Response, success?: true) }
   let(:message_response) { instance_double(HTTParty::Response, success?: true) }
+  let(:config_response) do
+    instance_double(HTTParty::Response, success?: true, parsed_response: { 'webhooks' => [] })
+  end
 
   before do
+    allow(HTTParty).to receive(:get).and_return(config_response)
     allow(channel).to receive(:save!).and_return(true)
     allow(channel).to receive(:inbox).and_return(
       instance_double('Inbox', name: 'Viper tec Principal', account_id: account.id)
@@ -66,6 +71,7 @@ describe Whatsapp::UnoapiWebhookSetupService do
     expect(payload['connectionType']).to eq('qrcode')
     expect(payload['markOnlineOnConnect']).to be(false)
     expect(payload['readOnReply']).to be(true)
+    expect(payload['historyMaxAgeDays']).to eq(15)
     expect(payload['useRedis']).to be(true)
     expect(payload['useS3']).to be(true)
     expect(webhook['urlAbsolute']).to eq('https://chatwoot.vipertec.net/webhooks/whatsapp/5566996222471')
@@ -76,6 +82,60 @@ describe Whatsapp::UnoapiWebhookSetupService do
     expect(payload).not_to have_key('sync_contacts')
   end
 
+  it 'uses seven days as the history window when the inbox has no override' do
+    channel.provider_config.delete('history_max_age_days')
+    calls = []
+    allow(HTTParty).to receive(:post) do |url, options|
+      calls << [url, options]
+      calls.length == 1 ? register_response : message_response
+    end
+
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net' do
+      service.perform(channel)
+    end
+
+    payload = JSON.parse(calls.first.last[:body])
+    expect(payload['historyMaxAgeDays']).to eq(7)
+  end
+
+  it 'uses the global token in the session payload without copying it into the inbox' do
+    channel.provider_config['api_key'] = nil
+    allow(GlobalConfigService).to receive(:load).with('UNOAPI_AUTH_TOKEN', nil).and_return('global-secret-token')
+    calls = []
+    allow(HTTParty).to receive(:post) do |url, options|
+      calls << [url, options]
+      calls.length == 1 ? register_response : message_response
+    end
+
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net', UNOAPI_AUTH_TOKEN: nil do
+      service.perform(channel)
+    end
+
+    payload = JSON.parse(calls.first.last[:body])
+    expect(payload['authToken']).to eq('global-secret-token')
+    expect(channel.provider_config['api_key']).to be_nil
+  end
+
+  it 'authorizes registration with the global token and persists the generated inbox token in the session payload' do
+    channel.provider_config['api_key'] = 'generated-session-token'
+    allow(GlobalConfigService).to receive(:load).with('UNOAPI_AUTH_TOKEN', nil).and_return('global-admin-token')
+    calls = []
+    allow(HTTParty).to receive(:post) do |url, options|
+      calls << [url, options]
+      calls.length == 1 ? register_response : message_response
+    end
+
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net', UNOAPI_AUTH_TOKEN: nil do
+      service.perform(channel)
+    end
+
+    register_options = calls.first.last
+    message_options = calls.second.last
+    expect(register_options[:headers][:Authorization]).to eq('global-admin-token')
+    expect(JSON.parse(register_options[:body])['authToken']).to eq('generated-session-token')
+    expect(message_options[:headers][:Authorization]).to eq('generated-session-token')
+  end
+
   it 'sends pairing_code when selected in the provider configuration' do
     channel.provider_config['connection_type'] = 'pairing_code'
     calls = []
@@ -84,9 +144,48 @@ describe Whatsapp::UnoapiWebhookSetupService do
       calls.length == 1 ? register_response : message_response
     end
 
-    service.perform(channel)
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net' do
+      service.perform(channel)
+    end
 
     payload = JSON.parse(calls.first.last[:body])
     expect(payload['connectionType']).to eq('pairing_code')
+  end
+
+  it 'preserves additional webhooks already configured in UnoAPI' do
+    typebot_webhook = {
+      'id' => 'type',
+      'typebot' => true,
+      'urlAbsolute' => 'https://bot.example.com/typebot/webhook',
+      'sendIncomingMessages' => true
+    }
+    allow(HTTParty).to receive(:get).and_return(
+      instance_double(
+        HTTParty::Response,
+        success?: true,
+        parsed_response: {
+          'webhooks' => [
+            { 'id' => 'default', 'urlAbsolute' => 'https://old.example.com/webhook' },
+            typebot_webhook
+          ]
+        }
+      )
+    )
+    calls = []
+    allow(HTTParty).to receive(:post) do |url, options|
+      calls << [url, options]
+      calls.length == 1 ? register_response : message_response
+    end
+
+    with_modified_env FRONTEND_URL: 'https://chatwoot.vipertec.net' do
+      service.perform(channel)
+    end
+
+    payload = JSON.parse(calls.first.last[:body])
+    expect(payload['webhooks'].map { |webhook| webhook['id'] }).to eq(%w[default type])
+    expect(payload['webhooks'].first['urlAbsolute']).to eq(
+      'https://chatwoot.vipertec.net/webhooks/whatsapp/5566996222471'
+    )
+    expect(payload['webhooks'].second).to eq(typebot_webhook)
   end
 end

@@ -87,6 +87,9 @@ const onSend = () => {
 
 <style lang="scss">
 .copilot-editor {
+  width: 100%;
+  min-width: 0;
+
   .ProseMirror-menubar {
     display: none;
   }

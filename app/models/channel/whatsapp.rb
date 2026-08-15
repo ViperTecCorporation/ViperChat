@@ -79,6 +79,24 @@ class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLengt
     end
   end
 
+  def unoapi_api_url
+    return unless provider == 'unoapi'
+
+    resolve_unoapi_config('UNOAPI_API_URL', 'url')&.delete_suffix('/')
+  end
+
+  def unoapi_auth_token
+    return unless provider == 'unoapi'
+
+    resolve_unoapi_config('UNOAPI_AUTH_TOKEN', 'api_key')
+  end
+
+  def unoapi_registration_auth_token
+    return unless provider == 'unoapi'
+
+    ENV['UNOAPI_AUTH_TOKEN'].presence || GlobalConfigService.load('UNOAPI_AUTH_TOKEN', nil).presence
+  end
+
   def messaging_window_enabled?
     provider_config['url'] == 'https://graph.facebook.com'
   end
@@ -147,6 +165,12 @@ class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLengt
   end
 
   private
+
+  def resolve_unoapi_config(environment_key, provider_config_key)
+    provider_config[provider_config_key].presence ||
+      ENV[environment_key].presence ||
+      GlobalConfigService.load(environment_key, nil).presence
+  end
 
   def handle_contact_sync_setting_change
     if contact_sync_enabled? && provider == 'unoapi'

@@ -220,6 +220,59 @@ describe AutomationRuleListener do
         expect(AutomationRules::ActionService).not_to have_received(:new)
       end
 
+      it 'does not call AutomationRules::ActionService for an UnoAPI external echo' do
+        whatsapp_channel = create(
+          :channel_whatsapp,
+          account: account,
+          provider: 'unoapi',
+          sync_templates: false,
+          validate_provider_config: false
+        )
+        whatsapp_channel.update!(
+          provider_config: whatsapp_channel.provider_config.merge('ignore_external_echo_automations' => true)
+        )
+        echo_conversation = create(:conversation, account: account, inbox: whatsapp_channel.inbox)
+        echo_message = create(
+          :message,
+          account: account,
+          conversation: echo_conversation,
+          inbox: whatsapp_channel.inbox,
+          message_type: :outgoing,
+          content_attributes: { external_echo: true }
+        )
+        echo_event = Events::Base.new('message_created', Time.zone.now, { message: echo_message })
+        allow(condition_match).to receive(:present?).and_return(true)
+
+        listener.message_created(echo_event)
+
+        expect(AutomationRules::ActionService).not_to have_received(:new)
+      end
+
+      it 'continues processing UnoAPI external echoes when the option is disabled' do
+        whatsapp_channel = create(
+          :channel_whatsapp,
+          account: account,
+          provider: 'unoapi',
+          sync_templates: false,
+          validate_provider_config: false
+        )
+        echo_conversation = create(:conversation, account: account, inbox: whatsapp_channel.inbox)
+        echo_message = create(
+          :message,
+          account: account,
+          conversation: echo_conversation,
+          inbox: whatsapp_channel.inbox,
+          message_type: :outgoing,
+          content_attributes: { external_echo: true }
+        )
+        echo_event = Events::Base.new('message_created', Time.zone.now, { message: echo_message })
+        allow(condition_match).to receive(:present?).and_return(true)
+
+        listener.message_created(echo_event)
+
+        expect(AutomationRules::ActionService).to have_received(:new).with(automation_rule, account, echo_conversation)
+      end
+
       it 'calls AutomationRules::ActionService if message is a private note' do
         message.update!(private: true)
         allow(condition_match).to receive(:present?).and_return(true)

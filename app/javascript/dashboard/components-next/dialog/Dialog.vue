@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, useAttrs, defineOptions } from 'vue';
-import { OnClickOutside } from '@vueuse/components';
+import { vOnClickOutside } from '@vueuse/components';
 import { useI18n } from 'vue-i18n';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -56,6 +56,14 @@ const props = defineProps({
   dialogClass: {
     type: [String, Array, Object],
     default: '',
+  },
+  contentClass: {
+    type: [String, Array, Object],
+    default: '',
+  },
+  mobileConstrained: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -122,57 +130,58 @@ defineExpose({ open, close });
       :class="[
         maxWidthClass,
         dialogClass,
+        { 'dialog-mobile-constrained': mobileConstrained },
         overflowYAuto ? 'overflow-y-auto' : 'overflow-visible',
       ]"
       v-bind="attrs"
       @close="handleNativeClose"
     >
-      <OnClickOutside @trigger="handleClickOutside">
-        <form
-          ref="dialogContentRef"
-          class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-start align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
-          @submit.prevent="confirm"
-          @click.stop
-        >
-          <div v-if="title || description" class="flex flex-col gap-2">
-            <h3 class="text-base font-medium leading-6 text-n-slate-12">
-              {{ title }}
-            </h3>
-            <slot name="description">
-              <p v-if="description" class="mb-0 text-sm text-n-slate-11">
-                {{ description }}
-              </p>
-            </slot>
-          </div>
-          <slot v-if="isOpen" />
-          <!-- Dialog content will be injected here -->
-          <slot name="footer">
-            <div
-              v-if="showCancelButton || showConfirmButton"
-              class="flex items-center justify-between w-full gap-3"
-            >
-              <Button
-                v-if="showCancelButton"
-                variant="faded"
-                color="slate"
-                :label="cancelButtonLabel || t('DIALOG.BUTTONS.CANCEL')"
-                class="w-full"
-                type="button"
-                @click="close"
-              />
-              <Button
-                v-if="showConfirmButton"
-                :color="type === 'edit' ? 'blue' : 'ruby'"
-                :label="confirmButtonLabel || t('DIALOG.BUTTONS.CONFIRM')"
-                class="w-full"
-                :is-loading="isLoading"
-                :disabled="disableConfirmButton || isLoading"
-                type="submit"
-              />
-            </div>
+      <form
+        ref="dialogContentRef"
+        v-on-click-outside="handleClickOutside"
+        class="flex flex-col w-full h-auto gap-6 p-6 overflow-visible text-start align-middle transition-all duration-300 ease-in-out transform bg-n-alpha-3 backdrop-blur-[100px] shadow-xl rounded-xl"
+        :class="contentClass"
+        @submit.prevent="confirm"
+        @click.stop
+      >
+        <div v-if="title || description" class="flex flex-col gap-2">
+          <h3 class="text-base font-medium leading-6 text-n-slate-12">
+            {{ title }}
+          </h3>
+          <slot name="description">
+            <p v-if="description" class="mb-0 text-sm text-n-slate-11">
+              {{ description }}
+            </p>
           </slot>
-        </form>
-      </OnClickOutside>
+        </div>
+        <slot v-if="isOpen" />
+        <!-- Dialog content will be injected here -->
+        <slot name="footer">
+          <div
+            v-if="showCancelButton || showConfirmButton"
+            class="flex items-center justify-between w-full gap-3"
+          >
+            <Button
+              v-if="showCancelButton"
+              variant="faded"
+              color="slate"
+              :label="cancelButtonLabel || t('DIALOG.BUTTONS.CANCEL')"
+              class="w-full"
+              type="button"
+              @click="close"
+            />
+            <Button
+              v-if="showConfirmButton"
+              :color="type === 'edit' ? 'blue' : 'ruby'"
+              :label="confirmButtonLabel || t('DIALOG.BUTTONS.CONFIRM')"
+              class="w-full"
+              :is-loading="isLoading"
+              :disabled="disableConfirmButton || isLoading"
+              type="submit"
+            />
+          </div>
+        </slot>
+      </form>
     </dialog>
   </TeleportWithDirection>
 </template>
@@ -180,6 +189,25 @@ defineExpose({ open, close });
 <style scoped>
 dialog::backdrop {
   @apply bg-n-alpha-black1 backdrop-blur-[4px];
+}
+
+@media (max-width: 639px) {
+  dialog.dialog-mobile-constrained {
+    width: calc(100% - 1rem);
+    height: calc(100dvh - 1rem);
+    max-height: calc(100dvh - 1rem);
+    margin: 0.5rem auto;
+    overflow: hidden !important;
+    overscroll-behavior: contain;
+  }
+
+  dialog.dialog-mobile-constrained > form {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden !important;
+  }
 }
 
 .dialog-position-top {

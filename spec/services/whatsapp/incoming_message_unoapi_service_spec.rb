@@ -24,6 +24,10 @@ RSpec.describe Whatsapp::IncomingMessageUnoapiService do
     )
   end
 
+  def unoapi_fixture(name)
+    JSON.parse(File.read(Rails.root.join('spec/fixtures/whatsapp/unoapi', name))).with_indifferent_access
+  end
+
   it 'updates the synthetic PIX message through sent, received, and read statuses without duplicating it' do
     expect do
       %w[sent received read].each do |status|
@@ -185,6 +189,67 @@ RSpec.describe Whatsapp::IncomingMessageUnoapiService do
         'retailer_id' => 'OC-001'
       )
       expect(catalog_message.attachments).to be_empty
+    end
+  end
+
+  context 'when UnoAPI sends structured interactive messages' do
+    it 'persists a list reply with its identifier, description, and external reference' do
+      described_class.new(inbox: channel.inbox, params: unoapi_fixture('interactive_list_reply.json')).perform
+
+      interactive_message = channel.inbox.messages.find_by!(source_id: 'UNO_LIST_REPLY_ID')
+      expect(interactive_message.content).to eq('Segunda via')
+      expect(interactive_message.content_attributes).to include(
+        'in_reply_to_external_id' => 'UNO_LIST_MESSAGE_ID',
+        'whatsapp_interactive' => include(
+          'schema_version' => 1,
+          'type' => 'list_reply',
+          'reply' => {
+            'id' => 'segunda_via',
+            'title' => 'Segunda via',
+            'description' => 'Emitir uma nova via do boleto'
+          }
+        )
+      )
+    end
+
+    it 'persists both carousel layouts as cards' do
+      %w[interactive_carousel_action.json interactive_carousel_root.json].each do |fixture_name|
+        described_class.new(inbox: channel.inbox, params: unoapi_fixture(fixture_name)).perform
+      end
+
+      cards = channel.inbox.messages.where(content_type: :cards).order(:created_at)
+      expect(cards.size).to eq(2)
+      expect(cards.first.content_attributes['items'].first['footer']).to eq('ViperChat')
+      expect(cards.last.content_attributes['items'].first['title']).to eq('Plano básico')
+    end
+
+    it 'keeps a flattened PIX echo as text instead of reconstructing payment metadata' do
+      described_class.new(
+        inbox: channel.inbox,
+        params: unoapi_fixture('outgoing_echo_pix_text.json'),
+        outgoing_echo: true
+      ).perform
+
+      echo = channel.inbox.messages.find_by!(source_id: 'UNO_ECHO_PIX_TEXT_ID')
+      expect(echo.content_type).to eq('text')
+      expect(echo.content_attributes).not_to have_key('whatsapp_interactive')
+      expect(echo.content).to include('Chave PIX tipo *EMAIL*')
+    end
+
+    it 'uses the recipient, not the business number, as the contact of a catalog echo' do
+      echo_params = unoapi_fixture('catalog_product.json')
+      change = echo_params.dig(:entry, 0, :changes, 0)
+      value = change[:value]
+      product_message = value.delete(:messages).first
+      value.delete(:contacts)
+      value[:message_echoes] = [product_message.merge(from: '5566996269251', to: '5566996222471')]
+      change[:field] = 'smb_message_echoes'
+
+      described_class.new(inbox: channel.inbox, params: echo_params, outgoing_echo: true).perform
+
+      echo = channel.inbox.messages.find_by!(source_id: 'UNO_PRODUCT_ID')
+      expect(echo.conversation.contact.phone_number).to eq('+5566996222471')
+      expect(echo.conversation.contact.phone_number).not_to eq('+5566996269251')
     end
   end
 end

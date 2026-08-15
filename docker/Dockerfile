@@ -121,6 +121,12 @@ ARG RAILS_ENV=production
 ENV RAILS_ENV=${RAILS_ENV}
 ENV BUNDLE_PATH="/gems"
 
+# Use ViperTec's central native push relay by default. Runtime environment
+# variables can override or disable these defaults for private deployments.
+ENV VIPER_NATIVE_PUSH_ENABLED="true"
+ENV VIPER_PUSH_RELAY_URL="https://relay.vipertec.net/v1/push"
+ENV VIPER_PUSH_RELAY_TOKEN="6a10c0fc82faa376849a74d61eae6b7870f28bf9f39f092f2c4f2b3d091568f6"
+
 RUN apk update && apk add --no-cache \
   build-base \
   openssl \
