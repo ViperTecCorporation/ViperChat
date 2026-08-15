@@ -1,4 +1,8 @@
 import { clearSession, updateSessionHeaders } from './authenticationService';
+import {
+  openNativeSuperAdmin,
+  VIPERCHAT_PRIVACY_URL,
+} from './nativeBrowserService';
 
 const AUTH_HEADER_NAMES = new Set([
   'access-token',
@@ -63,6 +67,7 @@ export const configureNativeEnvironment = ({ installation, session }) => {
     DEPLOYMENT_ENV: 'native',
     DISPLAY_MANIFEST: false,
     ACTIVE_PLATFORM_BANNERS: [],
+    PRIVACY_URL: VIPERCHAT_PRIVACY_URL,
   };
   window.browserConfig = { browser_name: 'ViperChat Android' };
   window.viperNativeInstallation = installation;
@@ -84,6 +89,13 @@ export const configureNativeEnvironment = ({ installation, session }) => {
       return updateSessionHeaders(installation.installationId, headerObject);
     },
     clear: () => clearSession(installation.installationId),
+  };
+  window.viperNativeNavigation = {
+    openSuperAdmin: () =>
+      openNativeSuperAdmin({
+        installation,
+        headers: window.viperNativeSession,
+      }),
   };
 
   if (accountId && !window.location.hash.includes('/app/accounts/')) {

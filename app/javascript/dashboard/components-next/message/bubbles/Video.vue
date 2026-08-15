@@ -108,6 +108,8 @@ onBeforeUnmount(clearRetryTimer);
       <video
         v-if="!hasError"
         controls
+        playsinline
+        preload="metadata"
         class="rounded-lg skip-context-menu"
         :src="videoSrc"
         :class="{

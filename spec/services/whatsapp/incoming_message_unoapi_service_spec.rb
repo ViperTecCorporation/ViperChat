@@ -50,6 +50,29 @@ RSpec.describe Whatsapp::IncomingMessageUnoapiService do
     )
   end
 
+  it 'prefers the authenticated UnoAPI media proxy over the signed storage URL' do
+    allow(channel).to receive(:unoapi_api_url).and_return('https://unoapi.example.test')
+    attachment_payload = {
+      id: '5511998517676/df3c2360-97f8-11f1-bde3-db1bf2a886da',
+      filename: 'df3c2360-97f8-11f1-bde3-db1bf2a886da.jpeg',
+      mime_type: 'image/jpeg',
+      url: 'https://storage.example.test/signed-url'
+    }.with_indifferent_access
+    downloaded_file = Object.new
+    transcoder = instance_double(Whatsapp::Unoapi::AudioTranscoder, perform: downloaded_file)
+
+    expect(Down).to receive(:download).with(
+      'https://unoapi.example.test/v15.0/download/5511998517676/df3c2360-97f8-11f1-bde3-db1bf2a886da.jpeg',
+      headers: channel.api_headers
+    ).and_return(downloaded_file)
+    expect(Whatsapp::Unoapi::AudioTranscoder).to receive(:new).with(downloaded_file).and_return(transcoder)
+
+    result = described_class.new(inbox: channel.inbox, params: {}).send(:download_attachment_file, attachment_payload)
+
+    expect(result).to eq(downloaded_file)
+    expect(downloaded_file.original_filename).to eq(attachment_payload[:filename])
+  end
+
   context 'when UnoAPI sends catalog messages' do
     let(:source_id) { 'uno-order-example-001' }
     let(:debug_logs) { [] }

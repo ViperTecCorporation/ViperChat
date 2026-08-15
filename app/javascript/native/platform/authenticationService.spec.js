@@ -15,6 +15,7 @@ import {
   loadSession,
   login,
   restoreSession,
+  syncShareContext,
   updateSessionHeaders,
   validateSession,
   verifyMfa,
@@ -66,6 +67,21 @@ describe('authenticationService', () => {
       'https://chat.example.com/auth/sign_in',
       expect.objectContaining({ method: 'POST' })
     );
+  });
+
+  it('shares only server and account metadata with the iOS extension', async () => {
+    const context = await syncShareContext({
+      installation,
+      user: { accounts: [{ id: 9 }] },
+    });
+
+    expect(context).toEqual({
+      installationId: 'inst-123',
+      baseUrl: 'https://chat.example.com',
+      accountId: 9,
+      instanceName: 'ViperChat',
+    });
+    expect(JSON.stringify(context)).not.toContain('access-token');
   });
 
   it('removes an expired session after validation', async () => {

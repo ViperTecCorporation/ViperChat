@@ -3,11 +3,13 @@ class Api::V1::Accounts::Conversations::ForwardsController < Api::V1::Accounts::
 
   def create
     source_messages = current_account.messages.where(id: permitted_params[:message_ids])
-    contact_inbox = target_contact_inbox
+    destination_conversation = target_conversation
+    contact_inbox = destination_conversation ? nil : target_contact_inbox
     Rails.logger.info(
       '[ForwardMessages] Starting forward ' \
       "account_id=#{current_account.id} user_id=#{Current.user.id} " \
-      "target_contact_id=#{contact_inbox.contact_id} target_inbox_id=#{contact_inbox.inbox_id} " \
+      "target_conversation_id=#{destination_conversation&.id} " \
+      "target_contact_id=#{contact_inbox&.contact_id} target_inbox_id=#{contact_inbox&.inbox_id} " \
       "message_ids=#{source_messages.pluck(:id)}"
     )
 
@@ -15,7 +17,8 @@ class Api::V1::Accounts::Conversations::ForwardsController < Api::V1::Accounts::
       account: current_account,
       user: Current.user,
       source_messages: source_messages,
-      target_contact_inbox: contact_inbox
+      target_contact_inbox: contact_inbox,
+      target_conversation: destination_conversation
     )
 
     @conversation = service.perform
@@ -23,8 +26,8 @@ class Api::V1::Accounts::Conversations::ForwardsController < Api::V1::Accounts::
     Rails.logger.info(
       '[ForwardMessages] Completed forward ' \
       "account_id=#{current_account.id} user_id=#{Current.user.id} " \
-      "conversation_id=#{@conversation.id} target_contact_id=#{contact_inbox.contact_id} " \
-      "target_inbox_id=#{contact_inbox.inbox_id} forwarded_message_count=#{source_messages.size}"
+      "conversation_id=#{@conversation.id} target_contact_id=#{@conversation.contact_id} " \
+      "target_inbox_id=#{@conversation.inbox_id} forwarded_message_count=#{source_messages.size}"
     )
   rescue StandardError => e
     Rails.logger.error(
@@ -38,7 +41,17 @@ class Api::V1::Accounts::Conversations::ForwardsController < Api::V1::Accounts::
   private
 
   def permitted_params
-    params.permit(:target_contact_id, :target_inbox_id, message_ids: [])
+    params.permit(:target_contact_id, :target_inbox_id, :target_conversation_id, message_ids: [])
+  end
+
+  def target_conversation
+    return if permitted_params[:target_conversation_id].blank?
+
+    conversation = current_account.conversations.find_by!(display_id: permitted_params[:target_conversation_id])
+    authorize conversation, :show?
+    raise ArgumentError, 'Target conversation must be different from source conversation' if conversation == @conversation
+
+    conversation
   end
 
   def target_contact

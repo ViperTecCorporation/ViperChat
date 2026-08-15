@@ -1,14 +1,16 @@
+import { FirebaseMessaging } from '@capacitor-firebase/messaging';
+import { App } from '@capacitor/app';
 import { Device } from '@capacitor/device';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { PushNotifications } from '@capacitor/push-notifications';
 import NotificationSubscriptionsAPI from 'dashboard/api/notificationSubscription';
 
 const MESSAGE_CHANNEL_ID = 'viperchat_messages';
-const MAX_NOTIFICATION_ID = 2147483647;
+const MAX_ANDROID_NOTIFICATION_SLOTS = 20;
+const HASH_MODULUS = 2147483647;
 
 let listenersRegistered = false;
+let appStateListener;
 let routerInstance;
-let foregroundNotificationId = Date.now() % MAX_NOTIFICATION_ID;
 
 const parseNotificationData = notification => {
   const rawPayload = notification?.data?.payload;
@@ -39,10 +41,22 @@ const openNotification = notification => {
   });
 };
 
-const nextForegroundNotificationId = () => {
-  foregroundNotificationId =
-    (foregroundNotificationId + 1) % MAX_NOTIFICATION_ID;
-  return foregroundNotificationId;
+const foregroundNotificationId = notification => {
+  const data = parseNotificationData(notification);
+  const key = `${data?.account_id || ''}:${data?.primary_actor?.id || data?.conversation_id || data?.primary_actor_id || ''}`;
+  let hash = 0;
+
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) % HASH_MODULUS;
+  }
+  return (hash % MAX_ANDROID_NOTIFICATION_SLOTS) + 1;
+};
+
+const clearAndroidNotifications = async () => {
+  const { platform } = await Device.getInfo();
+  if (platform === 'android') {
+    await LocalNotifications.removeAllDeliveredNotifications();
+  }
 };
 
 const createMessageChannel = async () => {
@@ -63,7 +77,7 @@ const showForegroundNotification = notification =>
   LocalNotifications.schedule({
     notifications: [
       {
-        id: nextForegroundNotificationId(),
+        id: foregroundNotificationId(notification),
         title: notification.title || 'ViperChat',
         body: notification.body || '',
         largeBody: notification.body || '',
@@ -74,68 +88,107 @@ const showForegroundNotification = notification =>
     ],
   });
 
+const registerToken = async (installation, pushToken) => {
+  if (!pushToken) return false;
+  const [device, deviceInfo] = await Promise.all([
+    Device.getId(),
+    Device.getInfo(),
+  ]);
+  await NotificationSubscriptionsAPI.create({
+    notification_subscription: {
+      subscription_type: 'viper_native',
+      subscription_attributes: {
+        push_token: pushToken,
+        device_id: `${installation.installationId}:${device.identifier}`,
+        installation_id: installation.installationId,
+        platform: deviceInfo.platform,
+      },
+    },
+  });
+  return true;
+};
+
+const registerCurrentToken = async installation => {
+  try {
+    const { token } = await FirebaseMessaging.getToken();
+    return await registerToken(installation, token);
+  } catch (error) {
+    // Permission and token delivery are independent. In particular, iOS
+    // simulators can grant notification permission without issuing an APNs/FCM
+    // token. Keep the granted UI state and retry registration on the next app
+    // activation instead of leaving the permission banner stuck on screen.
+    // eslint-disable-next-line no-console
+    console.error('[ViperChat] Native push token registration failed', error);
+    return false;
+  }
+};
+
 const registerListeners = async installation => {
   if (listenersRegistered) return;
   listenersRegistered = true;
 
   await createMessageChannel();
 
-  await PushNotifications.addListener('registration', async token => {
-    const device = await Device.getId();
-    await NotificationSubscriptionsAPI.create({
-      notification_subscription: {
-        subscription_type: 'viper_native',
-        subscription_attributes: {
-          push_token: token.value,
-          device_id: `${installation.installationId}:${device.identifier}`,
-          installation_id: installation.installationId,
-          platform: 'android',
-        },
-      },
+  await FirebaseMessaging.addListener('tokenReceived', event => {
+    registerToken(installation, event.token).catch(error => {
+      // eslint-disable-next-line no-console
+      console.error('[ViperChat] Native push token update failed', error);
     });
   });
-
-  await PushNotifications.addListener('registrationError', error => {
-    // eslint-disable-next-line no-console
-    console.error('[ViperChat] Native push registration failed', error);
-  });
-  await PushNotifications.addListener(
-    'pushNotificationActionPerformed',
-    event => openNotification(event.notification)
+  await FirebaseMessaging.addListener('notificationActionPerformed', event =>
+    openNotification(event.notification)
   );
-  await PushNotifications.addListener(
-    'pushNotificationReceived',
-    showForegroundNotification
+  await FirebaseMessaging.addListener('notificationReceived', event =>
+    showForegroundNotification(event.notification)
   );
   await LocalNotifications.addListener(
     'localNotificationActionPerformed',
     event => openNotification({ data: event.notification.extra })
   );
+  appStateListener ||= await App.addListener('appStateChange', state => {
+    clearAndroidNotifications().catch(error => {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[ViperChat] Failed to clear delivered notifications after app became ${state.isActive ? 'active' : 'inactive'}`,
+        error
+      );
+    });
+  });
 };
 
 export const getNativePushPermission = () =>
-  PushNotifications.checkPermissions();
+  FirebaseMessaging.checkPermissions();
 
 export const enableNativePush = async ({ installation, router }) => {
   routerInstance = router;
   await registerListeners(installation);
-  const permission = await PushNotifications.requestPermissions();
+  const permission = await FirebaseMessaging.requestPermissions();
   if (permission.receive !== 'granted') return permission;
 
-  await PushNotifications.register();
-  return permission;
+  const registered = await registerCurrentToken(installation);
+  return { ...permission, registered };
 };
 
 export const initializeNativePush = async ({ installation, router }) => {
   if (!installation.features?.nativePush) return { receive: 'denied' };
   routerInstance = router;
   await registerListeners(installation);
+  await clearAndroidNotifications();
   const permission = await getNativePushPermission();
-  if (permission.receive === 'granted') await PushNotifications.register();
+  if (permission.receive === 'granted') {
+    const registered = await registerCurrentToken(installation);
+    return { ...permission, registered };
+  }
   return permission;
 };
 
 export const nativePushServiceTestUtils = {
   parseNotificationData,
+  registerCurrentToken,
+  reset: () => {
+    listenersRegistered = false;
+    appStateListener = undefined;
+    routerInstance = undefined;
+  },
   showForegroundNotification,
 };

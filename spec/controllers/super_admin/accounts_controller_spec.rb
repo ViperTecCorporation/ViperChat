@@ -49,6 +49,23 @@ RSpec.describe 'Super Admin accounts API', type: :request do
 
   describe 'GET /super_admin/accounts/{account_id}/edit' do
     context 'when it is an authenticated user' do
+      it 'renders explicit false values for unchecked feature flags' do
+        account.enable_features!('agent_conversation_viewed')
+        sign_in(super_admin, scope: :super_admin)
+        allow_any_instance_of(ActionView::Base).to receive(:vite_client_tag).and_return('') # rubocop:disable RSpec/AnyInstance
+        allow_any_instance_of(ActionView::Base).to receive(:vite_javascript_tag).and_return('') # rubocop:disable RSpec/AnyInstance
+
+        get "/super_admin/accounts/#{account.id}/edit"
+
+        document = Nokogiri::HTML(response.body)
+        hidden_input = document.at_css(
+          'input[type="hidden"][name="enabled_features[feature_agent_conversation_viewed]"][value="false"]'
+        )
+
+        expect(response).to have_http_status(:success)
+        expect(hidden_input).to be_present
+      end
+
       it 'renders a Captain model selector for every AI feature', if: ChatwootApp.enterprise? do
         account.update!(captain_models: { 'editor' => 'gpt-4.1' })
         sign_in(super_admin, scope: :super_admin)
@@ -105,6 +122,24 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         expect(account.reload).not_to be_feature_agent_bots
         expect(account).to be_feature_integrations
         expect(account).to be_feature_conversation_unread_counts
+      end
+
+      it 'persists explicit false values instead of restoring installation defaults' do
+        account.enable_features!('agent_conversation_viewed', 'assignment_v2')
+        sign_in(super_admin, scope: :super_admin)
+
+        patch "/super_admin/accounts/#{account.id}",
+              params: {
+                account: { name: account.name, locale: account.locale, status: account.status },
+                enabled_features: {
+                  feature_agent_conversation_viewed: 'false',
+                  feature_assignment_v2: 'false'
+                }
+              }
+
+        expect(response).to have_http_status(:redirect)
+        expect(account.reload).not_to be_feature_agent_conversation_viewed
+        expect(account).not_to be_feature_assignment_v2
       end
 
       it 'updates Captain model overrides without changing unrelated settings' do

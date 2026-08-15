@@ -53,6 +53,7 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
       subject: details[:subject].presence,
       description: details[:description].presence,
       picture: group_picture_url(details),
+      picture_id: group_picture_id(details),
       join_approval_mode: details[:join_approval_mode].presence,
       announcement: details[:announcement],
       locked: details[:locked],
@@ -103,15 +104,21 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     additional_attributes['group_announcement'] = group[:announcement] unless group[:announcement].nil?
     additional_attributes['group_locked'] = group[:locked] unless group[:locked].nil?
 
-    picture_url = group_picture_url(group)
-    if picture_url.present?
-      additional_attributes['group_picture'] = picture_url
-      Avatar::AvatarFromUrlJob.enqueue_if_needed(@conversation.contact, picture_url, avatar_metadata_from(group))
-    end
+    update_group_picture(additional_attributes, group)
 
     attrs[:additional_attributes] = additional_attributes
     @conversation.assign_attributes(attrs)
     @conversation.save! if @conversation.changed?
+  end
+
+  def update_group_picture(additional_attributes, group)
+    picture_url = group_picture_url(group)
+    picture_id = group_picture_id(group)
+    return if picture_url.blank? && picture_id.blank?
+
+    additional_attributes['group_picture'] = picture_url if picture_url.present?
+    additional_attributes['group_picture_id'] = picture_id if picture_id.present?
+    enqueue_avatar(@conversation.contact, picture_id, picture_url, avatar_metadata_from(group))
   end
 
   def sync_participant(participant)
@@ -184,6 +191,7 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     attrs = {
       name: participant_name(participant, source_id),
       avatar_url: participant_picture_url(participant),
+      avatar_picture_id: participant_picture_id(participant),
       avatar_metadata: avatar_metadata_from(participant, participant[:profile]),
       bsuid: participant_bsuid(participant),
       whatsapp_username: participant[:username].presence
@@ -217,7 +225,8 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
       username: participant[:username].presence,
       role: participant[:role].presence,
       is_admin: participant[:is_admin],
-      picture: picture_url
+      picture: picture_url,
+      picture_id: participant_picture_id(participant).presence || current_metadata['picture_id'].presence
     }.compact
   end
 
@@ -236,6 +245,27 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
       participant[:profile_picture_url].presence ||
       participant.dig(:profile, :picture).presence ||
       participant.dig(:profile, :profile_url).presence
+  end
+
+  def group_picture_id(group)
+    group[:picture_id].presence ||
+      group[:profile_picture_id].presence ||
+      group[:group_picture_id].presence ||
+      group.dig(:profile, :picture_id).presence
+  end
+
+  def participant_picture_id(participant)
+    participant[:picture_id].presence ||
+      participant[:profile_picture_id].presence ||
+      participant.dig(:profile, :picture_id).presence
+  end
+
+  def enqueue_avatar(contact, picture_id, picture_url, metadata)
+    if picture_id.present?
+      Avatar::AvatarFromUnoapiJob.enqueue_if_needed(contact, @channel, picture_id, metadata, picture_url)
+    elsif picture_url.present?
+      Avatar::AvatarFromUrlJob.enqueue_if_needed(contact, picture_url, metadata)
+    end
   end
 
   def avatar_metadata_from(*sources)

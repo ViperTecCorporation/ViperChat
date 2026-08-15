@@ -16,7 +16,8 @@ class Whatsapp::SendReactionService
     message.conversation.inbox.channel.send_reaction(
       phone_number,
       message.source_id,
-      emoji
+      emoji,
+      message
     )
   end
 

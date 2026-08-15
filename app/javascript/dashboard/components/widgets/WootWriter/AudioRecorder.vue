@@ -145,9 +145,18 @@ const stopRecording = () => {
   }
 };
 
-const startRecording = () => {
-  record.value.startRecording();
-  isRecording.value = true;
+const startRecording = async () => {
+  try {
+    await record.value.startRecording();
+    if (isUnmounting) {
+      record.value?.stopRecording();
+      return;
+    }
+    isRecording.value = true;
+  } catch (error) {
+    isRecording.value = false;
+    emit('recordError', { error });
+  }
 };
 
 const playPause = () => {

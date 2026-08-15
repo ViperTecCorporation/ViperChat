@@ -71,5 +71,41 @@ RSpec.describe 'Conversation Forwards API', type: :request do
       contact_inbox = ContactInbox.find_by!(contact: target_contact, inbox: target_inbox)
       expect(contact_inbox.source_id).to eq('120363040468224422@g.us')
     end
+
+    it 'forwards directly to an existing group conversation' do
+      target_contact = create(:contact, account: account, email: '120363040468224422@g.us', phone_number: nil)
+      whatsapp_channel = create(:channel_whatsapp, account: account, provider: 'unoapi', sync_templates: false, validate_provider_config: false)
+      target_inbox = whatsapp_channel.inbox
+      target_contact_inbox = create(
+        :contact_inbox,
+        contact: target_contact,
+        inbox: target_inbox,
+        source_id: '120363040468224422@g.us'
+      )
+      target_conversation = create(
+        :conversation,
+        account: account,
+        inbox: target_inbox,
+        contact: target_contact,
+        contact_inbox: target_contact_inbox,
+        group: true,
+        group_title: 'Equipe Comercial',
+        group_source_id: '120363040468224422@g.us'
+      )
+      create(:inbox_member, inbox: target_inbox, user: agent)
+
+      expect do
+        post "/api/v1/accounts/#{account.id}/conversations/#{source_conversation.display_id}/forwards",
+             params: {
+               target_conversation_id: target_conversation.display_id,
+               message_ids: [source_message.id]
+             },
+             headers: agent.create_new_auth_token,
+             as: :json
+      end.not_to change(Conversation, :count)
+
+      expect(response).to have_http_status(:success)
+      expect(target_conversation.reload.messages.last.content).to eq("<p>mensagem encaminhada</p>\n")
+    end
   end
 end

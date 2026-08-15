@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReplyBox from './ReplyBox.vue';
 
 const createContext = overrides => ({
@@ -149,5 +149,62 @@ describe('ReplyBox compact composer', () => {
     expect(ReplyBox.computed.messagePlaceHolder.call(context)).toBe(
       'CONVERSATION.REPLYBOX.COMPACT.PLACEHOLDER_WITH_SCHEDULE'
     );
+  });
+});
+
+describe('ReplyBox direct upload previews', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('uses an object URL instead of reading the whole uploaded file', () => {
+    const createObjectURL = vi.fn(() => 'blob:video-preview');
+    vi.stubGlobal('URL', {
+      createObjectURL,
+      revokeObjectURL: vi.fn(),
+    });
+    const rawFile = { type: 'video/mp4', size: 150 * 1024 * 1024 };
+    const context = {
+      showFileUpload: true,
+      isOnPrivateNote: false,
+      enableMultipleFileUpload: true,
+      attachedFiles: [],
+      currentChat: { id: 42 },
+      isPrivate: false,
+    };
+
+    ReplyBox.methods.attachFile.call(context, {
+      blob: { signed_id: 'signed-blob-id' },
+      file: { file: rawFile },
+    });
+
+    expect(createObjectURL).toHaveBeenCalledWith(rawFile);
+    expect(context.attachedFiles).toEqual([
+      expect.objectContaining({
+        thumb: 'blob:video-preview',
+        previewObjectUrl: 'blob:video-preview',
+        blobSignedId: 'signed-blob-id',
+      }),
+    ]);
+  });
+
+  it('releases the preview URL when an attachment is removed', () => {
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(),
+      revokeObjectURL,
+    });
+    const removedAttachment = { previewObjectUrl: 'blob:removed' };
+    const retainedAttachment = { previewObjectUrl: 'blob:retained' };
+    const context = {
+      attachedFiles: [removedAttachment, retainedAttachment],
+      revokeAttachmentPreview: ReplyBox.methods.revokeAttachmentPreview,
+    };
+
+    ReplyBox.methods.removeAttachment.call(context, [retainedAttachment]);
+
+    expect(revokeObjectURL).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:removed');
+    expect(context.attachedFiles).toEqual([retainedAttachment]);
   });
 });

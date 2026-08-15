@@ -28,7 +28,7 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
       text: { body: content.to_s }
     }
 
-    response = HTTParty.post(messages_path, headers: api_headers, body: request_body.to_json)
+    response = HTTParty.post(messages_path, headers: api_headers, body: outgoing_message_payload(request_body, message).to_json)
     return response.parsed_response.dig('messages', 0, 'id') if response.success? && response.parsed_response['error'].blank?
 
     Rails.logger.error(response.body)
@@ -121,6 +121,10 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
 
   private
 
+  def outgoing_message_payload(request_body, message)
+    Whatsapp::Unoapi::OutgoingIdentityPayload.new(request_body: request_body, message: message, inbox: whatsapp_channel.inbox).perform
+  end
+
   def should_prefix_sender_name?(message)
     return false if message.content_attributes&.dig('whatsapp_interactive_reply').present?
 
@@ -171,7 +175,7 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
       }
     }
 
-    response = HTTParty.post(messages_path, headers: api_headers, body: request_body.to_json)
+    response = HTTParty.post(messages_path, headers: api_headers, body: outgoing_message_payload(request_body, message).to_json)
     process_pix_payment_response(response, message)
   end
 

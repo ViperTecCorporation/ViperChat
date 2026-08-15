@@ -35,3 +35,41 @@ Content-Type: application/json
 O relay deve responder com qualquer status 2xx. Web Push e inscrições `browser_push` continuam no fluxo original e não passam por esse endpoint.
 
 Todas as instalações Android do projeto Firebase podem compartilhar um único relay central. O token acima autentica a comunicação servidor-servidor entre cada Chatwoot e o relay; ele não é incluído no APK. Veja o procedimento de publicação em [push-relay.md](push-relay.md).
+
+## CORS do armazenamento para uploads nativos
+
+O Android executa o bundle Capacitor com o origin `https://localhost`. Quando o
+Active Storage usa upload direto para S3, Cloudflare R2 ou outro serviço
+compatível, o bucket precisa permitir esse origin além do domínio web da
+instalação. Sem essa regra, a criação do blob no Chatwoot responde 200, mas o
+`PUT` seguinte para o armazenamento é bloqueado por CORS e o aplicativo exibe
+erro ao compartilhar o arquivo.
+
+Exemplo de regra para S3/R2, substituindo o domínio pelo endereço público da
+instalação:
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://chatwoot.example.com",
+      "https://localhost"
+    ],
+    "AllowedMethods": ["GET", "POST", "PUT", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": [
+      "ETag",
+      "Content-Length",
+      "Content-Type",
+      "Content-Disposition"
+    ],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+O preflight deve responder com status 2xx e incluir `https://localhost` em
+`Access-Control-Allow-Origin`, `PUT` em `Access-Control-Allow-Methods` e os
+cabeçalhos `content-md5` e `content-type` em
+`Access-Control-Allow-Headers`. Essa configuração não altera o fluxo Web/PWA;
+ela apenas autoriza o mesmo upload direto a partir do aplicativo Android.

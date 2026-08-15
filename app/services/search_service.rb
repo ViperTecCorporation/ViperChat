@@ -33,8 +33,15 @@ class SearchService
   def filter_conversations
     conversations_query = current_account.conversations.where(inbox_id: accessable_inbox_ids)
                                          .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
-                                         .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
-                            ILIKE :search OR contacts.phone_number ILIKE :search OR contacts.identifier ILIKE :search", search: "%#{search_query}%")
+                                         .where(<<~SQL.squish, search: "%#{search_query}%")
+                                           cast(conversations.display_id as text) ILIKE :search OR
+                                           conversations.group_title ILIKE :search OR
+                                           conversations.group_source_id ILIKE :search OR
+                                           contacts.name ILIKE :search OR
+                                           contacts.email ILIKE :search OR
+                                           contacts.phone_number ILIKE :search OR
+                                           contacts.identifier ILIKE :search
+                                         SQL
 
     if current_account.feature_enabled?('advanced_search')
       conversations_query = apply_time_filter(conversations_query,

@@ -167,6 +167,7 @@ export default {
     v-if="!authUIFlags.isFetching"
     id="app"
     class="flex flex-col w-full h-screen min-h-0 bg-n-background"
+    :class="{ 'native-safe-area': isNativeApp }"
     :dir="isRTL ? 'rtl' : 'ltr'"
   >
     <UpdateBanner :latest-chatwoot-version="latestChatwootVersion" />
@@ -201,5 +202,12 @@ export default {
 
 .v-popper--theme-tooltip .v-popper__arrow-container {
   display: none;
+}
+
+.native-safe-area {
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
 }
 </style>

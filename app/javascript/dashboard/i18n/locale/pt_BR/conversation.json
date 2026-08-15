@@ -344,7 +344,7 @@
       "TIP_ATTACH_SINGLE": "Você não pode anexar mais arquivos a esta mensagem",
       "TIP_AUDIORECORDER_ICON": "Gravar áudio",
       "TIP_AUDIORECORDER_PERMISSION": "Permitir acesso ao áudio",
-      "TIP_AUDIORECORDER_ERROR": "Não foi possível abrir o áudio",
+      "TIP_AUDIORECORDER_ERROR": "Não foi possível acessar o microfone",
       "PIX_PAYMENT": {
         "TOOLTIP": "Enviar solicitação de pagamento PIX",
         "CONFIRM_TITLE": "Enviar chave PIX?",
