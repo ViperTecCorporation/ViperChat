@@ -690,6 +690,32 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(Conversation.exists?(bsuid_conversation.id)).to be(false)
         expect(whatsapp_channel.inbox.conversations.where(contact: phone_contact).count).to eq(1)
       end
+
+      it 'reuses and repairs a single conversation linked to another contact inbox' do
+        whatsapp_channel.inbox.update!(lock_to_single_conversation: true)
+        phone_contact = create(:contact, account: whatsapp_channel.account, name: 'Maria')
+        phone_contact.update_columns( # rubocop:disable Rails/SkipsModelValidations
+          phone_number: '+5566999999999',
+          bsuid: '123456789012345@lid'
+        )
+        phone_contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: phone_contact, source_id: '5566999999999')
+        other_contact = create(:contact, account: whatsapp_channel.account, name: 'Wrong contact')
+        wrong_contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, contact: other_contact, source_id: '9999999999999')
+        existing_conversation = create(
+          :conversation,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          contact: phone_contact,
+          contact_inbox: wrong_contact_inbox
+        )
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: one_to_one_params).perform
+
+        message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.ONE_TO_ONE_MESSAGE_ID')
+        expect(message.conversation).to eq(existing_conversation)
+        expect(existing_conversation.reload.contact_inbox).to eq(phone_contact_inbox)
+        expect(whatsapp_channel.inbox.conversations.where(contact: phone_contact).count).to eq(1)
+      end
     end
 
     context 'when message is a reply (has context)' do
@@ -929,6 +955,21 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
           'username' => '@maria.vendas'
         )
         expect(message.content).to eq('Bom dia pessoal')
+      end
+
+      it 'prefers authenticated picture ids for the structured group and sender' do
+        picture_id_params = params.deep_dup
+        contact = picture_id_params[:entry][0][:changes][0][:value][:contacts][0]
+        contact[:profile][:picture_id] = 'sender-picture-id'
+        contact[:group_picture_id] = 'group-picture-id'
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: picture_id_params).perform
+        end.to have_enqueued_job(Avatar::AvatarFromUnoapiJob).twice
+
+        conversation = whatsapp_channel.inbox.conversations.find_by!(group_source_id: '120363040468224422@g.us')
+        expect(conversation.additional_attributes).to include('group_picture_id' => 'group-picture-id')
+        expect(conversation.group_contacts.first.metadata).to include('picture_id' => 'sender-picture-id')
       end
 
       it 'preserves the existing group picture when a structured webhook sends an empty picture' do

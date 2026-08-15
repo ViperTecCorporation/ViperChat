@@ -130,6 +130,7 @@ export default {
       :src="dataUrl"
       muted
       playsInline
+      preload="metadata"
       @error="onImgError"
       @click="onClick"
     />

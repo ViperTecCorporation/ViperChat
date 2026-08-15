@@ -31,25 +31,26 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     response = HTTParty.post(
       "#{phone_id_path}/messages",
       headers: api_headers,
-      body: request_body.to_json
+      body: outgoing_message_payload(request_body, message).to_json
     )
 
     process_response(response, message)
   end
 
-  def send_reaction(phone_number, message_id, emoji)
+  def send_reaction(phone_number, message_id, emoji, message = nil)
+    request_body = {
+      messaging_product: 'whatsapp',
+      to: phone_number,
+      type: 'reaction',
+      reaction: {
+        message_id: message_id,
+        emoji: emoji
+      }
+    }
     response = HTTParty.post(
       messages_path,
       headers: api_headers,
-      body: {
-        messaging_product: 'whatsapp',
-        to: phone_number,
-        type: 'reaction',
-        reaction: {
-          message_id: message_id,
-          emoji: emoji
-        }
-      }.to_json
+      body: outgoing_message_payload(request_body, message).to_json
     )
 
     response.success? && response.parsed_response['error'].blank?
@@ -159,6 +160,10 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
   private
 
+  def outgoing_message_payload(request_body, _message)
+    request_body
+  end
+
   def api_key
     whatsapp_channel.provider_config['api_key']
   end
@@ -242,7 +247,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     response = HTTParty.post(
       messages_path,
       headers: api_headers,
-      body: request_body.to_json
+      body: outgoing_message_payload(request_body, message).to_json
     )
 
     process_response(response, message)
@@ -299,7 +304,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     response = HTTParty.post(
       "#{phone_id_path(voice_message?(type, attachment) ? 'v24.0' : 'v13.0')}/messages",
       headers: api_headers,
-      body: request_body.to_json
+      body: outgoing_message_payload(request_body, message).to_json
     )
 
     process_response(response, message)
@@ -322,19 +327,20 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
         link: sticker_url
       }
     }.to_json}")
+    request_body = {
+      messaging_product: 'whatsapp',
+      recipient_type: recipient_type_for(message),
+      context: whatsapp_reply_context(message),
+      to: phone_number,
+      type: 'sticker',
+      sticker: {
+        link: sticker_url
+      }
+    }
     response = HTTParty.post(
       "#{phone_id_path}/messages",
       headers: api_headers,
-      body: {
-        messaging_product: 'whatsapp',
-        recipient_type: recipient_type_for(message),
-        context: whatsapp_reply_context(message),
-        to: phone_number,
-        type: 'sticker',
-        sticker: {
-          link: sticker_url
-        }
-      }.to_json
+      body: outgoing_message_payload(request_body, message).to_json
     )
 
     process_response(response, message)
@@ -358,7 +364,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     response = HTTParty.post(
       "#{phone_id_path}/messages",
       headers: api_headers,
-      body: request_body.to_json
+      body: outgoing_message_payload(request_body, message).to_json
     )
 
     process_response(response, message)
@@ -544,16 +550,17 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   def send_interactive_text_message(phone_number, message)
     payload = create_payload_based_on_items(message)
 
+    request_body = {
+      messaging_product: 'whatsapp',
+      recipient_type: recipient_type_for(message),
+      to: phone_number,
+      interactive: payload,
+      type: 'interactive'
+    }
     response = HTTParty.post(
       "#{phone_id_path}/messages",
       headers: api_headers,
-      body: {
-        messaging_product: 'whatsapp',
-        recipient_type: recipient_type_for(message),
-        to: phone_number,
-        interactive: payload,
-        type: 'interactive'
-      }.to_json
+      body: outgoing_message_payload(request_body, message).to_json
     )
 
     process_response(response, message)

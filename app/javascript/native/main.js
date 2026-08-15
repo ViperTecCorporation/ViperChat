@@ -1,8 +1,15 @@
 import { createApp } from 'vue';
 import 'dashboard/assets/scss/app.scss';
+import './native.scss';
 import { refreshActiveInstallation } from './platform/installationService';
-import { restoreSession } from './platform/authenticationService';
+import {
+  restoreSession,
+  syncShareContext,
+} from './platform/authenticationService';
 import { configureNativeEnvironment } from './platform/nativeEnvironmentService';
+import { startNativeSystemBarSync } from './platform/nativeSystemBarService';
+
+startNativeSystemBarSync();
 
 const mountNativeShell = async () => {
   const { default: NativeApp } = await import('./NativeApp.vue');
@@ -29,6 +36,7 @@ const start = async () => {
     return;
   }
 
+  await syncShareContext({ installation, user: session.user });
   configureNativeEnvironment({ installation, session });
   const { mountDashboard } = await import('../entrypoints/dashboard');
   await mountDashboard();

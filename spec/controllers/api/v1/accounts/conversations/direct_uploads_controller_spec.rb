@@ -122,6 +122,13 @@ RSpec.describe '/api/v1/accounts/:account_id/conversations/:conversation_id/dire
         expect(response).to have_http_status(:success)
         expect(response.parsed_body['content_type']).to eq('image/png')
       end
+
+      it 'creates the blob for a native Devise token request from the Capacitor origin' do
+        create_direct_upload(agent.create_new_auth_token.merge('Origin' => 'https://localhost'))
+
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body['content_type']).to eq('image/png')
+      end
     end
   end
 end

@@ -10,8 +10,8 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
   },
   plugins: {
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'banner', 'list'],
+    FirebaseMessaging: {
+      presentationOptions: ['alert', 'badge', 'sound'],
     },
   },
 };

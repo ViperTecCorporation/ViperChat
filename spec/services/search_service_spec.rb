@@ -259,6 +259,33 @@ describe SearchService do
         search = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Conversation')
         expect(search.perform[:conversations].map(&:id)).to include new_converstion.id
       end
+
+      it 'searches group conversations by title and source id' do
+        group_conversation = create(
+          :conversation,
+          account: account,
+          inbox: inbox,
+          group: true,
+          group_title: 'Equipe Comercial Viper',
+          group_source_id: '120363040468224422@g.us'
+        )
+
+        title_search = described_class.new(
+          current_user: user,
+          current_account: account,
+          params: { q: 'Comercial Viper' },
+          search_type: 'Conversation'
+        )
+        jid_search = described_class.new(
+          current_user: user,
+          current_account: account,
+          params: { q: '120363040468224422' },
+          search_type: 'Conversation'
+        )
+
+        expect(title_search.perform[:conversations]).to include(group_conversation)
+        expect(jid_search.perform[:conversations]).to include(group_conversation)
+      end
     end
 
     context 'when article search' do

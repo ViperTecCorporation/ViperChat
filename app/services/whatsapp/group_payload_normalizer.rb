@@ -14,6 +14,7 @@ class Whatsapp::GroupPayloadNormalizer
       group_source_id: group_source_id,
       group_title: contact[:group_subject].presence || group_source_id,
       group_picture: contact[:group_picture].presence,
+      group_picture_id: contact[:group_picture_id].presence || contact.dig(:profile, :picture_id).presence,
       group_picture_metadata: avatar_metadata_from(contact),
       sender_identifier: sender_identifier,
       sender_phone: sender_phone,
@@ -21,6 +22,7 @@ class Whatsapp::GroupPayloadNormalizer
       sender_username: sender_username,
       sender_name: sender_name,
       sender_picture: contact.dig(:profile, :picture).presence,
+      sender_picture_id: contact.dig(:profile, :picture_id).presence || contact[:picture_id].presence,
       sender_picture_metadata: avatar_metadata_from(contact, contact[:profile]),
       message_source_id: message[:id],
       message_from: message[:from]

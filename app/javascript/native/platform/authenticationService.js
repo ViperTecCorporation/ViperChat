@@ -7,10 +7,35 @@ const AUTH_HEADER_NAMES = [
   'expiry',
   'uid',
 ];
+const SHARE_CONTEXT_KEY = 'viper:native:share-context';
 
 let sessionWriteQueue = Promise.resolve();
 
 const sessionKey = installationId => `viper:${installationId}:auth`;
+
+const resolveAccountId = user => {
+  const accountId = Number(user?.account_id || user?.accounts?.[0]?.id);
+  return Number.isInteger(accountId) && accountId > 0 ? accountId : null;
+};
+
+export const syncShareContext = async ({ installation, user }) => {
+  const accountId = resolveAccountId(user);
+  if (!installation?.installationId || !installation?.baseUrl || !accountId) {
+    return null;
+  }
+
+  const context = {
+    installationId: installation.installationId,
+    baseUrl: installation.baseUrl,
+    accountId,
+    instanceName: installation.instanceName || 'ViperChat',
+  };
+  await SecureStorage.set({
+    key: SHARE_CONTEXT_KEY,
+    value: JSON.stringify(context),
+  });
+  return context;
+};
 
 const readResponseBody = async response => {
   try {
@@ -58,7 +83,10 @@ export const saveSession = async (installationId, session) => {
 };
 
 export const clearSession = installationId =>
-  SecureStorage.remove({ key: sessionKey(installationId) });
+  Promise.all([
+    SecureStorage.remove({ key: sessionKey(installationId) }),
+    SecureStorage.remove({ key: SHARE_CONTEXT_KEY }),
+  ]);
 
 export const login = async ({ installation, email, password }) => {
   const response = await fetch(`${installation.baseUrl}/auth/sign_in`, {
@@ -86,10 +114,12 @@ export const login = async ({ installation, email, password }) => {
     throw new Error('O servidor não retornou uma sessão compatível.');
   }
 
-  await saveSession(installation.installationId, {
+  const session = {
     headers,
     user: body.data,
-  });
+  };
+  await saveSession(installation.installationId, session);
+  await syncShareContext({ installation, user: session.user });
   return { mfaRequired: false };
 };
 
@@ -120,10 +150,12 @@ export const verifyMfa = async ({
   if (!headers['access-token'] || !headers.client || !headers.uid) {
     throw new Error('O servidor não retornou uma sessão compatível.');
   }
-  await saveSession(installation.installationId, {
+  const session = {
     headers,
     user: body.data,
-  });
+  };
+  await saveSession(installation.installationId, session);
+  await syncShareContext({ installation, user: session.user });
 };
 
 export const validateSession = async installation => {
@@ -146,7 +178,7 @@ export const validateSession = async installation => {
     throw new Error('Não foi possível validar a sessão neste momento.');
   }
 
-  return saveSession(
+  const refreshedSession = await saveSession(
     installation.installationId,
     mergeSessionHeaders(
       {
@@ -156,6 +188,8 @@ export const validateSession = async installation => {
       response.headers
     )
   );
+  await syncShareContext({ installation, user: refreshedSession.user });
+  return refreshedSession;
 };
 
 // A cold Android launch can briefly lose network connectivity while the
@@ -185,5 +219,7 @@ export const updateSessionHeaders = async (installationId, headers) => {
 
 export const authenticationServiceTestUtils = {
   extractAuthHeaders,
+  resolveAccountId,
+  shareContextKey: SHARE_CONTEXT_KEY,
   sessionKey,
 };

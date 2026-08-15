@@ -7,6 +7,7 @@ import Avatar from 'next/avatar/Avatar.vue';
 import SidebarProfileMenuStatus from './SidebarProfileMenuStatus.vue';
 import ThemeSettingsDialog from './ThemeSettingsDialog.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { useAlert } from 'dashboard/composables';
 
 import {
   DropdownContainer,
@@ -54,6 +55,22 @@ const toggleChatSupport = () => {
 
 const openThemeSettings = () => {
   showThemeSettings.value = true;
+};
+
+const openSuperAdminConsole = async () => {
+  try {
+    await window.viperNativeNavigation.openSuperAdmin();
+  } catch (error) {
+    useAlert(error?.message || 'Não foi possível abrir o Super Admin.');
+  }
+};
+
+const superAdminNavigation = () => {
+  if (window.chatwootConfig?.isNativeApp) {
+    return { click: openSuperAdminConsole };
+  }
+
+  return { link: '/super_admin', nativeLink: true, target: '_blank' };
 };
 
 const menuItems = computed(() => {
@@ -111,9 +128,7 @@ const menuItems = computed(() => {
       showOnCustomBrandedInstance: true,
       label: t('SIDEBAR_ITEMS.SUPER_ADMIN_CONSOLE'),
       icon: 'i-lucide-castle',
-      link: '/super_admin',
-      nativeLink: true,
-      target: '_blank',
+      ...superAdminNavigation(),
     },
     {
       show: true,

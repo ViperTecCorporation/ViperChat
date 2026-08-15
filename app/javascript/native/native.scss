@@ -1,0 +1,32 @@
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+html {
+  background-color: rgb(var(--brand-color, 111 57 53));
+}
+
+body {
+  margin: 0;
+  background-color: rgb(var(--background-color, 247 247 247));
+}
+
+// Keep content out of the rounded screen edges while making those areas feel
+// like part of the active installation theme instead of unstyled WebView gaps.
+body::before {
+  position: fixed;
+  right: 0;
+  left: 0;
+  z-index: 2147483647;
+  display: block;
+  pointer-events: none;
+  content: '';
+  background-color: rgb(var(--brand-color, 111 57 53));
+}
+
+body::before {
+  top: 0;
+  height: env(safe-area-inset-top, 0);
+}

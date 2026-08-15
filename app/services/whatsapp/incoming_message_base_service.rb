@@ -112,6 +112,7 @@ class Whatsapp::IncomingMessageBaseService
     contact_attributes = {
       name: contact_display_name(contact_params),
       avatar_url: contact_params.dig(:profile, :picture).presence,
+      avatar_picture_id: contact_picture_id(contact_params),
       avatar_metadata: avatar_metadata_from(contact_params, contact_params[:profile]),
       bsuid: contact_bsuid(contact_params),
       whatsapp_username: contact_username(contact_params)
@@ -382,6 +383,7 @@ class Whatsapp::IncomingMessageBaseService
     contact_attributes = {
       name: contact_display_name(contact_params),
       avatar_url: contact_params.dig(:profile, :picture).presence,
+      avatar_picture_id: contact_picture_id(contact_params),
       avatar_metadata: avatar_metadata_from(contact_params, contact_params[:profile]),
       bsuid: contact_bsuid(contact_params),
       whatsapp_username: contact_username(contact_params)
@@ -407,13 +409,26 @@ class Whatsapp::IncomingMessageBaseService
     update_contact_with_profile_name(contact_params)
   end
 
+  def contact_picture_id(contact_params)
+    contact_params.dig(:profile, :picture_id).presence ||
+      contact_params[:picture_id].presence ||
+      contact_params[:profile_picture_id].presence
+  end
+
   def set_conversation
     # if lock to single conversation is disabled, we will create a new conversation if previous conversation is resolved
     merge_contact_conversation_aliases if single_conversation_for_contact_aliases?
     @conversation = existing_contact_conversation
+    repair_conversation_contact_inbox if @conversation && single_conversation_for_contact_aliases?
     return if @conversation
 
     @conversation = ::Conversation.create!(conversation_params)
+  end
+
+  def repair_conversation_contact_inbox
+    return if @conversation.contact_inbox.contact_id == @contact.id
+
+    @conversation.update!(contact_inbox: @contact_inbox)
   end
 
   def merge_contact_conversation_aliases
@@ -435,7 +450,10 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def contact_conversation_aliases
-    @inbox.conversations.non_group_conversations.where(contact_id: @contact.id, contact_inbox_id: contact_inbox_aliases.select(:id))
+    conversations = @inbox.conversations.non_group_conversations.where(contact_id: @contact.id)
+    return conversations if single_conversation_for_contact_aliases?
+
+    conversations.where(contact_inbox_id: contact_inbox_aliases.select(:id))
   end
 
   def preferred_contact_conversation(conversations)
@@ -654,7 +672,7 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def contact_bsuid(contact_params)
-    contact_params[:user_id].presence || messages_data&.first&.[](:from_user_id).presence
+    whatsapp_source_id(contact_params[:user_id].presence || messages_data&.first&.[](:from_user_id).presence)
   end
 
   def contact_username(contact_params)

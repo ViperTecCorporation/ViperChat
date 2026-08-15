@@ -1,7 +1,7 @@
 require 'stringio'
 
 class Messages::ForwardService
-  pattr_initialize [:account!, :user!, :source_messages!, :target_contact_inbox!]
+  pattr_initialize [:account!, :user!, :source_messages!, :target_contact_inbox, :target_conversation]
 
   def perform
     ActiveRecord::Base.transaction do
@@ -15,6 +15,11 @@ class Messages::ForwardService
   private
 
   def build_conversation
+    if target_conversation
+      reopen_and_assign_conversation(target_conversation)
+      return target_conversation
+    end
+
     conversation = existing_conversation
 
     if conversation
@@ -59,7 +64,7 @@ class Messages::ForwardService
   def build_forwarded_message(original_message)
     Message.new(
       account: account,
-      inbox: target_contact_inbox.inbox,
+      inbox: @conversation.inbox,
       conversation: @conversation,
       message_type: :outgoing,
       content: original_message.outgoing_content,

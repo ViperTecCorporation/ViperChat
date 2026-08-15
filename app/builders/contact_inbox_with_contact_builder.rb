@@ -73,6 +73,16 @@ class ContactInboxWithContactBuilder
 
   def update_contact_avatar(contact)
     avatar_url = contact_attributes[:avatar_url]
+    if unoapi_whatsapp_channel? && contact_attributes[:avatar_picture_id].present?
+      return ::Avatar::AvatarFromUnoapiJob.enqueue_if_needed(
+        contact,
+        inbox.channel,
+        contact_attributes[:avatar_picture_id],
+        contact_attributes[:avatar_metadata],
+        avatar_url
+      )
+    end
+
     ::Avatar::AvatarFromUrlJob.enqueue_if_needed(contact, avatar_url, contact_attributes[:avatar_metadata])
   end
 

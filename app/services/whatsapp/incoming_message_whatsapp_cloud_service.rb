@@ -27,13 +27,10 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     changes = value.fetch(:changes, {}).with_indifferent_access
     attrs = group_settings_attributes(changes)
     picture_url = group_settings_picture_url(changes)
-    return if attrs.blank? && picture_url.blank?
+    picture_id = group_settings_picture_id(changes)
+    return unless group_settings_update_present?(attrs, picture_id, picture_url)
 
-    if picture_url.present?
-      conversation.additional_attributes ||= {}
-      conversation.additional_attributes['group_picture'] = picture_url
-      Avatar::AvatarFromUrlJob.enqueue_if_needed(conversation.contact, picture_url, avatar_metadata_from(changes))
-    end
+    update_group_settings_picture(conversation, changes, picture_id, picture_url) if group_picture_update?(picture_id, picture_url)
 
     conversation.update!(attrs)
     conversation.contact.update!(name: attrs[:group_title]) if attrs[:group_title].present?
@@ -48,6 +45,25 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
 
   def group_settings_picture_url(changes)
     changes[:picture].presence || changes[:picture_url].presence || changes[:group_picture].presence
+  end
+
+  def group_settings_picture_id(changes)
+    changes[:picture_id].presence || changes[:group_picture_id].presence || changes.dig(:profile, :picture_id).presence
+  end
+
+  def group_settings_update_present?(attrs, picture_id, picture_url)
+    attrs.present? || group_picture_update?(picture_id, picture_url)
+  end
+
+  def group_picture_update?(picture_id, picture_url)
+    picture_id.present? || picture_url.present?
+  end
+
+  def update_group_settings_picture(conversation, changes, picture_id, picture_url)
+    conversation.additional_attributes ||= {}
+    conversation.additional_attributes['group_picture'] = picture_url if picture_url.present?
+    conversation.additional_attributes['group_picture_id'] = picture_id if picture_id.present?
+    enqueue_unoapi_avatar(conversation.contact, picture_id, picture_url, avatar_metadata_from(changes))
   end
 
   def set_contact
@@ -68,6 +84,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
         email: group_payload[:group_source_id],
         name: group_payload[:group_title],
         avatar_url: group_payload[:group_picture].presence,
+        avatar_picture_id: group_payload[:group_picture_id].presence,
         avatar_metadata: group_payload[:group_picture_metadata]
       }
     ).perform
@@ -205,6 +222,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
         email: group_payload[:group_source_id],
         name: group_payload[:group_title],
         avatar_url: group_payload[:group_picture].presence,
+        avatar_picture_id: group_payload[:group_picture_id].presence,
         avatar_metadata: group_payload[:group_picture_metadata]
       }
     ).perform
@@ -221,6 +239,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     attrs = {
       name: group_payload[:sender_name],
       avatar_url: group_payload[:sender_picture].presence,
+      avatar_picture_id: group_payload[:sender_picture_id].presence,
       avatar_metadata: group_payload[:sender_picture_metadata],
       bsuid: group_payload[:sender_bsuid],
       whatsapp_username: group_payload[:sender_username]
@@ -238,9 +257,9 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
 
   def group_additional_attributes
     attrs = @conversation.additional_attributes || {}
-    return attrs if group_payload[:group_picture].blank?
-
-    attrs.merge('group_picture' => group_payload[:group_picture])
+    attrs['group_picture'] = group_payload[:group_picture] if group_payload[:group_picture].present?
+    attrs['group_picture_id'] = group_payload[:group_picture_id] if group_payload[:group_picture_id].present?
+    attrs
   end
 
   def sync_group_sender_contact
@@ -253,11 +272,20 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
         wa_id: group_payload[:sender_phone],
         user_id: group_payload[:sender_bsuid],
         username: group_payload[:sender_username],
-        picture: group_payload[:sender_picture]
+        picture: group_payload[:sender_picture],
+        picture_id: group_payload[:sender_picture_id]
       }.compact
     end
 
     enqueue_group_participants_sync
+  end
+
+  def enqueue_unoapi_avatar(contact, picture_id, picture_url, metadata)
+    if inbox.channel.provider == 'unoapi' && picture_id.present?
+      Avatar::AvatarFromUnoapiJob.enqueue_if_needed(contact, inbox.channel, picture_id, metadata, picture_url)
+    elsif picture_url.present?
+      Avatar::AvatarFromUrlJob.enqueue_if_needed(contact, picture_url, metadata)
+    end
   end
 
   def enqueue_group_participants_sync

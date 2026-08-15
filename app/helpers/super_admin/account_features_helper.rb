@@ -1,6 +1,12 @@
 module SuperAdmin::AccountFeaturesHelper
+  BOOLEAN_TYPE = ActiveModel::Type::Boolean.new
+
   def self.account_features
     YAML.safe_load(Rails.root.join('config/features.yml').read).freeze
+  end
+
+  def self.boolean_enabled?(value)
+    !!BOOLEAN_TYPE.cast(value)
   end
 
   def self.account_premium_features
