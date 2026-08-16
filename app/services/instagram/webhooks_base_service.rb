@@ -15,22 +15,37 @@ class Instagram::WebhooksBaseService
     @contact_inbox = @inbox.contact_inboxes.where(source_id: user['id']).first
     @contact = @contact_inbox.contact if @contact_inbox
 
-    update_instagram_profile_link(user) && return if @contact
+    if @contact
+      update_instagram_profile(user)
+      update_instagram_avatar(user)
+      return
+    end
 
     @contact_inbox = @inbox.channel.create_contact_inbox(
       user['id'], user['name']
     )
 
     @contact = @contact_inbox.contact
-    update_instagram_profile_link(user)
-    Avatar::AvatarFromUrlJob.perform_later(@contact, user['profile_pic']) if user['profile_pic']
+    update_instagram_profile(user)
+    update_instagram_avatar(user)
   end
 
-  def update_instagram_profile_link(user)
-    return unless user['username']
+  def update_instagram_profile(user)
+    attributes = {}
 
-    instagram_attributes = build_instagram_attributes(user)
-    @contact.update!(additional_attributes: @contact.additional_attributes.merge(instagram_attributes))
+    profile_name = user['name'].presence || user['username'].presence
+    attributes[:name] = profile_name if profile_name && @contact.name == "Unknown (IG: #{user['id']})"
+
+    if user['username']
+      instagram_attributes = build_instagram_attributes(user)
+      attributes[:additional_attributes] = @contact.additional_attributes.merge(instagram_attributes)
+    end
+
+    @contact.update!(attributes) if attributes.present?
+  end
+
+  def update_instagram_avatar(user)
+    Avatar::AvatarFromUrlJob.perform_later(@contact, user['profile_pic']) if user['profile_pic']
   end
 
   def build_instagram_attributes(user)

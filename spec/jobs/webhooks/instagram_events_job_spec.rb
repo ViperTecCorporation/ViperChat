@@ -365,6 +365,17 @@ describe Webhooks::InstagramEventsJob do
         instagram_webhook.perform_now(messaging_seen_event[:entry])
       end
 
+      it 'handles messaging_seen callback without sender and recipient' do
+        messaging_seen_event = build(:messaging_seen_event, ig_entry_id: instagram_channel.instagram_id).with_indifferent_access
+        messaging = messaging_seen_event[:entry][0][:messaging][0]
+        messaging.delete(:sender)
+        messaging.delete(:recipient)
+
+        expect(Instagram::ReadStatusService).to receive(:new).with(params: messaging, channel: instagram_channel).and_call_original
+
+        instagram_webhook.perform_now(messaging_seen_event[:entry])
+      end
+
       it 'creates contact when Instagram API call returns `No matching Instagram user` (9010 error code)' do
         stub_request(:get, %r{https://graph\.instagram\.com/v22\.0/.*\?.*})
           .to_return(status: 401, body: { error: { message: 'No matching Instagram user', code: 9010 } }.to_json)

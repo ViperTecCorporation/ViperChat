@@ -42,9 +42,16 @@ class Webhooks::InstagramController < ActionController::API
       token == GlobalConfigService.load('INSTAGRAM_VERIFY_TOKEN', '')
   end
 
+  def meta_signature_verification_required?
+    ActiveModel::Type::Boolean.new.cast(
+      GlobalConfigService.load('ENABLE_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION', true)
+    )
+  end
+
   def meta_app_secrets
     [
       *instagram_channel_meta_app_secrets,
+      GlobalConfigService.load('INSTAGRAM_WEBHOOK_APP_SECRET', nil),
       GlobalConfigService.load('INSTAGRAM_APP_SECRET', nil),
       GlobalConfigService.load('FB_APP_SECRET', nil)
     ]

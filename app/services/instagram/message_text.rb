@@ -12,15 +12,17 @@ class Instagram::MessageText < Instagram::BaseMessageText
 
     response = HTTParty.get(url)
 
-    return process_successful_response(response) if response.success?
+    return process_successful_response(response, ig_scope_id) if response.success?
 
     handle_error_response(response, ig_scope_id) || {}
   end
 
   private
 
-  def process_successful_response(response)
+  def process_successful_response(response, ig_scope_id)
     result = JSON.parse(response.body).with_indifferent_access
+    return unknown_user(ig_scope_id) if result['id'].blank?
+
     {
       'name' => result['name'],
       'username' => result['username'],

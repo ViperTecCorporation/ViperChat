@@ -440,6 +440,17 @@
   description: 'The App Secret used for Instagram authentication'
   locked: false
   type: secret
+- name: INSTAGRAM_WEBHOOK_APP_SECRET
+  display_title: 'Instagram Webhook App Secret'
+  description: 'The Meta App Secret used to validate Instagram webhook signatures'
+  locked: false
+  type: secret
+- name: ENABLE_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION
+  value: true
+  display_title: 'Enable Instagram Webhook Signature Verification'
+  description: 'Validate incoming Instagram webhooks using the configured app secrets'
+  locked: false
+  type: boolean
 - name: INSTAGRAM_VERIFY_TOKEN
   display_title: 'Instagram Verify Token'
   description: 'The verify token used for Instagram Webhook'
