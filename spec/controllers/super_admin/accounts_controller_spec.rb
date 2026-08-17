@@ -33,7 +33,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         account.update!(captain_models: { 'editor' => 'gpt-4.1' })
         sign_in(super_admin, scope: :super_admin)
 
-        get "/super_admin/accounts/#{account.id}"
+        get "/super_admin/accounts/#{account.id}", params: { locale: 'en' }
         document = Nokogiri::HTML(response.body)
         summaries = document.css('details summary').map { |summary| summary.text.squish }
 
@@ -70,7 +70,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         account.update!(captain_models: { 'editor' => 'gpt-4.1' })
         sign_in(super_admin, scope: :super_admin)
 
-        get "/super_admin/accounts/#{account.id}/edit"
+        get "/super_admin/accounts/#{account.id}/edit", params: { locale: 'en' }
 
         expect(response).to have_http_status(:success)
         Llm::Models.feature_keys.each do |feature_key|
@@ -89,7 +89,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         account.enable_features!('captain_integration_v2')
         sign_in(super_admin, scope: :super_admin)
 
-        get "/super_admin/accounts/#{account.id}/edit"
+        get "/super_admin/accounts/#{account.id}/edit", params: { locale: 'en' }
 
         document = Nokogiri::HTML(response.body)
         assistant_select = document.at_css('select[name="account[captain_models][assistant]"]')
