@@ -37,6 +37,7 @@ RSpec.describe Concerns::Agentable do
   let(:mock_agents_agent) { instance_double(Agents::Agent) }
 
   before do
+    account.disable_features!('captain_integration_v2')
     InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_MODEL').destroy_all
     allow(Agents::Agent).to receive(:new).and_return(mock_agents_agent)
     allow(Captain::PromptRenderer).to receive(:render).and_return('rendered_template')
