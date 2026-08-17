@@ -737,6 +737,9 @@ RSpec.describe Conversation do
         group_picture: nil,
         group_source_id: nil,
         group_title: nil,
+        applied_sla: nil,
+        sla_events: [],
+        sla_policy_id: nil,
         priority: nil,
         unread_count: 0
       }
