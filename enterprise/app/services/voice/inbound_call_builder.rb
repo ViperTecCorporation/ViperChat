@@ -1,18 +1,23 @@
 class Voice::InboundCallBuilder
-  attr_reader :account, :inbox, :from_number, :call_sid
+  attr_reader :account, :inbox, :from_number, :call_sid, :provider, :extra_meta
 
-  def self.perform!(account:, inbox:, from_number:, call_sid:)
-    new(account: account, inbox: inbox, from_number: from_number, call_sid: call_sid).perform!
+  def self.perform!(**attributes)
+    new(**attributes).perform!
   end
 
-  def initialize(account:, inbox:, from_number:, call_sid:)
-    @account = account
-    @inbox = inbox
-    @from_number = from_number
-    @call_sid = call_sid
+  def initialize(**attributes)
+    @inbox = attributes.fetch(:inbox)
+    @from_number = attributes.fetch(:from_number)
+    @call_sid = attributes.fetch(:call_sid)
+    @provider = attributes.fetch(:provider, :twilio).to_sym
+    @extra_meta = attributes.fetch(:extra_meta, {}) || {}
+    @legacy_conversation_mode = attributes[:account].present? && provider == :twilio
+    @account = attributes[:account] || inbox.account
   end
 
   def perform!
+    return perform_provider_call! unless @legacy_conversation_mode
+
     Rails.logger.info(
       "VOICE_INBOUND_CALL_BUILDER start account_id=#{account.id} inbox_id=#{inbox.id} call_sid=#{call_sid} from_number=#{from_number}"
     )
@@ -33,6 +38,89 @@ class Voice::InboundCallBuilder
   end
 
   private
+
+  def perform_provider_call!
+    existing = find_existing_provider_call
+    return existing if existing
+
+    ActiveRecord::Base.transaction do
+      contact_inbox = ensure_provider_contact_inbox!
+      contact = contact_inbox.contact
+      conversation = resolve_provider_conversation!(contact, contact_inbox)
+      call = create_provider_call!(contact, conversation)
+      message = Voice::CallMessageBuilder.new(call).perform!
+      call.update!(message_id: message.id)
+      call
+    end
+  rescue ActiveRecord::RecordNotUnique
+    find_existing_provider_call || raise
+  end
+
+  def find_existing_provider_call
+    Call.where(account_id: account.id, inbox_id: inbox.id)
+        .find_by(provider: provider, provider_call_id: call_sid)
+  end
+
+  def ensure_provider_contact_inbox!
+    source_id = provider_source_id
+    existing = inbox.contact_inboxes.find_by(source_id: source_id)
+    return existing if existing
+
+    ContactInbox.create!(contact: ensure_provider_contact!, inbox: inbox, source_id: source_id)
+  rescue ActiveRecord::RecordNotUnique
+    inbox.contact_inboxes.find_by!(source_id: source_id)
+  end
+
+  def ensure_provider_contact!
+    contact = account.contacts.find_or_create_by!(phone_number: from_number) do |record|
+      record.name = provider_contact_name.presence || from_number
+    end
+    contact.update!(name: provider_contact_name) if provider_contact_name.present? && contact.name == from_number
+    contact
+  end
+
+  def provider_contact_name
+    extra_meta.stringify_keys['contact_name'].presence
+  end
+
+  def provider_source_id
+    return from_number unless provider == :whatsapp
+
+    digits = from_number.to_s.delete_prefix('+')
+    Whatsapp::PhoneNumberNormalizationService.new(inbox).normalize_and_find_contact_by_provider(digits, :cloud)
+  end
+
+  def resolve_provider_conversation!(contact, contact_inbox)
+    reusable = if inbox.lock_to_single_conversation
+                 contact_inbox.conversations.last
+               else
+                 contact_inbox.conversations.where.not(status: :resolved).last
+               end
+    return reusable if reusable
+
+    account.conversations.create!(
+      contact_inbox_id: contact_inbox.id,
+      inbox_id: inbox.id,
+      contact_id: contact.id,
+      status: :open
+    )
+  end
+
+  def create_provider_call!(contact, conversation)
+    call = Call.create!(
+      account: account,
+      inbox: inbox,
+      conversation: conversation,
+      contact: contact,
+      provider: provider,
+      direction: :incoming,
+      status: 'ringing',
+      provider_call_id: call_sid,
+      meta: { 'initiated_at' => Time.zone.now.to_i }.merge(extra_meta.stringify_keys)
+    )
+    call.update!(conference_sid: call.default_conference_sid) if call.twilio?
+    call
+  end
 
   def ensure_contact!
     contact = account.contacts.find_or_create_by!(phone_number: from_number) do |record|
