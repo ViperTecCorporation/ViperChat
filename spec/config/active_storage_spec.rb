@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe 'Active Storage media delivery' do
+RSpec.describe ActiveStorage do
   it 'serves Apple-compatible video attachments inline' do
     expect(Rails.application.config.active_storage.content_types_allowed_inline).to include(
       'video/mp4',

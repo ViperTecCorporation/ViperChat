@@ -40,8 +40,7 @@ const enable = async () => {
 <template>
   <aside
     v-if="isAvailable && !['granted', 'denied'].includes(permission)"
-    class="fixed inset-x-3 z-[1000] mx-auto flex max-w-md items-center justify-between gap-3 rounded-xl border border-n-weak bg-n-solid-2 p-3 shadow-xl"
-    style="top: calc(0.75rem + env(safe-area-inset-top))"
+    class="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[1000] mx-auto flex max-w-md items-center justify-between gap-3 rounded-xl border border-n-weak bg-n-solid-2 p-3 shadow-xl"
   >
     <p class="text-sm text-n-slate-12">{{ copy.description }}</p>
     <button
