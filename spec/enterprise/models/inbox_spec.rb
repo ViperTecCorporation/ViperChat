@@ -12,6 +12,7 @@ RSpec.describe Inbox do
     let!(:inbox_member_4) { create(:inbox_member, inbox: inbox) }
 
     before do
+      inbox.account.disable_features!(:assignment_v2, :advanced_assignment)
       create(:conversation, inbox: inbox, assignee: inbox_member_1.user)
       # to test conversations in other inboxes won't impact
       create_list(:conversation, 3, assignee: inbox_member_1.user)
@@ -46,6 +47,7 @@ RSpec.describe Inbox do
     let!(:agent2) { create(:user, account: account, role: :agent, auto_offline: false) }
 
     before do
+      account.disable_features!(:assignment_v2, :advanced_assignment)
       create(:inbox_member, inbox: v2_inbox, user: agent1)
       create(:inbox_member, inbox: v2_inbox, user: agent2)
 
