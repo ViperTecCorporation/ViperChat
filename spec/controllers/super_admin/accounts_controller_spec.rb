@@ -49,7 +49,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
 
   describe 'GET /super_admin/accounts/{account_id}/edit' do
     context 'when it is an authenticated user' do
-      it 'renders explicit false values for unchecked feature flags' do
+      it 'renders explicit false values for unchecked feature flags', if: ChatwootApp.enterprise? do
         account.enable_features!('agent_conversation_viewed')
         sign_in(super_admin, scope: :super_admin)
         allow_any_instance_of(ActionView::Base).to receive(:vite_client_tag).and_return('') # rubocop:disable RSpec/AnyInstance
