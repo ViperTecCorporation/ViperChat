@@ -100,6 +100,8 @@ RSpec.describe Contact, type: :model do
     end
 
     it 'does not include company_id when companies feature is disabled' do
+      account.disable_features!(:companies)
+
       expect(contact.push_event_data).not_to have_key(:company_id)
     end
   end
