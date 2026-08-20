@@ -12,7 +12,15 @@ class Notification::ViperPushRelayService
       timeout: 10
     )
 
+    if response.code == 410
+      subscription.destroy!
+      Rails.logger.info("Removed expired Viper native push subscription #{subscription.id}")
+      return false
+    end
+
     raise "Viper Push Relay returned HTTP #{response.code}" unless response.success?
+
+    true
   end
 
   private

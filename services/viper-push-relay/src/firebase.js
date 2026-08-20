@@ -54,8 +54,8 @@ export const buildFirebaseMessage = payload => {
   };
 };
 
-export const createFirebaseSender = ({ projectId }) => {
-  const auth = new GoogleAuth({ scopes: [FCM_SCOPE] });
+export const createFirebaseSender = ({ projectId, credentials }) => {
+  const auth = new GoogleAuth({ credentials, scopes: [FCM_SCOPE] });
   const url = `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/messages:send`;
 
   return async payload => {
@@ -74,5 +74,5 @@ export const firebaseErrorStatus = error => {
   const status = error?.response?.data?.error?.status;
   if (status === 'UNREGISTERED' || status === 'NOT_FOUND') return 410;
   if (status === 'RESOURCE_EXHAUSTED' || status === 'UNAVAILABLE') return 503;
-  return 502;
+  return undefined;
 };
