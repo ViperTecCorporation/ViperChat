@@ -21,26 +21,11 @@ copiado para a imagem.
 
 ## Preparação da VPS
 
-No diretório do Compose do Chatwoot:
+Codifique a conta de serviço Firebase em Base64, mantendo o valor somente no
+ambiente do stack e fora do repositório:
 
 ```bash
-mkdir -p secrets
-chmod 700 secrets
-```
-
-Copie a conta de serviço Firebase para:
-
-```text
-secrets/firebase-service-account.json
-```
-
-O processo da imagem roda como UID/GID `1000`. Restrinja a credencial ao root e
-ao grupo do processo; `chmod 600` deixa o relay sem acesso e faz os envios
-falharem com HTTP 502:
-
-```bash
-chown root:1000 secrets/firebase-service-account.json
-chmod 640 secrets/firebase-service-account.json
+base64 -w 0 firebase-service-account.json
 openssl rand -hex 32
 ```
 
@@ -56,7 +41,7 @@ VIPER_PUSH_RELAY_TOKEN=COLE_AQUI_O_TOKEN_GERADO
 VIPER_PUSH_RELAY_IMAGE_TAG=latest
 VIPER_PUSH_RELAY_PORT=3100
 VIPER_FIREBASE_PROJECT_ID=viperchat-f0ce4
-VIPER_FIREBASE_CREDENTIALS_PATH=./secrets/firebase-service-account.json
+FIREBASE_SERVICE_ACCOUNT_JSON_BASE64=COLE_AQUI_O_JSON_EM_BASE64
 ```
 
 O serviço possui um token padrão somente quando iniciado fora de produção. O
@@ -94,9 +79,10 @@ montada com `:ro`. Em hosts com Docker instalado via Snap, não acrescente
 `cap_drop: ALL` ou `no-new-privileges`: essa combinação impede a execução do
 entrypoint oficial da imagem Node.
 
-O relay agora valida a leitura da credencial durante a inicialização. Assim, um
-arquivo com proprietário ou modo incorreto impede o container de ficar
-saudável, em vez de aceitar tráfego e falhar somente no primeiro push.
+O relay valida e decodifica a credencial durante a inicialização. Um valor
+ausente ou inválido impede o container de iniciar, em vez de aceitar tráfego e
+falhar somente no primeiro push. `GOOGLE_APPLICATION_CREDENTIALS` continua
+compatível para instalações que optarem por um arquivo externo.
 
 ## Cloudflare Tunnel
 

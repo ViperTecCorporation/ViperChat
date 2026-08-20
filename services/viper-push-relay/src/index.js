@@ -6,7 +6,10 @@ const config = loadConfig();
 const server = buildServer({
   relayToken: config.relayToken,
   firebaseProjectId: config.firebaseProjectId,
-  sendPush: createFirebaseSender({ projectId: config.firebaseProjectId }),
+  sendPush: createFirebaseSender({
+    projectId: config.firebaseProjectId,
+    credentials: config.firebaseCredentials,
+  }),
 });
 
 server.listen(config.port, '0.0.0.0', () => {

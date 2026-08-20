@@ -36,11 +36,33 @@ const assertFirebaseCredentialsReadable = () => {
   }
 };
 
+const firebaseCredentials = () => {
+  const encoded = process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64?.trim();
+  if (!encoded) {
+    assertFirebaseCredentialsReadable();
+    return undefined;
+  }
+
+  try {
+    const credentials = JSON.parse(
+      Buffer.from(encoded, 'base64').toString('utf8')
+    );
+    if (!credentials.client_email || !credentials.private_key) {
+      throw new Error('missing service account fields');
+    }
+    return credentials;
+  } catch {
+    throw new Error(
+      'FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 must contain valid Base64-encoded service account JSON'
+    );
+  }
+};
+
 export const loadConfig = () => {
-  assertFirebaseCredentialsReadable();
   return {
     port: Number.parseInt(process.env.PORT || '3100', 10),
     firebaseProjectId: required('FIREBASE_PROJECT_ID'),
+    firebaseCredentials: firebaseCredentials(),
     relayToken: relayToken(),
   };
 };

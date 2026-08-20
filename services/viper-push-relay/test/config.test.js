@@ -3,6 +3,8 @@ import { afterEach, test } from 'node:test';
 import { DEVELOPMENT_RELAY_TOKEN, loadConfig } from '../src/config.js';
 
 const originalEnvironment = {
+  FIREBASE_SERVICE_ACCOUNT_JSON_BASE64:
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64,
   FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
   GOOGLE_APPLICATION_CREDENTIALS:
     process.env.GOOGLE_APPLICATION_CREDENTIALS,
@@ -51,5 +53,35 @@ test('fails at startup when configured Firebase credentials are unreadable', () 
   assert.throws(
     () => loadConfig(),
     /GOOGLE_APPLICATION_CREDENTIALS is not readable/
+  );
+});
+
+test('loads Firebase credentials from Base64 without a file mount', () => {
+  process.env.NODE_ENV = 'production';
+  process.env.FIREBASE_PROJECT_ID = 'viperchat-test';
+  process.env.VIPER_PUSH_RELAY_TOKEN = 'a'.repeat(32);
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = '/missing/firebase.json';
+  process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 = Buffer.from(
+    JSON.stringify({
+      client_email: 'relay@example.test',
+      private_key: 'test-private-key',
+    })
+  ).toString('base64');
+
+  assert.equal(
+    loadConfig().firebaseCredentials.client_email,
+    'relay@example.test'
+  );
+});
+
+test('rejects invalid Base64 Firebase credentials at startup', () => {
+  process.env.NODE_ENV = 'production';
+  process.env.FIREBASE_PROJECT_ID = 'viperchat-test';
+  process.env.VIPER_PUSH_RELAY_TOKEN = 'a'.repeat(32);
+  process.env.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 = 'not-valid-json';
+
+  assert.throws(
+    () => loadConfig(),
+    /must contain valid Base64-encoded service account JSON/
   );
 });
