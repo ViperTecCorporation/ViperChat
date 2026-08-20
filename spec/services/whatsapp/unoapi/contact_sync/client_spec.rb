@@ -120,7 +120,7 @@ describe Whatsapp::Unoapi::ContactSync::Client do
       )
 
     expect { client.import_contact(phone_number: '5566999069708', full_name: 'Fran Fernandes') }
-      .to raise_error(Whatsapp::Unoapi::ContactSync::Client::TransientError)
+      .to raise_error(StandardError) { |error| expect(error.class.name).to eq('Whatsapp::Unoapi::ContactSync::Client::TransientError') }
   end
 
   it 'raises the provider mismatch error returned by a non-Zapo session' do
@@ -132,6 +132,6 @@ describe Whatsapp::Unoapi::ContactSync::Client do
       )
 
     expect { client.contacts(cursor: '0') }
-      .to raise_error(Whatsapp::Unoapi::ContactSync::Client::ProviderMismatchError)
+      .to raise_error(StandardError) { |error| expect(error.class.name).to eq('Whatsapp::Unoapi::ContactSync::Client::ProviderMismatchError') }
   end
 end

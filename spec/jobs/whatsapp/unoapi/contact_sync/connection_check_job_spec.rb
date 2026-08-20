@@ -24,13 +24,13 @@ describe Whatsapp::Unoapi::ContactSync::ConnectionCheckJob do
       end.to have_enqueued_job(Whatsapp::Unoapi::ContactSync::PageJob)
         .with(channel.id, '0')
         .at(3.minutes.from_now)
-    end
 
-    expect(channel.reload).to have_attributes(
-      contact_sync_status: 'scheduled',
-      contact_sync_cursor: '0',
-      contact_sync_next_run_at: be_within(1.second).of(3.minutes.from_now)
-    )
+      expect(channel.reload).to have_attributes(
+        contact_sync_status: 'scheduled',
+        contact_sync_cursor: '0',
+        contact_sync_next_run_at: be_within(1.second).of(3.minutes.from_now)
+      )
+    end
   end
 
   it 'starts subsequent synchronizations immediately' do
