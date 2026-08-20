@@ -113,8 +113,8 @@ class Notification::PushNotificationService
     return unless native_push_enabled?
     return unless subscription.viper_native?
 
-    Notification::ViperPushRelayService.new(notification: notification, subscription: subscription).perform
-    Rails.logger.info("Viper native push sent to #{user.email} with title #{notification.push_message_title}")
+    sent = Notification::ViperPushRelayService.new(notification: notification, subscription: subscription).perform
+    Rails.logger.info("Viper native push sent to #{user.email} with title #{notification.push_message_title}") if sent
   rescue StandardError => e
     Rails.logger.error("Viper native push failed for subscription #{subscription.id}: #{e.class} - #{e.message}")
   end

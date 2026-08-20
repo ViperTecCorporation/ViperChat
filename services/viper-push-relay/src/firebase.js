@@ -74,5 +74,5 @@ export const firebaseErrorStatus = error => {
   const status = error?.response?.data?.error?.status;
   if (status === 'UNREGISTERED' || status === 'NOT_FOUND') return 410;
   if (status === 'RESOURCE_EXHAUSTED' || status === 'UNAVAILABLE') return 503;
-  return 502;
+  return undefined;
 };
