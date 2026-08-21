@@ -267,8 +267,14 @@ RSpec.describe Account, type: :model do
 
   describe 'default features' do
     before do
+      captain_features = %w[captain_integration captain_integration_v2]
+      defaults = Featurable::FEATURE_LIST.map do |feature|
+        next feature unless captain_features.include?(feature['name'])
+
+        feature.merge('enabled' => false)
+      end
       InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
-        value: Featurable::FEATURE_LIST,
+        value: defaults,
         locked: true
       )
     end

@@ -35,6 +35,8 @@ RSpec.describe 'Article Bulk Actions API', type: :request do
     end
 
     context 'when captain is not enabled' do
+      before { account.disable_features!('captain_tasks') }
+
       it 'returns unprocessable entity' do
         post translate_url,
              headers: admin.create_new_auth_token,

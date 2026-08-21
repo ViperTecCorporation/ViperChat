@@ -20,27 +20,26 @@ class Api::V1::Accounts::Contacts::CallsController < Api::V1::Accounts::BaseCont
     Rails.logger.info(
       "VOICE_OUTBOUND_CALL_CREATE account_id=#{Current.account.id} inbox_id=#{voice_inbox.id} contact_id=#{contact.id} user_id=#{Current.user.id}"
     )
-    result = Voice::OutboundCallBuilder.perform!(
+    call = Voice::OutboundCallBuilder.perform!(
       account: Current.account,
       inbox: voice_inbox,
       user: Current.user,
-      contact: contact
+      contact: contact,
+      conversation: existing_conversation
     )
-
-    conversation = result[:conversation]
 
     Rails.logger.info(
       "VOICE_OUTBOUND_CALL_CREATED " \
       "account_id=#{Current.account.id} " \
       "inbox_id=#{voice_inbox.id} " \
-      "conversation_id=#{conversation.display_id} " \
-      "call_sid=#{result[:call_sid]}"
+      "conversation_id=#{call.conversation.display_id} " \
+      "call_sid=#{call.provider_call_id}"
     )
     render json: {
-      conversation_id: conversation.display_id,
+      conversation_id: call.conversation.display_id,
       inbox_id: voice_inbox.id,
-      call_sid: result[:call_sid],
-      conference_sid: conversation.additional_attributes['conference_sid']
+      call_sid: call.provider_call_id,
+      conference_sid: call.conference_sid
     }
   end
 
@@ -68,5 +67,16 @@ class Api::V1::Accounts::Contacts::CallsController < Api::V1::Accounts::BaseCont
 
       inbox
     end
+  end
+
+  def existing_conversation
+    return nil if params[:conversation_id].blank?
+
+    conversation = Current.account.conversations.find_by(display_id: params[:conversation_id])
+    return nil unless conversation
+    return nil unless conversation.inbox_id == voice_inbox.id && conversation.contact_id == contact.id
+    return nil unless conversation.open?
+
+    conversation
   end
 end

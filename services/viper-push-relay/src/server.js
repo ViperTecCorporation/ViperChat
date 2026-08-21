@@ -112,7 +112,7 @@ export const buildServer = ({ relayToken, firebaseProjectId, sendPush }) =>
       );
       json(response, 202, { accepted: true, message: result?.name, requestId });
     } catch (error) {
-      const status = error.status || firebaseErrorStatus(error);
+      const status = firebaseErrorStatus(error) || error.status || 502;
       console.error(
         JSON.stringify({
           level: 'error',

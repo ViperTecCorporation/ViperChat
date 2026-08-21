@@ -9,6 +9,7 @@ RSpec.describe 'Devise::Mailer' do
     let(:inviter_val) { nil }
     let(:mail) { Devise::Mailer.confirmation_instructions(confirmable_user.reload, nil, {}) }
     let(:mail_body) { CGI.unescapeHTML(mail.body.to_s) }
+    let(:brand_name) { GlobalConfig.get('BRAND_NAME')['BRAND_NAME'] || 'ViperChat' }
 
     before do
       confirmable_user.update!(confirmed_at: nil)
@@ -51,7 +52,7 @@ RSpec.describe 'Devise::Mailer' do
 
         it 'mentions SSO invitation' do
           expect(mail_body).to include("You're invited to join #{account.name}")
-          expect(mail_body).to include("#{inviter_val.name} invited you to access the #{account.name} workspace on Chatwoot.")
+          expect(mail_body).to include("#{inviter_val.name} invited you to access the #{account.name} workspace on #{brand_name}.")
         end
 
         it 'explains SSO authentication' do

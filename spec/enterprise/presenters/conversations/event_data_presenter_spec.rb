@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Conversations::EventDataPresenter do
-  let!(:presenter) { described_class.new(conversation) }
+  let(:presenter) { described_class.new(conversation.reload) }
   let!(:conversation) { create(:conversation) }
   let!(:applied_sla) { create(:applied_sla, conversation: conversation) }
   let!(:sla_event) { create(:sla_event, conversation: conversation, applied_sla: applied_sla) }

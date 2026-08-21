@@ -34,6 +34,9 @@ RSpec.describe ConversationFinder do
                                      mine_count: 1,
                                      assigned_count: 2,
                                      unassigned_count: 0,
+                                     waiting_count: 1,
+                                     group_count: 0,
+                                     internal_count: 0,
                                      all_count: 2
                                    })
     end

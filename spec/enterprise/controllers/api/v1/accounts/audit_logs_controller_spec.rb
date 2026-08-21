@@ -1,7 +1,9 @@
 require 'rails_helper'
 
 RSpec.describe 'Enterprise Audit API', type: :request do
-  let!(:account) { create(:account) }
+  let!(:account) do
+    create(:account, selected_feature_flags: Featurable.default_feature_flags - [:feature_audit_logs])
+  end
   let!(:admin) { create(:user, account: account, role: :administrator) }
   let!(:inbox) { create(:inbox, account: account) }
 

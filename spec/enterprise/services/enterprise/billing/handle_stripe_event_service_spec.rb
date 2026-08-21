@@ -223,6 +223,7 @@ describe Enterprise::Billing::HandleStripeEventService do
       end
 
       it 'does not enable Captain V2 for existing paid accounts during reconciliation' do
+        account.disable_features!('captain_integration_v2')
         allow(subscription).to receive(:[]).with('plan')
                                            .and_return({ 'id' => 'test', 'product' => 'plan_id_startups', 'name' => 'Startups' })
 
@@ -232,6 +233,7 @@ describe Enterprise::Billing::HandleStripeEventService do
       end
 
       it 'enables Captain V2 for new cloud accounts marked as default eligible' do
+        account.disable_features!('captain_integration_v2')
         account.update!(
           internal_attributes: account.internal_attributes.merge(
             Enterprise::Account::CAPTAIN_V2_DEFAULT_ELIGIBLE => true

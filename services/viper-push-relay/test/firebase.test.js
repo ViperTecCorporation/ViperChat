@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildFirebaseMessage } from '../src/firebase.js';
+import { buildFirebaseMessage, firebaseErrorStatus } from '../src/firebase.js';
 
 const payload = conversationId => ({
   device: { push_token: 'fcm-token' },
@@ -40,4 +40,17 @@ test('uses no more than 20 active Android notification slots', () => {
   );
 
   assert.ok(tags.size <= 20);
+});
+
+test('maps permanently invalid Firebase tokens to gone', () => {
+  const error = {
+    status: 404,
+    response: { data: { error: { status: 'NOT_FOUND' } } },
+  };
+
+  assert.equal(firebaseErrorStatus(error), 410);
+});
+
+test('leaves unknown Firebase errors for the HTTP fallback', () => {
+  assert.equal(firebaseErrorStatus({ status: 429 }), undefined);
 });
