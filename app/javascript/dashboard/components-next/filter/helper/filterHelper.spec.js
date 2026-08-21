@@ -171,12 +171,57 @@ const storeValues = {
   'inboxes/getInboxes': ref([]),
   'teams/getTeams': ref([]),
   'campaigns/getAllCampaigns': ref([]),
+  getCurrentUser: ref({ id: 1, name: 'Agent One' }),
+  getCurrentRole: ref('agent'),
+  getCurrentAccountId: ref(1),
+  'accounts/isFeatureEnabledonAccount': ref(() => false),
 };
 
 describe('useConversationFilterContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    storeValues['agents/getAgents'].value = [];
+    storeValues.getCurrentRole.value = 'agent';
+    storeValues['accounts/isFeatureEnabledonAccount'].value = () => false;
     useMapGetter.mockImplementation(key => storeValues[key] || ref([]));
+  });
+
+  it('restricts the assignee filter to the current agent when enabled', () => {
+    storeValues['agents/getAgents'].value = [
+      { id: 1, name: 'Agent One' },
+      { id: 2, name: 'Agent Two' },
+    ];
+    storeValues['accounts/isFeatureEnabledonAccount'].value = (
+      _accountId,
+      feature
+    ) => feature === 'restrict_assignee_filter_for_agent';
+
+    const { filterTypes } = useConversationFilterContext();
+    const assigneeFilter = filterTypes.value.find(
+      filter => filter.attributeKey === CONVERSATION_ATTRIBUTES.ASSIGNEE_ID
+    );
+
+    expect(assigneeFilter.options).toEqual([{ id: 1, name: 'Agent One' }]);
+    expect(
+      assigneeFilter.filterOperators.map(operator => operator.value)
+    ).toEqual(['equal_to']);
+  });
+
+  it('keeps all assignee options available for administrators', () => {
+    storeValues.getCurrentRole.value = 'administrator';
+    storeValues['agents/getAgents'].value = [
+      { id: 1, name: 'Agent One' },
+      { id: 2, name: 'Agent Two' },
+    ];
+    storeValues['accounts/isFeatureEnabledonAccount'].value = () => true;
+
+    const { filterTypes } = useConversationFilterContext();
+    const assigneeFilter = filterTypes.value.find(
+      filter => filter.attributeKey === CONVERSATION_ATTRIBUTES.ASSIGNEE_ID
+    );
+
+    expect(assigneeFilter.options).toHaveLength(2);
+    expect(assigneeFilter.filterOperators).toHaveLength(4);
   });
 
   it('exposes contact as an async searchable conversation filter', () => {

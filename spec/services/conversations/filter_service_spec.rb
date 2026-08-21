@@ -332,6 +332,46 @@ describe Conversations::FilterService do
         expect(result[:conversations].pluck(:campaign_id).sort).to eq [campaign_2.id, campaign_1.id].sort
       end
 
+      context 'when the assignee filter is restricted to the current agent' do
+        before do
+          account.enable_features!(:restrict_assignee_filter_for_agent)
+        end
+
+        it 'forces agent requests to filter by their own assignment' do
+          params[:payload] = [
+            {
+              attribute_key: 'assignee_id',
+              filter_operator: 'not_equal_to',
+              values: [user_2.id],
+              query_operator: nil,
+              custom_attribute_type: ''
+            }.with_indifferent_access
+          ]
+
+          result = filter_service.new(params, user_1, account).perform
+
+          expect(result[:conversations]).to be_present
+          expect(result[:conversations].pluck(:assignee_id).uniq).to eq [user_1.id]
+        end
+
+        it 'keeps administrator assignee filters unchanged' do
+          administrator = create(:user, account: account, role: :administrator)
+          params[:payload] = [
+            {
+              attribute_key: 'assignee_id',
+              filter_operator: 'equal_to',
+              values: [user_2.id],
+              query_operator: nil,
+              custom_attribute_type: ''
+            }.with_indifferent_access
+          ]
+
+          result = filter_service.new(params, administrator, account).perform
+
+          expect(result[:conversations].pluck(:assignee_id)).to eq [user_2.id]
+        end
+      end
+
       it 'handles invalid query conditions' do
         params[:payload] = [
           {
