@@ -12,21 +12,21 @@ export default {
     const urlData = endPoints('validityCheck');
     return axios.get(urlData.url);
   },
-  logout() {
+  async logout() {
     const urlData = endPoints('logout');
-    const fetchPromise = new Promise((resolve, reject) => {
-      axios
-        .delete(urlData.url)
-        .then(response => {
-          deleteIndexedDBOnLogout();
-          clearCookiesOnLogout();
-          resolve(response);
-        })
-        .catch(error => {
-          reject(error);
-        });
-    });
-    return fetchPromise;
+    try {
+      await window.viperNativeAuth?.beforeLogout?.();
+    } catch (error) {
+      // A stale remote token is removed by the relay after Firebase reports it
+      // as invalid. Do not prevent the user from ending their session.
+      // eslint-disable-next-line no-console
+      console.error('[ViperChat] Native push logout cleanup failed', error);
+    }
+
+    const response = await axios.delete(urlData.url);
+    deleteIndexedDBOnLogout();
+    clearCookiesOnLogout();
+    return response;
   },
   hasAuthCookie() {
     return Boolean(

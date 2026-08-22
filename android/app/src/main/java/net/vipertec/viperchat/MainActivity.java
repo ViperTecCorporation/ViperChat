@@ -19,6 +19,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SecureStoragePlugin.class);
         registerPlugin(NativeSharePlugin.class);
         registerPlugin(NativeSystemBarsPlugin.class);
+        registerPlugin(NativeAppSettingsPlugin.class);
         super.onCreate(savedInstanceState);
 
         configureStatusBar();

@@ -7,6 +7,7 @@ class Conversations::FilterService < FilterService
   end
 
   def perform
+    restrict_assignee_filter_to_current_user
     validate_query_operator
     @conversations = query_builder(@filters['conversations'])
     mine_count, unassigned_count, group_count, all_count, = set_count_for_all_conversations
@@ -49,5 +50,19 @@ class Conversations::FilterService < FilterService
 
   def conversations
     @conversations.sort_on_last_activity_at.page(current_page)
+  end
+
+  private
+
+  def restrict_assignee_filter_to_current_user
+    return unless @account.feature_enabled?('restrict_assignee_filter_for_agent')
+    return if @account.account_users.find_by!(user_id: @user.id).administrator?
+
+    @params[:payload].each do |filter|
+      next unless filter[:attribute_key] == 'assignee_id'
+
+      filter[:filter_operator] = 'equal_to'
+      filter[:values] = [@user.id]
+    end
   end
 end

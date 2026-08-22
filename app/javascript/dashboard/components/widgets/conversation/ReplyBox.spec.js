@@ -94,6 +94,35 @@ describe('ReplyBox Captain shortcuts', () => {
 });
 
 describe('ReplyBox compact composer', () => {
+  it('queues recorded audio send until its upload finishes', async () => {
+    let finishUpload;
+    const uploadPromise = new Promise(resolve => {
+      finishUpload = resolve;
+    });
+    const context = {
+      recordingAudioState: '',
+      hasRecordedAudio: false,
+      isRecordedAudioUploadPending: false,
+      sendRecordedAudioAfterUpload: false,
+      onFileUpload: vi.fn(() => uploadPromise),
+      onSendReply: vi.fn(),
+    };
+    const file = { file: new Blob(['audio'], { type: 'audio/mp3' }) };
+
+    const finishPromise = ReplyBox.methods.onFinishRecorder.call(context, file);
+    await ReplyBox.methods.onSendReply.call(context);
+
+    expect(context.sendRecordedAudioAfterUpload).toBe(true);
+    expect(context.onSendReply).not.toHaveBeenCalled();
+
+    finishUpload(true);
+    await finishPromise;
+
+    expect(context.isRecordedAudioUploadPending).toBe(false);
+    expect(context.sendRecordedAudioAfterUpload).toBe(false);
+    expect(context.onSendReply).toHaveBeenCalledOnce();
+  });
+
   it('does not focus the message editor automatically on mobile', () => {
     expect(
       ReplyBox.computed.shouldFocusMessageEditorOnMount.call({

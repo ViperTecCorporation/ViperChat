@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useAlert } from 'dashboard/composables';
 import { useStore } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import { useMessageContext } from '../provider.js';
 import BaseAttachmentBubble from './BaseAttachment.vue';
 
@@ -15,6 +16,8 @@ const { attachments, content } = useMessageContext();
 
 const $store = useStore();
 const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
 
 const attachment = computed(() => {
   return attachments.value[0];
@@ -68,24 +71,32 @@ async function filterContactByNumber(searchCandidate) {
   return contacts.shift();
 }
 
-function openContactNewTab(contactId) {
-  const accountId = window.location.pathname.split('/')[3];
-  const url = `/app/accounts/${accountId}/contacts/${contactId}`;
-  window.open(url, '_blank');
+function openContact(contactId) {
+  return router.push({
+    name: 'contacts_edit',
+    params: {
+      accountId: route.params.accountId,
+      contactId,
+    },
+  });
 }
 
 async function addContact() {
   try {
-    let contact = await filterContactByNumber(rawPhoneNumber);
-    if (!contact) {
+    let contact = await filterContactByNumber(rawPhoneNumber.value);
+    if (contact) {
+      useAlert(t('CONTACT_FORM.FORM.PHONE_NUMBER.DUPLICATE'));
+    } else {
       contact = await $store.dispatch('contacts/create', getContactObject());
       useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
     }
-    openContactNewTab(contact.id);
+    await openContact(contact.id);
   } catch (error) {
     if (error instanceof DuplicateContactException) {
-      if (error.data.includes('phone_number')) {
+      if (error.contactErrorAttributes.includes('phone_number')) {
         useAlert(t('CONTACT_FORM.FORM.PHONE_NUMBER.DUPLICATE'));
+      } else {
+        useAlert(error.contactErrorDetail || t('CONTACT_FORM.ERROR_MESSAGE'));
       }
     } else if (error instanceof ExceptionWithMessage) {
       useAlert(error.data);

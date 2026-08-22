@@ -156,8 +156,40 @@ const registerListeners = async installation => {
   });
 };
 
-export const getNativePushPermission = () =>
-  FirebaseMessaging.checkPermissions();
+export const getNativePushPermission = async () => {
+  const [deviceInfo, firebasePermission] = await Promise.all([
+    Device.getInfo(),
+    FirebaseMessaging.checkPermissions(),
+  ]);
+  if (deviceInfo.platform !== 'android') return firebasePermission;
+
+  const localPermission = await LocalNotifications.checkPermissions();
+  if (localPermission.display === 'denied') {
+    return { receive: 'denied', settingsTarget: 'app' };
+  }
+  if (firebasePermission.receive !== 'granted') return firebasePermission;
+
+  if (Number.parseInt(deviceInfo.osVersion, 10) >= 8) {
+    try {
+      const { channels } = await LocalNotifications.listChannels();
+      const messageChannel = channels.find(
+        channel => channel.id === MESSAGE_CHANNEL_ID
+      );
+      if (Number(messageChannel?.importance) === 0) {
+        return {
+          receive: 'denied',
+          settingsTarget: 'channel',
+          channelId: MESSAGE_CHANNEL_ID,
+        };
+      }
+    } catch {
+      // Some vendor implementations do not expose channel state. In that case,
+      // retain the app-level permission result instead of blocking registration.
+    }
+  }
+
+  return firebasePermission;
+};
 
 export const enableNativePush = async ({ installation, router }) => {
   routerInstance = router;
@@ -167,6 +199,25 @@ export const enableNativePush = async ({ installation, router }) => {
 
   const registered = await registerCurrentToken(installation);
   return { ...permission, registered };
+};
+
+export const disableNativePush = async () => {
+  let cleanupError;
+
+  try {
+    const { token } = await FirebaseMessaging.getToken();
+    if (token) await NotificationSubscriptionsAPI.destroy(token);
+  } catch (error) {
+    cleanupError = error;
+  }
+
+  const [tokenDeletion] = await Promise.allSettled([
+    FirebaseMessaging.deleteToken(),
+    clearAndroidNotifications(),
+  ]);
+
+  if (cleanupError) throw cleanupError;
+  if (tokenDeletion.status === 'rejected') throw tokenDeletion.reason;
 };
 
 export const initializeNativePush = async ({ installation, router }) => {

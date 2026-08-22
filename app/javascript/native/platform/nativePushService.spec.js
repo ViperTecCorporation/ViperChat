@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   appListeners,
+  device,
   firebaseMessaging,
   localListeners,
   localNotifications,
+  notificationSubscriptionsAPI,
   pushListeners,
 } = vi.hoisted(() => {
   const appListenerCallbacks = {};
@@ -13,21 +15,34 @@ const {
 
   return {
     appListeners: appListenerCallbacks,
+    device: {
+      getId: vi.fn(async () => ({ identifier: 'device-123' })),
+      getInfo: vi.fn(async () => ({ platform: 'android', osVersion: '12' })),
+    },
     pushListeners: pushListenerCallbacks,
     localListeners: localListenerCallbacks,
     localNotifications: {
       addListener: vi.fn(async (event, callback) => {
         localListenerCallbacks[event] = callback;
       }),
+      checkPermissions: vi.fn(async () => ({ display: 'granted' })),
       createChannel: vi.fn(async () => {}),
+      listChannels: vi.fn(async () => ({
+        channels: [{ id: 'viperchat_messages', importance: 4 }],
+      })),
       removeAllDeliveredNotifications: vi.fn(async () => {}),
       schedule: vi.fn(async () => ({ notifications: [] })),
+    },
+    notificationSubscriptionsAPI: {
+      create: vi.fn(async () => {}),
+      destroy: vi.fn(async () => {}),
     },
     firebaseMessaging: {
       addListener: vi.fn(async (event, callback) => {
         pushListenerCallbacks[event] = callback;
       }),
       checkPermissions: vi.fn(async () => ({ receive: 'granted' })),
+      deleteToken: vi.fn(async () => {}),
       getToken: vi.fn(async () => ({ token: 'fcm-token' })),
       requestPermissions: vi.fn(async () => ({ receive: 'granted' })),
     },
@@ -43,10 +58,7 @@ vi.mock('@capacitor/app', () => ({
 }));
 
 vi.mock('@capacitor/device', () => ({
-  Device: {
-    getId: vi.fn(async () => ({ identifier: 'device-123' })),
-    getInfo: vi.fn(async () => ({ platform: 'android', osVersion: '12' })),
-  },
+  Device: device,
 }));
 
 vi.mock('@capacitor/local-notifications', () => ({
@@ -58,10 +70,11 @@ vi.mock('@capacitor-firebase/messaging', () => ({
 }));
 
 vi.mock('dashboard/api/notificationSubscription', () => ({
-  default: { create: vi.fn(async () => {}) },
+  default: notificationSubscriptionsAPI,
 }));
 
 import {
+  disableNativePush,
   enableNativePush,
   initializeNativePush,
   nativePushServiceTestUtils,
@@ -77,6 +90,13 @@ describe('nativePushService', () => {
     vi.clearAllMocks();
     nativePushServiceTestUtils.reset();
     firebaseMessaging.getToken.mockResolvedValue({ token: 'fcm-token' });
+    device.getInfo.mockResolvedValue({ platform: 'android', osVersion: '12' });
+    localNotifications.checkPermissions.mockResolvedValue({
+      display: 'granted',
+    });
+    localNotifications.listChannels.mockResolvedValue({
+      channels: [{ id: 'viperchat_messages', importance: 4 }],
+    });
   });
 
   it('keeps the granted permission when the platform cannot issue a token', async () => {
@@ -93,6 +113,31 @@ describe('nativePushService', () => {
     });
 
     expect(result).toEqual({ receive: 'granted', registered: false });
+  });
+
+  it('removes the server subscription and local token before logout', async () => {
+    await disableNativePush();
+
+    expect(notificationSubscriptionsAPI.destroy).toHaveBeenCalledWith(
+      'fcm-token'
+    );
+    expect(firebaseMessaging.deleteToken).toHaveBeenCalledOnce();
+    expect(
+      localNotifications.removeAllDeliveredNotifications
+    ).toHaveBeenCalledOnce();
+  });
+
+  it('invalidates the local token even when server cleanup fails', async () => {
+    notificationSubscriptionsAPI.destroy.mockRejectedValueOnce(
+      new Error('Network error')
+    );
+
+    await expect(disableNativePush()).rejects.toThrow('Network error');
+
+    expect(firebaseMessaging.deleteToken).toHaveBeenCalledOnce();
+    expect(
+      localNotifications.removeAllDeliveredNotifications
+    ).toHaveBeenCalledOnce();
   });
 
   it('shows foreground pushes and opens their conversation when tapped', async () => {
@@ -179,5 +224,41 @@ describe('nativePushService', () => {
       ([request]) => request.notifications[0].id
     );
     expect(new Set(ids).size).toBeLessThanOrEqual(20);
+  });
+
+  it('detects app-level notification blocking on Android 7 through 12', async () => {
+    localNotifications.checkPermissions.mockResolvedValueOnce({
+      display: 'denied',
+    });
+
+    const result = await initializeNativePush({
+      installation: {
+        installationId: 'installation-123',
+        features: { nativePush: true },
+      },
+      router,
+    });
+
+    expect(result).toEqual({ receive: 'denied', settingsTarget: 'app' });
+  });
+
+  it('detects a blocked message channel on Android 8 and newer', async () => {
+    localNotifications.listChannels.mockResolvedValueOnce({
+      channels: [{ id: 'viperchat_messages', importance: 0 }],
+    });
+
+    const result = await initializeNativePush({
+      installation: {
+        installationId: 'installation-123',
+        features: { nativePush: true },
+      },
+      router,
+    });
+
+    expect(result).toEqual({
+      receive: 'denied',
+      settingsTarget: 'channel',
+      channelId: 'viperchat_messages',
+    });
   });
 });

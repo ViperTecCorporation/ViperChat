@@ -248,10 +248,14 @@ export default {
         useAlert(this.$t('CONTACT_FORM.SUCCESS_MESSAGE'));
       } catch (error) {
         if (error instanceof DuplicateContactException) {
-          if (error.data.includes('email')) {
+          if (error.contactErrorAttributes.includes('email')) {
             useAlert(this.$t('CONTACT_FORM.FORM.EMAIL_ADDRESS.DUPLICATE'));
-          } else if (error.data.includes('phone_number')) {
+          } else if (error.contactErrorAttributes.includes('phone_number')) {
             useAlert(this.$t('CONTACT_FORM.FORM.PHONE_NUMBER.DUPLICATE'));
+          } else {
+            useAlert(
+              error.contactErrorDetail || this.$t('CONTACT_FORM.ERROR_MESSAGE')
+            );
           }
         } else if (error instanceof ExceptionWithMessage) {
           useAlert(error.data);

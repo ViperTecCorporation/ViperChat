@@ -39,10 +39,12 @@ const updateContact = async updatedData => {
   } catch (error) {
     const i18nPrefix = 'CONTACTS_LAYOUT.CARD.EDIT_DETAILS_FORM.FORM';
     if (error instanceof DuplicateContactException) {
-      if (error.data.includes('email')) {
+      if (error.contactErrorAttributes.includes('email')) {
         useAlert(t(`${i18nPrefix}.EMAIL_ADDRESS.DUPLICATE`));
-      } else if (error.data.includes('phone_number')) {
+      } else if (error.contactErrorAttributes.includes('phone_number')) {
         useAlert(t(`${i18nPrefix}.PHONE_NUMBER.DUPLICATE`));
+      } else {
+        useAlert(error.contactErrorDetail || t(`${i18nPrefix}.ERROR_MESSAGE`));
       }
     } else if (error instanceof ExceptionWithMessage) {
       useAlert(error.data);

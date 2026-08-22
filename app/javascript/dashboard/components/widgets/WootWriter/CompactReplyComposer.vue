@@ -134,6 +134,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    isRecordedAudioSendPending: {
+      type: Boolean,
+      default: false,
+    },
     isCopilotActive: {
       type: Boolean,
       default: false,
@@ -431,7 +435,8 @@ export default {
         color="blue"
         sm
         class="!rounded-full"
-        :disabled="isSendDisabled"
+        :disabled="isSendDisabled || isRecordedAudioSendPending"
+        :is-loading="isRecordedAudioSendPending"
         @click="$emit('send')"
       />
     </template>

@@ -60,6 +60,12 @@ export function useConversationFilterContext() {
   const inboxes = useMapGetter('inboxes/getInboxes');
   const teams = useMapGetter('teams/getTeams');
   const campaigns = useMapGetter('campaigns/getAllCampaigns');
+  const currentUser = useMapGetter('getCurrentUser');
+  const currentRole = useMapGetter('getCurrentRole');
+  const currentAccountId = useMapGetter('getCurrentAccountId');
+  const isFeatureEnabledonAccount = useMapGetter(
+    'accounts/isFeatureEnabledonAccount'
+  );
 
   const {
     equalityOperators,
@@ -104,6 +110,26 @@ export function useConversationFilterContext() {
     )
   );
 
+  const restrictAssigneeFilterToSelf = computed(
+    () =>
+      currentRole.value !== 'administrator' &&
+      isFeatureEnabledonAccount.value(
+        currentAccountId.value,
+        'restrict_assignee_filter_for_agent'
+      )
+  );
+
+  const assigneeOptions = computed(() => {
+    const availableAgents = restrictAssigneeFilterToSelf.value
+      ? agents.value.filter(agent => agent.id === currentUser.value.id)
+      : agents.value;
+
+    return availableAgents.map(agent => ({
+      id: agent.id,
+      name: agent.name,
+    }));
+  });
+
   /**
    * @type {import('vue').ComputedRef<FilterType[]>}
    */
@@ -146,14 +172,11 @@ export function useConversationFilterContext() {
       attributeName: t('FILTER.ATTRIBUTES.ASSIGNEE_NAME'),
       label: t('FILTER.ATTRIBUTES.ASSIGNEE_NAME'),
       inputType: 'searchSelect',
-      options: agents.value.map(agent => {
-        return {
-          id: agent.id,
-          name: agent.name,
-        };
-      }),
+      options: assigneeOptions.value,
       dataType: 'text',
-      filterOperators: presenceOperators.value,
+      filterOperators: restrictAssigneeFilterToSelf.value
+        ? [presenceOperators.value[0]]
+        : presenceOperators.value,
       attributeModel: 'standard',
     },
     {

@@ -176,6 +176,7 @@ RSpec.describe Account do
         api_and_webhooks
         whatsapp_reconfigure
         whatsapp_embedded_signup_inbox_creation
+        restrict_assignee_filter_for_agent
       ]
       expected_mapping = extension_features.each_with_index.to_h do |feature, index|
         ["feature_#{feature}".to_sym, 1 << index]
@@ -186,6 +187,7 @@ RSpec.describe Account do
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_captain_document_auto_sync]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1 << 12)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(1 << 16)
+      expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_restrict_assignee_filter_for_agent]).to eq(1 << 17)
     end
 
     it 'keeps existing feature flags on the original column' do

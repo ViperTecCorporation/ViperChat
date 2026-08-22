@@ -316,3 +316,7 @@
   display_name: WhatsApp Embedded Signup Inbox Creation
   enabled: true
   column: feature_flags_ext_1
+- name: restrict_assignee_filter_for_agent
+  display_name: Restrict Assignee Filter To Self
+  enabled: false
+  column: feature_flags_ext_1
