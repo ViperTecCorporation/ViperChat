@@ -7,6 +7,10 @@ import { useAlert } from 'dashboard/composables';
 import { debounce } from '@chatwoot/utils';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import filterQueryGenerator from 'dashboard/helper/filterQueryGenerator';
+import {
+  DuplicateContactException,
+  ExceptionWithMessage,
+} from 'shared/helpers/CustomErrors';
 
 import ContactsListLayout from 'dashboard/components-next/Contacts/ContactsListLayout.vue';
 import ContactEmptyState from 'dashboard/components-next/Contacts/EmptyState/ContactEmptyState.vue';
@@ -71,6 +75,7 @@ const isSearchView = computed(() => !!searchQuery.value);
 const selectedContactIds = ref([]);
 const isBulkActionLoading = ref(false);
 const bulkDeleteDialogRef = ref(null);
+const contactEmptyStateRef = ref(null);
 const selectedCount = computed(() => selectedContactIds.value.length);
 const bulkDeleteDialogTitle = computed(() =>
   selectedCount.value > 1
@@ -425,7 +430,40 @@ const handleSort = async ({ sort, order }) => {
 };
 
 const createContact = async contact => {
-  await store.dispatch('contacts/create', contact);
+  try {
+    await store.dispatch('contacts/create', contact);
+    contactEmptyStateRef.value?.onSuccess();
+    useAlert(
+      t('CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.SUCCESS_MESSAGE')
+    );
+  } catch (error) {
+    if (error instanceof DuplicateContactException) {
+      if (error.contactErrorAttributes.includes('email')) {
+        useAlert(
+          t(
+            'CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.EMAIL_ADDRESS_DUPLICATE'
+          )
+        );
+      } else if (error.contactErrorAttributes.includes('phone_number')) {
+        useAlert(
+          t(
+            'CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.PHONE_NUMBER_DUPLICATE'
+          )
+        );
+      } else {
+        useAlert(
+          error.contactErrorDetail ||
+            t('CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.ERROR_MESSAGE')
+        );
+      }
+    } else if (error instanceof ExceptionWithMessage) {
+      useAlert(error.data);
+    } else {
+      useAlert(
+        t('CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.ERROR_MESSAGE')
+      );
+    }
+  }
 };
 
 watch(hasSelection, value => {
@@ -541,6 +579,7 @@ onMounted(async () => {
         />
         <ContactEmptyState
           v-if="showEmptyStateLayout"
+          ref="contactEmptyStateRef"
           class="pt-14"
           :title="t('CONTACTS_LAYOUT.EMPTY_STATE.TITLE')"
           :subtitle="t('CONTACTS_LAYOUT.EMPTY_STATE.SUBTITLE')"

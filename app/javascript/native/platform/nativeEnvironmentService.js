@@ -1,4 +1,5 @@
 import { clearSession, updateSessionHeaders } from './authenticationService';
+import { disableNativePush } from './nativePushService';
 import {
   openNativeSuperAdmin,
   VIPERCHAT_PRIVACY_URL,
@@ -75,6 +76,7 @@ export const configureNativeEnvironment = ({ installation, session }) => {
   window.errorLoggingConfig = '';
   window.viperNativeSession = session.headers;
   window.viperNativeAuth = {
+    beforeLogout: disableNativePush,
     updateHeaders: headers => {
       const headerObject = Object.fromEntries(
         Object.entries(headers || {}).filter(

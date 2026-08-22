@@ -73,9 +73,9 @@ describe('FileUploadMixin', () => {
   });
 
   describe('onDirectFileUpload', () => {
-    it('returns early if no file is provided', () => {
-      const returnValue = wrapper.vm.onDirectFileUpload(null);
-      expect(returnValue).toBeUndefined();
+    it('returns false if no file is provided', async () => {
+      const returnValue = await wrapper.vm.onDirectFileUpload(null);
+      expect(returnValue).toBe(false);
     });
 
     it('shows an alert if the file size exceeds the maximum limit', () => {
@@ -87,9 +87,9 @@ describe('FileUploadMixin', () => {
   });
 
   describe('onIndirectFileUpload', () => {
-    it('returns early if no file is provided', () => {
+    it('returns false if no file is provided', () => {
       const returnValue = wrapper.vm.onIndirectFileUpload(null);
-      expect(returnValue).toBeUndefined();
+      expect(returnValue).toBe(false);
     });
 
     it('shows an alert if the file size exceeds the maximum limit', () => {

@@ -207,6 +207,8 @@ export default {
       newConversationModalActive: false,
       showArticleSearchPopover: false,
       hasRecordedAudio: false,
+      isRecordedAudioUploadPending: false,
+      sendRecordedAudioAfterUpload: false,
       copilotAcceptedMessages: {},
       groupMentionContacts: [],
       isLoadingGroupMentionContacts: false,
@@ -1404,6 +1406,11 @@ export default {
           });
     },
     async onSendReply() {
+      if (this.hasRecordedAudio && this.isRecordedAudioUploadPending) {
+        this.sendRecordedAudioAfterUpload = true;
+        return;
+      }
+
       const undefinedVariables = getUndefinedVariablesInMessage({
         message: this.message,
         variables: this.messageVariables,
@@ -1525,6 +1532,8 @@ export default {
       this.clearAttachedFiles();
       this.attachedContacts = [];
       this.isRecordingAudio = false;
+      this.isRecordedAudioUploadPending = false;
+      this.sendRecordedAudioAfterUpload = false;
       this.resetReplyToMessage();
       this.resetAudioRecorderInput();
     },
@@ -1572,7 +1581,7 @@ export default {
     onRecordProgressChanged(duration) {
       this.recordingAudioDurationText = duration;
     },
-    onFinishRecorder(file) {
+    async onFinishRecorder(file) {
       this.recordingAudioState = 'stopped';
       this.hasRecordedAudio = true;
       // Added a new key isRecordedAudio to the file to find it's and recorded audio
@@ -1581,7 +1590,25 @@ export default {
         ...file,
         isRecordedAudio: true,
       };
-      return file && this.onFileUpload(autoRecordedFile);
+      if (!file) {
+        this.hasRecordedAudio = false;
+        return;
+      }
+
+      this.isRecordedAudioUploadPending = true;
+      const wasAttached = await this.onFileUpload(autoRecordedFile);
+      this.isRecordedAudioUploadPending = false;
+
+      if (!wasAttached) {
+        this.hasRecordedAudio = false;
+        this.sendRecordedAudioAfterUpload = false;
+        return;
+      }
+
+      if (this.sendRecordedAudioAfterUpload) {
+        this.sendRecordedAudioAfterUpload = false;
+        await this.onSendReply();
+      }
     },
     onAudioRecorderError() {
       // getUserMedia can reject after Android's runtime permission dialog.
@@ -1604,11 +1631,11 @@ export default {
       });
     },
     attachFile({ blob, file }) {
-      if (!this.showFileUpload && !this.isOnPrivateNote) return;
+      if (!this.showFileUpload && !this.isOnPrivateNote) return false;
 
       if (!this.enableMultipleFileUpload && this.attachedFiles.length > 0) {
         useAlert(this.$t('CONVERSATION.REPLYBOX.TIP_ATTACH_SINGLE'));
-        return;
+        return false;
       }
       const previewObjectUrl = URL.createObjectURL(file.file);
       this.attachedFiles.push({
@@ -1620,6 +1647,7 @@ export default {
         blobSignedId: blob ? blob.signed_id : undefined,
         isRecordedAudio: file?.isRecordedAudio || false,
       });
+      return true;
     },
     revokeAttachmentPreview(attachment) {
       if (attachment?.previewObjectUrl) {
@@ -1867,6 +1895,8 @@ export default {
       this.isRecordingAudio = false;
       this.recordingAudioState = '';
       this.hasRecordedAudio = false;
+      this.isRecordedAudioUploadPending = false;
+      this.sendRecordedAudioAfterUpload = false;
       // Only clear the recorded audio when we click toggle button.
       const recordedAudioFiles = this.attachedFiles.filter(
         file => file?.isRecordedAudio
@@ -1995,6 +2025,7 @@ export default {
           :recording-audio-state="recordingAudioState"
           :recording-audio-duration-text="recordingAudioDurationText"
           :has-recorded-audio="hasRecordedAudio"
+          :is-recorded-audio-send-pending="sendRecordedAudioAfterUpload"
           :is-copilot-active="copilot.isActive.value"
           :on-file-upload="onFileUpload"
           :send-button-text="replyButtonLabel"

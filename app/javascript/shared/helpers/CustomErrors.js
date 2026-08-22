@@ -14,6 +14,15 @@ export class DuplicateContactException extends Error {
       ? null
       : this.message;
   }
+
+  get contactErrorAttributes() {
+    if (Array.isArray(this.data)) return this.data;
+    if (typeof this.data === 'string') return [this.data];
+    if (!this.data || typeof this.data !== 'object') return [];
+    if (Array.isArray(this.data.attributes)) return this.data.attributes;
+
+    return Object.keys(this.data);
+  }
 }
 export class ExceptionWithMessage extends Error {
   constructor(data) {

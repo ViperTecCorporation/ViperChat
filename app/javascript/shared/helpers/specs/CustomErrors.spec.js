@@ -9,5 +9,17 @@ describe('DuplicateContactException', () => {
     expect(exception.data).toEqual({
       attributes: ['email'],
     });
+    expect(exception.contactErrorAttributes).toEqual(['email']);
+  });
+
+  it.each([
+    [['phone_number'], ['phone_number']],
+    ['email', ['email']],
+    [{ phone_number: ['has already been taken'] }, ['phone_number']],
+    [null, []],
+  ])('normalizes duplicate attributes from %p', (data, expected) => {
+    const exception = new DuplicateContactException(data);
+
+    expect(exception.contactErrorAttributes).toEqual(expected);
   });
 });

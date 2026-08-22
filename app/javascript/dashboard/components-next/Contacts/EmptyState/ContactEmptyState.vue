@@ -33,6 +33,12 @@ const createNewContactDialogRef = ref(null);
 const onClick = () => {
   createNewContactDialogRef.value?.dialogRef.open();
 };
+
+const onSuccess = () => {
+  createNewContactDialogRef.value?.onSuccess();
+};
+
+defineExpose({ onSuccess });
 </script>
 
 <template>
