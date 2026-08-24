@@ -52,12 +52,8 @@ const foregroundNotificationId = notification => {
   return (hash % MAX_ANDROID_NOTIFICATION_SLOTS) + 1;
 };
 
-const clearAndroidNotifications = async () => {
-  const { platform } = await Device.getInfo();
-  if (platform === 'android') {
-    await LocalNotifications.removeAllDeliveredNotifications();
-  }
-};
+const clearDeliveredNotifications = () =>
+  LocalNotifications.removeAllDeliveredNotifications();
 
 const createMessageChannel = async () => {
   const { platform, osVersion } = await Device.getInfo();
@@ -73,8 +69,13 @@ const createMessageChannel = async () => {
   });
 };
 
-const showForegroundNotification = notification =>
-  LocalNotifications.schedule({
+const showForegroundNotification = async notification => {
+  const { platform } = await Device.getInfo();
+  // FirebaseMessaging.presentationOptions displays foreground notifications on
+  // iOS. Scheduling another local notification there would show it twice.
+  if (platform !== 'android') return;
+
+  await LocalNotifications.schedule({
     notifications: [
       {
         id: foregroundNotificationId(notification),
@@ -87,6 +88,7 @@ const showForegroundNotification = notification =>
       },
     ],
   });
+};
 
 const registerToken = async (installation, pushToken) => {
   if (!pushToken) return false;
@@ -138,15 +140,18 @@ const registerListeners = async installation => {
   await FirebaseMessaging.addListener('notificationActionPerformed', event =>
     openNotification(event.notification)
   );
-  await FirebaseMessaging.addListener('notificationReceived', event =>
-    showForegroundNotification(event.notification)
-  );
+  await FirebaseMessaging.addListener('notificationReceived', event => {
+    showForegroundNotification(event.notification).catch(error => {
+      // eslint-disable-next-line no-console
+      console.error('[ViperChat] Foreground notification failed', error);
+    });
+  });
   await LocalNotifications.addListener(
     'localNotificationActionPerformed',
     event => openNotification({ data: event.notification.extra })
   );
   appStateListener ||= await App.addListener('appStateChange', state => {
-    clearAndroidNotifications().catch(error => {
+    clearDeliveredNotifications().catch(error => {
       // eslint-disable-next-line no-console
       console.error(
         `[ViperChat] Failed to clear delivered notifications after app became ${state.isActive ? 'active' : 'inactive'}`,
@@ -213,7 +218,7 @@ export const disableNativePush = async () => {
 
   const [tokenDeletion] = await Promise.allSettled([
     FirebaseMessaging.deleteToken(),
-    clearAndroidNotifications(),
+    clearDeliveredNotifications(),
   ]);
 
   if (cleanupError) throw cleanupError;
@@ -224,7 +229,7 @@ export const initializeNativePush = async ({ installation, router }) => {
   if (!installation.features?.nativePush) return { receive: 'denied' };
   routerInstance = router;
   await registerListeners(installation);
-  await clearAndroidNotifications();
+  await clearDeliveredNotifications();
   const permission = await getNativePushPermission();
   if (permission.receive === 'granted') {
     const registered = await registerCurrentToken(installation);
