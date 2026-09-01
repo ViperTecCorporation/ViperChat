@@ -287,6 +287,16 @@ describe ConversationFinder do
       end
     end
 
+    context 'with priority and created at sort' do
+      let(:params) { { status: 'all', assignee_type: 'waiting', sort_by: 'priority_desc_created_at_asc' } }
+
+      it 'loads conversations when the permission scope joins other tables' do
+        result = conversation_finder.perform
+
+        expect(result[:conversations].to_a).to all(be_a(Conversation))
+      end
+    end
+
     context 'with assignee_type assigned' do
       let(:params) { { assignee_type: 'assigned' } }
 
