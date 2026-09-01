@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import FileUpload from 'vue-upload-component';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -32,6 +32,12 @@ const copy = Object.freeze({
 
 const items = computed(() => props.modelValue);
 
+const revokePreviewUrl = attachment => {
+  if (attachment?.previewUrl?.startsWith('blob:')) {
+    URL.revokeObjectURL(attachment.previewUrl);
+  }
+};
+
 const updateItem = (index, patch) => {
   const next = props.modelValue.map((item, itemIndex) =>
     itemIndex === index ? { ...item, ...patch } : item
@@ -55,6 +61,7 @@ const addItem = () => {
 
 const removeItem = index => {
   if (props.modelValue.length === 1) return;
+  props.modelValue[index].attachments.forEach(revokePreviewUrl);
   emit(
     'update:modelValue',
     props.modelValue.filter((_, itemIndex) => itemIndex !== index)
@@ -62,6 +69,8 @@ const removeItem = index => {
 };
 
 const removeAttachment = (itemIndex, attachmentIndex) => {
+  const currentAttachment = items.value[itemIndex].attachments[attachmentIndex];
+  revokePreviewUrl(currentAttachment);
   const attachments = items.value[itemIndex].attachments.filter(
     (_, index) => index !== attachmentIndex
   );
@@ -91,6 +100,12 @@ const onFile = (file, index) => {
   if (!file) return;
   emit('upload', { index, file, voiceMessage: false });
 };
+
+onBeforeUnmount(() => {
+  items.value.forEach(item => {
+    item.attachments.forEach(revokePreviewUrl);
+  });
+});
 </script>
 
 <template>
@@ -208,27 +223,39 @@ const onFile = (file, index) => {
         <div
           v-for="(attachment, attachmentIndex) in item.attachments"
           :key="attachment.signedId || `${index}-${attachmentIndex}`"
-          class="flex items-center justify-between gap-3 p-2 rounded-lg bg-n-alpha-2"
+          class="flex flex-col min-w-0 gap-2 p-2 rounded-lg bg-n-alpha-2"
         >
-          <span class="flex items-center min-w-0 gap-2 text-sm text-n-slate-12">
-            <Icon
-              :icon="
-                attachment.voiceMessage
-                  ? 'i-lucide-audio-lines'
-                  : 'i-lucide-file'
-              "
-              class="size-4 shrink-0"
+          <div class="flex items-center justify-between min-w-0 gap-3">
+            <span
+              class="flex items-center min-w-0 gap-2 text-sm text-n-slate-12"
+            >
+              <Icon
+                :icon="
+                  attachment.voiceMessage
+                    ? 'i-lucide-audio-lines'
+                    : 'i-lucide-file'
+                "
+                class="size-4 shrink-0"
+              />
+              <span class="truncate">{{
+                attachment.name || 'Anexo existente'
+              }}</span>
+            </span>
+            <Button
+              icon="i-lucide-x"
+              color="slate"
+              variant="ghost"
+              size="xs"
+              class="shrink-0"
+              @click="removeAttachment(index, attachmentIndex)"
             />
-            <span class="truncate">{{
-              attachment.name || 'Anexo existente'
-            }}</span>
-          </span>
-          <Button
-            icon="i-lucide-x"
-            color="slate"
-            variant="ghost"
-            size="xs"
-            @click="removeAttachment(index, attachmentIndex)"
+          </div>
+          <audio
+            v-if="attachment.voiceMessage && attachment.previewUrl"
+            :src="attachment.previewUrl"
+            controls
+            preload="metadata"
+            class="w-full max-w-full h-10"
           />
         </div>
       </div>

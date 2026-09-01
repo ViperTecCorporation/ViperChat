@@ -60,6 +60,14 @@ RSpec.describe 'Scheduled Messages API', type: :request do
     expect(response.parsed_body['message_count']).to eq(3)
     expect(response.parsed_body['messages'].pluck('content')).to eq(['First', nil, 'Third'])
     expect(response.parsed_body['messages'][1]['voice_message']).to be(true)
+    expect(response.parsed_body['messages'][1]['attachments']).to contain_exactly(
+      include(
+        'signed_id' => audio_blob.signed_id,
+        'name' => 'voice.mp3',
+        'content_type' => 'audio/mpeg',
+        'url' => include('/rails/active_storage/blobs/redirect/')
+      )
+    )
   end
 
   it 'rejects a sequence with more than five messages' do

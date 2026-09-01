@@ -473,9 +473,17 @@ const resetEditForm = (item, retry = false) => {
     content_type: message.content_type || 'text',
     content_attributes: message.content_attributes || {},
     voice_message: Boolean(message.voice_message),
-    attachments: (message.attachment_blob_ids || []).map((signedId, index) => ({
-      signedId,
-      name: `Anexo ${index + 1}`,
+    attachments: (
+      message.attachments ||
+      (message.attachment_blob_ids || []).map((signedId, index) => ({
+        signed_id: signedId,
+        name: `Anexo ${index + 1}`,
+      }))
+    ).map(attachment => ({
+      signedId: attachment.signed_id,
+      name: attachment.name,
+      contentType: attachment.content_type,
+      previewUrl: attachment.url,
       voiceMessage: Boolean(message.voice_message),
     })),
   }));
@@ -645,6 +653,11 @@ const uploadAttachment = ({ file, index, voiceMessage }) => {
     message.attachments.push({
       signedId: blob.signed_id,
       name: blob.filename,
+      contentType: blob.content_type,
+      previewUrl:
+        voiceMessage && file.file instanceof Blob
+          ? URL.createObjectURL(file.file)
+          : undefined,
       voiceMessage,
     });
     message.voice_message = message.voice_message || Boolean(voiceMessage);
