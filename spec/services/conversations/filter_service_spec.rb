@@ -334,6 +334,7 @@ describe Conversations::FilterService do
 
       it 'filters unassigned conversations without expanding the agent permission scope' do
         visible_unassigned = create(:conversation, account: account, inbox: inbox, assignee: nil)
+        unassigned_group = create(:conversation, account: account, inbox: inbox, assignee: nil, group: true)
         inaccessible_inbox = create(:inbox, account: account, enable_auto_assignment: false)
         inaccessible_unassigned = create(:conversation, account: account, inbox: inaccessible_inbox, assignee: nil)
         params[:payload] = [
@@ -349,6 +350,7 @@ describe Conversations::FilterService do
         result = filter_service.new(params, user_1, account).perform
 
         expect(result[:conversations]).to include(visible_unassigned)
+        expect(result[:conversations]).not_to include(unassigned_group)
         expect(result[:conversations]).not_to include(inaccessible_unassigned)
         expect(result[:conversations].pluck(:assignee_id).uniq).to eq [nil]
       end

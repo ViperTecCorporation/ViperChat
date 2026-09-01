@@ -31,6 +31,7 @@ class Conversations::FilterService < FilterService
     conversations = @account.conversations.includes(
       :taggings, :inbox, { assignee: { avatar_attachment: [:blob] } }, { contact: { avatar_attachment: [:blob] } }, :team, :messages, :contact_inbox
     )
+    conversations = conversations.non_group_conversations if filtering_unassigned_assignee?
 
     Conversations::PermissionFilterService.new(
       conversations,
@@ -55,6 +56,12 @@ class Conversations::FilterService < FilterService
   end
 
   private
+
+  def filtering_unassigned_assignee?
+    @params[:payload].any? do |filter|
+      filter[:attribute_key] == 'assignee_id' && filter[:filter_operator] == 'is_not_present'
+    end
+  end
 
   def normalize_unassigned_assignee_filter
     @params[:payload].each do |filter|

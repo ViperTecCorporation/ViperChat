@@ -198,7 +198,11 @@ const compareDates = (conversationValue, filterValue, compareFn) => {
  * @returns {Boolean} - Returns true if the value matches the filter
  */
 const matchesCondition = (conversationValue, filter) => {
-  const { filter_operator: filterOperator, values } = filter;
+  const {
+    attribute_key: attributeKey,
+    filter_operator: filterOperator,
+    values,
+  } = filter;
 
   const isNullish =
     conversationValue === null || conversationValue === undefined;
@@ -207,11 +211,18 @@ const matchesCondition = (conversationValue, filter) => {
     ? values.map(resolveValue)
     : resolveValue(values);
 
+  const isUnassignedAssigneeFilter =
+    attributeKey === 'assignee_id' &&
+    Array.isArray(filterValue) &&
+    filterValue.includes('nil');
+
   switch (filterOperator) {
     case 'equal_to':
+      if (isUnassignedAssigneeFilter) return isNullish;
       return equalTo(filterValue, conversationValue);
 
     case 'not_equal_to':
+      if (isUnassignedAssigneeFilter) return !isNullish;
       return !equalTo(filterValue, conversationValue);
 
     case 'contains':

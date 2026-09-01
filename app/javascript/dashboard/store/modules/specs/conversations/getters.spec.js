@@ -184,6 +184,58 @@ describe('#getters', () => {
       ]);
     });
   });
+  describe('#getMineChats', () => {
+    const conversationList = [
+      {
+        id: 1,
+        status: 'open',
+        meta: { assignee: { id: 1 } },
+      },
+      {
+        id: 2,
+        status: 'open',
+        meta: { team: { id: 5 } },
+      },
+      {
+        id: 3,
+        status: 'open',
+        meta: { assignee: { id: 2 } },
+      },
+    ];
+
+    const buildRootGetters = includeTeamConversations => ({
+      getCurrentUser: { id: 1 },
+      getCurrentAccountId: 1,
+      'teams/getMyTeams': [{ id: 5 }],
+      'accounts/getAccount': () => ({
+        settings: {
+          include_team_conversations_in_mine: includeTeamConversations,
+        },
+      }),
+    });
+
+    it('includes conversations assigned to the agent teams by default', () => {
+      const result = getters.getMineChats(
+        { allConversations: conversationList },
+        {},
+        {},
+        buildRootGetters(undefined)
+      )({ status: 'open' });
+
+      expect(result).toEqual([conversationList[0], conversationList[1]]);
+    });
+
+    it('keeps accumulated team conversations out when the account setting is disabled', () => {
+      const result = getters.getMineChats(
+        { allConversations: conversationList },
+        {},
+        {},
+        buildRootGetters(false)
+      )({ status: 'open' });
+
+      expect(result).toEqual([conversationList[0]]);
+    });
+  });
   describe('#getParticipatingChats', () => {
     const conversationList = [
       { id: 1, inbox_id: 2, status: 1, meta: { assignee: { id: 1 } } },

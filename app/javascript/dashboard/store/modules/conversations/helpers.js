@@ -107,11 +107,13 @@ const filterByInternal = (
 };
 
 const filterByGroups = (shouldFilter, assigneeType, conversation = {}) => {
-  if (assigneeType !== 'groups') {
-    return shouldFilter;
+  if (assigneeType === 'groups') {
+    return !!conversation.group && shouldFilter;
   }
 
-  return !!conversation.group && shouldFilter;
+  if (assigneeType === 'me') return shouldFilter;
+
+  return !conversation.group && shouldFilter;
 };
 
 export const applyPageFilters = (conversation, filters) => {

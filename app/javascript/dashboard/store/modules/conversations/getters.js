@@ -85,9 +85,14 @@ const getters = {
   },
   getMineChats: (_state, _, __, rootGetters) => activeFilters => {
     const currentUserID = rootGetters.getCurrentUser?.id;
-    const currentUserTeamIds = (rootGetters['teams/getMyTeams'] || []).map(
-      team => team.id
-    );
+    const currentAccountId = rootGetters.getCurrentAccountId;
+    const getAccount = rootGetters['accounts/getAccount'];
+    const currentAccount = getAccount ? getAccount(currentAccountId) : {};
+    const includeTeamConversations =
+      currentAccount.settings?.include_team_conversations_in_mine !== false;
+    const currentUserTeamIds = includeTeamConversations
+      ? (rootGetters['teams/getMyTeams'] || []).map(team => team.id)
+      : [];
 
     return _state.allConversations.filter(conversation => {
       const shouldFilter = applyPageFilters(conversation, activeFilters);
