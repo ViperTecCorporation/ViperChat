@@ -147,6 +147,7 @@ class ConversationFinder
       @conversations = @conversations.joins(:inbox)
                                      .where(inboxes: { channel_type: 'Channel::Internal' })
     end
+    @conversations = @conversations.non_group_conversations unless %w[me groups].include?(@assignee_type)
     @conversations
   end
 
@@ -225,7 +226,7 @@ class ConversationFinder
       count_scope = count_scope.joins(:inbox).where.not(inboxes: { channel_type: 'Channel::Internal' })
     end
 
-    waiting_scope = count_scope.unattended
+    waiting_scope = count_scope.non_group_conversations.unattended
     waiting_scope = if @is_admin
                       waiting_scope
                     else
@@ -236,16 +237,16 @@ class ConversationFinder
 
     return legacy_count_for_all_conversations(count_scope, internal_scope, waiting_scope) if count_scope.limit_value || count_scope.offset_value || count_scope.eager_loading?
 
-    waiting_filter = '(first_reply_created_at IS NULL OR waiting_since IS NOT NULL)'
+    waiting_filter = '"conversations"."group" = FALSE AND (first_reply_created_at IS NULL OR waiting_since IS NOT NULL)'
     waiting_filter = "#{waiting_filter} AND (assignee_id = #{current_user.id} OR assignee_id IS NULL)" unless @is_admin
 
     counts = count_scope.unscope(:order).pick(
       Arel.sql("COUNT(*) FILTER (WHERE #{mine_count_filter})"),
-      Arel.sql('COUNT(*) FILTER (WHERE assignee_id IS NOT NULL OR team_id IS NOT NULL)'),
+      Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = FALSE AND (assignee_id IS NOT NULL OR team_id IS NOT NULL))'),
       Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = FALSE AND assignee_id IS NULL AND team_id IS NULL)'),
       Arel.sql("COUNT(*) FILTER (WHERE #{waiting_filter})"),
       Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = TRUE)'),
-      Arel.sql('COUNT(*)')
+      Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = FALSE)')
     )
     counts = counts || [0, 0, 0, 0, 0, 0]
     counts + [internal_scope.count]
@@ -258,13 +259,13 @@ class ConversationFinder
       unassigned_conversations(count_scope).count,
       waiting_scope.count,
       count_scope.group_conversations.count,
-      count_scope.count,
+      count_scope.non_group_conversations.count,
       internal_scope.count
     ]
   end
 
   def waiting_conversations
-    conversations = @conversations.unattended
+    conversations = @conversations.non_group_conversations.unattended
     return conversations if @is_admin
 
     conversations.where(assignee_id: current_user.id).or(
@@ -280,7 +281,8 @@ class ConversationFinder
   end
 
   def assigned_conversations(scope)
-    scope.where.not(assignee_id: nil).or(scope.where.not(team_id: nil))
+    non_group_conversations = scope.non_group_conversations
+    non_group_conversations.where.not(assignee_id: nil).or(non_group_conversations.where.not(team_id: nil))
   end
 
   def unassigned_conversations(scope)

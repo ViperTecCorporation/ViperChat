@@ -65,6 +65,21 @@ describe ConversationFinder do
         expect(result[:conversations].map(&:id)).not_to include(team_conversation.id)
         expect(result[:count][:mine_count]).to be 2
       end
+
+      it 'includes assigned groups but not unassigned groups in Mine' do
+        team = create(:team, account: account)
+        create(:team_member, team: team, user: user_1)
+        assigned_group = create(:conversation, account: account, inbox: inbox, assignee: user_1, group: true)
+        team_group = create(:conversation, account: account, inbox: inbox, team: team, group: true)
+        unassigned_group = create(:conversation, account: account, inbox: inbox, group: true)
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).to include(assigned_group.id, team_group.id)
+        expect(result[:conversations].map(&:id)).not_to include(unassigned_group.id)
+        expect(result[:count][:mine_count]).to be 4
+        expect(result[:count][:group_count]).to be 3
+      end
     end
 
     context 'with inbox' do
@@ -109,6 +124,16 @@ describe ConversationFinder do
       it 'filter conversations by assignee type all' do
         result = conversation_finder.perform
         expect(result[:conversations].length).to be 4
+      end
+
+      it 'does not include groups in All or in the All count' do
+        group_conversation = create(:conversation, account: account, inbox: inbox, assignee: user_1, group: true)
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).not_to include(group_conversation.id)
+        expect(result[:count][:all_count]).to be 4
+        expect(result[:count][:group_count]).to be 1
       end
     end
 
@@ -179,6 +204,15 @@ describe ConversationFinder do
       it 'returns the correct waiting count' do
         result = conversation_finder.perform
 
+        expect(result[:count][:waiting_count]).to be 3
+      end
+
+      it 'does not include groups that are waiting' do
+        waiting_group = create(:conversation, account: account, inbox: inbox, group: true)
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).not_to include(waiting_group.id)
         expect(result[:count][:waiting_count]).to be 3
       end
     end
@@ -270,6 +304,16 @@ describe ConversationFinder do
         expect(result[:conversations].map(&:id)).to include(team_conversation.id)
         expect(result[:count][:assigned_count]).to be 4
         expect(result[:count][:unassigned_count]).to be 1
+      end
+
+      it 'does not include assigned groups outside Groups and Mine' do
+        assigned_group = create(:conversation, account: account, inbox: inbox, assignee: user_1, group: true)
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).not_to include(assigned_group.id)
+        expect(result[:count][:assigned_count]).to be 3
+        expect(result[:count][:group_count]).to be 1
       end
 
       it 'returns the correct meta' do
