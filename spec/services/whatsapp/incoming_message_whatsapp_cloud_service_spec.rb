@@ -575,6 +575,49 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect(message).to have_attributes(message_type: 'outgoing', content: 'Mensagem enviada pelo aparelho')
       end
 
+      it 'reuses an existing phone contact when Graph resolves a BSUID-only SMB echo' do
+        user_id = 'BR.4462342527311286'
+        existing_contact = create(:contact, account: whatsapp_channel.account, phone_number: '+5511987654321')
+        echo_params = {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              field: 'smb_message_echoes',
+              value: {
+                metadata: {
+                  display_phone_number: whatsapp_channel.phone_number.delete('+'),
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                contacts: [{ user_id: user_id }],
+                message_echoes: [{
+                  from: whatsapp_channel.phone_number.delete('+'),
+                  to_user_id: user_id,
+                  id: "wamid.SMB_ECHO_EXISTING_CONTACT_#{SecureRandom.hex(8)}",
+                  text: { body: 'Mensagem para contato existente' },
+                  timestamp: '1788199109',
+                  type: 'text'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+        stub_request(:get, "https://graph.facebook.com/v22.0/#{user_id}")
+          .to_return(
+            status: 200,
+            body: { id: user_id, phone_number: '5511987654321' }.to_json,
+            headers: { 'Content-Type' => 'application/json' }
+          )
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
+        end.not_to change(whatsapp_channel.account.contacts, :count)
+
+        bsuid_contact_inbox = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: user_id)
+        expect(bsuid_contact_inbox.contact).to eq(existing_contact)
+        expect(existing_contact.reload.bsuid).to eq(user_id)
+      end
+
       it 'does not call Graph when the SMB echo BSUID already exists locally' do
         user_id = 'BR.4462342527311286'
         contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, source_id: user_id)
