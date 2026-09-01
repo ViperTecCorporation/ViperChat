@@ -121,12 +121,18 @@ class ConversationFinder
 
   def find_all_conversations
     find_conversation_by_inbox
-    # Apply permission-based filtering
-    @conversations = Conversations::PermissionFilterService.new(
-      @conversations,
-      current_user,
-      current_account
-    ).perform
+    @conversations = if params[:q]
+                       Search::ConversationVisibilityService.new(
+                         current_user: current_user,
+                         current_account: current_account
+                       ).conversations.merge(@conversations)
+                     else
+                       Conversations::PermissionFilterService.new(
+                         @conversations,
+                         current_user,
+                         current_account
+                       ).perform
+                     end
     filter_by_conversation_type if params[:conversation_type]
     @conversations
   end

@@ -5,6 +5,7 @@ RSpec.describe 'Search', type: :request do
   let(:agent) { create(:user, account: account, role: :agent) }
 
   before do
+    account.disable_features!(:hide_contacts_for_agent)
     contact = create(:contact, email: 'test@example.com', account: account)
     conversation = create(:conversation, account: account, contact_id: contact.id)
     create(:message, conversation: conversation, account: account, content: 'test1')
@@ -84,6 +85,19 @@ RSpec.describe 'Search', type: :request do
         contact_result = response_data[:payload][:contacts].first
         expect(contact_result[:last_activity_at]).to eq(contact.last_activity_at.to_i)
         expect(contact_result).not_to have_key(:created_at)
+      end
+
+      it 'does not expose contacts when contacts are hidden for agents' do
+        account.enable_features!(:hide_contacts_for_agent)
+
+        get "/api/v1/accounts/#{account.id}/search/contacts",
+            headers: agent.create_new_auth_token,
+            params: { q: 'test' },
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        response_data = JSON.parse(response.body, symbolize_names: true)
+        expect(response_data[:payload][:contacts]).to be_empty
       end
 
       context 'with advanced_search feature enabled', :opensearch do
@@ -167,6 +181,34 @@ RSpec.describe 'Search', type: :request do
 
         expect(response_data[:payload].keys).to contain_exactly(:conversations)
         expect(response_data[:payload][:conversations].length).to eq 1
+      end
+
+      it 'does not return conversations assigned to another agent when all chats are hidden' do
+        other_agent = create(:user, account: account, role: :agent)
+        restricted_contact = create(:contact, email: 'restricted-search@example.com', account: account)
+        available_contact = create(:contact, email: 'available-search@example.com', account: account)
+        restricted_conversation = create(:conversation, account: account, contact: restricted_contact, assignee: other_agent)
+        available_conversation = create(
+          :conversation,
+          account: account,
+          contact: available_contact,
+          assignee: nil,
+          inbox: restricted_conversation.inbox
+        )
+        create(:message, conversation: restricted_conversation, account: account, content: 'restricted')
+        create(:message, conversation: available_conversation, account: account, content: 'available')
+        create(:inbox_member, user: agent, inbox: restricted_conversation.inbox)
+        account.enable_features!(:hide_all_chats_for_agent)
+
+        get "/api/v1/accounts/#{account.id}/search/conversations",
+            headers: agent.create_new_auth_token,
+            params: { q: 'search@example.com' },
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        conversation_ids = JSON.parse(response.body, symbolize_names: true).dig(:payload, :conversations).pluck(:id)
+        expect(conversation_ids).to include(available_conversation.display_id)
+        expect(conversation_ids).not_to include(restricted_conversation.display_id)
       end
 
       context 'with advanced_search feature enabled', :opensearch do

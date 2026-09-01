@@ -224,6 +224,26 @@ RSpec.describe 'Conversations API', type: :request do
         expect(response_data[:meta][:all_count]).to eq(1)
         expect(response_data[:payload].first[:messages].first[:content]).to eq 'test1'
       end
+
+      it 'hides another agent conversations while keeping unassigned results' do
+        searchable_inbox = agent.inboxes.find_by!(account_id: account.id)
+        other_agent = create(:user, account: account, role: :agent)
+        restricted_conversation = create(:conversation, account: account, inbox: searchable_inbox, assignee: other_agent)
+        available_conversation = create(:conversation, account: account, inbox: searchable_inbox, assignee: nil)
+        create(:message, conversation: restricted_conversation, account: account, content: 'visibility-scope-search')
+        create(:message, conversation: available_conversation, account: account, content: 'visibility-scope-search')
+        account.enable_features!(:hide_all_chats_for_agent)
+
+        get "/api/v1/accounts/#{account.id}/conversations/search",
+            headers: agent.create_new_auth_token,
+            params: { q: 'visibility-scope-search' },
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        conversation_ids = response.parsed_body['payload'].pluck('id')
+        expect(conversation_ids).to include(available_conversation.display_id)
+        expect(conversation_ids).not_to include(restricted_conversation.display_id)
+      end
     end
   end
 
