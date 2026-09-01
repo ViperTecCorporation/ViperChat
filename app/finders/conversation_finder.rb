@@ -150,8 +150,7 @@ class ConversationFinder
     when 'assigned'
       @conversations = assigned_conversations(@conversations)
     when 'internal'
-      @conversations = @conversations.joins(:inbox)
-                                     .where(inboxes: { channel_type: 'Channel::Internal' })
+      @conversations = @conversations.where(inbox_id: internal_inbox_scope)
     end
     @conversations = @conversations.non_group_conversations unless %w[me groups].include?(@assignee_type)
     @conversations
@@ -167,15 +166,13 @@ class ConversationFinder
     when 'unattended'
       @conversations = @conversations.unattended
     when 'internal'
-      @conversations = @conversations.joins(:inbox)
-                                     .where(inboxes: { channel_type: 'Channel::Internal' })
+      @conversations = @conversations.where(inbox_id: internal_inbox_scope)
     end
     @conversations
   end
 
   def filter_internal_conversations
-    @conversations = @conversations.joins(:inbox)
-                                   .where.not(inboxes: { channel_type: 'Channel::Internal' })
+    @conversations = @conversations.where.not(inbox_id: internal_inbox_scope)
   end
 
   def internal_request?
@@ -225,11 +222,11 @@ class ConversationFinder
     count_scope = @conversations
     count_scope = count_scope.where(status: status_filter) if status_filter
 
-    internal_scope = @conversations.joins(:inbox).where(inboxes: { channel_type: 'Channel::Internal' })
+    internal_scope = @conversations.where(inbox_id: internal_inbox_scope)
     internal_scope = internal_scope.where(status: status_filter) if status_filter
 
     unless params[:conversation_type] == 'internal' || @assignee_type == 'internal'
-      count_scope = count_scope.joins(:inbox).where.not(inboxes: { channel_type: 'Channel::Internal' })
+      count_scope = count_scope.where.not(inbox_id: internal_inbox_scope)
     end
 
     waiting_scope = count_scope.non_group_conversations.unattended
@@ -305,6 +302,10 @@ class ConversationFinder
 
   def current_user_team_ids
     @current_user_team_ids ||= current_user.teams.where(account_id: current_account.id).pluck(:id)
+  end
+
+  def internal_inbox_scope
+    current_account.inboxes.where(channel_type: 'Channel::Internal').select(:id)
   end
 
   def current_page

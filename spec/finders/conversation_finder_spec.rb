@@ -43,6 +43,12 @@ describe ConversationFinder do
         expect(result[:conversations].length).to be 2
       end
 
+      it 'preloads conversation associations without joining them into the paginated query' do
+        result = conversation_finder.perform
+
+        expect(result[:conversations].eager_loading?).to be(false)
+      end
+
       it 'includes conversations assigned to one of the agent teams by default' do
         team = create(:team, account: account)
         create(:team_member, team: team, user: user_1)
