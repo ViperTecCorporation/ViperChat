@@ -1,5 +1,6 @@
 class Conversations::FilterService < FilterService
   ATTRIBUTE_MODEL = 'conversation_attribute'.freeze
+  UNASSIGNED_FILTER_OPERATORS = %w[equal_to not_equal_to].freeze
 
   def initialize(params, user, account)
     @account = account
@@ -7,6 +8,7 @@ class Conversations::FilterService < FilterService
   end
 
   def perform
+    normalize_unassigned_assignee_filter
     restrict_assignee_filter_to_current_user
     validate_query_operator
     @conversations = query_builder(@filters['conversations'])
@@ -53,6 +55,17 @@ class Conversations::FilterService < FilterService
   end
 
   private
+
+  def normalize_unassigned_assignee_filter
+    @params[:payload].each do |filter|
+      next unless filter[:attribute_key] == 'assignee_id'
+      next unless filter[:values] == ['nil']
+      next unless UNASSIGNED_FILTER_OPERATORS.include?(filter[:filter_operator])
+
+      filter[:filter_operator] = filter[:filter_operator] == 'equal_to' ? 'is_not_present' : 'is_present'
+      filter[:values] = []
+    end
+  end
 
   def restrict_assignee_filter_to_current_user
     return unless @account.feature_enabled?('restrict_assignee_filter_for_agent')

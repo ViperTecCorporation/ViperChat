@@ -207,6 +207,48 @@ describe('useConversationFilterContext', () => {
     ).toEqual(['equal_to']);
   });
 
+  it('adds a none option to filter accessible unassigned conversations', () => {
+    storeValues['agents/getAgents'].value = [
+      { id: 1, name: 'Agent One' },
+      { id: 2, name: 'Agent Two' },
+    ];
+
+    const { filterTypes } = useConversationFilterContext();
+    const assigneeFilter = filterTypes.value.find(
+      filter => filter.attributeKey === CONVERSATION_ATTRIBUTES.ASSIGNEE_ID
+    );
+
+    expect(assigneeFilter.options).toEqual([
+      { id: 'nil', name: 'BULK_ACTION.NONE' },
+      { id: 1, name: 'Agent One' },
+      { id: 2, name: 'Agent Two' },
+    ]);
+  });
+
+  it('hides unassigned choices from agents when the account flag is enabled', () => {
+    storeValues['agents/getAgents'].value = [
+      { id: 1, name: 'Agent One' },
+      { id: 2, name: 'Agent Two' },
+    ];
+    storeValues['accounts/isFeatureEnabledonAccount'].value = (
+      _accountId,
+      feature
+    ) => feature === 'hide_unassigned_for_agent';
+
+    const { filterTypes } = useConversationFilterContext();
+    const assigneeFilter = filterTypes.value.find(
+      filter => filter.attributeKey === CONVERSATION_ATTRIBUTES.ASSIGNEE_ID
+    );
+
+    expect(assigneeFilter.options).toEqual([
+      { id: 1, name: 'Agent One' },
+      { id: 2, name: 'Agent Two' },
+    ]);
+    expect(
+      assigneeFilter.filterOperators.map(operator => operator.value)
+    ).toEqual(['equal_to', 'not_equal_to', 'is_present']);
+  });
+
   it('keeps all assignee options available for administrators', () => {
     storeValues.getCurrentRole.value = 'administrator';
     storeValues['agents/getAgents'].value = [
@@ -220,7 +262,11 @@ describe('useConversationFilterContext', () => {
       filter => filter.attributeKey === CONVERSATION_ATTRIBUTES.ASSIGNEE_ID
     );
 
-    expect(assigneeFilter.options).toHaveLength(2);
+    expect(assigneeFilter.options).toHaveLength(3);
+    expect(assigneeFilter.options[0]).toEqual({
+      id: 'nil',
+      name: 'BULK_ACTION.NONE',
+    });
     expect(assigneeFilter.filterOperators).toHaveLength(4);
   });
 

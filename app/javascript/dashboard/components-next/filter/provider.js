@@ -119,15 +119,47 @@ export function useConversationFilterContext() {
       )
   );
 
+  const hideUnassignedFilterForAgent = computed(
+    () =>
+      currentRole.value !== 'administrator' &&
+      isFeatureEnabledonAccount.value(
+        currentAccountId.value,
+        'hide_unassigned_for_agent'
+      )
+  );
+
   const assigneeOptions = computed(() => {
     const availableAgents = restrictAssigneeFilterToSelf.value
       ? agents.value.filter(agent => agent.id === currentUser.value.id)
       : agents.value;
 
-    return availableAgents.map(agent => ({
+    const agentOptions = availableAgents.map(agent => ({
       id: agent.id,
       name: agent.name,
     }));
+
+    if (
+      restrictAssigneeFilterToSelf.value ||
+      hideUnassignedFilterForAgent.value
+    ) {
+      return agentOptions;
+    }
+
+    return [{ id: 'nil', name: t('BULK_ACTION.NONE') }, ...agentOptions];
+  });
+
+  const assigneeFilterOperators = computed(() => {
+    if (restrictAssigneeFilterToSelf.value) {
+      return [presenceOperators.value[0]];
+    }
+
+    if (hideUnassignedFilterForAgent.value) {
+      return presenceOperators.value.filter(
+        operator => operator.value !== 'is_not_present'
+      );
+    }
+
+    return presenceOperators.value;
   });
 
   /**
@@ -174,9 +206,7 @@ export function useConversationFilterContext() {
       inputType: 'searchSelect',
       options: assigneeOptions.value,
       dataType: 'text',
-      filterOperators: restrictAssigneeFilterToSelf.value
-        ? [presenceOperators.value[0]]
-        : presenceOperators.value,
+      filterOperators: assigneeFilterOperators.value,
       attributeModel: 'standard',
     },
     {
