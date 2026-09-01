@@ -21,7 +21,7 @@ pnpm native:open:ios
 
 O bundle ID é `net.vipertec.viperchat` e o deployment target inicial é iOS 15. O ícone e a tela de abertura usam a identidade ViperChat.
 
-Para a linha `v4.16.12-viper.19`, o App Store Connect recebe a versão pública `4.16.12` e o build `4161219`. O app principal e a `ShareExtension` devem permanecer com esses dois valores iguais.
+Para a linha `v4.16.12-viper.20`, o App Store Connect recebe a versão pública `4.16.12` e o build `4161220`. O app principal e a `ShareExtension` devem permanecer com esses dois valores iguais.
 
 Para testar login e persistência de sessão no simulador, execute o aplicativo pelo Xcode ou gere o build com assinatura local (`Sign to Run Locally`). `CODE_SIGNING_ALLOWED=NO` deve ser usado somente para validar a compilação, pois um aplicativo sem `application-identifier` não consegue acessar o Keychain.
 
