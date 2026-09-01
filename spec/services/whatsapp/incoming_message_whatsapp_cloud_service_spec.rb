@@ -511,6 +511,9 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
           }]
         }.with_indifferent_access
 
+        stub_request(:get, 'https://graph.facebook.com/v22.0/BR.1597711494623173')
+          .to_return(status: 404, body: { error: 'Phone number is not available' }.to_json)
+
         described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
 
         contact_inbox = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: 'BR.1597711494623173')
@@ -523,6 +526,83 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         )
         expect(message.content).to eq('Mensagem enviada pelo aparelho')
         expect(message.conversation.contact_inbox).to eq(contact_inbox)
+      end
+
+      it 'links a Graph-resolved phone number to a BSUID-only SMB echo' do
+        user_id = 'BR.4462342527311286'
+        echo_params = {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              field: 'smb_message_echoes',
+              value: {
+                metadata: {
+                  display_phone_number: whatsapp_channel.phone_number.delete('+'),
+                  phone_number_id: whatsapp_channel.provider_config['phone_number_id']
+                },
+                contacts: [{ user_id: user_id }],
+                message_echoes: [{
+                  from: whatsapp_channel.phone_number.delete('+'),
+                  to_user_id: user_id,
+                  id: "wamid.SMB_ECHO_GRAPH_#{SecureRandom.hex(8)}",
+                  text: { body: 'Mensagem enviada pelo aparelho' },
+                  timestamp: '1788199109',
+                  type: 'text'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+        stub_request(:get, "https://graph.facebook.com/v22.0/#{user_id}")
+          .with(headers: { 'Authorization' => 'Bearer test_key', 'Content-Type' => 'application/json' })
+          .to_return(
+            status: 200,
+            body: { id: user_id, phone_number: '5511987654321' }.to_json,
+            headers: { 'Content-Type' => 'application/json' }
+          )
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
+
+        expect(a_request(:get, "https://graph.facebook.com/v22.0/#{user_id}")).to have_been_made.once
+        expect(whatsapp_channel.inbox.contact_inboxes.pluck(:source_id)).to include('5511987654321', user_id)
+        phone_contact_inbox = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: '5511987654321')
+        bsuid_contact_inbox = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: user_id)
+        message = whatsapp_channel.inbox.messages.find_by!(source_id: echo_params.dig(:entry, 0, :changes, 0, :value, :message_echoes, 0, :id))
+
+        expect(phone_contact_inbox.contact).to have_attributes(phone_number: '+5511987654321', bsuid: user_id)
+        expect(bsuid_contact_inbox.contact).to eq(phone_contact_inbox.contact)
+        expect(message).to have_attributes(message_type: 'outgoing', content: 'Mensagem enviada pelo aparelho')
+      end
+
+      it 'does not call Graph when the SMB echo BSUID already exists locally' do
+        user_id = 'BR.4462342527311286'
+        contact_inbox = create(:contact_inbox, inbox: whatsapp_channel.inbox, source_id: user_id)
+        echo_params = {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              field: 'smb_message_echoes',
+              value: {
+                contacts: [{ user_id: user_id }],
+                message_echoes: [{
+                  from: whatsapp_channel.phone_number.delete('+'),
+                  to_user_id: user_id,
+                  id: "wamid.SMB_ECHO_LOCAL_#{SecureRandom.hex(8)}",
+                  text: { body: 'Mensagem local' },
+                  timestamp: '1788199109',
+                  type: 'text'
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
+
+        expect(a_request(:get, "https://graph.facebook.com/v22.0/#{user_id}")).not_to have_been_made
+        expect(whatsapp_channel.inbox.messages.last.conversation.contact).to eq(contact_inbox.contact)
       end
     end
 

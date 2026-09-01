@@ -80,6 +80,31 @@ describe Whatsapp::FacebookApiClient do
     end
   end
 
+  describe '#fetch_whatsapp_user' do
+    let(:user_id) { 'BR.4462342527311286' }
+
+    it 'returns WhatsApp user identifiers' do
+      stub_request(:get, "https://graph.facebook.com/#{api_version}/#{user_id}")
+        .with(headers: { 'Authorization' => "Bearer #{access_token}", 'Content-Type' => 'application/json' })
+        .to_return(
+          status: 200,
+          body: { id: user_id, phone_number: '5511987654321', wa_id: '5511987654321' }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      result = api_client.fetch_whatsapp_user(user_id)
+
+      expect(result).to include('id' => user_id, 'phone_number' => '5511987654321')
+    end
+
+    it 'raises an error when the lookup fails' do
+      stub_request(:get, "https://graph.facebook.com/#{api_version}/#{user_id}")
+        .to_return(status: 404, body: { error: 'User not found' }.to_json)
+
+      expect { api_client.fetch_whatsapp_user(user_id) }.to raise_error(/WhatsApp user lookup failed/)
+    end
+  end
+
   describe '#debug_token' do
     let(:input_token) { 'test_input_token' }
     let(:app_access_token) { "#{app_id}|#{app_secret}" }

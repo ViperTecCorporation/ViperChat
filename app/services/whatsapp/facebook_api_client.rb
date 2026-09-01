@@ -30,6 +30,15 @@ class Whatsapp::FacebookApiClient
     handle_response(response, 'WABA phone numbers fetch failed')
   end
 
+  def fetch_whatsapp_user(user_id)
+    response = HTTParty.get(
+      "#{BASE_URI}/#{@api_version}/#{user_id}",
+      headers: request_headers
+    )
+
+    handle_response(response, 'WhatsApp user lookup failed')
+  end
+
   def debug_token(input_token)
     response = HTTParty.get(
       "#{BASE_URI}/#{@api_version}/debug_token",

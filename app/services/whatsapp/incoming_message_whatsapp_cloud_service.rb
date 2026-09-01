@@ -93,6 +93,30 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     @contact = contact_inbox.contact
   end
 
+  def set_contact_from_echo
+    message = messages_data.first
+    source_ids = echo_source_ids(message)
+    return if source_ids.blank?
+
+    phone_source_id = echo_phone_source_id(message)
+    phone_source_id = fetch_echo_phone_source_id(echo_bsuid(message)) if phone_source_id.blank? && existing_echo_contact_inbox(source_ids).blank?
+    source_ids = [phone_source_id, *source_ids].compact_blank.uniq
+
+    contact_attributes = contact_attributes_from_echo(message, source_ids.first)
+    contact_attributes[:name] = echo_contact_name || contact_attributes[:name]
+    contact_attributes[:bsuid] = echo_bsuid(message) if echo_bsuid(message).present?
+    apply_phone_attributes(contact_attributes, phone_source_id)
+
+    @contact_inbox = ContactInboxSourceIdResolver.new(
+      inbox: inbox,
+      source_ids: source_ids,
+      contact_attributes: contact_attributes.compact
+    ).perform
+    @contact = @contact_inbox.contact
+    @sender = nil
+    update_whatsapp_identifiers(source_ids: source_ids, phone_number: contact_attributes[:phone_number])
+  end
+
   def processed_params
     @processed_params ||= params[:entry].try(:first).try(:[], 'changes').try(:first).try(:[], 'value')
   end
@@ -163,6 +187,55 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
 
   def contact_params
     @contact_params ||= @processed_params[:contacts]&.first
+  end
+
+  def echo_source_ids(message)
+    contact = echo_contact_params
+    [
+      whatsapp_phone_source_id(message[:to]),
+      whatsapp_phone_source_id(contact[:wa_id].presence || contact[:phone_number].presence),
+      whatsapp_source_id(message[:to_user_id].presence || contact[:user_id].presence),
+      whatsapp_source_id(message[:to_parent_user_id].presence || contact[:parent_user_id].presence)
+    ].compact_blank.uniq
+  end
+
+  def echo_phone_source_id(message)
+    contact = echo_contact_params
+    whatsapp_phone_source_id(
+      message[:to].presence || contact[:wa_id].presence || contact[:phone_number].presence || contact.dig(:profile, :phone).presence
+    )
+  end
+
+  def echo_bsuid(message)
+    contact = echo_contact_params
+    message[:to_parent_user_id].presence || message[:to_user_id].presence || contact[:parent_user_id].presence || contact[:user_id].presence
+  end
+
+  def echo_contact_params
+    @echo_contact_params ||= Array(@processed_params[:contacts]).first.to_h.with_indifferent_access
+  end
+
+  def echo_contact_name
+    echo_contact_params.dig(:profile, :name).presence || echo_contact_params.dig(:profile, :username).presence
+  end
+
+  def existing_echo_contact_inbox(source_ids)
+    source_ids.each do |source_id|
+      contact_inbox = inbox.contact_inboxes.find_by(source_id: source_id)
+      return contact_inbox if contact_inbox
+    end
+    nil
+  end
+
+  def fetch_echo_phone_source_id(user_id)
+    return if user_id.blank?
+
+    response = Whatsapp::FacebookApiClient.new(inbox.channel.provider_config['api_key']).fetch_whatsapp_user(user_id)
+    identifiers = response.to_h.with_indifferent_access
+    whatsapp_phone_source_id(identifiers[:phone_number].presence || identifiers[:wa_id].presence)
+  rescue StandardError => e
+    Rails.logger.warn("[WHATSAPP][SMB_ECHO] Meta user lookup failed channel_id=#{inbox.channel_id} user_id=#{user_id} error=#{e.message}")
+    nil
   end
 
   def group_payload
