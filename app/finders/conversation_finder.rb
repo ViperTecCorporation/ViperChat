@@ -243,10 +243,21 @@ class ConversationFinder
     waiting_filter = '"conversations"."group" = FALSE AND (first_reply_created_at IS NULL OR waiting_since IS NOT NULL)'
     waiting_filter = "#{waiting_filter} AND (assignee_id = #{current_user.id} OR assignee_id IS NULL)" unless @is_admin
 
+    assigned_filter = if @team
+                        '"conversations"."group" = FALSE AND assignee_id IS NOT NULL'
+                      else
+                        '"conversations"."group" = FALSE AND (assignee_id IS NOT NULL OR team_id IS NOT NULL)'
+                      end
+    unassigned_filter = if @team
+                          '"conversations"."group" = FALSE AND assignee_id IS NULL'
+                        else
+                          '"conversations"."group" = FALSE AND assignee_id IS NULL AND team_id IS NULL'
+                        end
+
     counts = count_scope.unscope(:order).pick(
       Arel.sql("COUNT(*) FILTER (WHERE #{mine_count_filter})"),
-      Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = FALSE AND (assignee_id IS NOT NULL OR team_id IS NOT NULL))'),
-      Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = FALSE AND assignee_id IS NULL AND team_id IS NULL)'),
+      Arel.sql("COUNT(*) FILTER (WHERE #{assigned_filter})"),
+      Arel.sql("COUNT(*) FILTER (WHERE #{unassigned_filter})"),
       Arel.sql("COUNT(*) FILTER (WHERE #{waiting_filter})"),
       Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = TRUE)'),
       Arel.sql('COUNT(*) FILTER (WHERE "conversations"."group" = FALSE)')
@@ -285,11 +296,15 @@ class ConversationFinder
 
   def assigned_conversations(scope)
     non_group_conversations = scope.non_group_conversations
+    return non_group_conversations.where.not(assignee_id: nil) if @team
+
     non_group_conversations.where.not(assignee_id: nil).or(non_group_conversations.where.not(team_id: nil))
   end
 
   def unassigned_conversations(scope)
-    scope.where(assignee_id: nil, team_id: nil).non_group_conversations
+    scope = scope.where(assignee_id: nil)
+    scope = scope.where(team_id: nil) unless @team
+    scope.non_group_conversations
   end
 
   def mine_count_filter

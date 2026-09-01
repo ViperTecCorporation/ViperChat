@@ -2052,8 +2052,6 @@ export default {
               ref="audioRecorderInput"
               :audio-record-format="audioRecordFormat"
               :height="32"
-              wave-color="#895D59"
-              progress-color="#6F3935"
               @recorder-progress-changed="onRecordProgressChanged"
               @finish-record="onFinishRecorder"
               @record-error="onAudioRecorderError"

@@ -52,6 +52,7 @@ import {
 } from 'dashboard/helper/permissionsHelper.js';
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
 import {
+  filterGroupsByAssigneeType,
   isConversationMine,
   isConversationUnassigned,
 } from '../store/modules/conversations/helpers';
@@ -413,7 +414,9 @@ function filterByAssigneeTab(conversations) {
     );
   }
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
-    return conversations.filter(isConversationUnassigned);
+    return conversations.filter(conversation =>
+      isConversationUnassigned(conversation, conversationFilters.value.teamId)
+    );
   }
   return [...conversations];
 }
@@ -475,7 +478,10 @@ const conversationList = computed(() => {
     localConversationList = sortByUnreadStatus(localConversationList);
   }
 
-  return localConversationList;
+  return filterGroupsByAssigneeType(
+    localConversationList,
+    activeAssigneeTab.value
+  );
 });
 
 const showEndOfListMessage = computed(() => {

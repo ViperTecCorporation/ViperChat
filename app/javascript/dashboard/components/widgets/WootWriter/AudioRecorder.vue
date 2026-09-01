@@ -17,11 +17,11 @@ const props = defineProps({
   },
   waveColor: {
     type: String,
-    default: '#1F93FF',
+    default: '',
   },
   progressColor: {
     type: String,
-    default: '#6E6F73',
+    default: '',
   },
 });
 
@@ -41,6 +41,38 @@ const isPlaying = ref(false);
 const hasRecording = ref(false);
 const recordedAudioUrl = ref(null);
 let isUnmounting = false;
+
+const DEFAULT_WAVE_COLOR = '#1F93FF';
+const DEFAULT_PROGRESS_COLOR = '#6E6F73';
+
+const getBrandColorChannels = () => {
+  if (typeof window === 'undefined') return null;
+
+  const rawColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--brand-color')
+    .trim();
+  const channels = rawColor
+    .split(/[\s,]+/)
+    .map(Number)
+    .filter(value => Number.isFinite(value))
+    .map(value => Math.max(0, Math.min(255, value)));
+
+  return channels.length === 3 ? channels : null;
+};
+
+const getWaveColors = () => {
+  const brandChannels = getBrandColorChannels();
+  const brandColor = brandChannels?.join(', ');
+
+  return {
+    waveColor:
+      props.waveColor ||
+      (brandColor ? `rgba(${brandColor}, 0.55)` : DEFAULT_WAVE_COLOR),
+    progressColor:
+      props.progressColor ||
+      (brandColor ? `rgb(${brandColor})` : DEFAULT_PROGRESS_COLOR),
+  };
+};
 
 const formatTimeProgress = time => {
   const duration = intervalToDuration({ start: 0, end: time });
@@ -73,10 +105,12 @@ const getRecordPluginOptions = audioFormat => {
 };
 
 const initWaveSurfer = () => {
+  const { waveColor, progressColor } = getWaveColors();
+
   wavesurfer.value = WaveSurfer.create({
     container: waveformContainer.value,
-    waveColor: props.waveColor,
-    progressColor: props.progressColor,
+    waveColor,
+    progressColor,
     height: props.height,
     barWidth: 2,
     barGap: 1,

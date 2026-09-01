@@ -116,7 +116,10 @@ const getters = {
   },
   getUnAssignedChats: _state => activeFilters => {
     return _state.allConversations.filter(conversation => {
-      const isUnAssigned = isConversationUnassigned(conversation);
+      const isUnAssigned = isConversationUnassigned(
+        conversation,
+        activeFilters.teamId
+      );
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       return isUnAssigned && shouldFilter;
     });
@@ -158,7 +161,7 @@ const getters = {
         currentUserId
       );
 
-      return shouldFilter && allowedForRole;
+      return !conversation.group && shouldFilter && allowedForRole;
     });
   },
   getChatListLoadingStatus: ({ listLoadingStatus }) => listLoadingStatus,

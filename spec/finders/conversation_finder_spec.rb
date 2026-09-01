@@ -355,6 +355,34 @@ describe ConversationFinder do
         result = conversation_finder.perform
         expect(result[:conversations].length).to be 1
       end
+
+      it 'returns conversations without an agent as unassigned inside the selected team' do
+        team_unassigned = create(:conversation, account: account, inbox: inbox, team: team, assignee: nil)
+        team_assigned = create(:conversation, account: account, inbox: inbox, team: team)
+        team_assigned.update!(assignee: user_1)
+        params[:assignee_type] = 'unassigned'
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).to contain_exactly(team_unassigned.id)
+        expect(result[:count][:unassigned_count]).to be 1
+        expect(result[:count][:assigned_count]).to be 1
+        expect(result[:count][:all_count]).to be 2
+        expect(result[:conversations].map(&:id)).not_to include(team_assigned.id)
+      end
+
+      it 'returns the same team-scoped counts from the meta endpoint' do
+        create(:conversation, account: account, inbox: inbox, team: team, assignee: nil)
+        team_assigned = create(:conversation, account: account, inbox: inbox, team: team)
+        team_assigned.update!(assignee: user_1)
+        params[:assignee_type] = 'unassigned'
+
+        result = conversation_finder.perform_meta_only
+
+        expect(result[:count][:unassigned_count]).to eq(1)
+        expect(result[:count][:assigned_count]).to eq(1)
+        expect(result[:count][:all_count]).to eq(2)
+      end
     end
 
     context 'with labels' do
