@@ -42,6 +42,29 @@ describe ConversationFinder do
         result = conversation_finder.perform
         expect(result[:conversations].length).to be 2
       end
+
+      it 'includes conversations assigned to one of the agent teams by default' do
+        team = create(:team, account: account)
+        create(:team_member, team: team, user: user_1)
+        team_conversation = create(:conversation, account: account, inbox: inbox, team: team)
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).to include(team_conversation.id)
+        expect(result[:count][:mine_count]).to be 3
+      end
+
+      it 'only includes directly assigned conversations when team conversations are disabled' do
+        account.update!(include_team_conversations_in_mine: false)
+        team = create(:team, account: account)
+        create(:team_member, team: team, user: user_1)
+        team_conversation = create(:conversation, account: account, inbox: inbox, team: team)
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).not_to include(team_conversation.id)
+        expect(result[:count][:mine_count]).to be 2
+      end
     end
 
     context 'with inbox' do

@@ -120,6 +120,14 @@
           "ERROR": "Failed to update deleted message setting"
         }
       },
+      "TEAM_CONVERSATIONS_IN_MINE": {
+        "TITLE": "Show team conversations in Mine",
+        "NOTE": "When enabled, conversations assigned to a team appear in the Mine tab for every agent on that team. Disable it to show only conversations assigned directly to each agent.",
+        "API": {
+          "SUCCESS": "Mine tab preference updated successfully",
+          "ERROR": "Failed to update the Mine tab preference"
+        }
+      },
       "MESSAGE_COMPOSER": {
         "TITLE": "Use classic message editor",
         "NOTE": "Enable this to return to the previous editor. When disabled, ViperChat uses the new compact editor for chat channels; email inboxes keep the classic editor.",

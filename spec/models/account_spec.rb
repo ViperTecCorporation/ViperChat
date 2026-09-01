@@ -365,6 +365,15 @@ RSpec.describe Account do
         expect(account.settings['show_deleted_message_content']).to be(true)
       end
 
+      it 'includes team conversations in Mine by default and allows disabling them' do
+        expect(account).to be_include_team_conversations_in_mine
+
+        account.include_team_conversations_in_mine = false
+
+        expect(account).not_to be_include_team_conversations_in_mine
+        expect(account.settings['include_team_conversations_in_mine']).to be(false)
+      end
+
       it 'defaults captain_auto_resolve_mode to legacy when captain_tasks is disabled' do
         allow(account).to receive(:feature_enabled?).with('captain_tasks').and_return(false)
 

@@ -273,7 +273,10 @@ class ConversationFinder
   end
 
   def mine_conversations(scope)
-    scope.where(assignee_id: current_user.id).or(scope.where(team_id: current_user_team_ids))
+    conversations_assigned_to_user = scope.where(assignee_id: current_user.id)
+    return conversations_assigned_to_user unless current_account.include_team_conversations_in_mine?
+
+    conversations_assigned_to_user.or(scope.where(team_id: current_user_team_ids))
   end
 
   def assigned_conversations(scope)
@@ -286,6 +289,7 @@ class ConversationFinder
 
   def mine_count_filter
     filter = "conversations.assignee_id = #{current_user.id}"
+    return filter unless current_account.include_team_conversations_in_mine?
     return filter if current_user_team_ids.empty?
 
     "#{filter} OR conversations.team_id IN (#{current_user_team_ids.join(', ')})"
