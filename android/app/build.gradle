@@ -48,8 +48,8 @@ android {
         applicationId "net.vipertec.viperchat"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 4161220
-        versionName "4.16.12-viper.20"
+        versionCode 4161221
+        versionName "4.16.12-viper.21"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
