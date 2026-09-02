@@ -183,6 +183,122 @@ describe('#getters', () => {
         },
       ]);
     });
+
+    it('includes conversations without an agent inside the selected team', () => {
+      const teamConversation = {
+        id: 22,
+        inbox_id: 4,
+        status: 1,
+        meta: { team: { id: 5 } },
+        labels: [],
+      };
+
+      expect(
+        getters.getUnAssignedChats({
+          allConversations: [teamConversation],
+        })({ status: 1, teamId: 5 })
+      ).toEqual([teamConversation]);
+    });
+
+    it('keeps team conversations out of the global unassigned tab', () => {
+      const teamConversation = {
+        id: 22,
+        inbox_id: 4,
+        status: 1,
+        meta: { team: { id: 5 } },
+        labels: [],
+      };
+
+      expect(
+        getters.getUnAssignedChats({
+          allConversations: [teamConversation],
+        })({ status: 1 })
+      ).toEqual([]);
+    });
+  });
+  describe('#getMineChats', () => {
+    const conversationList = [
+      {
+        id: 1,
+        status: 'open',
+        meta: { assignee: { id: 1 } },
+      },
+      {
+        id: 2,
+        status: 'open',
+        meta: { team: { id: 5 } },
+      },
+      {
+        id: 3,
+        status: 'open',
+        meta: { assignee: { id: 2 } },
+      },
+    ];
+
+    const buildRootGetters = includeTeamConversations => ({
+      getCurrentUser: { id: 1 },
+      getCurrentAccountId: 1,
+      'teams/getMyTeams': [{ id: 5 }],
+      'accounts/getAccount': () => ({
+        settings: {
+          include_team_conversations_in_mine: includeTeamConversations,
+        },
+      }),
+    });
+
+    it('includes conversations assigned to the agent teams by default', () => {
+      const result = getters.getMineChats(
+        { allConversations: conversationList },
+        {},
+        {},
+        buildRootGetters(undefined)
+      )({ status: 'open' });
+
+      expect(result).toEqual([conversationList[0], conversationList[1]]);
+    });
+
+    it('keeps accumulated team conversations out when the account setting is disabled', () => {
+      const result = getters.getMineChats(
+        { allConversations: conversationList },
+        {},
+        {},
+        buildRootGetters(false)
+      )({ status: 'open' });
+
+      expect(result).toEqual([conversationList[0]]);
+    });
+  });
+  describe('#getAllStatusChats', () => {
+    it('keeps cached group conversations out of the all tab', () => {
+      const regularConversation = {
+        id: 1,
+        status: 'open',
+        group: false,
+        meta: {},
+      };
+      const groupConversation = {
+        id: 2,
+        status: 'open',
+        group: true,
+        meta: {},
+      };
+      const rootGetters = {
+        getCurrentUser: {
+          id: 1,
+          accounts: [{ id: 1, role: 'administrator' }],
+        },
+        getCurrentAccountId: 1,
+      };
+
+      const result = getters.getAllStatusChats(
+        { allConversations: [regularConversation, groupConversation] },
+        {},
+        {},
+        rootGetters
+      )({ status: 'open', assigneeType: 'all' });
+
+      expect(result).toEqual([regularConversation]);
+    });
   });
   describe('#getParticipatingChats', () => {
     const conversationList = [

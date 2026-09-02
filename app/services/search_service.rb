@@ -31,17 +31,17 @@ class SearchService
   end
 
   def filter_conversations
-    conversations_query = current_account.conversations.where(inbox_id: accessable_inbox_ids)
-                                         .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
-                                         .where(<<~SQL.squish, search: "%#{search_query}%")
-                                           cast(conversations.display_id as text) ILIKE :search OR
-                                           conversations.group_title ILIKE :search OR
-                                           conversations.group_source_id ILIKE :search OR
-                                           contacts.name ILIKE :search OR
-                                           contacts.email ILIKE :search OR
-                                           contacts.phone_number ILIKE :search OR
-                                           contacts.identifier ILIKE :search
-                                         SQL
+    conversations_query = searchable_conversations
+                          .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
+                          .where(<<~SQL.squish, search: "%#{search_query}%")
+                            cast(conversations.display_id as text) ILIKE :search OR
+                            conversations.group_title ILIKE :search OR
+                            conversations.group_source_id ILIKE :search OR
+                            contacts.name ILIKE :search OR
+                            contacts.email ILIKE :search OR
+                            contacts.phone_number ILIKE :search OR
+                            contacts.identifier ILIKE :search
+                          SQL
 
     if current_account.feature_enabled?('advanced_search')
       conversations_query = apply_time_filter(conversations_query,
@@ -71,6 +71,8 @@ class SearchService
   end
 
   def should_run_advanced_search?
+    return false if conversation_visibility.assignment_restricted?
+
     ChatwootApp.advanced_search_allowed? && current_account.feature_enabled?('advanced_search')
   end
 
@@ -113,7 +115,7 @@ class SearchService
 
   def message_base_query
     query = current_account.messages.where('created_at >= ?', 3.months.ago)
-    query = query.where(inbox_id: accessable_inbox_ids) unless should_skip_inbox_filtering?
+    query = query.where(conversation_id: searchable_conversations.select(:id)) unless account_user.administrator?
     query
   end
 
@@ -173,6 +175,7 @@ class SearchService
       "name ILIKE :search OR email ILIKE :search OR phone_number
       ILIKE :search OR identifier ILIKE :search", search: "%#{search_query}%"
     )
+    contacts_query = conversation_visibility.contacts(contacts_query)
 
     contacts_query = apply_time_filter(contacts_query, 'last_activity_at') if current_account.feature_enabled?('advanced_search')
 
@@ -209,6 +212,17 @@ class SearchService
     requested_time = Time.zone.at(until_param.to_i)
 
     [requested_time, max_future].min
+  end
+
+  def searchable_conversations
+    conversation_visibility.conversations
+  end
+
+  def conversation_visibility
+    @conversation_visibility ||= Search::ConversationVisibilityService.new(
+      current_user: current_user,
+      current_account: current_account
+    )
   end
 end
 

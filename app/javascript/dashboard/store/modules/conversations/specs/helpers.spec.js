@@ -17,6 +17,25 @@ describe('Conversation Helpers', () => {
         applyPageFilters({ status: 'open', group: false }, defaultFilters)
       ).toBe(false);
     });
+
+    it('keeps group conversations out of the all tab after visiting groups', () => {
+      const allFilters = { ...defaultFilters, assigneeType: 'all' };
+
+      expect(
+        applyPageFilters({ status: 'open', group: true }, allFilters)
+      ).toBe(false);
+      expect(
+        applyPageFilters({ status: 'open', group: false }, allFilters)
+      ).toBe(true);
+    });
+
+    it('allows assigned group conversations on the mine tab', () => {
+      const mineFilters = { ...defaultFilters, assigneeType: 'me' };
+
+      expect(
+        applyPageFilters({ status: 'open', group: true }, mineFilters)
+      ).toBe(true);
+    });
   });
 
   describe('#applyRoleFilter', () => {

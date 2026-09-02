@@ -85,9 +85,14 @@ const getters = {
   },
   getMineChats: (_state, _, __, rootGetters) => activeFilters => {
     const currentUserID = rootGetters.getCurrentUser?.id;
-    const currentUserTeamIds = (rootGetters['teams/getMyTeams'] || []).map(
-      team => team.id
-    );
+    const currentAccountId = rootGetters.getCurrentAccountId;
+    const getAccount = rootGetters['accounts/getAccount'];
+    const currentAccount = getAccount ? getAccount(currentAccountId) : {};
+    const includeTeamConversations =
+      currentAccount.settings?.include_team_conversations_in_mine !== false;
+    const currentUserTeamIds = includeTeamConversations
+      ? (rootGetters['teams/getMyTeams'] || []).map(team => team.id)
+      : [];
 
     return _state.allConversations.filter(conversation => {
       const shouldFilter = applyPageFilters(conversation, activeFilters);
@@ -111,7 +116,10 @@ const getters = {
   },
   getUnAssignedChats: _state => activeFilters => {
     return _state.allConversations.filter(conversation => {
-      const isUnAssigned = isConversationUnassigned(conversation);
+      const isUnAssigned = isConversationUnassigned(
+        conversation,
+        activeFilters.teamId
+      );
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       return isUnAssigned && shouldFilter;
     });
@@ -153,7 +161,7 @@ const getters = {
         currentUserId
       );
 
-      return shouldFilter && allowedForRole;
+      return !conversation.group && shouldFilter && allowedForRole;
     });
   },
   getChatListLoadingStatus: ({ listLoadingStatus }) => listLoadingStatus,

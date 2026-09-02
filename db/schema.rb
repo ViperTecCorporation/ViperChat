@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_29_000000) do
+ActiveRecord::Schema[7.1].define(version: 2026_09_01_010000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -759,6 +759,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_29_000000) do
     t.string "pubsub_token"
     t.jsonb "additional_attributes", default: {}, null: false
     t.index ["contact_id"], name: "index_contact_inboxes_on_contact_id"
+    t.index ["inbox_id", "contact_id"], name: "idx_contact_inboxes_inbox_contact"
     t.index ["inbox_id", "source_id"], name: "index_contact_inboxes_on_inbox_id_and_source_id", unique: true
     t.index ["inbox_id"], name: "index_contact_inboxes_on_inbox_id"
     t.index ["pubsub_token"], name: "index_contact_inboxes_on_pubsub_token", unique: true
@@ -794,11 +795,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_29_000000) do
     t.index ["account_id"], name: "index_contacts_on_account_id"
     t.index ["account_id"], name: "index_resolved_contact_account_id", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["blocked"], name: "index_contacts_on_blocked"
+    t.index ["bsuid"], name: "idx_contacts_bsuid_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["company_id"], name: "index_contacts_on_company_id"
     t.index ["email", "account_id"], name: "uniq_email_per_account_contact", unique: true
     t.index ["identifier", "account_id"], name: "uniq_identifier_per_account_contact", unique: true
     t.index ["name", "email", "phone_number", "identifier"], name: "index_contacts_on_name_email_phone_number_identifier", opclass: :gin_trgm_ops, using: :gin
     t.index ["phone_number", "account_id"], name: "index_contacts_on_phone_number_and_account_id"
+    t.index ["whatsapp_username"], name: "idx_contacts_whatsapp_username_trgm", opclass: :gin_trgm_ops, using: :gin
   end
 
   create_table "conversation_participants", force: :cascade do |t|
@@ -1243,12 +1246,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_29_000000) do
     t.index ["account_id", "inbox_id"], name: "index_messages_on_account_id_and_inbox_id"
     t.index ["account_id"], name: "index_messages_on_account_id"
     t.index ["content"], name: "index_messages_on_content", opclass: :gin_trgm_ops, using: :gin
+    t.index ["conversation_id", "account_id", "created_at"], name: "idx_messages_conversation_account_created", order: { created_at: :desc }
     t.index ["conversation_id", "account_id", "message_type", "created_at"], name: "index_messages_on_conversation_account_type_created"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["created_at"], name: "index_messages_on_created_at"
     t.index ["inbox_id"], name: "index_messages_on_inbox_id"
     t.index ["sender_type", "sender_id", "created_at"], name: "index_messages_on_sender_and_created"
-    t.index ["sender_type", "sender_id"], name: "index_messages_on_sender_type_and_sender_id"
     t.index ["source_id"], name: "index_messages_on_source_id"
     t.index ["status"], name: "idx_messages_status"
   end

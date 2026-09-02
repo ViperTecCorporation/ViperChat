@@ -332,6 +332,29 @@ describe Conversations::FilterService do
         expect(result[:conversations].pluck(:campaign_id).sort).to eq [campaign_2.id, campaign_1.id].sort
       end
 
+      it 'filters unassigned conversations without expanding the agent permission scope' do
+        visible_unassigned = create(:conversation, account: account, inbox: inbox, assignee: nil)
+        unassigned_group = create(:conversation, account: account, inbox: inbox, assignee: nil, group: true)
+        inaccessible_inbox = create(:inbox, account: account, enable_auto_assignment: false)
+        inaccessible_unassigned = create(:conversation, account: account, inbox: inaccessible_inbox, assignee: nil)
+        params[:payload] = [
+          {
+            attribute_key: 'assignee_id',
+            filter_operator: 'equal_to',
+            values: ['nil'],
+            query_operator: nil,
+            custom_attribute_type: ''
+          }.with_indifferent_access
+        ]
+
+        result = filter_service.new(params, user_1, account).perform
+
+        expect(result[:conversations]).to include(visible_unassigned)
+        expect(result[:conversations]).not_to include(unassigned_group)
+        expect(result[:conversations]).not_to include(inaccessible_unassigned)
+        expect(result[:conversations].pluck(:assignee_id).uniq).to eq [nil]
+      end
+
       context 'when the assignee filter is restricted to the current agent' do
         before do
           account.enable_features!(:restrict_assignee_filter_for_agent)
@@ -343,6 +366,24 @@ describe Conversations::FilterService do
               attribute_key: 'assignee_id',
               filter_operator: 'not_equal_to',
               values: [user_2.id],
+              query_operator: nil,
+              custom_attribute_type: ''
+            }.with_indifferent_access
+          ]
+
+          result = filter_service.new(params, user_1, account).perform
+
+          expect(result[:conversations]).to be_present
+          expect(result[:conversations].pluck(:assignee_id).uniq).to eq [user_1.id]
+        end
+
+        it 'does not allow the unassigned option to bypass the restriction' do
+          create(:conversation, account: account, inbox: inbox, assignee: nil)
+          params[:payload] = [
+            {
+              attribute_key: 'assignee_id',
+              filter_operator: 'equal_to',
+              values: ['nil'],
               query_operator: nil,
               custom_attribute_type: ''
             }.with_indifferent_access

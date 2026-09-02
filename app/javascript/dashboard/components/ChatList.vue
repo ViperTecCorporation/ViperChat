@@ -52,6 +52,7 @@ import {
 } from 'dashboard/helper/permissionsHelper.js';
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
 import {
+  filterGroupsByAssigneeType,
   isConversationMine,
   isConversationUnassigned,
 } from '../store/modules/conversations/helpers';
@@ -114,6 +115,7 @@ const inboxesList = useMapGetter('inboxes/getInboxes');
 const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
 const currentAccountId = useMapGetter('getCurrentAccountId');
+const getAccountFn = useMapGetter('accounts/getAccount');
 // We can't useFunctionGetter here since it needs to be called on setup?
 const getTeamFn = useMapGetter('teams/getTeam');
 const getConversationById = useMapGetter('getConversationById');
@@ -215,6 +217,11 @@ const hasAppliedFiltersOrActiveFolders = computed(() => {
 const currentUserDetails = computed(() => {
   const { id, name } = currentUser.value;
   return { id, name };
+});
+
+const includeTeamConversationsInMine = computed(() => {
+  const account = getAccountFn.value(currentAccountId.value);
+  return account.settings?.include_team_conversations_in_mine !== false;
 });
 
 const userPermissions = computed(() => {
@@ -395,7 +402,9 @@ const pageTitle = computed(() => {
 
 function filterByAssigneeTab(conversations) {
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ME) {
-    const currentUserTeamIds = myTeamsList.value.map(team => team.id);
+    const currentUserTeamIds = includeTeamConversationsInMine.value
+      ? myTeamsList.value.map(team => team.id)
+      : [];
     return conversations.filter(conversation =>
       isConversationMine(
         conversation,
@@ -405,7 +414,9 @@ function filterByAssigneeTab(conversations) {
     );
   }
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
-    return conversations.filter(isConversationUnassigned);
+    return conversations.filter(conversation =>
+      isConversationUnassigned(conversation, conversationFilters.value.teamId)
+    );
   }
   return [...conversations];
 }
@@ -467,7 +478,10 @@ const conversationList = computed(() => {
     localConversationList = sortByUnreadStatus(localConversationList);
   }
 
-  return localConversationList;
+  return filterGroupsByAssigneeType(
+    localConversationList,
+    activeAssigneeTab.value
+  );
 });
 
 const showEndOfListMessage = computed(() => {

@@ -19,6 +19,7 @@ import AccountDelete from './components/AccountDelete.vue';
 import AudioTranscription from './components/AudioTranscription.vue';
 import DeletedMessageContent from './components/DeletedMessageContent.vue';
 import LegacyMessageComposer from './components/LegacyMessageComposer.vue';
+import TeamConversationsInMine from './components/TeamConversationsInMine.vue';
 import SectionLayout from './components/SectionLayout.vue';
 
 export default {
@@ -31,6 +32,7 @@ export default {
     AudioTranscription,
     DeletedMessageContent,
     LegacyMessageComposer,
+    TeamConversationsInMine,
     SectionLayout,
     SwitchControl,
     WithLabel,
@@ -274,6 +276,7 @@ export default {
     </div>
     <AudioTranscription v-if="showAudioTranscriptionConfig" />
     <DeletedMessageContent />
+    <TeamConversationsInMine />
     <LegacyMessageComposer />
     <SectionLayout
       with-border

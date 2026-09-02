@@ -190,7 +190,7 @@ describe('nativePushService', () => {
     });
   });
 
-  it('clears delivered Android notifications whenever the app becomes active', async () => {
+  it('clears delivered notifications whenever the app becomes active', async () => {
     await initializeNativePush({
       installation: {
         installationId: 'installation-123',
@@ -204,6 +204,27 @@ describe('nativePushService', () => {
     expect(
       localNotifications.removeAllDeliveredNotifications
     ).toHaveBeenCalledTimes(2);
+  });
+
+  it('lets iOS presentation options display foreground pushes only once', async () => {
+    device.getInfo.mockResolvedValue({ platform: 'ios', osVersion: '26.0' });
+
+    await initializeNativePush({
+      installation: {
+        installationId: 'installation-123',
+        features: { nativePush: true },
+      },
+      router,
+    });
+
+    await pushListeners.notificationReceived({
+      notification: {
+        title: 'Nova mensagem',
+        body: 'Mensagem de teste',
+      },
+    });
+
+    expect(localNotifications.schedule).not.toHaveBeenCalled();
   });
 
   it('uses at most 20 foreground notification slots', async () => {

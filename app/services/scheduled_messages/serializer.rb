@@ -26,7 +26,21 @@ class ScheduledMessages::Serializer
   def items
     @message.items.map do |item|
       item.as_json(only: [:id, :position, :status, :content, :content_type, :content_attributes, :voice_message,
-                          :error_message, :message_id]).merge(attachment_blob_ids: item.signed_attachment_ids)
+                          :error_message, :message_id]).merge(
+                            attachment_blob_ids: item.signed_attachment_ids,
+                            attachments: attachments(item)
+                          )
+    end
+  end
+
+  def attachments(item)
+    item.files.map do |file|
+      {
+        signed_id: file.blob.signed_id,
+        name: file.filename.to_s,
+        content_type: file.content_type,
+        url: Rails.application.routes.url_helpers.rails_blob_path(file, only_path: true)
+      }
     end
   end
 

@@ -61,6 +61,10 @@ describe SearchService do
     end
 
     context 'when contact search' do
+      before do
+        account.disable_features!(:hide_contacts_for_agent)
+      end
+
       it 'searches across name, email, phone_number and identifier and returns in the order of contact last_activity_at' do
         # random contact
         create(:contact, account_id: account.id)
@@ -286,6 +290,110 @@ describe SearchService do
         expect(title_search.perform[:conversations]).to include(group_conversation)
         expect(jid_search.perform[:conversations]).to include(group_conversation)
       end
+
+      # rubocop:disable RSpec/MultipleMemoizedHelpers
+      context 'with agent visibility flags' do
+        let!(:other_agent) { create(:user, account: account) }
+        let!(:own_contact) { create(:contact, name: 'Scoped Search Own', email: 'scoped-own@example.com', account: account) }
+        let!(:other_contact) { create(:contact, name: 'Scoped Search Other', email: 'scoped-other@example.com', account: account) }
+        let!(:unassigned_contact) do
+          create(:contact, name: 'Scoped Search Unassigned', email: 'scoped-unassigned@example.com', account: account)
+        end
+        let!(:own_conversation) { create(:conversation, contact: own_contact, inbox: inbox, account: account, assignee: user) }
+        let!(:other_conversation) { create(:conversation, contact: other_contact, inbox: inbox, account: account, assignee: other_agent) }
+        let!(:unassigned_conversation) { create(:conversation, contact: unassigned_contact, inbox: inbox, account: account, assignee: nil) }
+        let!(:own_message) do
+          create(:message, conversation: own_conversation, account: account, inbox: inbox, content: 'scoped search message')
+        end
+        let!(:other_message) do
+          create(:message, conversation: other_conversation, account: account, inbox: inbox, content: 'scoped search message')
+        end
+        let!(:unassigned_message) do
+          create(:message, conversation: unassigned_conversation, account: account, inbox: inbox, content: 'scoped search message')
+        end
+
+        before do
+          account.disable_features!(:hide_contacts_for_agent)
+          account.enable_features!(:hide_all_chats_for_agent)
+        end
+
+        it 'returns only own and unassigned records for a regular agent' do
+          conversation_results = described_class.new(
+            current_user: user,
+            current_account: account,
+            params: { q: 'Scoped Search' },
+            search_type: 'Conversation'
+          ).perform[:conversations]
+          message_results = described_class.new(
+            current_user: user,
+            current_account: account,
+            params: { q: 'scoped search message' },
+            search_type: 'Message'
+          ).perform[:messages]
+          contact_results = described_class.new(
+            current_user: user,
+            current_account: account,
+            params: { q: 'Scoped Search' },
+            search_type: 'Contact'
+          ).perform[:contacts]
+
+          expect(conversation_results).to include(own_conversation, unassigned_conversation)
+          expect(conversation_results).not_to include(other_conversation)
+          expect(message_results).to include(own_message, unassigned_message)
+          expect(message_results).not_to include(other_message)
+          expect(contact_results).to include(own_contact, unassigned_contact)
+          expect(contact_results).not_to include(other_contact)
+        end
+
+        it 'also removes unassigned records when that account flag is enabled' do
+          account.enable_features!(:hide_unassigned_for_agent)
+
+          results = described_class.new(
+            current_user: user,
+            current_account: account,
+            params: { q: 'Scoped Search' },
+            search_type: 'Conversation'
+          ).perform[:conversations]
+
+          expect(results).to include(own_conversation)
+          expect(results).not_to include(other_conversation, unassigned_conversation)
+        end
+
+        it 'does not expose direct contact results when contacts are hidden for agents' do
+          account.enable_features!(:hide_contacts_for_agent)
+
+          results = described_class.new(
+            current_user: user,
+            current_account: account,
+            params: { q: 'Scoped Search' },
+            search_type: 'Contact'
+          ).perform[:contacts]
+
+          expect(results).to be_empty
+        end
+
+        it 'keeps all account search results available for administrators' do
+          administrator = create(:user, account: account, role: :administrator)
+          account.enable_features!(:hide_unassigned_for_agent, :hide_contacts_for_agent)
+
+          conversation_results = described_class.new(
+            current_user: administrator,
+            current_account: account,
+            params: { q: 'Scoped Search' },
+            search_type: 'Conversation'
+          ).perform[:conversations]
+          contact_results = described_class.new(
+            current_user: administrator,
+            current_account: account,
+            params: { q: 'Scoped Search' },
+            search_type: 'Contact'
+          ).perform[:contacts]
+
+          expect(conversation_results).to include(own_conversation, other_conversation, unassigned_conversation)
+          expect(contact_results).to include(own_contact, other_contact, unassigned_contact)
+        end
+      end
+      # rubocop:enable RSpec/MultipleMemoizedHelpers
     end
 
     context 'when article search' do
@@ -322,6 +430,7 @@ describe SearchService do
       let!(:recent_contact) { create(:contact, name: 'Recent Potter', email: 'recent@test.com', account: account, last_activity_at: 1.day.ago) }
 
       before do
+        account.disable_features!(:hide_contacts_for_agent)
         account.enable_features!('advanced_search')
       end
 
@@ -431,15 +540,15 @@ describe SearchService do
         account_user.update!(role: 'agent')
       end
 
-      it 'filters by accessible inbox_id when user has limited access' do
+      it 'filters by accessible conversation when user has limited access' do
         # Create an additional inbox that user is NOT assigned to
         create(:inbox, account: account)
 
         base_query = search.send(:message_base_query)
 
-        # Should have both time and inbox filters
+        # Should have both time and conversation permission filters
         expect(base_query.to_sql).to include('created_at >= ')
-        expect(base_query.to_sql).to include('inbox_id')
+        expect(base_query.to_sql).to include('conversation_id')
       end
 
       context 'when user has access to all inboxes' do

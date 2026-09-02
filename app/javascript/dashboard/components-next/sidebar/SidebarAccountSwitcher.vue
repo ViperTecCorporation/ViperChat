@@ -70,7 +70,9 @@ const emitNewAccount = () => {
         :data-account-id="accountId"
         aria-haspopup="listbox"
         aria-controls="account-options"
-        class="flex items-center gap-2 justify-between w-full rounded-lg px-2"
+        :aria-expanded="isOpen"
+        :aria-label="t('SIDEBAR_ITEMS.SWITCH_ACCOUNT')"
+        class="flex items-center justify-between w-full min-w-0 gap-2 px-2 py-1 rounded-lg"
         :class="[
           isOpen && 'bg-n-alpha-1',
           showAccountSwitcher
@@ -79,8 +81,10 @@ const emitNewAccount = () => {
         ]"
         @click="() => showAccountSwitcher && toggle()"
       >
+        <Logo class="size-5 shrink-0" />
+        <span class="flex-shrink-0 w-px h-3 bg-n-strong" />
         <span
-          class="text-sm font-medium leading-5 text-n-slate-12 truncate"
+          class="flex-1 min-w-0 text-sm font-medium leading-5 text-left text-n-slate-12 truncate rtl:text-right"
           aria-live="polite"
         >
           {{ currentAccount.name }}
@@ -95,7 +99,7 @@ const emitNewAccount = () => {
     </template>
     <DropdownBody
       v-if="showAccountSwitcher || isCollapsed"
-      class="min-w-80 z-50"
+      class="z-50 w-[calc(100vw-1rem)] max-w-80 ltr:left-0 rtl:right-0"
     >
       <DropdownSection :title="t('SIDEBAR_ITEMS.SWITCH_ACCOUNT')">
         <DropdownItem

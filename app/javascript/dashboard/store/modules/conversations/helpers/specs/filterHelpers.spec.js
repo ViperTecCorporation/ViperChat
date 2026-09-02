@@ -231,6 +231,34 @@ describe('filterHelpers', () => {
       expect(matchesFilters(conversation, filters)).toBe(true);
     });
 
+    it('should match an unassigned conversation selected with the nil assignee option', () => {
+      const conversation = { meta: { assignee: null } };
+      const filters = [
+        {
+          attribute_key: 'assignee_id',
+          filter_operator: 'equal_to',
+          values: [{ id: 'nil', name: 'None' }],
+          query_operator: 'and',
+        },
+      ];
+
+      expect(matchesFilters(conversation, filters)).toBe(true);
+    });
+
+    it('should not match an assigned conversation selected with the nil assignee option', () => {
+      const conversation = { meta: { assignee: { id: 1 } } };
+      const filters = [
+        {
+          attribute_key: 'assignee_id',
+          filter_operator: 'equal_to',
+          values: [{ id: 'nil', name: 'None' }],
+          query_operator: 'and',
+        },
+      ];
+
+      expect(matchesFilters(conversation, filters)).toBe(false);
+    });
+
     it('should not match conversation with is_present operator when assignee is null', () => {
       const conversation = { meta: { assignee: null } };
       const filters = [

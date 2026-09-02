@@ -4,7 +4,7 @@
     "LOAD_MORE_CONVERSATIONS": "Carregar mais conversas",
     "EOF": "Todas as conversas carregadas 🎉",
     "LIST": {
-      "404": "Não há conversas ativas neste grupo."
+      "404": "Nenhuma conversa encontrada."
     },
     "FAILED_TO_SEND": "Falha ao enviar",
     "PUSH_NOTIFICATIONS": {

@@ -21,6 +21,8 @@ pnpm native:open:ios
 
 O bundle ID é `net.vipertec.viperchat` e o deployment target inicial é iOS 15. O ícone e a tela de abertura usam a identidade ViperChat.
 
+Para a linha `v4.16.12-viper.22`, o App Store Connect recebe a versão pública `4.16.12` e o build `4161222`. O app principal e a `ShareExtension` devem permanecer com esses dois valores iguais.
+
 Para testar login e persistência de sessão no simulador, execute o aplicativo pelo Xcode ou gere o build com assinatura local (`Sign to Run Locally`). `CODE_SIGNING_ALLOWED=NO` deve ser usado somente para validar a compilação, pois um aplicativo sem `application-identifier` não consegue acessar o Keychain.
 
 ## Sessão e permissões
@@ -40,3 +42,14 @@ A extensão `ShareExtension` aparece no menu de compartilhamento do Fotos e de o
 - CallKit e PushKit para chamadas recebidas com o aplicativo suspenso ou encerrado.
 
 O `GoogleService-Info.plist`, certificados e chaves de assinatura não devem ser versionados.
+
+## Checklist de distribuição
+
+- selecionar a equipe da ViperTec em **Signing & Capabilities** para os targets `App` e `ShareExtension`;
+- confirmar os App IDs `net.vipertec.viperchat` e `net.vipertec.viperchat.share`;
+- habilitar **Push Notifications** no target `App` e **App Groups** nos dois targets;
+- manter `group.net.vipertec.viperchat` associado aos dois App IDs;
+- validar que o Archive assinado contém `aps-environment=production` (o Xcode define o ambiente a partir do provisioning profile);
+- gerar o relatório de privacidade pelo Organizer e conferir sua consistência com a seção **App Privacy** do App Store Connect;
+- executar login, reabertura, logout, push em primeiro plano/segundo plano/app encerrado, câmera, microfone, fotos, arquivos, localização, reprodução de vídeo e Share Extension em aparelho físico;
+- usar **Product > Archive**, distribuir primeiro para o TestFlight e somente depois selecionar o build aprovado na versão da App Store.

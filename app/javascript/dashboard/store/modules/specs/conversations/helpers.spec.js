@@ -6,6 +6,7 @@ import {
   filterByTeam,
   filterByLabel,
   filterByUnattended,
+  filterGroupsByAssigneeType,
 } from '../../conversations/helpers';
 
 const conversationList = [
@@ -228,5 +229,32 @@ describe('#filterByUnattended', () => {
   });
   it('returns true if conversation type is unattended and has first reply', () => {
     expect(filterByUnattended(true, 'mentions', 123)).toEqual(true);
+  });
+});
+
+describe('#filterGroupsByAssigneeType', () => {
+  const regularConversation = { id: 1, group: false };
+  const groupConversation = { id: 2, group: true };
+  const cachedConversations = [regularConversation, groupConversation];
+
+  it.each(['all', 'assigned', 'unassigned', 'waiting', 'internal'])(
+    'keeps cached groups out of the %s tab',
+    assigneeType => {
+      expect(
+        filterGroupsByAssigneeType(cachedConversations, assigneeType)
+      ).toEqual([regularConversation]);
+    }
+  );
+
+  it('shows only groups in the groups tab', () => {
+    expect(filterGroupsByAssigneeType(cachedConversations, 'groups')).toEqual([
+      groupConversation,
+    ]);
+  });
+
+  it('allows assigned groups in the mine tab', () => {
+    expect(filterGroupsByAssigneeType(cachedConversations, 'me')).toEqual(
+      cachedConversations
+    );
   });
 });

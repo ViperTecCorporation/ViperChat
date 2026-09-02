@@ -29,8 +29,11 @@ const senderName = computed(() => {
 </script>
 
 <template>
-  <BaseBubble class="overflow-hidden p-3" data-bubble-name="attachment">
-    <div class="grid gap-4 min-w-64">
+  <BaseBubble
+    class="w-full max-w-full overflow-hidden p-3"
+    data-bubble-name="attachment"
+  >
+    <div class="grid w-full min-w-0 gap-4">
       <div class="grid gap-3">
         <div
           class="size-8 rounded-lg grid place-content-center"
@@ -58,19 +61,19 @@ const senderName = computed(() => {
           </slot>
         </div>
       </div>
-      <div v-if="action" class="mb-2">
+      <div v-if="action" class="min-w-0 mb-2">
         <a
           v-if="action.href"
           :href="action.href"
           rel="noreferrer noopener nofollow"
           target="_blank"
-          class="w-full block bg-n-solid-3 px-4 py-2 rounded-lg text-sm text-center border border-n-container"
+          class="block w-full max-w-full px-4 py-2 text-sm text-center border rounded-lg box-border bg-n-solid-3 border-n-container"
         >
           {{ action.label }}
         </a>
         <button
           v-else
-          class="w-full bg-n-solid-3 px-4 py-2 rounded-lg text-sm text-center border border-n-container"
+          class="w-full max-w-full px-4 py-2 text-sm text-center border rounded-lg box-border bg-n-solid-3 border-n-container"
           @click="action.onClick"
         >
           {{ action.label }}

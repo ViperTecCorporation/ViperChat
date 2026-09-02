@@ -20,8 +20,11 @@
 		A11000022FEA000100000001 /* SecureStoragePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000122FEA000100000001 /* SecureStoragePlugin.swift */; };
 		A11000032FEA000100000001 /* NativeSharePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000132FEA000100000001 /* NativeSharePlugin.swift */; };
 		A11000042FEA000100000001 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A11000142FEA000100000001 /* GoogleService-Info.plist */; };
+		A11000052FEA000100000001 /* NativeAppSettingsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000152FEA000100000001 /* NativeAppSettingsPlugin.swift */; };
+		A11000062FEA000100000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A11000162FEA000100000001 /* PrivacyInfo.xcprivacy */; };
 		B22000012FEB000100000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22000112FEB000100000001 /* ShareViewController.swift */; };
 		B22000022FEB000100000001 /* ShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B22000142FEB000100000001 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B22000032FEB000100000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B22000162FEB000100000001 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,11 +67,14 @@
 		A11000122FEA000100000001 /* SecureStoragePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStoragePlugin.swift; sourceTree = "<group>"; };
 		A11000132FEA000100000001 /* NativeSharePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSharePlugin.swift; sourceTree = "<group>"; };
 		A11000142FEA000100000001 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		A11000152FEA000100000001 /* NativeAppSettingsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAppSettingsPlugin.swift; sourceTree = "<group>"; };
+		A11000162FEA000100000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B22000112FEB000100000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		B22000122FEB000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B22000132FEB000100000001 /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		B22000142FEB000100000001 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B22000152FEB000100000001 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
+		B22000162FEB000100000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,7 +122,9 @@
 				A11000112FEA000100000001 /* ViperBridgeViewController.swift */,
 				A11000122FEA000100000001 /* SecureStoragePlugin.swift */,
 				A11000132FEA000100000001 /* NativeSharePlugin.swift */,
+				A11000152FEA000100000001 /* NativeAppSettingsPlugin.swift */,
 				A11000142FEA000100000001 /* GoogleService-Info.plist */,
+				A11000162FEA000100000001 /* PrivacyInfo.xcprivacy */,
 				B22000152FEB000100000001 /* App.entitlements */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
@@ -136,6 +144,7 @@
 				B22000112FEB000100000001 /* ShareViewController.swift */,
 				B22000122FEB000100000001 /* Info.plist */,
 				B22000132FEB000100000001 /* ShareExtension.entitlements */,
+				B22000162FEB000100000001 /* PrivacyInfo.xcprivacy */,
 			);
 			path = ShareExtension;
 			sourceTree = "<group>";
@@ -251,6 +260,7 @@
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				A11000042FEA000100000001 /* GoogleService-Info.plist in Resources */,
+				A11000062FEA000100000001 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -258,6 +268,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B22000032FEB000100000001 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -273,6 +284,7 @@
 				A11000012FEA000100000001 /* ViperBridgeViewController.swift in Sources */,
 				A11000022FEA000100000001 /* SecureStoragePlugin.swift in Sources */,
 				A11000032FEA000100000001 /* NativeSharePlugin.swift in Sources */,
+				A11000052FEA000100000001 /* NativeAppSettingsPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -430,14 +442,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4161222;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 4.16.12;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = net.vipertec.viperchat;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -453,14 +465,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4161222;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 4.16.12;
 				PRODUCT_BUNDLE_IDENTIFIER = net.vipertec.viperchat;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
@@ -475,7 +487,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4161222;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -484,7 +496,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 4.16.12;
 				PRODUCT_BUNDLE_IDENTIFIER = net.vipertec.viperchat.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -500,7 +512,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4161222;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -509,7 +521,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 4.16.12;
 				PRODUCT_BUNDLE_IDENTIFIER = net.vipertec.viperchat.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

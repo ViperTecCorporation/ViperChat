@@ -24,6 +24,28 @@
 - **rbenv setup**: Before running any `bundle` or `rspec` commands, init rbenv in your shell (`eval "$(rbenv init -)"`) so the correct Ruby/Bundler versions are used
 - Always prefer `bundle exec` for Ruby CLI tasks (rspec, rake, rubocop, etc.)
 
+## Mandatory Web, Android, and iOS Validation
+
+- Treat ViperChat as one product delivered on Web, Android, and iOS. Any change to the shared frontend or to native behavior must be evaluated for all three platforms; do not consider the work complete after validating only the browser or only one native platform.
+- For changes to the frontend bundled by Capacitor (including authentication, conversations, contacts, composer, attachments, media, notifications, routing, translations, and shared assets), always regenerate both native bundles before handoff:
+  - Android: `pnpm native:sync:android`
+  - iOS: `pnpm native:sync:ios`
+- For Android-native changes, also rebuild Android. For iOS-native changes, also rebuild iOS. When a shared frontend, Capacitor plugin, dependency, or native configuration changes, rebuild both platforms.
+- Before testing Android, run `adb devices`. If an emulator or physical device is listed as `device`, installing the current build and exercising the affected flow on that device is mandatory. Do not skip this because the user did not explicitly ask for installation or testing.
+- When an iOS simulator, physical device, or reachable development Mac is available, synchronize, build, install/run, and exercise the affected flow there. For release-sensitive changes, validate a Release build or Archive whenever signing is available.
+- A native smoke test must cover the changed behavior and its adjacent critical path, including login/session persistence, navigation, loading states, back/foreground transitions, permissions, uploads/media, and push notifications when relevant.
+- If a platform, toolchain, emulator, or device is unavailable, state exactly what was and was not packaged or tested and why. Never report cross-platform validation as complete when one of the required targets was not actually exercised.
+- Keep Web/PWA behavior independent and regression-tested when changing native wrappers, bridges, permissions, or notification handling. A native fix must not silently alter the browser/PWA contract.
+
+## Mandatory Mobile Responsiveness
+
+- Every new or changed frontend screen, modal, drawer, popover, composer, list, and form must be visually checked at mobile widths as well as desktop. At minimum, cover widths around 320, 360, 390, 412/430 px and a representative desktop viewport; test portrait and landscape when the flow can reasonably be used in both.
+- Do not accept horizontal overflow, clipped borders or actions, content hidden under headers/navigation, disproportionate scaling, unexpected zoom, unreachable controls, or dialogs rendered outside the viewport.
+- Account for iOS safe areas, rounded corners/notches, the software keyboard, and Android status/navigation bars. Fixed positioning and viewport-height layouts must include these constraints without consuming unnecessary application space.
+- Prefer responsive Tailwind utilities and flexible sizing over fixed widths, fixed heights, absolute positioning, or device-specific pixel offsets. Any unavoidable exception must be justified by the component's layout contract.
+- Validate long translations, dynamic content, scrolling, touch targets, keyboard open/close behavior, and initial rendering after login or app resume. A passing unit test does not replace this visual and interaction check.
+- If a browser device emulator or connected native device is available, perform the responsive check there as part of the task without waiting for a separate reminder from the user.
+
 ## Code Style
 
 - **Ruby**: Follow RuboCop rules (150 character max line length)

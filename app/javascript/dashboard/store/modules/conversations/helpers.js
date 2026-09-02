@@ -58,10 +58,26 @@ export const isConversationMine = (
   return isAssignedToUser || isAssignedToUserTeam;
 };
 
-export const isConversationUnassigned = conversation =>
-  !conversation.meta?.assignee &&
-  !conversation.meta?.team &&
-  !conversation.group;
+export const isConversationUnassigned = (conversation, teamId) => {
+  const team = conversation.meta?.team;
+  const isOnSelectedTeam = teamId && Number(team?.id) === Number(teamId);
+
+  return (
+    !conversation.meta?.assignee &&
+    (!team || isOnSelectedTeam) &&
+    !conversation.group
+  );
+};
+
+export const filterGroupsByAssigneeType = (conversations, assigneeType) => {
+  if (assigneeType === 'groups') {
+    return conversations.filter(conversation => conversation.group);
+  }
+  if (assigneeType === 'me') {
+    return conversations;
+  }
+  return conversations.filter(conversation => !conversation.group);
+};
 
 export const filterByLabel = (shouldFilter, labels, chatLabels) => {
   const isOnLabel = labels.every(label => chatLabels.includes(label));
@@ -107,11 +123,13 @@ const filterByInternal = (
 };
 
 const filterByGroups = (shouldFilter, assigneeType, conversation = {}) => {
-  if (assigneeType !== 'groups') {
-    return shouldFilter;
+  if (assigneeType === 'groups') {
+    return !!conversation.group && shouldFilter;
   }
 
-  return !!conversation.group && shouldFilter;
+  if (assigneeType === 'me') return shouldFilter;
+
+  return !conversation.group && shouldFilter;
 };
 
 export const applyPageFilters = (conversation, filters) => {

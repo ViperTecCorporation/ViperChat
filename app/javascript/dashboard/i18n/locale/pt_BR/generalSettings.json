@@ -120,6 +120,14 @@
           "ERROR": "Falha ao atualizar configuração de mensagens apagadas"
         }
       },
+      "TEAM_CONVERSATIONS_IN_MINE": {
+        "TITLE": "Exibir conversas dos times na aba Minhas",
+        "NOTE": "Quando ativado, conversas atribuídas a um time aparecem na aba Minhas de todos os agentes desse time. Desative para mostrar apenas as conversas atribuídas diretamente a cada agente.",
+        "API": {
+          "SUCCESS": "Preferência da aba Minhas atualizada com sucesso",
+          "ERROR": "Falha ao atualizar a preferência da aba Minhas"
+        }
+      },
       "MESSAGE_COMPOSER": {
         "TITLE": "Usar editor clássico de mensagens",
         "NOTE": "Ative para voltar ao editor anterior. Desativado, o ViperChat usa o novo editor compacto para canais de conversa; caixas de e-mail continuam usando o editor clássico.",
