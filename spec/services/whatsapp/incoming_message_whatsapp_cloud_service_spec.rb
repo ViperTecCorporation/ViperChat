@@ -900,6 +900,246 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
       end
     end
 
+    context 'when Meta sends a WhatsApp message edit event' do
+      let(:original_source_id) { 'wamid.META_ORIGINAL_MESSAGE_ID' }
+      let(:edit_event_id) { 'wamid.META_EDIT_EVENT_ID' }
+      let(:contact_wa_id) { "1650#{SecureRandom.random_number(10**7).to_s.rjust(7, '0')}" }
+      let(:meta_edit_params) do
+        {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                contacts: [{ profile: { name: 'Pranav' }, wa_id: contact_wa_id }],
+                messages: [{
+                  from: contact_wa_id,
+                  id: edit_event_id,
+                  timestamp: '1770407829',
+                  type: 'edit',
+                  edit: {
+                    original_message_id: original_source_id,
+                    message: {
+                      type: 'text',
+                      text: { body: 'Edited by Meta' }
+                    }
+                  }
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+      end
+      let!(:original_message) do
+        contact = create(:contact, phone_number: "+#{contact_wa_id}", account: whatsapp_channel.account)
+        contact_inbox = create(:contact_inbox, contact: contact, inbox: whatsapp_channel.inbox, source_id: contact_wa_id)
+        conversation = create(:conversation, contact: contact, inbox: whatsapp_channel.inbox, contact_inbox: contact_inbox)
+        create(
+          :message,
+          conversation: conversation,
+          inbox: whatsapp_channel.inbox,
+          source_id: original_source_id,
+          content: 'Original Meta message',
+          content_attributes: { 'existing' => true }
+        )
+      end
+
+      it 'updates the original message instead of creating an empty duplicate' do
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: meta_edit_params).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+
+        expect(original_message.reload).to have_attributes(content: 'Edited by Meta')
+        expect(original_message.content_attributes).to include(
+          'edited' => true,
+          'edit_event_id' => edit_event_id,
+          'previous_content' => 'Original Meta message',
+          'existing' => true
+        )
+      end
+
+      it 'updates a media caption from the nested edited message' do
+        params = meta_edit_params.deep_dup
+        params.dig(:entry, 0, :changes, 0, :value, :messages, 0, :edit)[:message] = {
+          type: 'image', image: { caption: 'Updated image caption' }
+        }
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+
+        expect(original_message.reload.content).to eq('Updated image caption')
+      end
+
+      it 'does not create a message when the original Meta message is missing' do
+        original_message.destroy!
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: meta_edit_params).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+      end
+    end
+
+    context 'when Meta sends a WhatsApp reaction event' do
+      let(:original_source_id) { 'wamid.META_REACTION_TARGET_ID' }
+      let(:contact_wa_id) { "1650#{SecureRandom.random_number(10**7).to_s.rjust(7, '0')}" }
+      let(:meta_reaction_params) do
+        {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                contacts: [{ profile: { name: 'Pranav' }, wa_id: contact_wa_id }],
+                messages: [{
+                  from: contact_wa_id,
+                  id: 'wamid.META_REACTION_EVENT_ID',
+                  timestamp: '1770407829',
+                  type: 'reaction',
+                  reaction: {
+                    message_id: original_source_id,
+                    emoji: '👍'
+                  }
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+      end
+      let!(:original_message) do
+        contact = create(:contact, phone_number: "+#{contact_wa_id}", account: whatsapp_channel.account)
+        contact_inbox = create(:contact_inbox, contact: contact, inbox: whatsapp_channel.inbox, source_id: contact_wa_id)
+        conversation = create(:conversation, contact: contact, inbox: whatsapp_channel.inbox, contact_inbox: contact_inbox)
+        create(
+          :message,
+          account: whatsapp_channel.account,
+          conversation: conversation,
+          inbox: whatsapp_channel.inbox,
+          message_type: :outgoing,
+          source_id: original_source_id,
+          content: 'React to this message',
+          content_attributes: { 'existing' => true }
+        )
+      end
+
+      it 'creates an emoji reply linked to the original message' do
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: meta_reaction_params).perform
+        end.to change(whatsapp_channel.inbox.messages, :count).by(1)
+
+        reaction_message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.META_REACTION_EVENT_ID')
+        expect(reaction_message).to have_attributes(content: '👍', message_type: 'incoming')
+        expect(reaction_message.content_attributes).to include(
+          'in_reply_to' => original_message.id,
+          'in_reply_to_external_id' => original_source_id
+        )
+      end
+
+      it 'ignores reaction removal events with an empty emoji' do
+        params = meta_reaction_params.deep_dup
+        params.dig(:entry, 0, :changes, 0, :value, :messages, 0, :reaction)[:emoji] = ''
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+      end
+
+      it 'keeps the emoji visible when the referenced message is not in the conversation history' do
+        original_message.destroy!
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: meta_reaction_params).perform
+        end.to change(whatsapp_channel.inbox.messages, :count).by(1)
+
+        reaction_message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.META_REACTION_EVENT_ID')
+        expect(reaction_message.content).to eq('👍')
+      end
+
+      it 'does not duplicate the emoji reply when Meta retries the webhook' do
+        described_class.new(inbox: whatsapp_channel.inbox, params: meta_reaction_params).perform
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: meta_reaction_params).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+      end
+    end
+
+    context 'when Meta sends a WhatsApp revoke event' do
+      let(:original_source_id) { 'wamid.META_REVOKE_TARGET_ID' }
+      let(:meta_revoke_params) do
+        {
+          phone_number: whatsapp_channel.phone_number,
+          object: 'whatsapp_business_account',
+          entry: [{
+            changes: [{
+              value: {
+                messages: [{
+                  from: '16503071063',
+                  id: 'wamid.META_REVOKE_EVENT_ID',
+                  timestamp: '1770407829',
+                  type: 'revoke',
+                  revoke: { original_message_id: original_source_id }
+                }]
+              }
+            }]
+          }]
+        }.with_indifferent_access
+      end
+      let!(:original_message) do
+        conversation = create(:conversation, account: whatsapp_channel.account, inbox: whatsapp_channel.inbox)
+        create(
+          :message,
+          account: whatsapp_channel.account,
+          conversation: conversation,
+          inbox: whatsapp_channel.inbox,
+          source_id: original_source_id,
+          content: 'Message deleted by the customer',
+          content_attributes: { 'existing' => true }
+        )
+      end
+
+      it 'marks the original message as deleted without creating another message' do
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: meta_revoke_params).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+
+        expect(original_message.reload.content).to eq(I18n.t('conversations.messages.deleted'))
+        expect(original_message.content_attributes).to include('deleted' => true, 'existing' => true)
+        expect(original_message.content_attributes).not_to have_key('deleted_content_preserved')
+      end
+
+      it 'preserves the original content when the account setting is enabled' do
+        whatsapp_channel.inbox.account.update!(show_deleted_message_content: true)
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: meta_revoke_params).perform
+
+        expect(original_message.reload.content).to eq('Message deleted by the customer')
+        expect(original_message.content_attributes).to include(
+          'deleted' => true,
+          'deleted_content_preserved' => true,
+          'existing' => true
+        )
+      end
+
+      it 'does not create a contact or message when the original message is missing' do
+        original_message.destroy!
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: meta_revoke_params).perform
+        end.to not_change(whatsapp_channel.inbox.messages, :count).and not_change(Contact, :count)
+      end
+
+      it 'does not change the result when Meta retries the revoke webhook' do
+        described_class.new(inbox: whatsapp_channel.inbox, params: meta_revoke_params).perform
+        deleted_content = original_message.reload.content
+        deleted_attributes = original_message.content_attributes.deep_dup
+
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: meta_revoke_params).perform
+        end.not_to change(whatsapp_channel.inbox.messages, :count)
+
+        expect(original_message.reload).to have_attributes(content: deleted_content, content_attributes: deleted_attributes)
+      end
+    end
+
     context 'when unoapi sends a WhatsApp message edit event' do
       let(:original_source_id) { 'wamid.ORIGINAL_MESSAGE_ID' }
       let(:edit_event_id) { 'wamid.EDIT_EVENT_ID' }

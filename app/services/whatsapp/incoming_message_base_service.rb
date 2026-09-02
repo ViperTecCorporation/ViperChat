@@ -50,8 +50,11 @@ class Whatsapp::IncomingMessageBaseService
   private
 
   def process_messages
-    # We don't support reactions & ephemeral message now, we need to skip processing the message
-    # if the webhook event is a reaction or an ephermal message or an unsupported message.
+    return if process_message_reaction
+    return if process_message_revoke
+
+    # Provider-specific reactions are handled above. Skip reaction formats that the
+    # active provider did not normalize, plus ephemeral and unsupported messages.
     return if unprocessable_message_type?(message_type)
 
     # Multiple webhook events can be received for the same message due to
@@ -269,7 +272,7 @@ class Whatsapp::IncomingMessageBaseService
       return true
     end
 
-    edited_content = message_content(message)
+    edited_content = message_content(edited_message_payload(message))
     content_attrs = original_message.content_attributes || {}
     content_attrs = content_attrs.merge(
       'edited' => true,
@@ -329,11 +332,32 @@ class Whatsapp::IncomingMessageBaseService
 
   def message_edit_event?
     message = messages_data&.first
-    message.present? && message[:message_type].to_s == 'message_edit'
+    return false if message.blank?
+
+    message[:message_type].to_s == 'message_edit' || provider_message_edit_event?(message)
   end
 
   def edited_original_source_id(message)
-    message.dig(:context, :id).presence || message.dig(:context, :message_id).presence || message[:edited_message_id].presence
+    message.dig(:edit, :original_message_id).presence ||
+      message.dig(:context, :id).presence ||
+      message.dig(:context, :message_id).presence ||
+      message[:edited_message_id].presence
+  end
+
+  def edited_message_payload(message)
+    message.dig(:edit, :message).presence || message
+  end
+
+  def process_message_reaction
+    false
+  end
+
+  def process_message_revoke
+    false
+  end
+
+  def provider_message_edit_event?(_message)
+    false
   end
 
   def set_contact

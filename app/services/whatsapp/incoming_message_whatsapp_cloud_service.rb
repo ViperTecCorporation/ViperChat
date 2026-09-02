@@ -121,6 +121,57 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     @processed_params ||= params[:entry].try(:first).try(:[], 'changes').try(:first).try(:[], 'value')
   end
 
+  def process_message_reaction
+    return false unless inbox.channel.provider == 'whatsapp_cloud'
+
+    message = messages_data&.first
+    return false unless message&.dig(:type).to_s == 'reaction'
+
+    original_source_id = message.dig(:reaction, :message_id).presence
+    unless original_source_id
+      Rails.logger.warn("[WHATSAPP] Message reaction ignored without target message id event_id=#{message[:id]}")
+      return true
+    end
+
+    emoji = message.dig(:reaction, :emoji).to_s
+    return true if emoji.blank?
+
+    message[:context] = message[:context].to_h.merge(id: original_source_id, message_id: original_source_id)
+    message[:text] = { body: emoji }
+    message[:type] = 'text'
+    false
+  end
+
+  def process_message_revoke
+    return false unless inbox.channel.provider == 'whatsapp_cloud'
+
+    message = messages_data&.first
+    return false unless message&.dig(:type).to_s == 'revoke'
+
+    original_source_id = message.dig(:revoke, :original_message_id).presence
+    unless original_source_id
+      Rails.logger.warn("[WHATSAPP] Message revoke ignored without original message id event_id=#{message[:id]}")
+      return true
+    end
+
+    original_message = find_message_by_source_id(original_source_id)
+    unless original_message
+      Rails.logger.info(
+        "[WHATSAPP] Message revoke ignored missing original original_source_id=#{original_source_id} event_id=#{message[:id]}"
+      )
+      return true
+    end
+
+    update_message_with_status(original_message, status: 'deleted')
+    true
+  end
+
+  def provider_message_edit_event?(message)
+    inbox.channel.provider == 'whatsapp_cloud' &&
+      message[:type].to_s == 'edit' &&
+      message.dig(:edit, :message).present?
+  end
+
   def download_attachment_file(attachment_payload)
     url_response = HTTParty.get(
       inbox.channel.media_url(attachment_payload[:id]),

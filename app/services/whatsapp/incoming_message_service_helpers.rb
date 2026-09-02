@@ -27,7 +27,7 @@ module Whatsapp::IncomingMessageServiceHelpers
   def message_content(message)
     # TODO: map interactive messages back to button messages in chatwoot
     interactive_content = build_interactive_content(message)
-    type_key = message_type.presence
+    type_key = message[:type].presence || message_type.presence
     message.dig(:text, :body) ||
       message.dig(:button, :text) ||
       message.dig(:interactive, :button_reply, :title) ||
@@ -218,7 +218,7 @@ module Whatsapp::IncomingMessageServiceHelpers
   end
 
   def unprocessable_message_type?(message_type)
-    message_type.blank? || %w[reaction ephemeral request_welcome unsupported].include?(message_type)
+    message_type.blank? || %w[reaction revoke ephemeral request_welcome unsupported].include?(message_type)
   end
 
   def brazil_phone_number?(phone_number)

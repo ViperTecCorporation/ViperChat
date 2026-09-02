@@ -322,7 +322,7 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       job.perform_now(wb_params)
     end
 
-    it 'Ignore reaction type message and stop raising error' do
+    it 'processes a reaction type message as an emoji reply' do
       other_channel = create(:channel_whatsapp, phone_number: '+1987654', provider: 'whatsapp_cloud', sync_templates: false,
                                                 validate_provider_config: false)
       wb_params = {
@@ -333,7 +333,8 @@ RSpec.describe Webhooks::WhatsappEventsJob do
             value: {
               contacts: [{ profile: { name: 'Test Test' }, wa_id: '1111981136571' }],
               messages: [{
-                from: '1111981136571', reaction: { emoji: '👍' }, timestamp: '1664799904', type: 'reaction'
+                from: '1111981136571', id: 'wamid.REACTION_EVENT', reaction: { message_id: 'wamid.MISSING_TARGET', emoji: '👍' },
+                timestamp: '1664799904', type: 'reaction'
               }],
               metadata: {
                 phone_number_id: other_channel.provider_config['phone_number_id'],
@@ -345,10 +346,12 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       }.with_indifferent_access
       expect do
         Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: other_channel.inbox, params: wb_params).perform
-      end.not_to change(Message, :count)
+      end.to change(other_channel.inbox.messages, :count).by(1)
+
+      expect(other_channel.inbox.messages.find_by!(source_id: 'wamid.REACTION_EVENT').content).to eq('👍')
     end
 
-    it 'ignore reaction type message, would not create contact if the reaction is the first event' do
+    it 'creates the contact when a reaction is the first event from the customer' do
       other_channel = create(:channel_whatsapp, phone_number: '+1987654', provider: 'whatsapp_cloud', sync_templates: false,
                                                 validate_provider_config: false)
       wb_params = {
@@ -359,7 +362,8 @@ RSpec.describe Webhooks::WhatsappEventsJob do
             value: {
               contacts: [{ profile: { name: 'Test Test' }, wa_id: '1111981136571' }],
               messages: [{
-                from: '1111981136571', reaction: { emoji: '👍' }, timestamp: '1664799904', type: 'reaction'
+                from: '1111981136571', id: 'wamid.FIRST_REACTION_EVENT',
+                reaction: { message_id: 'wamid.MISSING_TARGET', emoji: '👍' }, timestamp: '1664799904', type: 'reaction'
               }],
               metadata: {
                 phone_number_id: other_channel.provider_config['phone_number_id'],
@@ -371,7 +375,7 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       }.with_indifferent_access
       expect do
         Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: other_channel.inbox, params: wb_params).perform
-      end.not_to change(Contact, :count)
+      end.to change(Contact, :count).by(1)
     end
 
     it 'ignore request_welcome type message, would not create contact or conversation' do
