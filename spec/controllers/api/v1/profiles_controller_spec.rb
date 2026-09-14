@@ -197,6 +197,15 @@ RSpec.describe 'Profile API', type: :request do
         json_response = response.parsed_body
         expect(json_response['ui_settings']['is_contact_sidebar_open']).to be(false)
       end
+
+      it 'preserves pins when saving stale preferences from another device' do
+        agent.update!(ui_settings: { pinned_conversations: { account.id.to_s => [1, 2] } })
+        put '/api/v1/profile',
+            params: { profile: { ui_settings: { pinned_conversations: {}, is_contact_sidebar_open: false } } },
+            headers: agent.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:success)
+        expect(agent.reload.ui_settings['pinned_conversations']).to eq(account.id.to_s => [1, 2])
+      end
     end
 
     context 'when an authenticated user updates email' do

@@ -1,7 +1,9 @@
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useRoute, useRouter } from 'vue-router';
+import { useNavigationShortcuts } from 'dashboard/composables/useNavigationShortcuts';
 
 export function useSidebarKeyboardShortcuts(toggleShortcutModalFn) {
+  useNavigationShortcuts();
   const route = useRoute();
   const router = useRouter();
 

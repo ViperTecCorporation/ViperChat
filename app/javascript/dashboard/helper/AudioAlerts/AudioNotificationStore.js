@@ -4,6 +4,7 @@ import {
 } from 'dashboard/constants/permissions';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper';
 import wootConstants from 'dashboard/constants/globals';
+import { archivedConversationIds } from 'dashboard/helper/conversationArchives';
 
 class AudioNotificationStore {
   constructor(store) {
@@ -16,8 +17,16 @@ class AudioNotificationStore {
       status: 'open',
     });
 
-    return mineConversation.some(conv => conv.unread_count > 0);
+    return mineConversation.some(
+      conv => conv.unread_count > 0 && !this.isArchived(conv.id)
+    );
   };
+
+  isArchived = conversationId =>
+    archivedConversationIds(
+      this.store.getters.getUISettings,
+      this.store.getters.getCurrentAccountId
+    ).includes(Number(conversationId));
 
   isMessageFromPendingConversation = (message = {}) => {
     const { conversation_id: conversationId } = message || {};

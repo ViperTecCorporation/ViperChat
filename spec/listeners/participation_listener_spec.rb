@@ -26,6 +26,35 @@ describe ParticipationListener do
       expect { listener.assignee_changed(event) }.not_to raise_error
     end
 
+    it 'keeps only the current agent by default on existing accounts' do
+      conversation.conversation_participants.create!(user: admin)
+      listener.assignee_changed(event)
+      expect(conversation.conversation_participants.reload.pluck(:user_id)).to eq([agent.id])
+      expect(account.reload.last_assignee_as_participant?).to be(true)
+    end
+
+    it 'preserves other participants when the account disables the option' do
+      account.update!(last_assignee_as_participant: false)
+      conversation.conversation_participants.create!(user: admin)
+      listener.assignee_changed(event)
+      expect(conversation.conversation_participants.reload.pluck(:user_id)).to contain_exactly(admin.id, agent.id)
+    end
+
+    it 'uses the latest persisted assignee for a delayed assignment event' do
+      conversation.reload
+      Conversation.find(conversation.id).update!(assignee: admin)
+      expect(conversation.assignee_id).to eq(agent.id)
+      listener.assignee_changed(event)
+      expect(conversation.conversation_participants.reload.pluck(:user_id)).to eq([admin.id])
+    end
+
+    it 'does not remove participants when the agent is unassigned' do
+      conversation.conversation_participants.create!(user: admin)
+      Conversation.find(conversation.id).update!(assignee: nil)
+      listener.assignee_changed(event)
+      expect(conversation.conversation_participants.reload.pluck(:user_id)).to eq([admin.id])
+    end
+
     it 'logs a debug message if participant save fails due to a race condition' do
       allow(Rails.logger).to receive(:warn)
       allow(conversation).to receive(:conversation_participants).and_return(double)

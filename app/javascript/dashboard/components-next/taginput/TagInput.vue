@@ -36,6 +36,7 @@ const props = defineProps({
   },
   focusOnMount: { type: Boolean, default: false },
   allowCreate: { type: Boolean, default: false },
+  filterMenuItems: { type: Boolean, default: true },
   // Skip label-based dedup when the consumer already filters menuItems by ID.
   // Prevents removing all same-name items when one is selected (e.g. duplicate agent names).
   skipLabelDedup: { type: Boolean, default: false },
@@ -94,7 +95,7 @@ const filteredMenuItems = computed(() => {
     allowCreate: props.allowCreate,
     skipLabelDedup: props.skipLabelDedup,
   });
-  if (props.type !== INPUT_TYPES.TEXT) return items;
+  if (props.type !== INPUT_TYPES.TEXT || !props.filterMenuItems) return items;
   const query = newTag.value?.trim()?.toLowerCase();
   if (!query) return items;
   return items.filter(item => item.label?.toLowerCase().includes(query));

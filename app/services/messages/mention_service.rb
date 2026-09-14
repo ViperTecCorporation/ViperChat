@@ -4,7 +4,7 @@ class Messages::MentionService
   def perform
     return unless valid_mention_message?(message)
 
-    validated_mentioned_ids = filter_mentioned_ids_by_inbox
+    validated_mentioned_ids = accessible_mentioned_ids
     return if validated_mentioned_ids.blank?
 
     Conversations::UserMentionJob.perform_later(validated_mentioned_ids, message.conversation.id, message.account.id)
@@ -15,7 +15,12 @@ class Messages::MentionService
   private
 
   def valid_mention_message?(message)
-    message.private? && message.content.present? && mentioned_ids.present?
+    (message.private? || internal_agent_message?) && message.content.present? && mentioned_ids.present?
+  end
+
+  def internal_agent_message?
+    message.inbox.internal_chat? && message.sender_type == 'User' &&
+      message.account.account_users.exists?(user_id: message.sender_id)
   end
 
   def mentioned_ids
@@ -37,15 +42,12 @@ class Messages::MentionService
            .map(&:to_s)
   end
 
-  def valid_mentionable_user_ids
-    @valid_mentionable_user_ids ||= begin
-      inbox = message.inbox
-      inbox.account.administrators.pluck(:id) + inbox.members.pluck(:id)
+  def accessible_mentioned_ids
+    message.account.account_users.includes(:user).where(user_id: mentioned_ids).filter_map do |account_user|
+      # Check access before adding participants: a mention must not grant access by itself.
+      context = { user: account_user.user, account: message.account, account_user: account_user }
+      account_user.user_id.to_s if ConversationPolicy.new(context, message.conversation).show?
     end
-  end
-
-  def filter_mentioned_ids_by_inbox
-    mentioned_ids & valid_mentionable_user_ids.map(&:to_s)
   end
 
   def generate_notifications_for_mentions(validated_mentioned_ids)

@@ -2,6 +2,7 @@
 import { MESSAGE_TYPE } from 'widget/helpers/constants';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { ATTACHMENT_ICONS } from 'shared/constants/messages';
+import { getMessagePreviewContent } from 'dashboard/helper/messagePreviewHelper';
 
 export default {
   name: 'MessagePreview',
@@ -41,17 +42,21 @@ export default {
     parsedLastMessage() {
       const { content_attributes: contentAttributes } = this.message;
       const { email: { subject } = {} } = contentAttributes || {};
-      return this.getPlainText(subject || this.message.content);
+      return this.getPlainText(
+        getMessagePreviewContent({
+          message: this.message,
+          subject,
+          t: this.$t,
+          emptyMessage: this.defaultEmptyMessage,
+        })
+      );
     },
     lastMessageFileType() {
-      const [{ file_type: fileType } = {}] = this.message.attachments;
+      const [{ file_type: fileType } = {}] = this.message.attachments || [];
       return fileType;
     },
     attachmentIcon() {
       return ATTACHMENT_ICONS[this.lastMessageFileType];
-    },
-    attachmentMessageContent() {
-      return `CHAT_LIST.ATTACHMENTS.${this.lastMessageFileType}.CONTENT`;
     },
     isMessageSticker() {
       return this.message && this.message.content_type === 'sticker';
@@ -90,20 +95,14 @@ export default {
       />
       {{ $t('CHAT_LIST.ATTACHMENTS.image.CONTENT') }}
     </span>
-    <span v-else-if="message.content">
-      {{ parsedLastMessage }}
-    </span>
-    <span v-else-if="message.attachments">
+    <span v-else>
       <fluent-icon
         v-if="attachmentIcon && showMessageType"
         size="16"
         class="-mt-0.5 align-middle inline-block text-n-slate-11"
         :icon="attachmentIcon"
       />
-      {{ $t(`${attachmentMessageContent}`) }}
-    </span>
-    <span v-else>
-      {{ defaultEmptyMessage || $t('CHAT_LIST.NO_CONTENT') }}
+      {{ parsedLastMessage }}
     </span>
   </div>
 </template>

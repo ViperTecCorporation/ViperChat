@@ -49,7 +49,10 @@ class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsapp
     return catalog_normalization[:content] if catalog_message?
     return interactive_normalization[:content] if interactive_normalization
 
-    super
+    content = super
+    return content unless group_message?
+
+    Whatsapp::Unoapi::IncomingGroupMentionsService.new(account: inbox.account, content: content).perform
   end
 
   def message_content_attributes(message)

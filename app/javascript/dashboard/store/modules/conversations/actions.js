@@ -11,6 +11,7 @@ import {
   isOnFoldersView,
 } from './helpers/actionHelpers';
 import messageReadActions from './actions/messageReadActions';
+import { sortMessagesChronologically } from './helpers';
 import messageTranslateActions from './actions/messageTranslateActions';
 import * as Sentry from '@sentry/vue';
 import {
@@ -32,6 +33,33 @@ export const hasMessageFailedWithExternalError = pendingMessage => {
 
 // actions
 const actions = {
+  async loadFavoriteMessage({ commit, state }, { conversationId, messageId }) {
+    const [
+      { data: conversation },
+      {
+        data: { payload },
+      },
+    ] = await Promise.all([
+      ConversationApi.show(conversationId),
+      MessageApi.getAroundMessage(conversationId, messageId),
+    ]);
+    commit(types.UPDATE_CONVERSATION, conversation);
+    commit(`contacts/${types.SET_CONTACT_ITEM}`, conversation.meta.sender);
+    const existing =
+      state.allConversations.find(chat => chat.id === conversationId)
+        ?.messages || [];
+    const messages = [
+      ...new Map(
+        [...existing, ...payload].map(message => [message.id, message])
+      ).values(),
+    ];
+    commit(types.SET_MISSING_MESSAGES, {
+      id: conversationId,
+      data: sortMessagesChronologically(messages),
+    });
+    commit(types.SET_CHAT_DATA_FETCHED, conversationId);
+    commit(types.SET_CURRENT_CHAT_WINDOW, conversation);
+  },
   getConversation: async ({ commit }, conversationId) => {
     try {
       const response = await ConversationApi.show(conversationId);
@@ -42,13 +70,21 @@ const actions = {
     }
   },
 
-  fetchAllConversations: async ({ commit, state, dispatch }) => {
+  fetchAllConversations: async (
+    { commit, state, dispatch },
+    { refresh = false } = {}
+  ) => {
     commit(types.SET_LIST_LOADING_STATUS);
     try {
-      const params = state.conversationFilters;
+      const params = { ...state.conversationFilters };
       const {
         data: { data },
       } = await ConversationApi.get(params);
+      if (refresh)
+        commit(
+          'reconcileConversationSnapshot',
+          data.payload.map(conversation => conversation.id)
+        );
       buildConversationList(
         { commit, dispatch },
         params,
@@ -56,7 +92,7 @@ const actions = {
         params.assigneeType
       );
     } catch (error) {
-      // Handle error
+      if (refresh) throw error;
     } finally {
       commit(types.CLEAR_LIST_LOADING_STATUS);
     }
@@ -66,6 +102,11 @@ const actions = {
     commit(types.SET_LIST_LOADING_STATUS);
     try {
       const { data } = await ConversationApi.filter(params);
+      if (params.refresh)
+        commit(
+          'reconcileConversationSnapshot',
+          data.payload.map(conversation => conversation.id)
+        );
       buildConversationList(
         { commit, dispatch },
         params,
@@ -73,7 +114,7 @@ const actions = {
         'appliedFilters'
       );
     } catch (error) {
-      // Handle error
+      if (params.refresh) throw error;
     } finally {
       commit(types.CLEAR_LIST_LOADING_STATUS);
     }
@@ -230,7 +271,7 @@ const actions = {
 
   syncActiveConversationMessages: async (
     { commit, state, dispatch },
-    { conversationId }
+    { conversationId, refresh = false }
   ) => {
     const { allConversations, syncConversationsMessages } = state;
     const lastMessageId = syncConversationsMessages[conversationId];
@@ -240,6 +281,53 @@ const actions = {
     if (!selectedChat) return;
     try {
       const { messages } = selectedChat;
+      if (refresh) {
+        let after =
+          lastMessageId ||
+          messages.filter(message => Number.isInteger(message.id)).at(-1)?.id;
+        const received = [];
+        while (after) {
+          // The next page cursor is supplied by the previous response.
+          // eslint-disable-next-line no-await-in-loop
+          const { data } = await MessageApi.getPreviousMessages({
+            conversationId,
+            after,
+          });
+          received.push(...data.payload);
+          const next = data.payload.at(-1)?.id;
+          if (data.payload.length < 100 || next === after) break;
+          after = next;
+        }
+        const { data: latest } = await MessageApi.getPreviousMessages({
+          conversationId,
+        });
+        received.push(...latest.payload);
+        const current = state.allConversations.find(
+          conversation => conversation.id === conversationId
+        );
+        if (!current) return;
+        const merged = new Map(
+          current.messages.map(message => [message.id, message])
+        );
+        received.forEach(message => merged.set(message.id, message));
+        commit(`conversationMetadata/${types.SET_CONVERSATION_METADATA}`, {
+          id: conversationId,
+          data: latest.meta,
+        });
+        commit(types.SET_MISSING_MESSAGES, {
+          id: conversationId,
+          data: [...merged.values()].sort(
+            (a, b) =>
+              Number(a.created_at) - Number(b.created_at) ||
+              Number(a.id) - Number(b.id)
+          ),
+        });
+        commit(types.SET_LAST_MESSAGE_ID_IN_SYNC_CONVERSATION, {
+          conversationId,
+          messageId: null,
+        });
+        return;
+      }
       // Fetch all the messages after the last message id
       const {
         data: { meta, payload },
@@ -270,7 +358,7 @@ const actions = {
       });
       dispatch('markMessagesRead', { id: conversationId }, { root: true });
     } catch (error) {
-      // Handle error
+      if (refresh) throw error;
     }
   },
 

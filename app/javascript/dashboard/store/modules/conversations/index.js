@@ -35,6 +35,14 @@ const getConversationById = _state => conversationId => {
 
 // mutations
 export const mutations = {
+  reconcileConversationSnapshot(_state, ids) {
+    const visible = new Set(ids);
+    _state.allConversations = _state.allConversations.filter(
+      conversation =>
+        visible.has(conversation.id) ||
+        conversation.id === _state.selectedChatId
+    );
+  },
   [types.SET_ALL_CONVERSATION](_state, conversationList) {
     const newAllConversations = [..._state.allConversations];
     conversationList.forEach(conversation => {

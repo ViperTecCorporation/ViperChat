@@ -294,6 +294,7 @@ RSpec.describe 'Accounts API', type: :request do
         ],
         show_deleted_message_content: true,
         include_team_conversations_in_mine: false,
+        last_assignee_as_participant: false,
         use_legacy_message_composer: true,
         timezone: 'Asia/Kolkata',
         industry: 'Technology',
@@ -327,6 +328,7 @@ RSpec.describe 'Accounts API', type: :request do
           auto_resolve_ignore_waiting
           show_deleted_message_content
           include_team_conversations_in_mine
+          last_assignee_as_participant
           use_legacy_message_composer
         ].each do |attribute|
           expect(account.reload.settings[attribute]).to eq(params[attribute.to_sym])

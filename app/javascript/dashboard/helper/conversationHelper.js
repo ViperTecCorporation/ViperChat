@@ -1,3 +1,5 @@
+import { isEmptyReplyMessage } from './messagePreviewHelper';
+
 /**
  * Determines the last non-activity message between store and API messages.
  * @param {Object} messageInStore - The last non-activity message from the store.
@@ -50,12 +52,16 @@ export const getLastMessage = m => {
   const lastMessageIncludingActivity = m.messages[m.messages.length - 1];
 
   const nonActivityMessages = m.messages.filter(
-    message => message.message_type !== 2
+    message => message.message_type !== 2 && !isEmptyReplyMessage(message)
   );
   const lastNonActivityMessageInStore =
     nonActivityMessages[nonActivityMessages.length - 1];
 
-  const lastNonActivityMessageFromAPI = m.last_non_activity_message;
+  const lastNonActivityMessageFromAPI = isEmptyReplyMessage(
+    m.last_non_activity_message
+  )
+    ? undefined
+    : m.last_non_activity_message;
 
   // If API value and store value for last non activity message
   // is empty, then return the last activity message

@@ -288,6 +288,8 @@ class ConversationFinder
   end
 
   def mine_conversations(scope)
+    archived_ids = Conversations::ArchiveService.new(current_user, current_account).ids
+    scope = scope.where.not(display_id: archived_ids)
     conversations_assigned_to_user = scope.where(assignee_id: current_user.id)
     return conversations_assigned_to_user unless current_account.include_team_conversations_in_mine?
 
@@ -308,6 +310,12 @@ class ConversationFinder
   end
 
   def mine_count_filter
+    ids = Conversations::ArchiveService.new(current_user, current_account).ids
+    exclusion = ids.empty? ? '' : " AND conversations.display_id NOT IN (#{ids.join(', ')})"
+    "(#{mine_assignment_filter})#{exclusion}"
+  end
+
+  def mine_assignment_filter
     filter = "conversations.assignee_id = #{current_user.id}"
     return filter unless current_account.include_team_conversations_in_mine?
     return filter if current_user_team_ids.empty?
@@ -347,6 +355,7 @@ class ConversationFinder
 
     sort_by, sort_order = SORT_OPTIONS[params[:sort_by]] || SORT_OPTIONS['last_activity_at_desc']
     @conversations = @conversations.send(sort_by, sort_order)
+    @conversations = Conversations::PinService.new(current_user, current_account).order(@conversations)
 
     if params[:updated_within].present?
       @conversations.where('conversations.updated_at > ?', Time.zone.now - params[:updated_within].to_i.seconds)

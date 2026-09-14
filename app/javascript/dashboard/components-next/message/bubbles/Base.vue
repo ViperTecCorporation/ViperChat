@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 
 import MessageMeta from '../MessageMeta.vue';
+import FavoriteIndicator from '../FavoriteIndicator.vue';
 
 import { emitter } from 'shared/helpers/mitt';
 import { useMessageContext } from '../provider.js';
@@ -15,8 +16,14 @@ const props = defineProps({
   hideMeta: { type: Boolean, default: false },
 });
 
-const { variant, orientation, inReplyTo, shouldGroupWithNext } =
-  useMessageContext();
+const {
+  id,
+  conversationId,
+  variant,
+  orientation,
+  inReplyTo,
+  shouldGroupWithNext,
+} = useMessageContext();
 const { t } = useI18n();
 
 const varaintBaseMap = {
@@ -114,6 +121,12 @@ const replyToPreview = computed(() => {
       />
     </div>
     <slot />
+    <FavoriteIndicator
+      v-if="!shouldShowMeta && variant !== MESSAGE_VARIANTS.ACTIVITY"
+      :message-id="id"
+      :conversation-id="conversationId"
+      class="mt-1 ml-auto"
+    />
     <MessageMeta
       v-if="shouldShowMeta"
       :class="[

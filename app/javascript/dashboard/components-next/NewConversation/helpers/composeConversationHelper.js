@@ -149,7 +149,12 @@ export const prepareNewMessagePayload = ({
   const payload = {
     inboxId: targetInbox.id,
     sourceId: targetInbox.sourceId,
-    contactId: Number(selectedContact.id),
+    contactId: selectedContact.recipient
+      ? undefined
+      : Number(selectedContact.id),
+    ...(selectedContact.recipient
+      ? { recipient: selectedContact.recipient }
+      : {}),
     message: { content: message },
     assigneeId: currentUser.id,
   };
@@ -187,6 +192,9 @@ export const prepareWhatsAppMessagePayload = ({
     inboxId: targetInbox.id,
     sourceId: targetInbox.sourceId,
     contactId: selectedContact.id,
+    ...(selectedContact.recipient
+      ? { recipient: selectedContact.recipient }
+      : {}),
     message: { content: message, template_params: templateParams },
     assigneeId: currentUser.id,
   };

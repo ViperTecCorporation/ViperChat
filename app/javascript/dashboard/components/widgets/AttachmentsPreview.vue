@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { formatBytes } from 'shared/helpers/FileHelper';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -12,6 +12,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['removeAttachment']);
+const failedPreviews = ref(new Set());
 
 const nonRecordedAudioAttachments = computed(() => {
   return props.attachments.filter(attachment => !attachment?.isVoiceMessage);
@@ -36,8 +37,19 @@ const formatFileSize = file => {
 };
 
 const isTypeImage = file => {
-  const type = file.content_type || file.type;
-  return type.includes('image');
+  const type = file.content_type || file.type || '';
+  return type.startsWith('image/');
+};
+
+const isTypeVideo = file =>
+  (file.content_type || file.type || '').startsWith('video/');
+
+const previewFailed = attachment => failedPreviews.value.add(attachment);
+
+const fileLabel = file => {
+  const name = file.filename || file.name || '';
+  const extension = name.includes('.') ? name.split('.').pop() : '';
+  return extension.slice(0, 5).toUpperCase() || '📄';
 };
 
 const fileName = file => {
@@ -50,26 +62,45 @@ const fileName = file => {
     <div
       v-for="(attachment, index) in nonRecordedAudioAttachments"
       :key="attachment.id"
-      class="flex items-center p-1 bg-n-slate-3 gap-1 rounded-md w-[15rem]"
+      class="flex items-center p-1 bg-n-slate-3 gap-2 rounded-md w-[18rem] max-w-full min-w-0"
     >
-      <div class="max-w-[4rem] flex-shrink-0 w-6 flex items-center">
+      <div
+        class="flex-shrink-0 size-10 flex items-center justify-center rounded bg-n-slate-4 overflow-hidden"
+      >
         <img
-          v-if="isTypeImage(attachment.resource)"
-          class="object-cover w-6 h-6 rounded-sm"
+          v-if="
+            attachment.thumb &&
+            isTypeImage(attachment.resource) &&
+            !failedPreviews.has(attachment)
+          "
+          class="object-cover size-10 rounded-sm"
           :src="attachment.thumb"
+          :alt="fileName(attachment.resource)"
+          @error="previewFailed(attachment)"
         />
-        <span v-else class="relative w-6 h-6 text-lg text-left -top-px">
-          📄
+        <video
+          v-else-if="
+            attachment.thumb &&
+            isTypeVideo(attachment.resource) &&
+            !failedPreviews.has(attachment)
+          "
+          class="object-cover size-10"
+          :src="attachment.thumb"
+          muted
+          playsinline
+          preload="metadata"
+          @error="previewFailed(attachment)"
+        />
+        <span v-else class="text-[10px] font-semibold text-n-slate-12">
+          {{ fileLabel(attachment.resource) }}
         </span>
       </div>
-      <div class="max-w-3/5 min-w-[50%] overflow-hidden text-ellipsis">
-        <span
-          class="h-4 overflow-hidden text-sm font-medium text-ellipsis whitespace-nowrap"
-        >
+      <div class="flex-1 min-w-0" :title="fileName(attachment.resource)">
+        <span class="block truncate text-sm font-medium">
           {{ fileName(attachment.resource) }}
         </span>
       </div>
-      <div class="w-[30%] justify-center">
+      <div class="flex-shrink-0">
         <span class="overflow-hidden text-xs text-ellipsis whitespace-nowrap">
           {{ formatFileSize(attachment.resource) }}
         </span>

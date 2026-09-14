@@ -1,6 +1,7 @@
 import { createStore } from 'vuex';
 
 import accounts from './modules/accounts';
+import messageFavorites from './modules/messageFavorites';
 import agentBots from './modules/agentBots';
 import agentCapacityPolicies from './modules/agentCapacityPolicies';
 import agents from './modules/agents';
@@ -65,6 +66,7 @@ const plugins = [];
 
 export default createStore({
   modules: {
+    messageFavorites,
     accounts,
     agentBots,
     agentCapacityPolicies,

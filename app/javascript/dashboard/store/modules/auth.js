@@ -1,5 +1,6 @@
 import types from '../mutation-types';
 import authAPI from '../../api/auth';
+import ConversationApi from '../../api/conversations';
 
 import { setUser, clearCookiesOnLogout } from '../utils/api';
 import SessionStorage from 'shared/helpers/sessionStorage';
@@ -112,6 +113,20 @@ export const actions = {
         clearCookiesOnLogout();
       }
     }
+  },
+
+  async syncConversationArchives({ commit, getters: authGetters }) {
+    const accountId = authGetters.getCurrentAccountId;
+    if (!accountId) return;
+    const { data } = await ConversationApi.getArchiveState();
+    commit(types.SET_CURRENT_USER_UI_SETTINGS, {
+      uiSettings: {
+        archived_conversations: {
+          ...authGetters.getUISettings.archived_conversations,
+          [accountId]: data.archived_conversations,
+        },
+      },
+    });
   },
   async setUser({ commit, dispatch }) {
     if (authAPI.hasAuthCookie()) {

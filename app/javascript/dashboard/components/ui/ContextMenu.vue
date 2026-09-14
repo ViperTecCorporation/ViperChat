@@ -89,7 +89,9 @@ onUnmounted(() => {
       class="fixed outline-none z-[9999] cursor-pointer"
       :style="position"
       tabindex="0"
-      @blur="handleClose"
+      @focusout="
+        !$event.currentTarget.contains($event.relatedTarget) && handleClose()
+      "
     >
       <slot />
     </div>

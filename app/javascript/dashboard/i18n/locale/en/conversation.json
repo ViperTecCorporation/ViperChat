@@ -1,5 +1,39 @@
 {
   "CONVERSATION": {
+    "ARCHIVE": {
+      "TITLE": "Archived",
+      "ACTION": "Archive conversation",
+      "RESTORE": "Unarchive",
+      "DESCRIPTION": "Archived conversations stay silent for you except for mentions. New messages and mentions do not unarchive the conversation.",
+      "EMPTY": "No archived conversations.",
+      "ERROR": "Could not update archived conversations.",
+      "RETRY": "Try again",
+      "MORE": "Load more",
+      "LOADING": "Loading…",
+      "CLOSE": "Close"
+    },
+    "FAVORITES": {
+      "TITLE": "Starred messages",
+      "ADD": "Star message",
+      "REMOVE": "Unstar message",
+      "STARRED": "Starred message",
+      "EMPTY": "No starred messages for this contact or conversation.",
+      "ERROR": "Could not load or update starred messages. Please try again.",
+      "UNAVAILABLE": "Could not open the message. It may have been deleted or you may no longer have access to the conversation.",
+      "CLOSE": "Close",
+      "RETRY": "Try again",
+      "GO_TO_MESSAGE": "Go to original message",
+      "MORE": "Load more",
+      "MEDIA": "Media or file",
+      "LOADING": "Loading…"
+    },
+    "PIN": {
+      "PIN": "Pin conversation",
+      "UNPIN": "Unpin conversation",
+      "PINNED": "Pinned conversation",
+      "LIMIT": "You can pin up to 3 conversations per account. Unpin one before adding another.",
+      "ERROR": "Could not update the pinned conversation. Please try again."
+    },
     "SELECT_A_CONVERSATION": "Please select a conversation from left pane",
     "CSAT_REPLY_MESSAGE": "Please rate the conversation",
     "404": "Sorry, we cannot find the conversation. Please try again",

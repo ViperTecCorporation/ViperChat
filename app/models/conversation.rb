@@ -217,6 +217,12 @@ class Conversation < ApplicationRecord
     end
   end
 
+  def group_avatar_url
+    return unless group?
+
+    additional_attributes&.dig('group_picture').presence || (contact&.avatar_url if primary_contact_is_group?)
+  end
+
   def cached_label_list_array
     (cached_label_list || '').split(',').map(&:strip)
   end

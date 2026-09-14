@@ -9,6 +9,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import GalleryView from './components/GalleryView.vue';
 import ForwardMessagesModal from './ForwardMessagesModal.vue';
 import { downloadFile } from '@chatwoot/utils';
+import { useConversationLinks } from 'dashboard/composables/useConversationLinks';
 
 const props = defineProps({
   show: {
@@ -42,6 +43,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'load-more']);
+const {
+  links,
+  total: linkTotal,
+  hasMore: hasMoreLinks,
+  loading: loadingLinks,
+  error: linksError,
+  load: loadLinks,
+} = useConversationLinks(props);
 
 const dialogRef = ref(null);
 const deleteConfirmRef = ref(null);
@@ -402,6 +411,7 @@ const groupByMonth = items => {
 const attachmentList = computed(() => props.attachments || []);
 const messagesMapById = computed(() => {
   const map = new Map();
+  links.value.forEach(link => map.set(link.message_id, link.message));
   (props.messages || []).forEach(message => {
     map.set(message.id, message);
   });
@@ -434,21 +444,6 @@ const documents = computed(() =>
         toDate(a.created_at || a.timestamp).getTime()
     )
 );
-
-const urlRegex = /https?:\/\/[^\s<>"']+/gi;
-
-const links = computed(() => {
-  return (props.messages || []).flatMap(message => {
-    const rawContent = message.content || '';
-    const matches = rawContent.match(urlRegex) || [];
-    return matches.map(url => ({
-      url,
-      sender: message.sender,
-      created_at: message.created_at,
-      message_id: message.id,
-    }));
-  });
-});
 
 const groupedDocs = computed(() => groupByMonth(documents.value));
 const groupedLinks = computed(() => groupByMonth(links.value));
@@ -727,6 +722,7 @@ const confirmDelete = async () => {
     showDeleteConfirm.value = false;
     showDeleteInfo.value = true;
     cancelDeleteSelection();
+    await loadLinks();
   } catch (error) {
     useAlert(t('CONVERSATION.MEDIA_LIBRARY.DELETE_ERROR'));
   } finally {
@@ -860,7 +856,7 @@ watch(
               <span
                 class="min-w-[1.75rem] px-2 rounded-md text-xs leading-5 font-medium text-center text-n-slate-11 outline outline-1 outline-n-strong"
               >
-                {{ links.length }}
+                {{ loadingLinks ? '…' : linksError ? '—' : linkTotal }}
               </span>
             </span>
           </Button>
@@ -1190,6 +1186,21 @@ watch(
           </div>
 
           <div v-if="activeTab === 'links'" class="flex flex-col gap-3">
+            <p v-if="linksError" role="alert">
+              {{ $t('CONVERSATION.MEDIA_LIBRARY.LOAD_ERROR') }}
+            </p>
+            <Button
+              v-if="linksError || hasMoreLinks"
+              :disabled="loadingLinks"
+              @click="loadLinks(!linksError && hasMoreLinks)"
+            >
+              {{ $t('CONVERSATION.MEDIA_LIBRARY.LOAD_MORE') }}
+            </Button>
+            <span
+              v-if="loadingLinks"
+              class="i-lucide-loader-2 animate-spin"
+              role="status"
+            />
             <div v-if="links.length" class="flex flex-col gap-4">
               <div
                 v-for="group in Object.values(groupedLinks)"
@@ -1202,8 +1213,8 @@ watch(
                 <div class="flex flex-col gap-2">
                   <a
                     v-for="link in group.items"
-                    :key="`${link.url}-${link.created_at}`"
-                    class="relative flex items-center justify-between gap-3 p-3 rounded-lg bg-n-alpha-2 hover:bg-n-alpha-3 text-n-slate-12"
+                    :key="`${link.message_id}-${link.url}`"
+                    class="relative flex flex-col items-start sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-n-alpha-2 hover:bg-n-alpha-3 text-n-slate-12"
                     :class="{
                       'ring-1 ring-blue-500':
                         isForwardSelectionActive &&
@@ -1216,7 +1227,9 @@ watch(
                     rel="noopener noreferrer"
                     @click="handleLinkClick(link, $event)"
                   >
-                    <span class="flex items-center gap-3 truncate">
+                    <span
+                      class="flex items-center gap-3 truncate w-full min-w-0 sm:flex-1"
+                    >
                       <span
                         class="w-8 h-8 rounded-md bg-n-alpha-3 flex items-center justify-center overflow-hidden flex-shrink-0"
                       >
@@ -1237,7 +1250,9 @@ watch(
                         <span class="truncate">{{ link.url }}</span>
                       </span>
                     </span>
-                    <span class="text-xs text-n-slate-11">
+                    <span
+                      class="text-xs text-n-slate-11 shrink-0 whitespace-nowrap"
+                    >
                       {{ formatDateTime(link.created_at) }}
                     </span>
                     <span
@@ -1268,20 +1283,23 @@ watch(
               <div class="text-right text-xs text-n-slate-11">
                 {{
                   $t('CONVERSATION.MEDIA_LIBRARY.LINK_COUNT', {
-                    count: links.length,
+                    count: linkTotal,
                   })
                 }}
               </div>
             </div>
             <div
-              v-else
+              v-else-if="!loadingLinks && !linksError"
               class="flex items-center justify-center py-12 text-sm text-n-slate-11"
             >
               {{ $t('CONVERSATION.MEDIA_LIBRARY.EMPTY') }}
             </div>
           </div>
 
-          <div v-if="hasMoreAttachments" class="flex justify-center pt-2">
+          <div
+            v-if="hasMoreAttachments && activeTab !== 'links'"
+            class="flex justify-center pt-2"
+          >
             <Button
               size="sm"
               variant="ghost"

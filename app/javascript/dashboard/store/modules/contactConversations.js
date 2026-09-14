@@ -23,8 +23,14 @@ export const createConversationPayload = ({ params, contactId, files }) => {
   }
 
   payload.append('inbox_id', inboxId);
-  payload.append('contact_id', contactId);
-  payload.append('source_id', sourceId);
+  if (params.recipient) {
+    Object.entries(params.recipient).forEach(([key, value]) =>
+      payload.append(`recipient[${key}]`, value)
+    );
+  } else {
+    payload.append('contact_id', contactId);
+    payload.append('source_id', sourceId);
+  }
   if (mailSubject) {
     payload.append('additional_attributes[mail_subject]', mailSubject);
   }
@@ -42,6 +48,7 @@ export const createWhatsAppConversationPayload = ({ params }) => {
     source_id: sourceId,
     message,
     assignee_id: assigneeId,
+    ...(params.recipient ? { recipient: params.recipient } : {}),
   };
 
   return payload;
@@ -99,7 +106,7 @@ export const actions = {
 
       const { data } = await ConversationApi.create(payload);
       commit(types.default.ADD_CONTACT_CONVERSATION, {
-        id: contactId,
+        id: contactId || data.meta?.sender?.id,
         data,
       });
 

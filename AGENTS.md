@@ -1,5 +1,28 @@
 # Chatwoot Development Guidelines
 
+## Temporarios de validacao e Nextcloud
+
+- A limpeza dos temporarios criados pelo agente faz parte de cada entrega, inclusive
+  quando testes ou builds falham. Registre os caminhos e remova-os ao terminar.
+- Prefira um diretorio unico por tarefa fora da arvore Nextcloud, no temporario
+  do sistema. Evite acumular bin/Codex*, obj/Codex*, copias de build e logs grandes.
+- Antes de limpar, confirme caminho, origem, conteudo descartavel, ausencia de
+  arquivos versionados e de processos usando os arquivos. Prefixo codex nao basta.
+- Nunca remova bin/obj inteiros, node_modules, caches compartilhados ou builds do
+  usuario por rotina. Nao encerre processos do usuario para liberar arquivos.
+- Preserve fontes, testes, AGENTS.md, .codex de configuracao, .github, .vscode,
+  planos, evidencias solicitadas, backups, credenciais e pacotes de implantacao.
+  Pastas .codex-tmp podem conter entregaveis e exigem revisao antes da remocao.
+- Excluir do Nextcloud nao significa apagar. Use regras especificas por projeto
+  para saidas geradas; nunca exclua bin, build, dist ou todas as pastas ocultas
+  globalmente. No Chatwoot, bin contem scripts versionados, nao compilados C#.
+- Mantenha dependencias e caches regeneraveis fora da sincronizacao; preserve
+  dados persistentes, uploads, bancos e materiais do usuario. Nao amplie o envio
+  de arquivos de autenticacao ao ajustar exclusoes.
+- Informe na entrega o que foi removido, se e recuperavel e qualquer temporario
+  preservado por estar em uso, ser entregavel ou ter origem incerta.
+
+
 ## Build / Test / Lint
 
 - **Setup**: `bundle install && pnpm install`

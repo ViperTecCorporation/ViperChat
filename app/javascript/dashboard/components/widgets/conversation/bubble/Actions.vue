@@ -2,10 +2,14 @@
 import { MESSAGE_TYPE, MESSAGE_STATUS } from 'shared/constants/messages';
 import inboxMixin from 'shared/mixins/inboxMixin';
 import { messageTimestamp } from 'shared/helpers/timeHelper';
+import FavoriteIndicator from 'dashboard/components-next/message/FavoriteIndicator.vue';
 
 export default {
+  components: { FavoriteIndicator },
   mixins: [inboxMixin],
   props: {
+    messageId: { type: [Number, String], default: null },
+    conversationId: { type: [Number, String], default: null },
     sender: {
       type: Object,
       default: () => ({}),
@@ -196,6 +200,11 @@ export default {
 
 <template>
   <div class="message-text--metadata">
+    <FavoriteIndicator
+      v-if="messageId && conversationId"
+      :message-id="messageId"
+      :conversation-id="conversationId"
+    />
     <span
       class="time"
       :class="{

@@ -8,6 +8,10 @@ import {
 } from 'dashboard/composables/store.js';
 
 import ChatListHeader from './ChatListHeader.vue';
+import ArchivedConversations from './ArchivedConversations.vue';
+import { useConversationArchives } from 'dashboard/composables/useConversationArchives';
+import { useConversationPins } from 'dashboard/composables/useConversationPins';
+import { sortPinnedConversations } from 'dashboard/helper/conversationPins';
 import ConversationList from './ConversationList.vue';
 import PushNotificationBanner from './PushNotificationBanner.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -71,6 +75,11 @@ const props = defineProps({
 
 const emit = defineEmits(['conversationLoad', 'listContextChange']);
 const { uiSettings } = useUISettings();
+const { pins } = useConversationPins();
+watch(
+  () => pins.value.join(','),
+  () => emitter.emit('refresh_conversation_list')
+);
 const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
@@ -79,6 +88,8 @@ const store = useStore();
 const resolveAttributesModalRef = ref(null);
 
 const activeAssigneeTab = ref(wootConstants.ASSIGNEE_TYPE.ME);
+const { archives } = useConversationArchives();
+const navigationReady = ref(false);
 const activeStatus = ref(wootConstants.STATUS_TYPE.OPEN);
 const activeSortBy = ref(wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC);
 const showAdvancedFilters = ref(false);
@@ -213,6 +224,12 @@ const hasActiveFolders = computed(() => {
 const hasAppliedFiltersOrActiveFolders = computed(() => {
   return hasAppliedFilters.value || hasActiveFolders.value;
 });
+provide(
+  'activeAssigneeTab',
+  computed(() =>
+    hasAppliedFiltersOrActiveFolders.value ? '' : activeAssigneeTab.value
+  )
+);
 
 const currentUserDetails = computed(() => {
   const { id, name } = currentUser.value;
@@ -478,9 +495,17 @@ const conversationList = computed(() => {
     localConversationList = sortByUnreadStatus(localConversationList);
   }
 
-  return filterGroupsByAssigneeType(
-    localConversationList,
-    activeAssigneeTab.value
+  return sortPinnedConversations(
+    filterGroupsByAssigneeType(
+      localConversationList,
+      activeAssigneeTab.value
+    ).filter(
+      conversation =>
+        hasAppliedFiltersOrActiveFolders.value ||
+        activeAssigneeTab.value !== 'me' ||
+        !archives.value.includes(Number(conversation.id))
+    ),
+    pins.value
   );
 });
 
@@ -748,6 +773,18 @@ function updateAssigneeTab(selectedTab) {
   }
 }
 
+function applyNavigationTab() {
+  const tab = route.query.navigation_tab;
+  if (!navigationReady.value || route.name !== 'home' || !tab) return;
+  if (assigneeTabItems.value.some(item => item.key === tab)) {
+    updateAssigneeTab(tab);
+  }
+  const { navigation_tab: ignored, ...query } = route.query;
+  router.replace({ query });
+}
+
+watch(() => route.query.navigation_tab, applyNavigationTab);
+
 function onBasicFilterChange(value, type) {
   if (type === 'status') {
     activeStatus.value = value;
@@ -945,6 +982,8 @@ onMounted(async () => {
     await store.dispatch('teams/get');
   }
   setFiltersFromUISettings();
+  navigationReady.value = true;
+  applyNavigationTab();
   store.dispatch('setChatListFilters', conversationFilters.value);
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
@@ -1074,6 +1113,10 @@ watch(conversationFilters, (newVal, oldVal) => {
       @chat-tab-change="updateAssigneeTab"
     />
 
+    <ArchivedConversations
+      v-if="activeAssigneeTab === 'me' && !hasAppliedFiltersOrActiveFolders"
+      :key="currentUser.id + ':' + currentAccountId"
+    />
     <PushNotificationBanner :account-id="currentAccountId" />
 
     <p

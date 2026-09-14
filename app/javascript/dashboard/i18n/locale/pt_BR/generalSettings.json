@@ -35,6 +35,12 @@
       }
     },
     "FORM": {
+      "LAST_ASSIGNEE_AS_PARTICIPANT": {
+        "TITLE": "Último agente como participante",
+        "NOTE": "Ao atribuir um agente, ele se torna o único participante da conversa e os demais são removidos. Desativado, os participantes anteriores são mantidos. A mudança se aplica às próximas atribuições.",
+        "SUCCESS": "Preferência atualizada.",
+        "ERROR": "Não foi possível atualizar a preferência."
+      },
       "ERROR": "Por favor, corrigir erros de formulário",
       "GENERAL_SECTION": {
         "TITLE": "Configurações gerais",

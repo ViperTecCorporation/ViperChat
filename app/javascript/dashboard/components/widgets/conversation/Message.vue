@@ -777,6 +777,8 @@ export default {
         </div>
         <BubbleActions
           :id="data.id"
+          :message-id="data.id"
+          :conversation-id="data.conversation_id"
           :sender="data.sender"
           :story-sender="storySender"
           :external-error="errorMessageTooltip"

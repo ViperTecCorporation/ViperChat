@@ -51,11 +51,11 @@ const ALLOWED_FILE_TYPES = {
 };
 
 const getAttachmentId = attachment =>
-  attachment?.message_id ||
-  attachment?.messageId ||
   attachment?.id ||
   attachment?.data_url ||
-  attachment?.dataUrl;
+  attachment?.dataUrl ||
+  attachment?.message_id ||
+  attachment?.messageId;
 
 const getAttachmentUrl = attachment =>
   attachment?.data_url ||
@@ -74,7 +74,21 @@ const normalizeType = type => {
   return lower;
 };
 
-const initialActiveIndex = props.allAttachments.findIndex(
+const attachmentTime = attachment => {
+  const value = attachment.created_at || attachment.timestamp;
+  if (!value) return 0;
+  if (typeof value === 'number') return value < 1e12 ? value * 1000 : value;
+  return Date.parse(value) || 0;
+};
+// Navigate forward in conversation time, regardless of the library's grid order.
+const orderedAttachments = computed(() =>
+  [...props.allAttachments].sort(
+    (a, b) =>
+      attachmentTime(a) - attachmentTime(b) ||
+      (Number(a.id) || 0) - (Number(b.id) || 0)
+  )
+);
+const initialActiveIndex = orderedAttachments.value.findIndex(
   attachment =>
     getAttachmentId(attachment) === getAttachmentId(props.attachment)
 );
@@ -120,6 +134,10 @@ const {
   onMouseMove,
   onMouseLeave,
   resetZoomAndRotation,
+  isTouching,
+  onTouchStart,
+  onTouchMove,
+  onTouchCancel,
 } = useImageZoom(imageRef);
 
 const currentUser = computed(() => getters.getCurrentUser.value);
@@ -213,13 +231,13 @@ const keyboardEvents = {
   ArrowLeft: {
     action: () => {
       const nextIndex = activeImageIndex.value - 1;
-      onClickChangeAttachment(props.allAttachments[nextIndex], nextIndex);
+      onClickChangeAttachment(orderedAttachments.value[nextIndex], nextIndex);
     },
   },
   ArrowRight: {
     action: () => {
       const nextIndex = activeImageIndex.value + 1;
-      onClickChangeAttachment(props.allAttachments[nextIndex], nextIndex);
+      onClickChangeAttachment(orderedAttachments.value[nextIndex], nextIndex);
     },
   },
 };
@@ -256,15 +274,15 @@ onMounted(() => {
     >
       <div
         class="bg-n-background flex flex-col h-[inherit] w-[inherit] overflow-hidden select-none"
-        @click="onClose"
+        @click.self="onClose"
       >
         <header
-          class="z-10 flex items-center justify-between w-full h-16 px-6 py-2 bg-n-background border-b border-n-weak"
+          class="z-10 flex flex-wrap items-center justify-between gap-2 w-full shrink-0 px-2 sm:px-6 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-n-background border-b border-n-weak"
           @click.stop
         >
           <div
             v-if="senderDetails"
-            class="flex items-center min-w-[15rem] shrink-0"
+            class="flex items-center min-w-0 flex-1 sm:flex-initial sm:max-w-60"
           >
             <Avatar
               v-if="senderDetails.avatar"
@@ -274,11 +292,11 @@ onMounted(() => {
               rounded-full
               class="flex-shrink-0"
             />
-            <div class="flex flex-col ml-2 rtl:ml-0 rtl:mr-2 overflow-hidden">
+            <div
+              class="flex flex-col min-w-0 ml-2 rtl:ml-0 rtl:mr-2 overflow-hidden"
+            >
               <h3 class="text-base leading-5 m-0 font-medium">
-                <span
-                  class="overflow-hidden text-n-slate-12 whitespace-nowrap text-ellipsis"
-                >
+                <span class="block truncate text-n-slate-12">
                   {{ senderDetails.name }}
                 </span>
               </h3>
@@ -291,12 +309,14 @@ onMounted(() => {
           </div>
 
           <div
-            class="flex-1 mx-2 px-2 truncate text-sm font-medium text-center text-n-slate-12"
+            class="hidden lg:block flex-1 min-w-0 mx-2 px-2 truncate text-sm font-medium text-center text-n-slate-12"
           >
             <span v-dompurify-html="fileNameFromDataUrl" class="truncate" />
           </div>
 
-          <div class="flex items-center gap-2 ml-2 shrink-0">
+          <div
+            class="order-last sm:order-none flex items-center justify-center gap-2 w-full sm:w-auto shrink-0"
+          >
             <NextButton
               v-if="isImage"
               icon="i-lucide-zoom-in"
@@ -333,12 +353,20 @@ onMounted(() => {
               :disabled="isDownloading"
               @click="onClickDownload"
             />
-            <NextButton icon="i-lucide-x" slate ghost @click="onClose" />
           </div>
+          <NextButton
+            icon="i-lucide-x"
+            :label="t('GENERAL.CLOSE')"
+            :aria-label="t('GENERAL.CLOSE')"
+            class="!min-h-11 shrink-0"
+            slate
+            faded
+            @click="onClose"
+          />
         </header>
 
-        <main class="flex items-stretch flex-1 h-full overflow-hidden">
-          <div class="flex items-center justify-center w-16 shrink-0">
+        <main class="flex items-stretch flex-1 min-h-0 overflow-hidden">
+          <div class="flex items-center justify-center w-11 sm:w-16 shrink-0">
             <NextButton
               v-if="hasMoreThanOneAttachment"
               icon="ltr:i-lucide-chevron-left rtl:i-lucide-chevron-right"
@@ -349,18 +377,20 @@ onMounted(() => {
               :disabled="activeImageIndex === 0"
               @click.stop="
                 onClickChangeAttachment(
-                  allAttachments[activeImageIndex - 1],
+                  orderedAttachments[activeImageIndex - 1],
                   activeImageIndex - 1
                 )
               "
             />
           </div>
 
-          <div class="flex-1 flex items-center justify-center overflow-hidden">
+          <div
+            class="flex-1 min-w-0 flex items-center justify-center overflow-hidden"
+          >
             <div
               v-if="isImage"
               :style="imageWrapperStyle"
-              class="flex items-center justify-center origin-center"
+              class="flex items-center justify-center origin-center touch-none"
               :class="{
                 // Adjust dimensions when rotated 90/270 degrees to maintain visibility
                 // and prevent image from overflowing container in different aspect ratios
@@ -368,6 +398,10 @@ onMounted(() => {
                   activeImageRotation % 180 !== 0,
                 'size-full': activeImageRotation % 180 === 0,
               }"
+              @touchstart.stop="onTouchStart"
+              @touchmove.prevent.stop="onTouchMove"
+              @touchend.stop="onTouchStart"
+              @touchcancel.stop="onTouchCancel"
             >
               <img
                 ref="imageRef"
@@ -375,6 +409,8 @@ onMounted(() => {
                 :src="activeAttachmentUrl"
                 :style="imageStyle"
                 class="max-h-full max-w-full object-contain duration-100 ease-in-out transform select-none"
+                :class="{ '!duration-0': isTouching }"
+                draggable="false"
                 @click.stop
                 @dblclick.stop="onDoubleClickZoomImage"
                 @wheel.prevent.stop="onWheelImageZoom"
@@ -406,7 +442,7 @@ onMounted(() => {
             </audio>
           </div>
 
-          <div class="flex items-center justify-center w-16 shrink-0">
+          <div class="flex items-center justify-center w-11 sm:w-16 shrink-0">
             <NextButton
               v-if="hasMoreThanOneAttachment"
               icon="ltr:i-lucide-chevron-right rtl:i-lucide-chevron-left"
@@ -417,7 +453,7 @@ onMounted(() => {
               :disabled="activeImageIndex === allAttachments.length - 1"
               @click.stop="
                 onClickChangeAttachment(
-                  allAttachments[activeImageIndex + 1],
+                  orderedAttachments[activeImageIndex + 1],
                   activeImageIndex + 1
                 )
               "
@@ -426,7 +462,7 @@ onMounted(() => {
         </main>
 
         <footer
-          class="z-10 flex items-center justify-center h-12 border-t border-n-weak"
+          class="z-10 shrink-0 flex items-center justify-center min-h-12 pb-[env(safe-area-inset-bottom)] border-t border-n-weak"
         >
           <div
             class="rounded-md flex items-center justify-center px-3 py-1 bg-n-slate-3 text-n-slate-12 text-sm font-medium"

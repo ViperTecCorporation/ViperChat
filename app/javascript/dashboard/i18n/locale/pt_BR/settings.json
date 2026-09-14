@@ -1,5 +1,23 @@
 {
   "PROFILE_SETTINGS": {
+    "NAVIGATION_SHORTCUTS": {
+      "TITLE": "Atalhos de navegação",
+      "DESCRIPTION": "Selecione um campo e pressione Alt, Ctrl ou Meta junto de um caractere; depois salve. Os atalhos funcionam fora do editor e respeitam as permissões da conta. Para Alt + @, use também Shift se o teclado exigir. Combinações reservadas pelo navegador ou sistema podem não funcionar.",
+      "SAVE": "Salvar atalhos",
+      "RESET": "Restaurar padrões",
+      "SAVED": "Atalhos salvos.",
+      "ERROR": "Não foi possível salvar os atalhos. Tente novamente.",
+      "DUPLICATE": "Esta combinação já está atribuída a outra ação de navegação.",
+      "ACTIONS": {
+        "all": "Todas as conversas",
+        "me": "Minhas",
+        "mentions": "Menções",
+        "groups": "Grupos",
+        "unattended": "Não atendidos",
+        "participating": "Participante",
+        "internal": "Chat interno"
+      }
+    },
     "LINK": "Configurações do Perfil",
     "TITLE": "Configurações do Perfil",
     "BTN_TEXT": "Atualizar o Perfil",

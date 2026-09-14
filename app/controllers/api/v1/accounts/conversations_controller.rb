@@ -3,8 +3,9 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   include DateRangeHelper
   include HmacConcern
 
-  before_action :conversation, except: [:index, :meta, :search, :create, :filter]
-  before_action :inbox, :contact, :contact_inbox, only: [:create]
+  before_action :conversation, except: [:index, :meta, :search, :create, :filter, :archived]
+  before_action :inbox, only: [:create]
+  before_action :contact, :contact_inbox, only: [:create], unless: -> { params[:recipient].present? }
 
   ATTACHMENT_RESULTS_PER_PAGE = 100
 
@@ -36,9 +37,38 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def show; end
 
+  def archive
+    archived = ActiveModel::Type::Boolean.new.cast(params.require(:archived))
+    ids = Conversations::ArchiveService.new(current_user, current_account).update(@conversation, archived)
+    ActionCableBroadcastJob.perform_later(
+      [current_user.pubsub_token], 'conversation.archive_changed',
+      { account_id: current_account.id, user_id: current_user.id }
+    )
+    render json: { archived_conversations: ids }
+  end
+
+  def archived
+    ids = Conversations::ArchiveService.new(current_user, current_account).ids
+    return render json: { archived_conversations: ids } if params[:ids_only].to_s == 'true'
+
+    scope = Search::ConversationVisibilityService.new(current_user: current_user, current_account: current_account).conversations
+    @conversations = scope.where(display_id: ids).order(last_activity_at: :desc, id: :desc)
+                          .page([params[:page].to_i, 1].max).per(25)
+  end
+
+  def pin
+    pinned = ActiveModel::Type::Boolean.new.cast(params.require(:pinned))
+    ids = Conversations::PinService.new(current_user, current_account).update(@conversation, pinned)
+    render json: { pinned_conversations: ids }
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   def create
     ActiveRecord::Base.transaction do
+      resolve_direct_recipient if params[:recipient].present?
       @conversation = ConversationBuilder.new(params: params, contact_inbox: @contact_inbox).perform
+      authorize_direct_conversation if params[:recipient].present?
       Messages::MessageBuilder.new(Current.user, @conversation, params[:message]).perform if params[:message].present?
     end
   end
@@ -228,6 +258,19 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
       source_id: params[:source_id],
       hmac_verified: hmac_verified?
     ).perform
+  end
+
+  def resolve_direct_recipient
+    params.require(:message)
+    @contact_inbox = Conversations::DirectRecipientService.new(
+      account: Current.account, inbox: @inbox, user: Current.user,
+      recipient: params.require(:recipient).permit(:phone_number, :bsuid)
+    ).perform
+  end
+
+  def authorize_direct_conversation
+    visibility = Search::ConversationVisibilityService.new(current_user: Current.user, current_account: Current.account)
+    raise Pundit::NotAuthorizedError unless visibility.conversations.exists?(id: @conversation.id)
   end
 
   def conversation_finder

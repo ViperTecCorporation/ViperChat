@@ -52,7 +52,7 @@ class Conversations::FilterService < FilterService
   end
 
   def conversations
-    @conversations.sort_on_last_activity_at.page(current_page)
+    Conversations::PinService.new(@user, @account).order(@conversations.sort_on_last_activity_at).page(current_page)
   end
 
   private

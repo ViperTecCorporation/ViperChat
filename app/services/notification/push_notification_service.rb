@@ -4,6 +4,8 @@ class Notification::PushNotificationService
   pattr_initialize [:notification!]
 
   def perform
+    return if Conversations::ArchiveService.muted_notification?(notification.user, notification.conversation, notification.notification_type)
+
     return unless user_subscribed_to_notification?
 
     notification_subscriptions.each do |subscription|

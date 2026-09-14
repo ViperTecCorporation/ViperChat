@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import Avatar from 'next/avatar/Avatar.vue';
+import AvatarPreview from 'dashboard/components-next/avatar/AvatarPreview.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 
 const props = defineProps({
@@ -36,23 +37,25 @@ const selectedModel = computed({
     @mouseenter="onThumbnailHover"
     @mouseleave="onThumbnailLeave"
   >
-    <Avatar
+    <AvatarPreview
       v-if="!hideThumbnail"
       :name="contact.name"
       :src="contact.thumbnail"
-      :size="24"
-      :status="contact.availability_status"
-      hide-offline-status
     >
-      <template v-if="enableSelection" #overlay>
-        <div
-          v-if="hovered || selected"
-          class="flex items-center justify-center rounded-md cursor-pointer absolute inset-0 z-10 backdrop-blur-[2px] size-6"
-          @click.stop
-        >
-          <Checkbox v-model="selectedModel" />
-        </div>
-      </template>
-    </Avatar>
+      <Avatar
+        :name="contact.name"
+        :src="contact.thumbnail"
+        :size="24"
+        :status="contact.availability_status"
+        hide-offline-status
+      />
+    </AvatarPreview>
+    <div
+      v-if="!hideThumbnail && enableSelection && (hovered || selected)"
+      class="absolute -bottom-2 ltr:-right-1 rtl:-left-1 z-10 rounded bg-n-background"
+      @click.stop
+    >
+      <Checkbox v-model="selectedModel" />
+    </div>
   </div>
 </template>

@@ -1,5 +1,23 @@
 {
   "PROFILE_SETTINGS": {
+    "NAVIGATION_SHORTCUTS": {
+      "TITLE": "Navigation shortcuts",
+      "DESCRIPTION": "Select a field and press Alt, Ctrl or Meta together with a character, then save. Shortcuts apply outside editors and respect account permissions. For Alt + @, also use Shift if your keyboard requires it. Browser/system-reserved combinations may not work.",
+      "SAVE": "Save shortcuts",
+      "RESET": "Restore defaults",
+      "SAVED": "Shortcuts saved.",
+      "ERROR": "Could not save shortcuts. Try again.",
+      "DUPLICATE": "This combination is already assigned to another navigation action.",
+      "ACTIONS": {
+        "all": "All conversations",
+        "me": "Mine",
+        "mentions": "Mentions",
+        "groups": "Groups",
+        "unattended": "Unattended",
+        "participating": "Participating",
+        "internal": "Internal chat"
+      }
+    },
     "LINK": "Profile Settings",
     "TITLE": "Profile Settings",
     "BTN_TEXT": "Update Profile",

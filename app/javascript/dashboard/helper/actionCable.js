@@ -1,4 +1,5 @@
 import AuthAPI from '../api/auth';
+import types from 'dashboard/store/mutation-types';
 import BaseActionCableConnector from '../../shared/helpers/BaseActionCableConnector';
 import DashboardAudioNotificationHelper from './AudioAlerts/DashboardAudioNotificationHelper';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
@@ -42,6 +43,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'contact.updated': this.onContactUpdate,
       'conversation.mentioned': this.onConversationMentioned,
       'notification.created': this.onNotificationCreated,
+      'conversation.archive_changed': this.onArchiveChanged,
       'notification.deleted': this.onNotificationDeleted,
       'notification.updated': this.onNotificationUpdated,
       'conversation.read': this.onConversationRead,
@@ -311,6 +313,19 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onNotificationCreated = data => {
     this.app.$store.dispatch('notifications/addNotification', data);
+  };
+
+  onArchiveChanged = data => {
+    const settings = this.app.$store.getters.getUISettings;
+    this.app.$store.commit(types.SET_CURRENT_USER_UI_SETTINGS, {
+      uiSettings: {
+        archived_conversations: {
+          ...settings?.archived_conversations,
+          [data.account_id]: data.archived_conversations,
+        },
+      },
+    });
+    emitter.emit('refresh_conversation_list');
   };
 
   onNotificationDeleted = data => {
