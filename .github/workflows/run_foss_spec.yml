@@ -87,6 +87,12 @@ jobs:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4.4.0
 
+      - name: Install image processing dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libvips-tools
+          vips --version
+
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
