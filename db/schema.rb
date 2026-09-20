@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_09_14_010000) do
+ActiveRecord::Schema[7.1].define(version: 2026_09_19_020000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -749,6 +749,15 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_14_010000) do
     t.index ["name", "account_id"], name: "index_companies_on_name_and_account_id"
   end
 
+  create_table "contact_identity_repair_audits", force: :cascade do |t|
+    t.string "source_table", null: false
+    t.bigint "source_id", null: false
+    t.jsonb "original_row", null: false
+    t.bigint "retained_id"
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["source_table", "source_id"], name: "idx_contact_identity_repair_original", unique: true
+  end
+
   create_table "contact_inboxes", force: :cascade do |t|
     t.bigint "contact_id"
     t.bigint "inbox_id"
@@ -802,6 +811,15 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_14_010000) do
     t.index ["name", "email", "phone_number", "identifier"], name: "index_contacts_on_name_email_phone_number_identifier", opclass: :gin_trgm_ops, using: :gin
     t.index ["phone_number", "account_id"], name: "index_contacts_on_phone_number_and_account_id"
     t.index ["whatsapp_username"], name: "idx_contacts_whatsapp_username_trgm", opclass: :gin_trgm_ops, using: :gin
+  end
+
+  create_table "conversation_identity_repair_audits", force: :cascade do |t|
+    t.string "source_table", null: false
+    t.bigint "source_id", null: false
+    t.jsonb "original_row", null: false
+    t.bigint "retained_id"
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["source_table", "source_id"], name: "idx_conversation_identity_repair_original", unique: true
   end
 
   create_table "conversation_participants", force: :cascade do |t|

@@ -24,6 +24,26 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
   describe '#perform' do
     let(:service) { described_class.new(attachment) }
 
+    context 'when the audio was sent by an agent' do
+      before { message.update!(message_type: :outgoing) }
+
+      it 'does not transcribe or check the usage quota' do
+        expect(service).not_to receive(:can_transcribe?)
+        expect(service).not_to receive(:transcribe_audio)
+        expect(service.perform).to eq({ error: 'Only incoming public audio messages can be transcribed' })
+      end
+    end
+
+    context 'when the message is private' do
+      before { message.update!(private: true) }
+
+      it 'does not transcribe or check the usage quota' do
+        expect(service).not_to receive(:can_transcribe?)
+        expect(service).not_to receive(:transcribe_audio)
+        expect(service.perform).to eq({ error: 'Only incoming public audio messages can be transcribed' })
+      end
+    end
+
     context 'when captain_integration feature is not enabled' do
       before do
         account.disable_features!('captain_integration')

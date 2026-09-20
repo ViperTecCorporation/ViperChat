@@ -7,6 +7,22 @@ describe Whatsapp::MessageDedupLock do
 
   after { Redis::Alfred.delete(redis_key) }
 
+  it 'releases a failed processing lease so the event can be retried' do
+    lock.acquire!
+    lock.release!
+    expect(described_class.new(source_id).acquire!).to be_truthy
+  end
+
+  it 'does not release another worker lease after expiration' do
+    lock.acquire!
+    Redis::Alfred.delete(redis_key)
+    replacement = described_class.new(source_id)
+    replacement.acquire!
+    lock.release!
+    expect { lock.ensure_owned! }.to raise_error(Whatsapp::MessageDedupLock::Busy)
+    expect { replacement.ensure_owned! }.not_to raise_error
+  end
+
   describe '#acquire!' do
     it 'returns truthy on first acquire' do
       expect(lock.acquire!).to be_truthy

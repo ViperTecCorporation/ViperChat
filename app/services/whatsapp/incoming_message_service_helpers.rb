@@ -288,6 +288,9 @@ module Whatsapp::IncomingMessageServiceHelpers
   def lock_message_source_id!
     return false if messages_data.blank?
 
-    Whatsapp::MessageDedupLock.new("#{inbox.id}:#{messages_data.first[:id]}").acquire!
+    @message_dedup_lock = Whatsapp::MessageDedupLock.new("#{inbox.id}:#{messages_data.first[:id]}")
+    raise Whatsapp::MessageDedupLock::Busy, 'WhatsApp message already processing' unless @message_dedup_lock.acquire!
+
+    true
   end
 end

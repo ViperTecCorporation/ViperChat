@@ -35,6 +35,12 @@ RSpec.describe Webhooks::WhatsappEventsJob do
   end
 
   context 'when whatsapp_cloud provider' do
+    it 'retries an in-flight message rather than acknowledging it as completed' do
+      allow(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).and_return(process_service)
+      allow(process_service).to receive(:perform).and_raise(Whatsapp::MessageDedupLock::Busy)
+      expect { job.perform_now(params) }.to have_enqueued_job(described_class).with(params).on_queue('low')
+    end
+
     it 'enqueue Whatsapp::IncomingMessageWhatsappCloudService' do
       allow(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).and_return(process_service)
       expect(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new)

@@ -128,9 +128,9 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
       .to contain_exactly('5566999069708', '53515477086263@lid')
     expect(other_channel.inbox.contact_inboxes.where(contact: contact).pluck(:source_id))
       .to contain_exactly('53515477086263@lid')
-    expect(stale_message.reload.conversation).to eq(phone_conversation)
+    expect(stale_message.reload.conversation).to eq(stale_conversation)
     expect(channel.inbox.conversations.where(contact: contact).count).to eq(1)
-    expect(Conversation.exists?(stale_conversation.id)).to be(false)
+    expect(Conversation.exists?(phone_conversation.id)).to be(false)
     expect(client).to have_received(:import_contact).with(hash_including(
                                                             phone_number: '5566999069708',
                                                             user_id: '53515477086263@lid'
@@ -194,8 +194,8 @@ describe Whatsapp::Unoapi::ContactSync::ContactExporter do
     expect(exporter.perform).to eq(:processed)
     expect(Contact.exists?(lid_contact.id)).to be(false)
     expect(lid_message.reload.sender).to eq(contact)
-    expect(lid_message.conversation).to eq(phone_conversation)
-    expect(Conversation.exists?(lid_conversation.id)).to be(false)
+    expect(lid_message.conversation).to eq(lid_conversation)
+    expect(Conversation.exists?(phone_conversation.id)).to be(false)
   end
 
   it 'keeps separate conversations when the UnoAPI inbox does not lock contacts to one conversation' do

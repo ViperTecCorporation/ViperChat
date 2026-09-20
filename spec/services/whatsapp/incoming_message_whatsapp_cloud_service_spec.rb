@@ -808,9 +808,9 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         described_class.new(inbox: whatsapp_channel.inbox, params: one_to_one_params).perform
 
         message = whatsapp_channel.inbox.messages.find_by!(source_id: 'wamid.ONE_TO_ONE_MESSAGE_ID')
-        expect(message.conversation).to eq(phone_conversation)
-        expect(old_bsuid_message.reload.conversation).to eq(phone_conversation)
-        expect(Conversation.exists?(bsuid_conversation.id)).to be(false)
+        expect(message.conversation).to eq(bsuid_conversation)
+        expect(old_bsuid_message.reload.conversation).to eq(bsuid_conversation)
+        expect(Conversation.exists?(phone_conversation.id)).to be(false)
         expect(whatsapp_channel.inbox.conversations.where(contact: phone_contact).count).to eq(1)
       end
 

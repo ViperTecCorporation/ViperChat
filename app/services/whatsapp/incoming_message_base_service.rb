@@ -64,6 +64,9 @@ class Whatsapp::IncomingMessageBaseService
     return if process_message_edit
     return if reconcile_existing_message(messages_data.first[:id])
     return unless lock_message_source_id!
+    # Do not reuse an earlier query-cache miss after acquiring the lease.
+    return if ActiveRecord::Base.uncached { reconcile_existing_message(messages_data.first[:id]) }
+
     set_message_type
     set_contact
     return unless @contact
@@ -72,7 +75,10 @@ class Whatsapp::IncomingMessageBaseService
     ActiveRecord::Base.transaction do
       set_conversation
       create_messages
+      @message_dedup_lock.ensure_owned!
     end
+  ensure
+    @message_dedup_lock&.release!
   end
 
   def process_statuses
@@ -456,19 +462,12 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def merge_contact_conversation_aliases
-    conversations = contact_conversation_aliases.to_a
-    return if conversations.size <= 1
-
-    target = preferred_contact_conversation(conversations)
-    mergees = conversations - [target]
-    Message.where(conversation_id: mergees.map(&:id)).update_all(conversation_id: target.id) # rubocop:disable Rails/SkipsModelValidations
-    target.update_columns(last_activity_at: conversations.filter_map(&:last_activity_at).max, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    mergees.each(&:destroy!)
+    Conversations::SingleConversationMergeService.new(inbox: @inbox, contact: @contact).perform
   end
 
   def existing_contact_conversation
     conversations = contact_conversation_aliases
-    return conversations.last if single_conversation_for_contact_aliases?
+    return conversations.reorder(created_at: :desc, id: :desc).first if single_conversation_for_contact_aliases?
 
     conversations.where.not(status: :resolved).last
   end
@@ -478,12 +477,6 @@ class Whatsapp::IncomingMessageBaseService
     return conversations if single_conversation_for_contact_aliases?
 
     conversations.where(contact_inbox_id: contact_inbox_aliases.select(:id))
-  end
-
-  def preferred_contact_conversation(conversations)
-    conversations.select { |conversation| conversation.contact_inbox.source_id.exclude?('@') }
-                 .max_by { |conversation| [conversation.last_activity_at, conversation.id] } ||
-      conversations.max_by { |conversation| [conversation.last_activity_at, conversation.id] }
   end
 
   def contact_inbox_aliases

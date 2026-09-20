@@ -2,7 +2,7 @@
   "PROFILE_SETTINGS": {
     "NAVIGATION_SHORTCUTS": {
       "TITLE": "Atalhos de navegação",
-      "DESCRIPTION": "Selecione um campo e pressione Alt, Ctrl ou Meta junto de um caractere; depois salve. Os atalhos funcionam fora do editor e respeitam as permissões da conta. Para Alt + @, use também Shift se o teclado exigir. Combinações reservadas pelo navegador ou sistema podem não funcionar.",
+      "DESCRIPTION": "Selecione um campo e pressione Alt, Ctrl ou Meta junto de um caractere; depois salve. Os atalhos funcionam fora do editor e respeitam as permissões da conta. Para Alt + {'@'}, use também Shift se o teclado exigir. Combinações reservadas pelo navegador ou sistema podem não funcionar.",
       "SAVE": "Salvar atalhos",
       "RESET": "Restaurar padrões",
       "SAVED": "Atalhos salvos.",
