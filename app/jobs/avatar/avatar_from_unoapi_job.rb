@@ -43,8 +43,7 @@ class Avatar::AvatarFromUnoapiJob < ApplicationJob
     end
 
     result = Whatsapp::Unoapi::ProfilePictureClient.new(channel).fetch(picture_id)
-    attach_avatar(contact, result, picture_id)
-    mark_synced(contact, picture_id, options[:avatar_metadata], options[:signature])
+    sync_avatar(contact, result, picture_id, options)
   rescue Whatsapp::Unoapi::ProfilePictureClient::NotFoundError
     enqueue_fallback(contact, options)
     release_reservation(contact, options[:signature])
@@ -59,6 +58,16 @@ class Avatar::AvatarFromUnoapiJob < ApplicationJob
 
   private
 
+  def sync_avatar(contact, result, picture_id, options)
+    contact.with_lock do
+      reserved = contact.additional_attributes['unoapi_avatar_enqueued_signature']
+      next if options[:signature].present? && reserved.present? && reserved != options[:signature]
+
+      Avatar::GroupAvatarService.new(contact).replace { attach_avatar(contact, result, picture_id) }
+      mark_synced(contact, picture_id, options[:avatar_metadata], options[:signature])
+    end
+  end
+
   def participant_picture_for_group?(contact, channel, picture_id)
     return false unless picture_id.to_s.end_with?('@lid', '@s.whatsapp.net', '@c.us')
 
@@ -66,11 +75,12 @@ class Avatar::AvatarFromUnoapiJob < ApplicationJob
   end
 
   def attach_avatar(contact, result, picture_id)
-    contact.avatar.attach(
+    blob = ActiveStorage::Blob.create_and_upload!(
       io: StringIO.new(result.body),
       filename: "unoapi-profile-#{Digest::SHA256.hexdigest(picture_id)[0, 12]}#{extension_for(result.content_type)}",
       content_type: result.content_type
     )
+    contact.avatar.attach(blob)
   end
 
   def extension_for(content_type)

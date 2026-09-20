@@ -22,6 +22,11 @@ class RepairDuplicateContactIdentities < ActiveRecord::Migration[7.1] # rubocop:
     connection.transaction do
       prepare_repair
       validate_ownership!
+      # Legacy duplicates can coexist with an incomplete unique index. Even an
+      # unrelated UPDATE may recheck uniqueness before we remove the duplicate.
+      # Drop under the existing write locks and rebuild within this transaction;
+      # rollback restores the original indexes as well as the original rows.
+      INDEXES.each { |name, (table, _columns)| remove_index table, name: name, if_exists: true }
       create_archive
       mapping = contact_mapping
       say "Contact identities to consolidate: #{mapping.size}"
@@ -32,7 +37,6 @@ class RepairDuplicateContactIdentities < ActiveRecord::Migration[7.1] # rubocop:
       refresh_counters
       INDEXES.each do |name, (table, columns)|
         # Rebuild only these three integrity constraints, under the same locks.
-        remove_index table, name: name, if_exists: true
         add_index table, columns, name: name, unique: true
       end
     end

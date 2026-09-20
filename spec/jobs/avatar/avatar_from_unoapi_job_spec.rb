@@ -57,6 +57,40 @@ RSpec.describe Avatar::AvatarFromUnoapiJob do
       .with(contact, fallback_url, { 'etag' => 'v1' })
   end
 
+  it 'serializes group replacements even when workers loaded the contact before either update' do
+    create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '123@g.us')
+    stale_contact = Contact.find(contact.id)
+    stale_contact.avatar_attachment
+    result = Whatsapp::Unoapi::ProfilePictureClient::Result.new(
+      body: Rails.root.join('spec/assets/avatar.png').binread, content_type: 'image/png'
+    )
+    client = instance_double(Whatsapp::Unoapi::ProfilePictureClient, fetch: result)
+    allow(Whatsapp::Unoapi::ProfilePictureClient).to receive(:new).and_return(client)
+    described_class.perform_now(contact, channel, '123@g.us')
+    old_blob = contact.reload.avatar.blob
+    described_class.perform_now(stale_contact, channel, '123@g.us')
+
+    expect(ActiveStorage::Attachment.where(record: contact, name: 'avatar').count).to eq(1)
+    expect(ActiveStorage::Attachment.where(record: contact, blob: old_blob).sole.name).to start_with('group_avatar_history_')
+    expect(old_blob.download).to be_present
+  end
+
+  it 'does not replace a group photo when a newer download reservation superseded the job' do
+    create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '123@g.us')
+    contact.avatar.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'manual.png', content_type: 'image/png')
+    original_id = contact.avatar.blob.id
+    contact.update!(additional_attributes: { unoapi_avatar_enqueued_signature: 'newer' })
+    result = Whatsapp::Unoapi::ProfilePictureClient::Result.new(
+      body: Rails.root.join('spec/assets/avatar.png').binread, content_type: 'image/png'
+    )
+    allow(Whatsapp::Unoapi::ProfilePictureClient).to receive(:new).and_return(
+      instance_double(Whatsapp::Unoapi::ProfilePictureClient, fetch: result)
+    )
+    described_class.perform_now(contact, channel, '123@g.us', { signature: 'older' })
+    expect(contact.reload.avatar.blob.id).to eq(original_id)
+    expect(contact.additional_attributes['unoapi_avatar_enqueued_signature']).to eq('newer')
+  end
+
   it 'never serializes the UnoAPI token in the queued arguments' do
     described_class.enqueue_if_needed(contact, channel, picture_id)
 

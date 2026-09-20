@@ -79,3 +79,48 @@ mesmo quando restaram metadados antigos. Falhas na busca não removem o avatar.
 
 Regressão após esse ajuste: 535 exemplos, zero falhas, lint dos quatro arquivos
 alterados sem infrações. A correção é de backend e não exige reinstalar os apps.
+
+## Múltiplos avatares ativos no mesmo grupo
+
+Foram encontrados vários vínculos `avatar` no mesmo contato. A associação
+`has_one_attached` não impede esse estado legado: a seleção podia devolver a foto
+antiga de um participante mesmo após a sincronização correta do grupo.
+
+`Avatar::GroupAvatarService` seleciona a foto identificada como pertencente ao
+grupo e preserva fotos manuais. Atualizações pelo job UnoAPI e pelo job de URL
+arquivam os vínculos anteriores em uma transação com bloqueio do contato, usando
+o nome `group_avatar_history_<attachment_id>`. Nenhum blob é apagado. No job UnoAPI,
+o upload termina antes da associação do blob ao contato. Fotos históricas passam
+a consumir armazenamento até uma eventual política de retenção, fora deste reparo.
+
+### Simulação e aplicação controlada
+
+Somente leitura, limitada à conta informada:
+
+```sh
+ACCOUNT_ID=1 RAILS_ENV=production bundle exec rails runner script/repair_duplicate_group_avatars.rb
+```
+
+O reparo automático exige identidade única de grupo e foto confirmada pelo hash
+do JID no nome do arquivo. Casos ambíguos, fotos manuais e downloads por URL sem
+essa comprovação são excluídos da aplicação automática.
+
+Exemplo de aplicação, somente após revisar a simulação e autorizar os contatos:
+
+```sh
+ACCOUNT_ID=1 APPLY_CONTACT_IDS=4697,51828 BACKUP_PATH=/private/group-avatars.jsonl \
+  RAILS_ENV=production bundle exec rails runner script/repair_duplicate_group_avatars.rb
+```
+
+O backup é criado exclusivamente, com permissão 0600, e sincronizado em disco
+antes da alteração de cada contato. Cada contato tem sua própria transação;
+uma falha posterior não desfaz contatos já reparados. Os IDs são validados no
+escopo da conta. A aplicação altera apenas os nomes dos vínculos antigos.
+
+Para recuperação, revisar o snapshot e restaurar os nomes dos vínculos somente
+após verificar que não houve novas fotos. Não sobrepor atualizações posteriores.
+Restaurar os nomes antigos também restaura a duplicidade original.
+
+Validação local: 561 exemplos sem falhas e RuboCop sem infrações nos oito arquivos
+Ruby alterados/adicionados. Mudança somente de backend. A simulação em produção
+não aplica o reparo nem executa migrations.

@@ -22,6 +22,25 @@ Em instalações com vínculos entre contas diferentes ou conflito de unicidade 
 
 O `down` é irreversível: rollback durante a execução é automático; após commit e novas gravações, desfazer exige plano usando backup e auditoria, não um unmerge automático. Guardar o backup original fora da pasta sincronizada.
 
+### Índices existentes com cobertura inconsistente
+
+A execução inicial da imagem `.25` em produção falhou ao atualizar um vínculo
+duplicado antes de removê-lo: o índice único existente rejeitou o UPDATE. A rotina
+agora remove os três índices listados em `INDEXES` **depois de adquirir os locks e
+validar as contas, antes de alterar registros**, reconstruindo-os ao final da mesma
+transação. Não há janela de escrita concorrente sem unicidade: os locks permanecem
+até o commit. Em erro, PostgreSQL restaura dados e DDL, inclusive os índices antigos.
+
+Os testes usam índices parciais para simular cobertura incompleta sem provocar
+corrupção física. Verificam a ordem das operações, reconstrução integral e rollback.
+Uma restauração lógica não reproduz corrupção física de índice: ela reconstrói os
+índices e pode rejeitar os três índices únicos por duplicidades existentes.
+
+O serviço automático deve condicionar web e workers a
+`chatwoot-migrate: { condition: service_completed_successfully }` no `depends_on`.
+Isso impede a subida inicial após uma falha, mas não substitui uma janela de
+manutenção: processos já em execução precisam ser parados antes deste reparo.
+
 ## Validação local
 
 Backup pré-reparo restaurado em PostgreSQL 16.11, sem iniciar Rails/Sidekiq:

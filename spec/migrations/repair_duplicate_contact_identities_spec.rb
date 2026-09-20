@@ -121,4 +121,44 @@ RSpec.describe RepairDuplicateContactIdentities do
     SQL
     expect { described_class.new.up }.to raise_error(/Cross-account/)
   end
+
+  it 'removes existing incomplete unique indexes before touching duplicate rows and rebuilds full constraints' do
+    # Partial indexes safely model incomplete coverage without corrupting PostgreSQL.
+    db.execute <<~SQL.squish
+      INSERT INTO contacts(id,account_id,email) VALUES(1,1,'same@example.com'),(2,1,'same@example.com');
+      INSERT INTO contact_inboxes(id,contact_id,inbox_id,source_id) VALUES(10,1,1,'same'),(11,2,1,'same');
+      CREATE UNIQUE INDEX uniq_email_per_account_contact ON contacts(email,account_id) WHERE id=1;
+      CREATE UNIQUE INDEX index_contact_inboxes_on_inbox_id_and_source_id ON contact_inboxes(inbox_id,source_id) WHERE id=10;
+      CREATE UNIQUE INDEX index_notification_subscriptions_on_identifier ON notification_subscriptions(identifier);
+    SQL
+    allow(db).to receive(:execute).and_wrap_original do |original, sql, *args, **kwargs|
+      if sql.match?(/\AUPDATE (?:"?contacts"?|"?contact_inboxes"?)\b/i)
+        expect(db.indexes('contacts').map(&:name)).not_to include('uniq_email_per_account_contact')
+        expect(db.indexes('contact_inboxes').map(&:name)).not_to include('index_contact_inboxes_on_inbox_id_and_source_id')
+      end
+      original.call(sql, *args, **kwargs)
+    end
+
+    described_class.new.up
+
+    expect(db.select_values('SELECT id FROM contacts')).to eq([1])
+    expect(db.select_values('SELECT id FROM contact_inboxes')).to eq([10])
+    described_class::INDEXES.each do |name, (table, _columns)|
+      index = db.indexes(table).find { |item| item.name == name }
+      expect(index.unique).to be(true)
+      expect(index.where).to be_nil
+    end
+  end
+
+  it 'restores existing indexes and rows when repair aborts after dropping indexes' do
+    db.execute <<~SQL.squish
+      INSERT INTO contacts(id,account_id,email) VALUES(1,1,'same@example.com'),(2,1,'same@example.com');
+      CREATE UNIQUE INDEX uniq_email_per_account_contact ON contacts(email,account_id) WHERE id=1;
+      INSERT INTO notification_subscriptions(id,user_id,identifier,subscription_type) VALUES(1,10,'device',1),(2,11,'device',1);
+    SQL
+    expect { db.transaction(requires_new: true) { described_class.new.up } }.to raise_error(/different users/)
+    expect(db.select_values('SELECT id FROM contacts ORDER BY id')).to eq([1, 2])
+    expect(db.indexes('contacts').find { |index| index.name == 'uniq_email_per_account_contact' }.where).to be_present
+    expect(db.table_exists?('contact_identity_repair_audits')).to be(false)
+  end
 end
