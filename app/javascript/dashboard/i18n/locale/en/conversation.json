@@ -1,5 +1,10 @@
 {
   "CONVERSATION": {
+    "UNOAPI_WARNING": {
+      "TITLE": "Sending notice",
+      "WITHOUT_QUOTE": "Sent without a quote. The original message could not be found on WhatsApp.",
+      "REFERENCE_NOT_SENT": "Reference not sent"
+    },
     "ARCHIVE": {
       "TITLE": "Archived",
       "ACTION": "Archive conversation",

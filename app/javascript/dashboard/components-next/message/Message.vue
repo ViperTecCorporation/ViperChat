@@ -48,6 +48,7 @@ import UnoapiInteractiveBubble from './bubbles/UnoapiInteractive.vue';
 import UnoapiCatalogBubble from './bubbles/UnoapiCatalog.vue';
 
 import MessageError from './MessageError.vue';
+import UnoapiWarning from './UnoapiWarning.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { useBranding } from 'shared/composables/useBranding';
@@ -872,6 +873,7 @@ provideMessageContext({
             {{ t('CONVERSATION.SENT_BY') }} {{ senderDisplayName }}
           </span>
           <Component :is="componentToRender" />
+          <UnoapiWarning :content-attributes="contentAttributes" />
           <span
             v-if="shouldShowDeletedMediaNotice"
             class="mt-1 px-3 text-xs font-medium text-n-slate-11"

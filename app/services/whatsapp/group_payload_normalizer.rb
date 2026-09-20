@@ -14,7 +14,7 @@ class Whatsapp::GroupPayloadNormalizer
       group_source_id: group_source_id,
       group_title: contact[:group_subject].presence || group_source_id,
       group_picture: contact[:group_picture].presence,
-      group_picture_id: contact[:group_picture_id].presence || contact.dig(:profile, :picture_id).presence,
+      group_picture_id: contact[:group_picture_id].presence,
       group_picture_metadata: avatar_metadata_from(contact),
       sender_identifier: sender_identifier,
       sender_phone: sender_phone,

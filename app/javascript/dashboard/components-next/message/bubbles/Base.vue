@@ -22,9 +22,18 @@ const {
   variant,
   orientation,
   inReplyTo,
+  contentAttributes,
   shouldGroupWithNext,
 } = useMessageContext();
 const { t } = useI18n();
+const quoteNotSent = computed(() => {
+  const attrs = contentAttributes?.value || {};
+  const warnings = attrs.unoapiWarnings ?? attrs.unoapi_warnings;
+  return (
+    Array.isArray(warnings) &&
+    warnings.some(warning => warning?.code === 'REPLY_SENT_WITHOUT_QUOTE')
+  );
+});
 
 const varaintBaseMap = {
   [MESSAGE_VARIANTS.AGENT]: 'bg-n-solid-blue text-n-slate-12',
@@ -115,6 +124,9 @@ const replyToPreview = computed(() => {
       class="p-2 -mx-1 mb-2 rounded-lg cursor-pointer bg-n-alpha-black1"
       @click="scrollToMessage"
     >
+      <p v-if="quoteNotSent" class="mb-1 text-xs font-medium text-n-amber-11">
+        {{ t('CONVERSATION.UNOAPI_WARNING.REFERENCE_NOT_SENT') }}
+      </p>
       <div
         v-dompurify-html="replyToPreview"
         class="prose prose-bubble line-clamp-2"

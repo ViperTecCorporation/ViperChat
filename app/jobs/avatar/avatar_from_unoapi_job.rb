@@ -36,6 +36,12 @@ class Avatar::AvatarFromUnoapiJob < ApplicationJob
     return unless channel.is_a?(Channel::Whatsapp) && channel.provider == 'unoapi'
 
     options = options.with_indifferent_access
+    # Older queued jobs may carry a participant JID for a group contact.
+    if participant_picture_for_group?(contact, channel, picture_id)
+      release_reservation(contact, options[:signature])
+      return
+    end
+
     result = Whatsapp::Unoapi::ProfilePictureClient.new(channel).fetch(picture_id)
     attach_avatar(contact, result, picture_id)
     mark_synced(contact, picture_id, options[:avatar_metadata], options[:signature])
@@ -52,6 +58,12 @@ class Avatar::AvatarFromUnoapiJob < ApplicationJob
   end
 
   private
+
+  def participant_picture_for_group?(contact, channel, picture_id)
+    return false unless picture_id.to_s.end_with?('@lid', '@s.whatsapp.net', '@c.us')
+
+    contact.contact_inboxes.where(inbox: channel.inbox).where("source_id LIKE '%@g.us'").exists?
+  end
 
   def attach_avatar(contact, result, picture_id)
     contact.avatar.attach(

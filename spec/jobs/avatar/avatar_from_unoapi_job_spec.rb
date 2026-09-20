@@ -63,4 +63,17 @@ RSpec.describe Avatar::AvatarFromUnoapiJob do
     serialized_jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.to_json
     expect(serialized_jobs).not_to include('secret')
   end
+
+  it 'rejects an old queued participant picture for a group without removing its legitimate avatar' do
+    create(:contact_inbox, inbox: channel.inbox, contact: contact, source_id: '123@g.us')
+    contact.avatar.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'group.png', content_type: 'image/png')
+    blob_id = contact.avatar.blob.id
+    contact.update!(additional_attributes: { unoapi_avatar_enqueued_signature: 'old-signature' })
+    expect(Whatsapp::Unoapi::ProfilePictureClient).not_to receive(:new)
+
+    described_class.perform_now(contact, channel, '456@lid', { 'signature' => 'old-signature' })
+
+    expect(contact.reload.avatar.blob.id).to eq(blob_id)
+    expect(contact.additional_attributes).not_to have_key('unoapi_avatar_enqueued_signature')
+  end
 end

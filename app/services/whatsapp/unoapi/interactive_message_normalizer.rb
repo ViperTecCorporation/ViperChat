@@ -66,6 +66,9 @@ class Whatsapp::Unoapi::InteractiveMessageNormalizer
     result = text_block(payload)
     image_url = safe_http_url(payload.dig(:image, :link))
     result[:image_url] = image_url if image_url.present?
+    if payload[:type] == 'document'
+      result.merge!(type: 'document', filename: payload.dig(:document, :filename), mime_type: payload.dig(:document, :mime_type))
+    end
     result.presence
   end
 

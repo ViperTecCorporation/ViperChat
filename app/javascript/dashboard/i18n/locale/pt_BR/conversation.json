@@ -1,5 +1,10 @@
 {
   "CONVERSATION": {
+    "UNOAPI_WARNING": {
+      "TITLE": "Aviso de envio",
+      "WITHOUT_QUOTE": "Enviada sem citação. Não foi possível localizar a mensagem original no WhatsApp.",
+      "REFERENCE_NOT_SENT": "Referência não enviada"
+    },
     "ARCHIVE": {
       "TITLE": "Arquivadas",
       "ACTION": "Arquivar conversa",

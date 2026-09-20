@@ -1,6 +1,8 @@
 require 'cgi'
 
 class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsappCloudService
+  include Whatsapp::Unoapi::StatusWarnings
+
   def perform
     log_catalog_event('unoapi_catalog_received', raw_catalog_diagnostics) if catalog_message?
     super
@@ -76,11 +78,18 @@ class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsapp
     super
   end
 
-  def reconcile_existing_message(source_id) # rubocop:disable Metrics/CyclomaticComplexity
+  def reconcile_existing_message(source_id)
     return super unless catalog_message? || interactive_normalization
     return false unless find_message_by_source_id(source_id)
 
+    document_added = attach_order_document
     update_message_with_status(@message, status: 'delivered') if outgoing_echo
+    reconcile_normalized_content
+    @message.send_update_event if document_added
+    true
+  end
+
+  def reconcile_normalized_content
     normalization = catalog_message? ? catalog_normalization : interactive_normalization
     @message.assign_attributes(
       content: normalization[:content],
@@ -88,7 +97,6 @@ class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsapp
       content_attributes: @message.content_attributes.to_h.merge(normalization[:content_attributes])
     )
     @message.save! if @message.changed?
-    true
   end
 
   def catalog_message?
@@ -108,7 +116,12 @@ class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsapp
 
   def create_regular_message(message)
     super
+    attach_order_document
     preserve_interactive_reply_reference(message)
+  end
+
+  def attach_order_document
+    Whatsapp::Unoapi::OrderDocumentService.new(message: @message, payload: messages_data.first).perform
   end
 
   def preserve_interactive_reply_reference(message)

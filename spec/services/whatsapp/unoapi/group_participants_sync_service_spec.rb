@@ -89,7 +89,9 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
       headers: { 'Content-Type' => 'application/json' }
     )
 
-    expect { service.perform }.to have_enqueued_job(Avatar::AvatarFromUrlJob).with(group_contact, 'https://cdn.example.com/groups/group.jpg')
+    expect { service.perform }.to have_enqueued_job(Avatar::AvatarFromUnoapiJob)
+      .with(group_contact, whatsapp_channel, conversation.group_source_id,
+            hash_including('fallback_url' => 'https://cdn.example.com/groups/group.jpg'))
 
     conversation.reload
     expect(conversation.group_title).to eq('Equipe Comercial VIP')
@@ -205,7 +207,9 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
 
   it 'does not enqueue group avatar sync when the group picture hash is unchanged' do
     picture_url = 'https://cdn.example.com/groups/group.jpg'
-    group_contact.update!(additional_attributes: { 'avatar_url_hash' => Digest::SHA256.hexdigest(picture_url) })
+    signature = Avatar::AvatarFromUnoapiJob.signature_for(whatsapp_channel, conversation.group_source_id,
+                                                          { hash: Digest::SHA256.hexdigest(picture_url) })
+    group_contact.update!(additional_attributes: { 'unoapi_avatar_signature' => signature })
     stub_request(:get, details_url).to_return(
       status: 200,
       body: {
@@ -227,8 +231,22 @@ describe Whatsapp::Unoapi::GroupParticipantsSyncService do
       headers: { 'Content-Type' => 'application/json' }
     )
 
-    expect { service.perform }.not_to have_enqueued_job(Avatar::AvatarFromUrlJob)
+    expect { service.perform }.not_to have_enqueued_job(Avatar::AvatarFromUnoapiJob)
     expect(conversation.reload.additional_attributes['group_picture']).to eq(picture_url)
+  end
+
+  it 'replaces a stale participant picture id with the group id for authenticated fetching' do
+    stub_request(:get, participants_url).to_return(
+      status: 200, body: { group: { picture_id: '456@lid' }, participants: [] }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+    stub_request(:get, details_url).to_return(
+      status: 200, body: { picture: 'https://example.com/expired.jpg' }.to_json,
+      headers: { 'Content-Type' => 'application/json' }
+    )
+    expect { service.perform }.to have_enqueued_job(Avatar::AvatarFromUnoapiJob)
+      .with(group_contact, whatsapp_channel, conversation.group_source_id, anything)
+    expect(conversation.reload.additional_attributes['group_picture_id']).to eq(conversation.group_source_id)
   end
 
   it 'preserves an existing participant profile picture when sync returns an empty profile_url' do

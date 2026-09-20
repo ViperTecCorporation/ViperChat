@@ -220,7 +220,19 @@ class Conversation < ApplicationRecord
   def group_avatar_url
     return unless group?
 
-    additional_attributes&.dig('group_picture').presence || (contact&.avatar_url if primary_contact_is_group?)
+    stored_group_avatar_url.presence || additional_attributes&.dig('group_picture').presence
+  end
+
+  def stored_group_avatar_url
+    return unless primary_contact_is_group?
+
+    picture_id = contact.additional_attributes['unoapi_profile_picture_id'].to_s
+    if picture_id.end_with?('@lid', '@s.whatsapp.net', '@c.us')
+      generated_prefix = "unoapi-profile-#{Digest::SHA256.hexdigest(picture_id)[0, 12]}."
+      return if contact.avatar_attachment&.blob&.filename.to_s.start_with?(generated_prefix)
+    end
+
+    contact.avatar_url
   end
 
   def cached_label_list_array

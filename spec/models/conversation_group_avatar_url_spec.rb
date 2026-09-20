@@ -29,4 +29,27 @@ RSpec.describe Conversation, '#group_avatar_url' do
     conversation.additional_attributes = { 'group_picture' => '' }
     expect(conversation.group_avatar_url).to be_nil
   end
+
+  it 'prefers the stored group photo over an expired remote link' do
+    contact_inbox.source_id = '123@g.us'
+    conversation.additional_attributes = { 'group_picture' => 'https://example.com/expired.jpg' }
+    expect(conversation.group_avatar_url).to eq('https://example.com/avatar.png')
+  end
+
+  it 'does not promote a generated participant photo to the group fallback' do
+    contact_inbox.source_id = '123@g.us'
+    contact.additional_attributes = { 'unoapi_profile_picture_id' => '456@lid' }
+    filename = "unoapi-profile-#{Digest::SHA256.hexdigest('456@lid')[0, 12]}.jpg"
+    blob = instance_double(ActiveStorage::Blob, filename: ActiveStorage::Filename.new(filename))
+    allow(contact).to receive(:avatar_attachment).and_return(instance_double(ActiveStorage::Attachment, blob: blob))
+    expect(conversation.group_avatar_url).to be_nil
+  end
+
+  it 'preserves manual group uploads even with stale participant metadata' do
+    contact_inbox.source_id = '123@g.us'
+    contact.additional_attributes = { 'unoapi_profile_picture_id' => '456@lid' }
+    blob = instance_double(ActiveStorage::Blob, filename: ActiveStorage::Filename.new('manual-group.jpg'))
+    allow(contact).to receive(:avatar_attachment).and_return(instance_double(ActiveStorage::Attachment, blob: blob))
+    expect(conversation.group_avatar_url).to eq('https://example.com/avatar.png')
+  end
 end
