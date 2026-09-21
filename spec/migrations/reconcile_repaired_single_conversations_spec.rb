@@ -5,16 +5,6 @@ require_relative '../../db/migrate/20260919020000_reconcile_repaired_single_conv
 RSpec.describe ReconcileRepairedSingleConversations do
   let(:db) { ActiveRecord::Base.connection }
 
-  # Connection only; all fixtures and DDL are rolled back per example.
-  before(:all) do # rubocop:disable RSpec/BeforeAfterAll
-    skip 'Standalone integration test: use viper_identity_fixture_test' unless ENV['PGDATABASE'] == 'viper_identity_fixture_test'
-
-    ActiveRecord::Base.establish_connection(adapter: 'postgresql', host: ENV.fetch('PGHOST'),
-                                            username: ENV.fetch('PGUSER'), password: ENV.fetch('PGPASSWORD'),
-                                            database: ENV.fetch('PGDATABASE'))
-    ActiveRecord::Migration.verbose = false
-  end
-
   around do |example|
     db.transaction do
       db.execute <<~SQL.squish
@@ -45,6 +35,36 @@ RSpec.describe ReconcileRepairedSingleConversations do
     end
   end
 
+  # Connection only; all fixtures and DDL are rolled back per example.
+  before(:all) do # rubocop:disable RSpec/BeforeAfterAll
+    skip 'Standalone integration test: use viper_identity_fixture_test' unless ENV['PGDATABASE'] == 'viper_identity_fixture_test'
+
+    ActiveRecord::Base.establish_connection(adapter: 'postgresql', host: ENV.fetch('PGHOST'),
+                                            username: ENV.fetch('PGUSER'), password: ENV.fetch('PGPASSWORD'),
+                                            database: ENV.fetch('PGDATABASE'))
+    ActiveRecord::Migration.verbose = false
+  end
+
+  it 'only prepares audit storage on upgrade, preserving every existing row and index' do
+    tables = db.tables
+    before_rows = tables.index_with do |table|
+      db.select_values("SELECT to_jsonb(t)::text FROM #{db.quote_table_name(table)} t ORDER BY to_jsonb(t)::text")
+    end
+    before_indexes = db.select_rows("SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' ORDER BY indexname")
+    migration = described_class.new
+    expect(migration).not_to receive(:repair!)
+    2.times { migration.migrate(:up) }
+    tables.each do |table|
+      expect(db.select_values("SELECT to_jsonb(t)::text FROM #{db.quote_table_name(table)} t ORDER BY to_jsonb(t)::text")).to eq(before_rows[table])
+    end
+    after_indexes = db.select_rows("SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' ORDER BY indexname")
+    expect(before_indexes - after_indexes).to be_empty
+  end
+
+  it 'requires explicit confirmation for a manual repair' do
+    expect { described_class.new.repair!(confirmation: 'no') }.to raise_error(ArgumentError)
+  end
+
   it 'merges only enabled inboxes, preserving message IDs and remapping dependent records and preferences' do
     db.execute <<~SQL.squish
       INSERT INTO messages VALUES(1,10,'old'),(2,11,'new'),(3,20,'disabled');
@@ -53,7 +73,7 @@ RSpec.describe ReconcileRepairedSingleConversations do
       INSERT INTO conversation_participants VALUES(1,10,5),(2,11,5),(3,10,6);
       INSERT INTO users VALUES(1,'{"pinned_conversations":{"1":[100,101],"2":[100]},"archived_conversations":{"1":[100]}}');
     SQL
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_values('SELECT id FROM conversations ORDER BY id')).to eq([11, 20, 21, 30])
     expect(db.select_rows('SELECT * FROM messages ORDER BY id')).to eq([[1, 11, 'old'], [2, 11, 'new'], [3, 20, 'disabled']])
     expect(db.select_rows('SELECT * FROM scheduled_messages')).to eq([[1, 11, 11]])
@@ -62,13 +82,13 @@ RSpec.describe ReconcileRepairedSingleConversations do
     settings = JSON.parse(db.select_value('SELECT ui_settings FROM users'))
     expect(settings).to include('pinned_conversations' => { '1' => [101], '2' => [100] }, 'archived_conversations' => { '1' => [] })
     count = db.select_value('SELECT count(*) FROM conversation_identity_repair_audits')
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_value('SELECT count(*) FROM conversation_identity_repair_audits')).to eq(count)
   end
 
   it 'does nothing to conversations when the single-conversation option is disabled' do
     db.execute 'UPDATE inboxes SET lock_to_single_conversation=false'
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_values('SELECT id FROM conversations ORDER BY id')).to eq([10, 11, 20, 21, 30])
     expect(db.select_value('SELECT count(*) FROM conversation_identity_repair_audits')).to eq(0)
   end
@@ -81,7 +101,7 @@ RSpec.describe ReconcileRepairedSingleConversations do
       INSERT INTO conversations(id,account_id,inbox_id,contact_id,contact_inbox_id,display_id)
       VALUES(40,1,1,3,4,400),(41,1,1,3,4,401);
     SQL
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_value('SELECT count(*) FROM conversations')).to eq(7)
   end
 
@@ -92,7 +112,7 @@ RSpec.describe ReconcileRepairedSingleConversations do
       UPDATE conversations SET created_at='2025-01-01',last_activity_at='2026-03-01',status=1 WHERE id=10;
       UPDATE conversations SET created_at='2025-02-01',status=0 WHERE id=11;
     SQL
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_values('SELECT id FROM conversations WHERE inbox_id=1')).to eq([11])
     expect(db.select_rows('SELECT status,last_activity_at::date::text FROM conversations WHERE id=11')).to eq([[0, '2026-02-01']])
   end
@@ -104,7 +124,11 @@ RSpec.describe ReconcileRepairedSingleConversations do
       INSERT INTO applied_slas VALUES(1,10,1),(2,11,1);
       INSERT INTO messages VALUES(1,10,'preserve');
     SQL
-    expect { db.transaction(requires_new: true) { described_class.new.up } }.to raise_error(Conversations::HistoryMerge::Conflict)
+    expect do
+      db.transaction(requires_new: true) do
+        described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
+      end
+    end.to raise_error(Conversations::HistoryMerge::Conflict)
     expect(db.select_value('SELECT count(*) FROM conversations')).to eq(5)
     expect(db.select_value('SELECT conversation_id FROM messages')).to eq(10)
     expect(db.table_exists?('conversation_identity_repair_audits')).to be(false)

@@ -1,5 +1,28 @@
 # Recuperação de identidades de contato — migration 20260919010000
 
+## Mudança na v4.16.12-viper.27
+
+As migrations 20260919010000, 20260919020000 e 20260921010000 agora
+somente criam suas tabelas de auditoria caso não existam. `db:migrate`
+não consolida contatos/conversas, não limpa e-mails, não remove inscrições
+e não reconstrói índices. Auditorias e reparos já realizados permanecem.
+A tabela de auditoria de conversas continua necessária ao fluxo normal
+de conversa única; esse comportamento configurado por caixa não foi desativado.
+
+Os detalhes abaixo documentam os reparos históricos, não o comportamento
+automático da atualização. A implementação continua disponível somente pelo
+método explícito `repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')`.
+Não colocar essa chamada no entrypoint, compose ou job de atualização.
+Ela ainda atua no banco inteiro: não oferece seleção de conta nem dry-run.
+Exige inventário revisado, backup restaurável, manutenção com escritores
+suspensos e validação posterior. Não é uma recomendação para execução genérica.
+A reconciliação de conversas requer a auditoria da primeira etapa.
+
+As versões das migrations permanecem para compatibilidade com instalações
+que já as executaram. Não apagar registros de `schema_migrations` nem usar
+`db:rollback` para desfazer merges. Os testes isolados de reparo e de upgrade
+sem alteração de dados passam a ser executados explicitamente no CI.
+
 ## Regra aprovada
 
 - Consolidar contatos da mesma conta por e-mail igual (sem distinção de maiúsculas) ou vínculo repetido `(inbox_id, source_id)`, inclusive cadeias transitivas.

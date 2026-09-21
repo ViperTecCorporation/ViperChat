@@ -136,6 +136,17 @@ jobs:
         env:
           NODE_OPTIONS: --openssl-legacy-provider
 
+      - name: Run isolated repair and safe-upgrade tests
+        if: matrix.ci_node_index == 0
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: ''
+          PGDATABASE: viper_identity_fixture_test
+        run: |
+          bundle exec ruby -rpg -e 'PG.connect(dbname: "postgres").exec("CREATE DATABASE viper_identity_fixture_test")'
+          bundle exec rspec spec/migrations
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()

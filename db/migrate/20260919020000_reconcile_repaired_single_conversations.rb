@@ -7,6 +7,14 @@ class ReconcileRepairedSingleConversations < RepairDuplicateContactIdentities
   CONVERSATION_ARCHIVE = 'conversation_identity_repair_audits'.freeze
 
   def up
+    # Upgrades only ensure audit storage. Bulk repairs require an explicit,
+    # separately reviewed maintenance invocation, never db:migrate.
+    create_archive
+  end
+
+  def repair!(confirmation:)
+    raise ArgumentError, 'Review backup and affected records before merging' unless confirmation == 'MERGE_REVIEWED_CONTACTS'
+
     connection.transaction do
       prepare_repair
       create_archive

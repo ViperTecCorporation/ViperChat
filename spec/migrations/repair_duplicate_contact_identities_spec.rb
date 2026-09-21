@@ -6,16 +6,6 @@ require_relative '../../db/migrate/20260919010000_repair_duplicate_contact_ident
 RSpec.describe RepairDuplicateContactIdentities do
   let(:db) { ActiveRecord::Base.connection }
 
-  # Connection only; every fixture and DDL statement is rolled back per example.
-  before(:all) do # rubocop:disable RSpec/BeforeAfterAll
-    skip 'Standalone integration test: use viper_identity_fixture_test (see docs)' unless ENV['PGDATABASE'] == 'viper_identity_fixture_test'
-
-    ActiveRecord::Base.establish_connection(adapter: 'postgresql', host: ENV.fetch('PGHOST'),
-                                            username: ENV.fetch('PGUSER'), password: ENV.fetch('PGPASSWORD'),
-                                            database: ENV.fetch('PGDATABASE'))
-    ActiveRecord::Migration.verbose = false
-  end
-
   around do |example|
     db.transaction do
       db.execute <<~SQL.squish
@@ -38,6 +28,36 @@ RSpec.describe RepairDuplicateContactIdentities do
     end
   end
 
+  # Connection only; every fixture and DDL statement is rolled back per example.
+  before(:all) do # rubocop:disable RSpec/BeforeAfterAll
+    skip 'Standalone integration test: use viper_identity_fixture_test (see docs)' unless ENV['PGDATABASE'] == 'viper_identity_fixture_test'
+
+    ActiveRecord::Base.establish_connection(adapter: 'postgresql', host: ENV.fetch('PGHOST'),
+                                            username: ENV.fetch('PGUSER'), password: ENV.fetch('PGPASSWORD'),
+                                            database: ENV.fetch('PGDATABASE'))
+    ActiveRecord::Migration.verbose = false
+  end
+
+  it 'only prepares audit storage on upgrade, preserving every existing row and index' do
+    tables = db.tables
+    before_rows = tables.index_with do |table|
+      db.select_values("SELECT to_jsonb(t)::text FROM #{db.quote_table_name(table)} t ORDER BY to_jsonb(t)::text")
+    end
+    before_indexes = db.select_rows("SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' ORDER BY indexname")
+    migration = described_class.new
+    expect(migration).not_to receive(:repair!)
+    2.times { migration.migrate(:up) }
+    tables.each do |table|
+      expect(db.select_values("SELECT to_jsonb(t)::text FROM #{db.quote_table_name(table)} t ORDER BY to_jsonb(t)::text")).to eq(before_rows[table])
+    end
+    after_indexes = db.select_rows("SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' ORDER BY indexname")
+    expect(before_indexes - after_indexes).to be_empty
+  end
+
+  it 'requires explicit confirmation for a manual repair' do
+    expect { described_class.new.repair!(confirmation: 'no') }.to raise_error(ArgumentError)
+  end
+
   it 'merges transitive duplicates into the lowest ID without changing message/conversation IDs' do
     db.execute <<~SQL.squish
       INSERT INTO contacts(id,account_id,email,name) VALUES(1,1,'same@example.com','Old'),(2,1,'SAME@example.com','New'),(3,1,'other@example.com','Other');
@@ -46,20 +66,20 @@ RSpec.describe RepairDuplicateContactIdentities do
       INSERT INTO messages VALUES(30,3,'Contact','preserve'),(31,3,'User','agent');
       INSERT INTO notes VALUES(40,2,'note');
     SQL
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_values('SELECT id FROM contacts')).to eq([1])
     expect(db.select_value('SELECT name FROM contacts WHERE id=1')).to eq('Old')
     expect(db.select_rows('SELECT * FROM conversations')).to eq([[20, 1, 10]])
     expect(db.select_rows('SELECT id,sender_id,content FROM messages ORDER BY id')).to eq([[30, 1, 'preserve'], [31, 3, 'agent']])
     expect(db.select_value('SELECT contact_id FROM notes')).to eq(1)
     count = db.select_value('SELECT count(*) FROM contact_identity_repair_audits')
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_value('SELECT count(*) FROM contact_identity_repair_audits')).to eq(count)
   end
 
   it 'keeps accounts separate and clears LID emails with their original value archived' do
     db.execute "INSERT INTO contacts(id,account_id,email) VALUES(1,1,'123@lid'),(2,2,'123@lid')"
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_value('SELECT count(*) FROM contacts')).to eq(2)
     expect(db.select_value('SELECT count(email) FROM contacts')).to eq(0)
     expect(db.select_values("SELECT original_row->>'email' FROM contact_identity_repair_audits ORDER BY source_id")).to eq(['123@lid', '123@lid'])
@@ -70,7 +90,7 @@ RSpec.describe RepairDuplicateContactIdentities do
       INSERT INTO contacts(id,account_id,email,blocked) VALUES(1,1,'a@b.com',false),(2,1,'a@b.com',true);
       INSERT INTO group_contacts VALUES(1,1,5,'{"old":true}'),(2,2,5,'{"new":true}');
     SQL
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_value('SELECT blocked FROM contacts')).to be(true)
     expect(db.select_value('SELECT count(*) FROM group_contacts')).to eq(1)
     expect(JSON.parse(db.select_value('SELECT metadata FROM group_contacts'))).to eq('old' => true, 'new' => true)
@@ -81,7 +101,7 @@ RSpec.describe RepairDuplicateContactIdentities do
       INSERT INTO notification_subscriptions(id,user_id,identifier,subscription_type,subscription_attributes,updated_at)
       VALUES(1,10,'device',1,'{"key":"old"}','2026-01-01'),(2,10,'device',1,'{"key":"new"}','2026-02-01');
     SQL
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_values('SELECT id FROM notification_subscriptions')).to eq([2])
     expect(db.select_value("SELECT original_row->'subscription_attributes'->>'key' FROM contact_identity_repair_audits")).to eq('old')
   end
@@ -97,7 +117,7 @@ RSpec.describe RepairDuplicateContactIdentities do
       INSERT INTO tags VALUES(1,2);
       INSERT INTO taggings VALUES(1,1,'Contact',1,'labels',NULL,NULL),(2,2,'Contact',1,'labels',NULL,NULL);
     SQL
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
     expect(db.select_rows('SELECT record_id,blob_id FROM active_storage_attachments ORDER BY blob_id')).to eq([[1, 10], [1, 11]])
     expect(db.select_value('SELECT count(*) FROM taggings')).to eq(1)
     expect(db.select_value('SELECT taggings_count FROM tags')).to eq(1)
@@ -109,7 +129,11 @@ RSpec.describe RepairDuplicateContactIdentities do
       INSERT INTO contacts(id,account_id,email) VALUES(1,1,'a@b.com'),(2,1,'a@b.com');
       INSERT INTO notification_subscriptions(id,user_id,identifier,subscription_type) VALUES(1,10,'device',1),(2,11,'device',1);
     SQL
-    expect { db.transaction(requires_new: true) { described_class.new.up } }.to raise_error(/different users/)
+    expect do
+      db.transaction(requires_new: true) do
+        described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
+      end
+    end.to raise_error(/different users/)
     expect(db.select_value('SELECT count(*) FROM contacts')).to eq(2)
     expect(db.table_exists?('contact_identity_repair_audits')).to be(false)
   end
@@ -119,7 +143,7 @@ RSpec.describe RepairDuplicateContactIdentities do
       INSERT INTO contacts(id,account_id,email) VALUES(1,1,'a@b.com');
       INSERT INTO contact_inboxes(id,contact_id,inbox_id,source_id) VALUES(1,1,2,'abc');
     SQL
-    expect { described_class.new.up }.to raise_error(/Cross-account/)
+    expect { described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS') }.to raise_error(/Cross-account/)
   end
 
   it 'removes existing incomplete unique indexes before touching duplicate rows and rebuilds full constraints' do
@@ -139,7 +163,7 @@ RSpec.describe RepairDuplicateContactIdentities do
       original.call(sql, *args, **kwargs)
     end
 
-    described_class.new.up
+    described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
 
     expect(db.select_values('SELECT id FROM contacts')).to eq([1])
     expect(db.select_values('SELECT id FROM contact_inboxes')).to eq([10])
@@ -156,7 +180,11 @@ RSpec.describe RepairDuplicateContactIdentities do
       CREATE UNIQUE INDEX uniq_email_per_account_contact ON contacts(email,account_id) WHERE id=1;
       INSERT INTO notification_subscriptions(id,user_id,identifier,subscription_type) VALUES(1,10,'device',1),(2,11,'device',1);
     SQL
-    expect { db.transaction(requires_new: true) { described_class.new.up } }.to raise_error(/different users/)
+    expect do
+      db.transaction(requires_new: true) do
+        described_class.new.repair!(confirmation: 'MERGE_REVIEWED_CONTACTS')
+      end
+    end.to raise_error(/different users/)
     expect(db.select_values('SELECT id FROM contacts ORDER BY id')).to eq([1, 2])
     expect(db.indexes('contacts').find { |index| index.name == 'uniq_email_per_account_contact' }.where).to be_present
     expect(db.table_exists?('contact_identity_repair_audits')).to be(false)

@@ -18,6 +18,14 @@ class RepairDuplicateContactIdentities < ActiveRecord::Migration[7.1] # rubocop:
   }.freeze
 
   def up
+    # Upgrades only ensure audit storage. Bulk repairs require an explicit,
+    # separately reviewed maintenance invocation, never db:migrate.
+    create_archive
+  end
+
+  def repair!(confirmation:)
+    raise ArgumentError, 'Review backup and affected records before merging' unless confirmation == 'MERGE_REVIEWED_CONTACTS'
+
     # Explicit transaction also protects invocations outside Rails' migrator.
     connection.transaction do
       prepare_repair
