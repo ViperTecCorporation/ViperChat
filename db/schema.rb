@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_09_19_020000) do
+ActiveRecord::Schema[7.1].define(version: 2026_09_21_010000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1342,6 +1342,15 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_19_020000) do
     t.index ["secondary_actor_type", "secondary_actor_id"], name: "uniq_secondary_actor_per_account_notifications"
     t.index ["user_id", "account_id", "snoozed_until", "read_at"], name: "idx_notifications_performance"
     t.index ["user_id"], name: "index_notifications_on_user_id"
+  end
+
+  create_table "phone_contact_repair_audits", force: :cascade do |t|
+    t.string "source_table", null: false
+    t.bigint "source_id", null: false
+    t.jsonb "original_row", null: false
+    t.bigint "retained_id"
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["source_table", "source_id"], name: "idx_phone_contact_repair_original", unique: true
   end
 
   create_table "platform_app_permissibles", force: :cascade do |t|
