@@ -59,8 +59,11 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   def persist_source_id(message_id)
     return if message_id.blank?
 
-    Whatsapp::MessageDedupLock.new("#{inbox.id}:#{message_id}").acquire!
+    dedup_lock = Whatsapp::MessageDedupLock.new("#{inbox.id}:#{message_id}")
+    dedup_lock.acquire!
     message.update!(source_id: message_id)
+  ensure
+    dedup_lock&.release!
   end
 
   def whatsapp_recipient

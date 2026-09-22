@@ -7,6 +7,8 @@ describe('useImageZoom', () => {
   beforeEach(() => {
     // Mock imageRef element with getBoundingClientRect method
     imageRef = ref({
+      clientWidth: 200,
+      clientHeight: 200,
       getBoundingClientRect: () => ({
         left: 100,
         top: 100,
@@ -14,6 +16,75 @@ describe('useImageZoom', () => {
         height: 200,
       }),
     });
+  });
+
+  it('zooms with a pinch and clamps the zoom level', () => {
+    const { onTouchStart, onTouchMove, zoomScale } = useImageZoom(imageRef);
+    onTouchStart({
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 200, clientY: 100 },
+      ],
+    });
+    onTouchMove({
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 300, clientY: 100 },
+      ],
+    });
+    expect(zoomScale.value).toBe(2);
+    onTouchMove({
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 900, clientY: 100 },
+      ],
+    });
+    expect(zoomScale.value).toBe(3);
+    onTouchMove({
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 110, clientY: 100 },
+      ],
+    });
+    expect(zoomScale.value).toBe(1);
+  });
+
+  it('pans a zoomed image with one finger and resets between attachments', () => {
+    const {
+      onZoom,
+      onTouchStart,
+      onTouchMove,
+      imageStyle,
+      resetZoomAndRotation,
+      isTouching,
+    } = useImageZoom(imageRef);
+    onZoom(1);
+    onTouchStart({ touches: [{ clientX: 100, clientY: 100 }] });
+    onTouchMove({ touches: [{ clientX: 140, clientY: 120 }] });
+    expect(imageStyle.value.transform).toBe('translate(40px, 20px) scale(2)');
+    resetZoomAndRotation();
+    expect(isTouching.value).toBe(false);
+    expect(imageStyle.value.transform).toBe('translate(0px, 0px) scale(1)');
+  });
+
+  it('clears the gesture on cancellation', () => {
+    const { onTouchStart, onTouchMove, onTouchCancel, zoomScale, isTouching } =
+      useImageZoom(imageRef);
+    onTouchStart({
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 200, clientY: 100 },
+      ],
+    });
+    onTouchCancel();
+    onTouchMove({
+      touches: [
+        { clientX: 100, clientY: 100 },
+        { clientX: 300, clientY: 100 },
+      ],
+    });
+    expect(isTouching.value).toBe(false);
+    expect(zoomScale.value).toBe(1);
   });
 
   it('should initialize with default values', () => {

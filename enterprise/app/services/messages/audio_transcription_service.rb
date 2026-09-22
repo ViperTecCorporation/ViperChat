@@ -18,6 +18,8 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
   end
 
   def perform
+    return { error: 'Only incoming public audio messages can be transcribed' } unless attachment.eligible_for_audio_transcription?
+
     return { error: 'Transcription limit exceeded' } unless can_transcribe?
     return { error: 'Message not found' } if message.blank?
     return { error: 'Audio too large for Whisper' } if audio_too_large?

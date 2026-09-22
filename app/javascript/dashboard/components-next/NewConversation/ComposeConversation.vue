@@ -6,6 +6,7 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAlert } from 'dashboard/composables';
 import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
 import { debounce } from '@chatwoot/utils';
+import camelcaseKeys from 'camelcase-keys';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import {
@@ -127,7 +128,16 @@ const resetContacts = () => {
 
 const handleSelectedContact = async ({ value, action, ...rest }) => {
   let contact;
-  if (action === 'create') {
+  if (action === 'direct') {
+    const recipient = rest.recipient;
+    contact = {
+      name: Object.values(recipient)[0],
+      recipient,
+      contactInboxes: camelcaseKeys(inboxesList.value, { deep: true }).filter(
+        inbox => inbox.channelType === 'Channel::Whatsapp'
+      ),
+    };
+  } else if (action === 'create') {
     isCreatingContact.value = true;
     try {
       contact = await createNewContact(value);

@@ -3,7 +3,9 @@ require 'rails_helper'
 RSpec.describe Messages::AudioTranscriptionJob do
   subject(:job) { described_class.perform_later(attachment_id) }
 
-  let(:message) { create(:message) }
+  let(:message) { create(:message, message_type: message_type, private: private_message) }
+  let(:message_type) { :incoming }
+  let(:private_message) { false }
   let(:attachment) do
     message.attachments.create!(
       account_id: message.account_id,
@@ -36,6 +38,38 @@ RSpec.describe Messages::AudioTranscriptionJob do
     it 'does nothing when attachment is not found' do
       expect(Messages::AudioTranscriptionService).not_to receive(:new)
       described_class.perform_now(999_999)
+    end
+  end
+
+  describe 'automatic transcription eligibility' do
+    it 'enqueues transcription for customer audio' do
+      expect { attachment }.to have_enqueued_job(described_class)
+    end
+
+    context 'with outgoing agent audio' do
+      let(:message_type) { :outgoing }
+
+      it 'does not enqueue transcription' do
+        expect { attachment }.not_to have_enqueued_job(described_class)
+      end
+
+      it 'ignores an already queued job' do
+        expect(Messages::AudioTranscriptionService).not_to receive(:new)
+        described_class.perform_now(attachment_id)
+      end
+    end
+
+    context 'with a private note' do
+      let(:private_message) { true }
+
+      it 'does not enqueue transcription even when marked incoming' do
+        expect { attachment }.not_to have_enqueued_job(described_class)
+      end
+
+      it 'ignores an already queued job' do
+        expect(Messages::AudioTranscriptionService).not_to receive(:new)
+        described_class.perform_now(attachment_id)
+      end
     end
   end
 end

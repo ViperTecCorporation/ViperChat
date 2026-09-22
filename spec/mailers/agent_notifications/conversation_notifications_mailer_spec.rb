@@ -63,6 +63,12 @@ RSpec.describe AgentNotifications::ConversationNotificationsMailer do
       expect(mail.body.encoded).to match("You've been mentioned in a conversation. <b>#{another_agent.display_name}</b> wrote:")
     end
 
+    it 'delivers a mention even when the conversation was archived before delivery' do
+      Conversations::ArchiveService.new(agent, account).update(conversation.reload, true)
+      expect(mail.to).to eq([agent.email])
+      expect(Conversations::ArchiveService.archived?(agent, conversation)).to be(true)
+    end
+
     it 'renders Customer if contacts name not available in the conversation' do
       expect(contact.name).to be_nil
       expect(conversation.recent_messages).not_to be_empty

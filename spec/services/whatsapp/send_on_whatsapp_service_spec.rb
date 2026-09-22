@@ -103,6 +103,7 @@ describe Whatsapp::SendOnWhatsappService do
           .ordered
         expect(dedup_lock).to receive(:acquire!).ordered
         expect(message).to receive(:update!).with(source_id: 'uno-message-id').and_call_original.ordered
+        expect(dedup_lock).to receive(:release!).ordered
 
         described_class.new(message: message).perform
 

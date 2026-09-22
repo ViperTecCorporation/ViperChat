@@ -15,6 +15,7 @@ class Messages::AudioTranscriptionJob < ApplicationJob
   def perform(attachment_id)
     attachment = Attachment.find_by(id: attachment_id)
     return if attachment.blank?
+    return unless attachment.eligible_for_audio_transcription?
 
     Messages::AudioTranscriptionService.new(attachment).perform
   end

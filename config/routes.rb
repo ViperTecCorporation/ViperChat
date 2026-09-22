@@ -137,6 +137,7 @@ Rails.application.routes.draw do
           end
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
           resources :scheduled_messages, only: [:index, :create, :update, :destroy]
+          resources :message_favorites, only: [:index, :create, :destroy]
           resources :whatsapp_stickers, only: [:index, :create, :destroy] do
             delete :bulk_destroy, on: :collection
           end
@@ -156,6 +157,7 @@ Rails.application.routes.draw do
               post :assign_by_source, to: 'conversations/source_assignments#create'
             end
             scope module: :conversations do
+              resources :links, only: [:index]
               resources :messages, only: [:index, :create, :destroy, :update] do
                 member do
                   post :translate
@@ -190,6 +192,8 @@ Rails.application.routes.draw do
               post :transcript
               post :toggle_status
               post :toggle_priority
+              post :pin
+              post :archive
               post :toggle_typing_status
               post :update_last_seen
               post :unread
@@ -199,6 +203,7 @@ Rails.application.routes.draw do
               get :inbox_assistant
               get :reporting_events if ChatwootApp.enterprise?
             end
+            get :archived, on: :collection
           end
         resources :internal_conversations, only: [:index, :create] do
           resource :voice_call, only: [:create], module: :internal_conversations

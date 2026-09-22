@@ -1,5 +1,7 @@
 class AgentNotifications::ConversationNotificationsMailer < ApplicationMailer
   def conversation_creation(conversation, agent, _user)
+    return if Conversations::ArchiveService.archived?(agent, conversation)
+
     return unless smtp_config_set_or_development?
 
     @agent = agent
@@ -11,6 +13,8 @@ class AgentNotifications::ConversationNotificationsMailer < ApplicationMailer
   end
 
   def conversation_assignment(conversation, agent, _user)
+    return if Conversations::ArchiveService.archived?(agent, conversation)
+
     return unless smtp_config_set_or_development?
 
     @agent = agent
@@ -32,6 +36,8 @@ class AgentNotifications::ConversationNotificationsMailer < ApplicationMailer
   end
 
   def assigned_conversation_new_message(conversation, agent, message)
+    return if Conversations::ArchiveService.archived?(agent, conversation)
+
     return unless smtp_config_set_or_development?
     # Don't spam with email notifications if agent is online
     return if ::OnlineStatusTracker.get_presence(message.account_id, 'User', agent.id)
@@ -44,6 +50,8 @@ class AgentNotifications::ConversationNotificationsMailer < ApplicationMailer
   end
 
   def participating_conversation_new_message(conversation, agent, message)
+    return if Conversations::ArchiveService.archived?(agent, conversation)
+
     return unless smtp_config_set_or_development?
     # Don't spam with email notifications if agent is online
     return if ::OnlineStatusTracker.get_presence(message.account_id, 'User', agent.id)

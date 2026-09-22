@@ -18,9 +18,11 @@ class Api::V1::ProfilesController < Api::BaseController
       "webrtc_jwt_present=#{custom_attributes_params[:webrtc_jwt].present?} " \
       "webrtc_password_present=#{custom_attributes_params[:webrtc_password].present?}"
     )
-    @user.assign_attributes(profile_params)
-    @user.custom_attributes.merge!(custom_attributes_params)
-    @user.save!
+    @user.with_lock do
+      @user.assign_attributes(profile_attributes)
+      @user.custom_attributes.merge!(custom_attributes_params)
+      @user.save!
+    end
   end
 
   def avatar
@@ -52,6 +54,16 @@ class Api::V1::ProfilesController < Api::BaseController
   end
 
   private
+
+  def profile_attributes
+    profile_params.tap do |attributes|
+      next unless attributes[:ui_settings]
+
+      # Pins are updated only through the account-scoped, permission-checked endpoint.
+      attributes[:ui_settings][Conversations::PinService::KEY] = @user.ui_settings&.fetch(Conversations::PinService::KEY, {}) || {}
+      attributes[:ui_settings][Conversations::ArchiveService::KEY] = @user.ui_settings&.fetch(Conversations::ArchiveService::KEY, {}) || {}
+    end
+  end
 
   def set_user
     @user = current_user

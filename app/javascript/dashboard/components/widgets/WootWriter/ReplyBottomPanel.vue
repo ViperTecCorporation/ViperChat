@@ -228,6 +228,7 @@ export default {
       }
 
       let channelType = this.channelType || this.inbox?.channel_type;
+      if (channelType === INBOX_TYPES.WHATSAPP) return '*';
       if (this.isAnInstagramChannel || this.isInstagramDM) {
         channelType = INBOX_TYPES.INSTAGRAM;
       }

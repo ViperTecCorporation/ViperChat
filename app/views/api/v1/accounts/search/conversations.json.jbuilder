@@ -6,6 +6,7 @@ json.payload do
       json.created_at conversation.created_at.to_i
       json.group conversation.group?
       json.group_title conversation.group_title
+      json.group_picture conversation.group_avatar_url if conversation.group?
       json.group_source_id conversation.group_source_id
       json.message do
         json.partial! 'message', formats: [:json], message: conversation.messages.try(:first)

@@ -233,25 +233,7 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter # rubocop:disable Metrics/C
   end
 
   def merge_inbox_conversation_aliases!(inbox)
-    conversations = inbox.conversations.non_group_conversations
-                         .where(contact_id: @contact.id, contact_inbox_id: @contact.contact_inboxes.where(inbox_id: inbox.id).select(:id))
-                         .to_a
-    return if conversations.size <= 1
-
-    target = preferred_conversation(conversations)
-    mergees = conversations - [target]
-    Message.where(conversation_id: mergees.map(&:id)).update_all(conversation_id: target.id) # rubocop:disable Rails/SkipsModelValidations
-    target.update_columns( # rubocop:disable Rails/SkipsModelValidations
-      last_activity_at: conversations.filter_map(&:last_activity_at).max,
-      updated_at: Time.current
-    )
-    mergees.each(&:destroy!)
-  end
-
-  def preferred_conversation(conversations)
-    conversations.select { |conversation| conversation.contact_inbox.source_id.exclude?('@') }
-                 .max_by { |conversation| [conversation.last_activity_at, conversation.id] } ||
-      conversations.max_by { |conversation| [conversation.last_activity_at, conversation.id] }
+    Conversations::SingleConversationMergeService.new(inbox: inbox, contact: @contact).perform
   end
 
   def technical_email?(contact)

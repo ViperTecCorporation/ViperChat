@@ -2,11 +2,13 @@
 import { computed, ref } from 'vue';
 import { useStore } from 'vuex';
 import BaseBubble from './Base.vue';
+import FileIcon from 'next/icon/FileIcon.vue';
 import { useMessageContext } from '../provider.js';
 
 const {
   content,
   contentAttributes,
+  attachments,
   conversationId,
   id: messageId,
 } = useMessageContext();
@@ -25,6 +27,13 @@ const sections = computed(() =>
 );
 const order = computed(() => interactive.value.order || {});
 const status = computed(() => interactive.value.status || {});
+const documents = computed(() =>
+  interactive.value.header?.type === 'document'
+    ? (attachments.value || []).filter(
+        attachment => attachment.fileType === 'file'
+      )
+    : []
+);
 
 const safeHttpUrl = value => {
   try {
@@ -122,6 +131,29 @@ const sendReply = async (reply, responseType) => {
       loading="lazy"
     />
     <div class="grid gap-2 px-4 py-3">
+      <a
+        v-for="document in documents"
+        :key="document.id"
+        :href="safeHttpUrl(document.dataUrl)"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex min-w-0 items-center gap-3 rounded-lg border border-n-weak p-3 text-sm hover:bg-n-alpha-2"
+      >
+        <FileIcon
+          :file-type="document.extension || 'pdf'"
+          class="size-6 shrink-0"
+        />
+        <span class="min-w-0 flex-1 break-all">
+          {{
+            interactive.header.filename ||
+            $t('CONVERSATION.SHARED_ATTACHMENT.FILE')
+          }}
+        </span>
+        <span
+          class="i-lucide-download size-4 shrink-0"
+          :aria-label="$t('CONVERSATION.DOWNLOAD')"
+        />
+      </a>
       <p
         v-if="interactive.header?.text"
         class="m-0 text-sm font-semibold text-n-slate-12"

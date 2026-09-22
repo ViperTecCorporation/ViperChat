@@ -50,6 +50,44 @@ RSpec.describe Whatsapp::IncomingMessageUnoapiService do
     )
   end
 
+  it 'keeps Meta reaction payload handling isolated from UnoAPI' do
+    reaction_params = {
+      messages: [{
+        id: 'uno-reaction-event',
+        type: 'reaction',
+        reaction: {
+          message_id: message.source_id,
+          emoji: '👍'
+        }
+      }]
+    }.with_indifferent_access
+
+    expect do
+      described_class.new(inbox: channel.inbox, params: reaction_params).perform
+    end.not_to change(channel.inbox.messages, :count)
+
+    expect(message.reload.content_attributes).to eq('whatsapp_interactive' => { 'type' => 'payment_request' })
+  end
+
+  it 'keeps Meta revoke payload handling isolated from UnoAPI' do
+    revoke_params = {
+      messages: [{
+        id: 'uno-revoke-event',
+        type: 'revoke',
+        revoke: { original_message_id: message.source_id }
+      }]
+    }.with_indifferent_access
+
+    expect do
+      described_class.new(inbox: channel.inbox, params: revoke_params).perform
+    end.not_to change(channel.inbox.messages, :count)
+
+    expect(message.reload).to have_attributes(
+      content: 'Pix - Cnpj : 1450742000190',
+      content_attributes: { 'whatsapp_interactive' => { 'type' => 'payment_request' } }
+    )
+  end
+
   it 'prefers the authenticated UnoAPI media proxy over the signed storage URL' do
     allow(channel).to receive(:unoapi_api_url).and_return('https://unoapi.example.test')
     attachment_payload = {

@@ -9,6 +9,7 @@ import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import ContactInfoRow from './ContactInfoRow.vue';
 import Avatar from 'next/avatar/Avatar.vue';
+import AvatarPreview from 'next/avatar/AvatarPreview.vue';
 import SocialIcons from './SocialIcons.vue';
 import EditContact from './EditContact.vue';
 import ContactMergeModal from 'dashboard/modules/contact/ContactMergeModal.vue';
@@ -18,13 +19,16 @@ import ComposeConversation from 'dashboard/components-next/NewConversation/Compo
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import InlineInput from 'dashboard/components-next/inline-input/InlineInput.vue';
+import FavoriteMessagesModal from 'dashboard/components-next/message/FavoriteMessagesModal.vue';
 
 export default {
   components: {
+    FavoriteMessagesModal,
     NextButton,
     ContactInfoRow,
     EditContact,
     Avatar,
+    AvatarPreview,
     ComposeConversation,
     SocialIcons,
     ContactMergeModal,
@@ -216,14 +220,20 @@ export default {
   <div class="relative items-center w-full p-4">
     <div class="flex flex-col w-full gap-2 text-left rtl:text-right">
       <div class="flex flex-row justify-between">
-        <Avatar
+        <AvatarPreview
           v-if="showAvatar"
+          :key="contact.id"
           :src="contact.thumbnail"
           :name="displayName"
-          :status="contact.availability_status"
-          :size="48"
-          hide-offline-status
-        />
+        >
+          <Avatar
+            :src="contact.thumbnail"
+            :name="displayName"
+            :status="contact.availability_status"
+            :size="48"
+            hide-offline-status
+          />
+        </AvatarPreview>
       </div>
 
       <div class="flex flex-col items-start gap-1.5 min-w-0 w-full">
@@ -351,7 +361,15 @@ export default {
           <SocialIcons :social-profiles="socialProfiles" />
         </div>
       </div>
-      <div class="flex items-center w-full mt-0.5 gap-2">
+      <div class="flex flex-wrap items-center w-full mt-0.5 gap-2">
+        <NextButton
+          icon="i-lucide-star"
+          :label="$t('CONVERSATION.FAVORITES.TITLE')"
+          slate
+          faded
+          sm
+          @click="$refs.favoriteMessages.open()"
+        />
         <ComposeConversation :contact-id="String(contact.id)">
           <template #trigger>
             <NextButton
@@ -414,6 +432,12 @@ export default {
         :show="showEditModal"
         :contact="contact"
         @cancel="toggleEditModal"
+      />
+      <FavoriteMessagesModal
+        ref="favoriteMessages"
+        :contact-id="currentChat.group ? null : contact.id"
+        :conversation-id="currentChat.group ? currentChat.id : null"
+        @navigate="$emit('panelClose')"
       />
     </div>
   </div>

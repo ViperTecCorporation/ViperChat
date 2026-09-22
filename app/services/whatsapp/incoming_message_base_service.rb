@@ -50,8 +50,11 @@ class Whatsapp::IncomingMessageBaseService
   private
 
   def process_messages
-    # We don't support reactions & ephemeral message now, we need to skip processing the message
-    # if the webhook event is a reaction or an ephermal message or an unsupported message.
+    return if process_message_reaction
+    return if process_message_revoke
+
+    # Provider-specific reactions are handled above. Skip reaction formats that the
+    # active provider did not normalize, plus ephemeral and unsupported messages.
     return if unprocessable_message_type?(message_type)
 
     # Multiple webhook events can be received for the same message due to
@@ -61,6 +64,9 @@ class Whatsapp::IncomingMessageBaseService
     return if process_message_edit
     return if reconcile_existing_message(messages_data.first[:id])
     return unless lock_message_source_id!
+    # Do not reuse an earlier query-cache miss after acquiring the lease.
+    return if ActiveRecord::Base.uncached { reconcile_existing_message(messages_data.first[:id]) }
+
     set_message_type
     set_contact
     return unless @contact
@@ -69,7 +75,10 @@ class Whatsapp::IncomingMessageBaseService
     ActiveRecord::Base.transaction do
       set_conversation
       create_messages
+      @message_dedup_lock.ensure_owned!
     end
+  ensure
+    @message_dedup_lock&.release!
   end
 
   def process_statuses
@@ -269,7 +278,7 @@ class Whatsapp::IncomingMessageBaseService
       return true
     end
 
-    edited_content = message_content(message)
+    edited_content = message_content(edited_message_payload(message))
     content_attrs = original_message.content_attributes || {}
     content_attrs = content_attrs.merge(
       'edited' => true,
@@ -329,11 +338,32 @@ class Whatsapp::IncomingMessageBaseService
 
   def message_edit_event?
     message = messages_data&.first
-    message.present? && message[:message_type].to_s == 'message_edit'
+    return false if message.blank?
+
+    message[:message_type].to_s == 'message_edit' || provider_message_edit_event?(message)
   end
 
   def edited_original_source_id(message)
-    message.dig(:context, :id).presence || message.dig(:context, :message_id).presence || message[:edited_message_id].presence
+    message.dig(:edit, :original_message_id).presence ||
+      message.dig(:context, :id).presence ||
+      message.dig(:context, :message_id).presence ||
+      message[:edited_message_id].presence
+  end
+
+  def edited_message_payload(message)
+    message.dig(:edit, :message).presence || message
+  end
+
+  def process_message_reaction
+    false
+  end
+
+  def process_message_revoke
+    false
+  end
+
+  def provider_message_edit_event?(_message)
+    false
   end
 
   def set_contact
@@ -432,19 +462,12 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def merge_contact_conversation_aliases
-    conversations = contact_conversation_aliases.to_a
-    return if conversations.size <= 1
-
-    target = preferred_contact_conversation(conversations)
-    mergees = conversations - [target]
-    Message.where(conversation_id: mergees.map(&:id)).update_all(conversation_id: target.id) # rubocop:disable Rails/SkipsModelValidations
-    target.update_columns(last_activity_at: conversations.filter_map(&:last_activity_at).max, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    mergees.each(&:destroy!)
+    Conversations::SingleConversationMergeService.new(inbox: @inbox, contact: @contact).perform
   end
 
   def existing_contact_conversation
     conversations = contact_conversation_aliases
-    return conversations.last if single_conversation_for_contact_aliases?
+    return conversations.reorder(created_at: :desc, id: :desc).first if single_conversation_for_contact_aliases?
 
     conversations.where.not(status: :resolved).last
   end
@@ -454,12 +477,6 @@ class Whatsapp::IncomingMessageBaseService
     return conversations if single_conversation_for_contact_aliases?
 
     conversations.where(contact_inbox_id: contact_inbox_aliases.select(:id))
-  end
-
-  def preferred_contact_conversation(conversations)
-    conversations.select { |conversation| conversation.contact_inbox.source_id.exclude?('@') }
-                 .max_by { |conversation| [conversation.last_activity_at, conversation.id] } ||
-      conversations.max_by { |conversation| [conversation.last_activity_at, conversation.id] }
   end
 
   def contact_inbox_aliases

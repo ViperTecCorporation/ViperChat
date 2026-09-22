@@ -5,6 +5,8 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
   # a webhook that arrives just after the lock is acquired can exhaust retries before the
   # holder finishes and silently drop its message.
   retry_on LockAcquisitionError, wait: 2.seconds, attempts: 20
+  # Retry longer than the processing lease; conflicts must not discard the event.
+  retry_on Whatsapp::MessageDedupLock::Busy, wait: 10.seconds, attempts: 40
 
   def perform(params = {})
     channel = find_channel_from_whatsapp_business_payload(params)

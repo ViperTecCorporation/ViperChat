@@ -631,9 +631,14 @@
       "ERROR_MESSAGE": "Ocorreu um erro ao criar a conversa. Tente novamente mais tarde.",
       "NO_INBOX_ALERT": "Não há caixas de entrada disponíveis para iniciar uma conversa com este contato.",
       "CONTACT_SELECTOR": {
+        "USE_IDENTIFIER": "Usar este destinatário",
         "LABEL": "Para:",
         "TAG_INPUT_PLACEHOLDER": "Digite pelo menos 2 caracteres para pesquisar por nome, e-mail ou número de telefone",
-        "CONTACT_CREATING": "Criando contato..."
+        "CONTACT_CREATING": "Criando contato...",
+        "IDENTIFIER_TYPE": "Tipo de destinatário",
+        "PHONE_TYPE": "Telefone",
+        "BSUID_TYPE": "BSUID / LID",
+        "IDENTIFIER_HINT": "Informe telefone com DDD ou selecione BSUID / LID. O cadastro será criado ao enviar."
       },
       "INBOX_SELECTOR": {
         "LABEL": "Via:",

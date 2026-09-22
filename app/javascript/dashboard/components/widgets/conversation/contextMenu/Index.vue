@@ -33,6 +33,10 @@ export default {
     AgentLoadingPlaceholder,
   },
   props: {
+    isPinned: { type: Boolean, default: false },
+    canArchive: { type: Boolean, default: false },
+    archiveBusy: { type: Boolean, default: false },
+    pinBusy: { type: Boolean, default: false },
     chatId: {
       type: Number,
       default: null,
@@ -67,6 +71,8 @@ export default {
     },
   },
   emits: [
+    'togglePin',
+    'archive',
     'updateConversation',
     'assignPriority',
     'markAsUnread',
@@ -283,6 +289,26 @@ export default {
   <div
     class="p-1 rounded-md shadow-xl bg-n-alpha-3/50 backdrop-blur-[100px] outline-1 outline outline-n-weak/50"
   >
+    <button
+      v-if="canArchive && !allowedOptions.length"
+      type="button"
+      class="flex items-center gap-2 w-full min-h-9 p-1 rounded-md text-n-slate-12 hover:bg-n-alpha-2 disabled:opacity-50"
+      :disabled="archiveBusy"
+      @click.stop="$emit('archive')"
+    >
+      <span class="i-lucide-archive size-4 shrink-0" />
+      {{ $t('CONVERSATION.ARCHIVE.ACTION') }}
+    </button>
+    <button
+      v-if="!allowedOptions.length"
+      type="button"
+      class="flex items-center gap-2 w-full min-h-9 p-1 rounded-md text-n-slate-12 hover:bg-n-alpha-2 disabled:opacity-50"
+      :disabled="pinBusy"
+      @click.stop="$emit('togglePin')"
+    >
+      <span class="i-lucide-pin size-4 shrink-0" />
+      {{ $t(isPinned ? 'CONVERSATION.PIN.UNPIN' : 'CONVERSATION.PIN.PIN') }}
+    </button>
     <template v-if="isAllowed([MENU.MARK_AS_READ, MENU.MARK_AS_UNREAD])">
       <MenuItem
         v-if="!hasUnreadMessages"

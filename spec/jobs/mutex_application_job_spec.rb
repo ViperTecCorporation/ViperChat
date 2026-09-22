@@ -11,6 +11,13 @@ RSpec.describe MutexApplicationJob do
   end
 
   describe '#with_lock' do
+    it 'releases its own lock even when the block raises a nested lock conflict' do
+      expect(lock_manager).to receive(:unlock).with(lock_key).once
+      expect do
+        described_class.new.with_lock(lock_key) { raise MutexApplicationJob::LockAcquisitionError }
+      end.to raise_error(MutexApplicationJob::LockAcquisitionError)
+    end
+
     it 'acquires the lock and yields the block if lock is not acquired' do
       expect(lock_manager).to receive(:lock).with(lock_key, Redis::LockManager::LOCK_TIMEOUT).and_return(true)
       expect(lock_manager).to receive(:unlock).with(lock_key).and_return(true)

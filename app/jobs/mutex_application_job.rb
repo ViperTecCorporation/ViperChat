@@ -22,37 +22,23 @@ class MutexApplicationJob < ApplicationJob
     end
   end
 
-  # Redis::LockManager#unlock is not owner-checked. If a job runs past the TTL,
-  # Redis can expire the key, a newer job can acquire it, and the older job can
-  # then delete the newer job's lock on unlock. Current mutex users treat locks as
-  # short race dampeners, so this is acceptable for now. Future iterations should
-  # move Redis::LockManager to token-checked unlocks.
+  # Release only our own lease, including exceptions and non-local returns.
   def with_lock(lock_key, timeout = Redis::LockManager::LOCK_TIMEOUT)
     lock_manager = Redis::LockManager.new
 
-    begin
-      if lock_manager.lock(lock_key, timeout)
-        log_attempt(lock_key, executions)
-        yield
-        # release the lock after the block has been executed
-        lock_manager.unlock(lock_key)
-      else
-        handle_failed_lock_acquisition(lock_key)
-      end
-    rescue StandardError => e
-      handle_error(e, lock_manager, lock_key)
-    end
+    acquired = lock_manager.lock(lock_key, timeout)
+    handle_failed_lock_acquisition(lock_key) unless acquired
+    log_attempt(lock_key, executions)
+    yield
+    true
+  ensure
+    lock_manager.unlock(lock_key) if acquired
   end
 
   private
 
   def log_attempt(lock_key, executions)
     Rails.logger.info "[#{self.class.name}] Acquired lock for: #{lock_key} on attempt #{executions}"
-  end
-
-  def handle_error(err, lock_manager, lock_key)
-    lock_manager.unlock(lock_key) unless err.is_a?(LockAcquisitionError)
-    raise err
   end
 
   def handle_failed_lock_acquisition(lock_key)

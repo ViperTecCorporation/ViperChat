@@ -126,6 +126,20 @@ class Message < ApplicationRecord
   }
   scope :chat, -> { where.not(message_type: :activity).where(private: false) }
   scope :non_activity_messages, -> { where.not(message_type: :activity).reorder('created_at desc') }
+  scope :without_empty_replies, lambda {
+    # Legacy store(:content_attributes, coder: JSON) can persist a JSON string.
+    attributes = <<~SQL.squish
+      (CASE WHEN json_typeof(messages.content_attributes) = 'string'
+       THEN (messages.content_attributes #>> '{}')::json ELSE messages.content_attributes END)
+    SQL
+    where.not(<<~SQL.squish)
+      messages.content_type = 0 AND BTRIM(COALESCE(messages.content, '')) = ''
+      AND #{attributes}->>'in_reply_to' IS NOT NULL
+      AND COALESCE(#{attributes}->>'deleted', 'false') != 'true'
+      AND COALESCE(#{attributes}->>'is_unsupported', 'false') != 'true'
+      AND NOT EXISTS (SELECT 1 FROM attachments WHERE attachments.message_id = messages.id)
+    SQL
+  }
   scope :today, -> { where("date_trunc('day', created_at) = ?", Date.current) }
   scope :voice_calls, -> { where(content_type: :voice_call) }
 
@@ -146,6 +160,7 @@ class Message < ApplicationRecord
   after_create_commit :execute_after_create_commit_callbacks
 
   after_update_commit :dispatch_update_event
+  after_commit -> { Conversations::LinksService.expire(self) }, on: [:create, :update, :destroy]
   after_commit :reindex_for_search, if: :should_index?, on: [:create, :update]
 
   def channel_token

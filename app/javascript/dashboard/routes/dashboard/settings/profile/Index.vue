@@ -12,6 +12,7 @@ import UserProfilePicture from './UserProfilePicture.vue';
 import UserBasicDetails from './UserBasicDetails.vue';
 import MessageSignature from './MessageSignature.vue';
 import FontSize from './FontSize.vue';
+import NavigationShortcuts from './NavigationShortcuts.vue';
 import UserLanguageSelect from './UserLanguageSelect.vue';
 import ChangePassword from './ChangePassword.vue';
 import NotificationPreferences from './NotificationPreferences.vue';
@@ -32,6 +33,7 @@ export default {
     MessageSignature,
     SectionLayout,
     FontSize,
+    NavigationShortcuts,
     UserLanguageSelect,
     UserProfilePicture,
     Policy,
@@ -301,6 +303,7 @@ export default {
         />
       </div>
     </SectionLayout>
+    <NavigationShortcuts />
     <SectionLayout
       with-border
       :title="$t('PROFILE_SETTINGS.FORM.MESSAGE_SIGNATURE_SECTION.TITLE')"

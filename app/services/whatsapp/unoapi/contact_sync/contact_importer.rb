@@ -260,17 +260,7 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter # rubocop:disable Metrics/C
   end
 
   def merge_inbox_conversation_aliases!(contact)
-    conversations = @inbox.conversations.non_group_conversations.where(contact_id: contact.id).to_a
-    return if conversations.size <= 1
-
-    target = conversations.max_by { |conversation| [conversation.last_activity_at, conversation.id] }
-    mergees = conversations - [target]
-    Message.where(conversation_id: mergees.map(&:id)).update_all(conversation_id: target.id) # rubocop:disable Rails/SkipsModelValidations
-    target.update_columns( # rubocop:disable Rails/SkipsModelValidations
-      last_activity_at: conversations.filter_map(&:last_activity_at).max,
-      updated_at: Time.current
-    )
-    mergees.each(&:destroy!)
+    Conversations::SingleConversationMergeService.new(inbox: @inbox, contact: contact).perform
   end
 
   def already_imported? # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity

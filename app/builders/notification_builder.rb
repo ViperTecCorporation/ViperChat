@@ -2,6 +2,8 @@ class NotificationBuilder
   pattr_initialize [:notification_type!, :user!, :account!, :primary_actor!, :secondary_actor]
 
   def perform
+    return if Conversations::ArchiveService.muted_notification?(user, primary_actor, notification_type)
+
     build_notification
   end
 

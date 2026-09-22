@@ -7,6 +7,7 @@ import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
 
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+import AvatarPreview from 'dashboard/components-next/avatar/AvatarPreview.vue';
 import CardMessagePreview from './CardMessagePreview.vue';
 import CardMessagePreviewWithMeta from './CardMessagePreviewWithMeta.vue';
 import CardPriorityIcon from './CardPriorityIcon.vue';
@@ -37,8 +38,19 @@ const cardMessagePreviewWithMetaRef = ref(null);
 
 const currentContact = computed(() => props.contact);
 
-const currentContactName = computed(() => currentContact.value?.name);
-const currentContactThumbnail = computed(() => currentContact.value?.thumbnail);
+const currentContactName = computed(() =>
+  props.conversation.group
+    ? props.conversation.groupTitle ||
+      props.conversation.group_title ||
+      currentContact.value?.name
+    : currentContact.value?.name
+);
+const currentContactThumbnail = computed(() => {
+  if (!props.conversation.group) return currentContact.value?.thumbnail;
+  return (
+    props.conversation.groupPicture || props.conversation.group_picture || ''
+  );
+});
 const currentContactStatus = computed(
   () => currentContact.value?.availabilityStatus
 );
@@ -90,13 +102,15 @@ const onCardClick = e => {
     class="flex w-full gap-3 px-3 py-4 transition-all duration-300 ease-in-out cursor-pointer"
     @click="onCardClick"
   >
-    <Avatar
-      :name="currentContactName"
-      :src="currentContactThumbnail"
-      :size="24"
-      :status="currentContactStatus"
-      rounded-full
-    />
+    <AvatarPreview :name="currentContactName" :src="currentContactThumbnail">
+      <Avatar
+        :name="currentContactName"
+        :src="currentContactThumbnail"
+        :size="24"
+        :status="currentContactStatus"
+        rounded-full
+      />
+    </AvatarPreview>
     <div class="flex flex-col w-full gap-1 min-w-0">
       <div class="flex items-center justify-between h-6 gap-2">
         <h4 class="text-base font-medium truncate text-n-slate-12">

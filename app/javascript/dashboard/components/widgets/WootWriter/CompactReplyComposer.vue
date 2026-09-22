@@ -283,6 +283,7 @@ export default {
       if (this.isNote) return getAllowedFileTypesByChannel();
 
       let channelType = this.channelType || this.inbox?.channel_type;
+      if (channelType === INBOX_TYPES.WHATSAPP) return '*';
       if (
         this.isAnInstagramChannel ||
         this.conversationType === 'instagram_direct_message'

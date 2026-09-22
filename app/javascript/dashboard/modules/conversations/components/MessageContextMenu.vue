@@ -17,9 +17,11 @@ import { useTrack } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import EmojiPicker from 'shared/components/emoji/EmojiPicker.vue';
 import ReportCaptainMessageDialog from './ReportCaptainMessageDialog.vue';
+import MessageFavoriteAction from 'dashboard/components-next/message/MessageFavoriteAction.vue';
 
 export default {
   components: {
+    MessageFavoriteAction,
     AddCannedModal,
     MenuItem,
     ContextMenu,
@@ -323,6 +325,7 @@ export default {
       @close="handleClose"
     >
       <div class="menu-container">
+        <MessageFavoriteAction :message="message" @close="handleClose" />
         <MenuItem
           v-if="enabledOptions['replyTo']"
           :option="{

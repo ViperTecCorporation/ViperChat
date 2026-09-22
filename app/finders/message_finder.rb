@@ -21,7 +21,9 @@ class MessageFinder
   end
 
   def current_messages
-    if @params[:after].present? && @params[:before].present?
+    if @params[:around].present?
+      messages_around(@params[:around].to_i)
+    elsif @params[:after].present? && @params[:before].present?
       messages_between(@params[:after].to_i, @params[:before].to_i)
     elsif @params[:before].present?
       messages_before(@params[:before].to_i)
@@ -30,6 +32,11 @@ class MessageFinder
     else
       messages_latest
     end
+  end
+
+  def messages_around(message_id)
+    cursor = messages.find(message_id)
+    messages_before(cursor.id) + [cursor] + messages_after(cursor.id).limit(20).to_a
   end
 
   def messages_after(after_id)

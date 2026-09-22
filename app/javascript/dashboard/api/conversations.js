@@ -10,6 +10,24 @@ class ConversationApi extends ApiClient {
     return axios.get(`${this.url}/${conversationID}/labels`);
   }
 
+  getLinks(conversationID, page = 1) {
+    return axios.get(`${this.url}/${conversationID}/links`, {
+      params: { page },
+    });
+  }
+
+  setArchived(conversationID, archived) {
+    return axios.post(`${this.url}/${conversationID}/archive`, { archived });
+  }
+
+  getArchived(page = 1) {
+    return axios.get(`${this.url}/archived`, { params: { page } });
+  }
+
+  getArchiveState() {
+    return axios.get(`${this.url}/archived`, { params: { ids_only: true } });
+  }
+
   updateLabels(conversationID, labels) {
     return axios.post(`${this.url}/${conversationID}/labels`, { labels });
   }
@@ -20,6 +38,10 @@ class ConversationApi extends ApiClient {
 
   getUnreadCounts() {
     return axios.get(`${this.url}/unread_counts`);
+  }
+
+  setPinned(conversationID, pinned) {
+    return axios.post(`${this.url}/${conversationID}/pin`, { pinned });
   }
 }
 

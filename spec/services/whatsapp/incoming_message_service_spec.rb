@@ -25,6 +25,47 @@ describe Whatsapp::IncomingMessageService do
     end
 
     context 'when valid text message params' do
+      it 'rechecks existence under the lease after an earlier miss' do
+        service = described_class.new(inbox: whatsapp_channel.inbox, params: params)
+        expect(service).to receive(:reconcile_existing_message).with(params[:messages].first[:id]).ordered.and_return(false)
+        expect(service).to receive(:reconcile_existing_message).with(params[:messages].first[:id]).ordered.and_return(true)
+        expect(service).not_to receive(:create_messages)
+        service.perform
+        key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: "#{whatsapp_channel.inbox.id}:#{params[:messages].first[:id]}")
+        expect(Redis::Alfred.exists?(key)).to be false
+      end
+
+      it 'rolls back a failed create and allows retry immediately' do
+        service = described_class.new(inbox: whatsapp_channel.inbox, params: params)
+        allow(service).to receive(:create_messages).and_wrap_original do |original|
+          original.call
+          raise 'failure before commit'
+        end
+        expect { service.perform }.to raise_error('failure before commit')
+        expect(whatsapp_channel.inbox.messages.count).to eq(0)
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        end.to change { whatsapp_channel.inbox.messages.count }.by(1)
+      end
+
+      it 'rolls back when processing outlives the message lease' do
+        service = described_class.new(inbox: whatsapp_channel.inbox, params: params)
+        key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: "#{whatsapp_channel.inbox.id}:#{params[:messages].first[:id]}")
+        allow(service).to receive(:create_messages).and_wrap_original do |original|
+          original.call
+          Redis::Alfred.delete(key)
+        end
+        expect { service.perform }.to raise_error(Whatsapp::MessageDedupLock::Busy)
+        expect(whatsapp_channel.inbox.messages.count).to eq(0)
+      end
+
+      it 'keeps the existing message when history is delivered again' do
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        end.not_to(change { whatsapp_channel.inbox.messages.count })
+      end
+
       it 'creates appropriate conversations, message and contacts' do
         described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
         expect(whatsapp_channel.inbox.conversations.count).not_to eq(0)
@@ -85,6 +126,20 @@ describe Whatsapp::IncomingMessageService do
         # this shouldn't create a duplicate message
         described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
         expect(whatsapp_channel.inbox.messages.count).to eq(1)
+      end
+
+      it 'receives on the newest conversation when historical CSAT prevents a safe merge' do
+        whatsapp_channel.inbox.update!(lock_to_single_conversation: true)
+        link = create(:contact_inbox, inbox: whatsapp_channel.inbox, source_id: params[:messages].first[:from])
+        old = create(:conversation, inbox: whatsapp_channel.inbox, contact: link.contact, contact_inbox: link, created_at: 2.days.ago)
+        current = create(:conversation, inbox: whatsapp_channel.inbox, contact: link.contact, contact_inbox: link, created_at: 1.day.ago)
+        response = create(:csat_survey_response, account: old.account, conversation: old, contact: link.contact)
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+
+        expect(Conversation.exists?(old.id)).to be(true)
+        expect(response.reload.conversation_id).to eq(old.id)
+        expect(current.messages.where(content: params[:messages].first[:text][:body])).to exist
       end
 
       it 'accepts the same provider message id in different inboxes' do
@@ -652,7 +707,7 @@ describe Whatsapp::IncomingMessageService do
     end
 
     describe 'when another worker already holds the dedup lock' do
-      it 'skips message creation' do
+      it 'raises a retryable conflict without creating a message' do
         params = { 'contacts' => [{ 'profile' => { 'name' => 'Kedar' }, 'wa_id' => '919746334593' }],
                    'messages' => [{ 'from' => '919446284490',
                                     'id' => 'wamid.SDFADSf23sfasdafasdfa',
@@ -673,7 +728,9 @@ describe Whatsapp::IncomingMessageService do
         expect(lock.acquire!).to be_truthy
 
         message_count = whatsapp_channel.inbox.messages.count
-        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        expect do
+          described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+        end.to raise_error(Whatsapp::MessageDedupLock::Busy)
         expect(whatsapp_channel.inbox.messages.count).to eq(message_count)
       ensure
         key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: dedup_id)

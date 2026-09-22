@@ -169,6 +169,8 @@ export class DashboardAudioNotificationHelper {
   };
 
   onNewMessage = message => {
+    if (this.store.isArchived(message?.conversation_id)) return;
+
     // If the user does not have the permission to view the conversation, then dismiss the alert
     // FIX ME: There shouldn't be a new message if the user has no access to the conversation.
     if (!this.store.hasConversationPermission(this.currentUser)) {

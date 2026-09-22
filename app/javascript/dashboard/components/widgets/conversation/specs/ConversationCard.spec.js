@@ -31,6 +31,30 @@ const mountComponent = (chat, currentContact = {}) =>
   });
 
 describe('ConversationCard', () => {
+  it('does not display a participant photo for a group without its own picture', () => {
+    const wrapper = mountComponent(
+      { group: true, group_title: 'Support' },
+      { thumbnail: '/participant.png' }
+    );
+    expect(wrapper.findComponent({ name: 'AvatarPreview' }).props('src')).toBe(
+      ''
+    );
+  });
+
+  it('preserves the group photo and individual contact photos', () => {
+    const group = mountComponent(
+      { group: true, group_picture: '/group.png' },
+      { thumbnail: '/participant.png' }
+    );
+    expect(group.findComponent({ name: 'AvatarPreview' }).props('src')).toBe(
+      '/group.png'
+    );
+    const individual = mountComponent({}, { thumbnail: '/participant.png' });
+    expect(
+      individual.findComponent({ name: 'AvatarPreview' }).props('src')
+    ).toBe('/participant.png');
+  });
+
   it('does not reserve the labels row when only a persisted SLA policy id is present', () => {
     const wrapper = mountComponent({ sla_policy_id: 1, applied_sla: null });
 

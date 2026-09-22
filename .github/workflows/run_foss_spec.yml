@@ -87,6 +87,12 @@ jobs:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4.4.0
 
+      - name: Install image processing dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libvips-tools
+          vips --version
+
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
@@ -129,6 +135,17 @@ jobs:
           fi
         env:
           NODE_OPTIONS: --openssl-legacy-provider
+
+      - name: Run isolated repair and safe-upgrade tests
+        if: matrix.ci_node_index == 0
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: ''
+          PGDATABASE: viper_identity_fixture_test
+        run: |
+          bundle exec ruby -rpg -e 'PG.connect(dbname: "postgres").exec("CREATE DATABASE viper_identity_fixture_test")'
+          bundle exec rspec spec/migrations
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

@@ -172,6 +172,95 @@ describe Whatsapp::Providers::UnoapiService do
         external_error: 'PIX payment requests are not supported in groups'
       )
     end
+
+    context 'with a sticker message' do
+      let(:source_blob) do
+        ActiveStorage::Blob.create_and_upload!(
+          io: StringIO.new('jpeg-data'), filename: 'FazOPix.jpeg', content_type: 'image/jpeg'
+        )
+      end
+      let(:sticker) do
+        WhatsappSticker.create!(account: whatsapp_channel.account, inbox: whatsapp_channel.inbox, blob: source_blob)
+      end
+      let(:sticker_message) do
+        create(
+          :message,
+          account: whatsapp_channel.account,
+          inbox: whatsapp_channel.inbox,
+          conversation: conversation,
+          message_type: :outgoing,
+          content_type: :sticker,
+          content_attributes: { sticker_id: sticker.id, sticker_url: 'https://storage.example.com/FazOPix.jpeg' }
+        )
+      end
+
+      it 'sends the converted WebP URL instead of the original JPEG' do
+        transcoder = instance_double(Whatsapp::Unoapi::StickerTranscoder, perform: sticker)
+        allow(Whatsapp::Unoapi::StickerTranscoder).to receive(:new).with(sticker).and_return(transcoder)
+        allow(sticker).to receive(:file_url).and_return('https://storage.example.com/FazOPix.webp')
+        stub = stub_request(:post, 'https://uno.example.com/v13.0/random_id/messages')
+               .with do |request|
+                 payload = JSON.parse(request.body)
+                 payload.dig('sticker', 'link') == 'https://storage.example.com/FazOPix.webp'
+               end
+               .to_return(status: 200, body: { messages: [{ id: 'sticker-message-id' }] }.to_json,
+                          headers: { 'Content-Type' => 'application/json' })
+
+        expect(service.send_message('5511912008012', sticker_message)).to eq('sticker-message-id')
+        expect(sticker_message.reload.content_attributes['sticker_url']).to end_with('.jpeg')
+        expect(stub).to have_been_requested.once
+      end
+
+      it 'marks conversion failures without calling UnoAPI again' do
+        allow(Whatsapp::Unoapi::StickerTranscoder).to receive(:new).with(sticker).and_raise(
+          Whatsapp::Unoapi::StickerTranscoder::Error,
+          'UnoAPI sticker conversion failed: invalid image'
+        )
+
+        expect(service.send_message('5511912008012', sticker_message)).to be_nil
+        expect(sticker_message.reload).to have_attributes(
+          status: 'failed',
+          external_error: 'UnoAPI sticker conversion failed: invalid image'
+        )
+        expect(a_request(:post, %r{uno\.example\.com/.*/messages})).not_to have_been_made
+      end
+
+      it 'translates an HTTP 413 into a sticker-specific failure' do
+        transcoder = instance_double(Whatsapp::Unoapi::StickerTranscoder, perform: sticker)
+        allow(Whatsapp::Unoapi::StickerTranscoder).to receive(:new).with(sticker).and_return(transcoder)
+        allow(sticker).to receive(:file_url).and_return('https://storage.example.com/FazOPix.webp')
+        stub_request(:post, 'https://uno.example.com/v13.0/random_id/messages')
+          .to_return(status: 413, body: { error: { message: 'media upload failed with status 413' } }.to_json,
+                     headers: { 'Content-Type' => 'application/json' })
+
+        expect(service.send_message('5511912008012', sticker_message)).to be_nil
+        expect(sticker_message.reload).to have_attributes(
+          status: 'failed',
+          external_error: 'UnoAPI sticker upload failed: converted WebP was rejected as too large (HTTP 413)'
+        )
+      end
+    end
+
+    it 'does not invoke sticker conversion for a regular image attachment' do
+      image_message = create(
+        :message,
+        account: whatsapp_channel.account,
+        inbox: whatsapp_channel.inbox,
+        conversation: conversation,
+        message_type: :outgoing,
+        content: 'Imagem comum'
+      )
+      attachment = image_message.attachments.create!(account: whatsapp_channel.account, file_type: :image)
+      attachment.file.attach(io: StringIO.new('image-data'), filename: 'photo.jpeg', content_type: 'image/jpeg')
+      allow(attachment).to receive(:download_url).and_return('https://storage.example.com/photo.jpeg')
+      allow(image_message).to receive(:attachments).and_return([attachment])
+      stub_request(:post, 'https://uno.example.com/v13.0/random_id/messages')
+        .to_return(status: 200, body: { messages: [{ id: 'image-message-id' }] }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      expect(Whatsapp::Unoapi::StickerTranscoder).not_to receive(:new)
+      expect(service.send_message('5511912008012', image_message)).to eq('image-message-id')
+    end
   end
 
   describe 'LID routing' do

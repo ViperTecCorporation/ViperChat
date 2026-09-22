@@ -1,5 +1,44 @@
 {
   "CONVERSATION": {
+    "UNOAPI_WARNING": {
+      "TITLE": "Aviso de envio",
+      "WITHOUT_QUOTE": "Enviada sem citação. Não foi possível localizar a mensagem original no WhatsApp.",
+      "REFERENCE_NOT_SENT": "Referência não enviada"
+    },
+    "ARCHIVE": {
+      "TITLE": "Arquivadas",
+      "ACTION": "Arquivar conversa",
+      "RESTORE": "Desarquivar",
+      "DESCRIPTION": "As conversas arquivadas ficam sem notificações para você, exceto menções. Novas mensagens e menções não desarquivam a conversa.",
+      "EMPTY": "Nenhuma conversa arquivada.",
+      "ERROR": "Não foi possível atualizar as conversas arquivadas.",
+      "RETRY": "Tentar novamente",
+      "MORE": "Carregar mais",
+      "LOADING": "Carregando…",
+      "CLOSE": "Fechar"
+    },
+    "FAVORITES": {
+      "TITLE": "Favoritas",
+      "ADD": "Favoritar mensagem",
+      "REMOVE": "Remover dos favoritos",
+      "STARRED": "Mensagem favorita",
+      "EMPTY": "Nenhuma mensagem favorita neste contato ou conversa.",
+      "ERROR": "Não foi possível carregar ou atualizar as favoritas. Tente novamente.",
+      "UNAVAILABLE": "Não foi possível abrir a mensagem. Ela pode ter sido excluída ou você não tem mais acesso à conversa.",
+      "CLOSE": "Fechar",
+      "RETRY": "Tentar novamente",
+      "GO_TO_MESSAGE": "Ir para a mensagem original",
+      "MORE": "Carregar mais",
+      "MEDIA": "Mídia ou arquivo",
+      "LOADING": "Carregando…"
+    },
+    "PIN": {
+      "PIN": "Fixar conversa",
+      "UNPIN": "Desafixar conversa",
+      "PINNED": "Conversa fixada",
+      "LIMIT": "Você pode fixar até 3 conversas por conta. Desafixe uma antes de adicionar outra.",
+      "ERROR": "Não foi possível alterar a fixação. Tente novamente."
+    },
     "SELECT_A_CONVERSATION": "Por favor, selecione uma conversa no painel da esquerda",
     "CSAT_REPLY_MESSAGE": "Por favor, classifique a conversa",
     "404": "Desculpe, não conseguimos encontrar a conversa. Por favor, tente novamente",

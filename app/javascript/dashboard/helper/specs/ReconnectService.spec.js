@@ -58,6 +58,7 @@ describe('ReconnectService', () => {
   });
 
   afterEach(() => {
+    reconnectService.disconnect();
     vi.clearAllMocks();
   });
 
@@ -71,7 +72,7 @@ describe('ReconnectService', () => {
       );
       expect(emitter.on).toHaveBeenCalledWith(
         BUS_EVENTS.WEBSOCKET_RECONNECT,
-        reconnectService.onReconnect
+        reconnectService.onWebsocketReconnect
       );
       expect(emitter.on).toHaveBeenCalledWith(
         BUS_EVENTS.WEBSOCKET_DISCONNECT,
@@ -89,7 +90,7 @@ describe('ReconnectService', () => {
       );
       expect(emitter.off).toHaveBeenCalledWith(
         BUS_EVENTS.WEBSOCKET_RECONNECT,
-        reconnectService.onReconnect
+        reconnectService.onWebsocketReconnect
       );
       expect(emitter.off).toHaveBeenCalledWith(
         BUS_EVENTS.WEBSOCKET_DISCONNECT,
@@ -112,15 +113,18 @@ describe('ReconnectService', () => {
   });
 
   describe('handleOnlineEvent', () => {
-    it('should reload the page if disconnected for more than 3 hours', () => {
+    it('refreshes without reloading even after a long disconnection', () => {
+      reconnectService.onReconnect = vi.fn();
       reconnectService.getSecondsSinceDisconnect = vi
         .fn()
         .mockReturnValue(10801);
       reconnectService.handleOnlineEvent();
-      expect(window.location.reload).toHaveBeenCalled();
+      expect(reconnectService.onReconnect).toHaveBeenCalled();
+      expect(window.location.reload).not.toHaveBeenCalled();
     });
 
     it('should not reload the page if disconnected for less than 3 hours', () => {
+      reconnectService.onReconnect = vi.fn();
       reconnectService.getSecondsSinceDisconnect = vi
         .fn()
         .mockReturnValue(10799);
@@ -134,8 +138,8 @@ describe('ReconnectService', () => {
       reconnectService.getSecondsSinceDisconnect = vi.fn().mockReturnValue(100);
       await reconnectService.fetchConversations();
       expect(storeMock.dispatch).toHaveBeenCalledWith('updateChatListFilters', {
-        page: null,
-        updatedWithin: 115,
+        page: 1,
+        updatedWithin: null,
       });
     });
 
@@ -143,10 +147,12 @@ describe('ReconnectService', () => {
       reconnectService.getSecondsSinceDisconnect = vi.fn().mockReturnValue(100);
       await reconnectService.fetchConversations();
       expect(storeMock.dispatch).toHaveBeenCalledWith('updateChatListFilters', {
-        page: null,
-        updatedWithin: 115,
+        page: 1,
+        updatedWithin: null,
       });
-      expect(storeMock.dispatch).toHaveBeenCalledWith('fetchAllConversations');
+      expect(storeMock.dispatch).toHaveBeenCalledWith('fetchAllConversations', {
+        refresh: true,
+      });
     });
 
     it('should dispatch updateChatListFilters and reset updatedWithin', async () => {
@@ -164,7 +170,7 @@ describe('ReconnectService', () => {
       await reconnectService.fetchFilteredOrSavedConversations(payload);
       expect(storeMock.dispatch).toHaveBeenCalledWith(
         'fetchFilteredConversations',
-        { queryData: payload, page: 1 }
+        { queryData: payload, page: 1, refresh: true }
       );
     });
   });
@@ -228,7 +234,7 @@ describe('ReconnectService', () => {
       await reconnectService.fetchConversationMessagesOnReconnect();
       expect(storeMock.dispatch).toHaveBeenCalledWith(
         'syncActiveConversationMessages',
-        { conversationId: 1 }
+        { conversationId: 1, refresh: true }
       );
     });
 
@@ -335,15 +341,115 @@ describe('ReconnectService', () => {
   });
 
   describe('onReconnect', () => {
+    it('coalesces simultaneous refresh requests', async () => {
+      let resolve;
+      reconnectService.handleRouteSpecificFetch = vi.fn(
+        () =>
+          new Promise(done => {
+            resolve = done;
+          })
+      );
+      reconnectService.revalidateCaches = vi.fn();
+      const first = reconnectService.onReconnect();
+      const second = reconnectService.onReconnect();
+      expect(first).toBe(second);
+      resolve();
+      await first;
+      expect(reconnectService.handleRouteSpecificFetch).toHaveBeenCalledTimes(
+        1
+      );
+    });
+
+    it('refreshes after being hidden without a websocket disconnect event', () => {
+      reconnectService.onReconnect = vi.fn();
+      reconnectService.hiddenAt = Date.now() - 60000;
+      reconnectService.handleVisibilityChange();
+      expect(reconnectService.onReconnect).toHaveBeenCalledOnce();
+    });
+
+    it('keeps the first disconnect cursor during repeated disconnect events', () => {
+      reconnectService.setConversationLastMessageId = vi.fn();
+      reconnectService.onDisconnect();
+      const time = reconnectService.disconnectTime;
+      reconnectService.onDisconnect();
+      expect(reconnectService.disconnectTime).toBe(time);
+      expect(
+        reconnectService.setConversationLastMessageId
+      ).toHaveBeenCalledOnce();
+    });
+
+    it('schedules a retry after an HTTP failure and cancels it on cleanup', async () => {
+      vi.useFakeTimers();
+      reconnectService.handleRouteSpecificFetch = vi
+        .fn()
+        .mockRejectedValue(new Error('offline'));
+      await reconnectService.onReconnect();
+      expect(reconnectService.retryTimer).not.toBeNull();
+      reconnectService.disconnect();
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(reconnectService.handleRouteSpecificFetch).toHaveBeenCalledOnce();
+      vi.useRealTimers();
+    });
+
     it('should handle route-specific fetch, revalidate caches, and emit WEBSOCKET_RECONNECT_COMPLETED event', async () => {
       reconnectService.handleRouteSpecificFetch = vi.fn();
       reconnectService.revalidateCaches = vi.fn();
-      await reconnectService.onReconnect();
+      await reconnectService.onWebsocketReconnect();
       expect(reconnectService.handleRouteSpecificFetch).toHaveBeenCalled();
       expect(reconnectService.revalidateCaches).toHaveBeenCalled();
       expect(emitter.emit).toHaveBeenCalledWith(
         BUS_EVENTS.WEBSOCKET_RECONNECT_COMPLETED
       );
+    });
+
+    it('refreshes archive and pin changes without a reconnection banner', async () => {
+      reconnectService.handleRouteSpecificFetch = vi.fn();
+      reconnectService.revalidateCaches = vi.fn();
+      const refresh = emitter.on.mock.calls.find(
+        ([name]) => name === 'refresh_conversation_list'
+      )[1];
+      await refresh();
+      await refresh();
+      expect(reconnectService.handleRouteSpecificFetch).toHaveBeenCalledTimes(
+        2
+      );
+      expect(emitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('completes a real reconnection arriving during a silent refresh', async () => {
+      let resolve;
+      reconnectService.handleRouteSpecificFetch = vi.fn(
+        () =>
+          new Promise(done => {
+            resolve = done;
+          })
+      );
+      reconnectService.revalidateCaches = vi.fn();
+      const refresh = reconnectService.onReconnect();
+      const reconnect = reconnectService.onWebsocketReconnect();
+      expect(refresh).toBe(reconnect);
+      resolve();
+      await refresh;
+      expect(emitter.emit).toHaveBeenCalledExactlyOnceWith(
+        BUS_EVENTS.WEBSOCKET_RECONNECT_COMPLETED
+      );
+    });
+
+    it('does not report recovery if the socket disconnects again during refresh', async () => {
+      let resolve;
+      reconnectService.handleRouteSpecificFetch = vi.fn(
+        () =>
+          new Promise(done => {
+            resolve = done;
+          })
+      );
+      reconnectService.revalidateCaches = vi.fn();
+      const reconnect = reconnectService.onWebsocketReconnect();
+      reconnectService.onDisconnect();
+      resolve();
+      await reconnect;
+      expect(emitter.emit).not.toHaveBeenCalled();
+      expect(reconnectService.disconnectTime).not.toBeNull();
     });
   });
 });

@@ -116,9 +116,21 @@ class Whatsapp::Unoapi::GroupParticipantsSyncService
     picture_id = group_picture_id(group)
     return if picture_url.blank? && picture_id.blank?
 
+    # Group details may contain an old participant ID. Resolve the group itself.
+    picture_id = authenticated_group_picture_id(picture_id)
     additional_attributes['group_picture'] = picture_url if picture_url.present?
-    additional_attributes['group_picture_id'] = picture_id if picture_id.present?
-    enqueue_avatar(@conversation.contact, picture_id, picture_url, avatar_metadata_from(group))
+    additional_attributes['group_picture_id'] = picture_id
+    return unless @conversation.primary_contact_is_group?
+
+    metadata = avatar_metadata_from(group)
+    metadata[:hash] ||= Digest::SHA256.hexdigest(picture_url.to_s) if picture_url.present?
+    enqueue_avatar(@conversation.contact, picture_id, picture_url, metadata)
+  end
+
+  def authenticated_group_picture_id(picture_id)
+    return @group_source_id if picture_id.blank? || picture_id.to_s.end_with?('@lid', '@s.whatsapp.net', '@c.us')
+
+    picture_id
   end
 
   def sync_participant(participant)

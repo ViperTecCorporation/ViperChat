@@ -54,6 +54,7 @@ class Account < ApplicationRecord
   store_accessor :settings, :audio_transcriptions, :auto_resolve_label
   store_accessor :settings, :show_deleted_message_content
   store_accessor :settings, :include_team_conversations_in_mine
+  store_accessor :settings, :last_assignee_as_participant
   store_accessor :settings, :captain_models, :captain_features
   store_accessor :settings, :reporting_timezone
   store_accessor :settings, :keep_pending_on_bot_failure
@@ -62,6 +63,10 @@ class Account < ApplicationRecord
 
   def include_team_conversations_in_mine?
     include_team_conversations_in_mine != false
+  end
+
+  def last_assignee_as_participant?
+    last_assignee_as_participant != false
   end
 
   has_many :account_users, dependent: :destroy_async

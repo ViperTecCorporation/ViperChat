@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
+import { getMessagePreviewContent } from 'dashboard/helper/messagePreviewHelper';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import CardLabels from 'dashboard/components-next/Conversation/ConversationCard/CardLabels.vue';
@@ -33,7 +34,7 @@ const lastNonActivityMessageContent = computed(() => {
     props.conversation;
   const { email: { subject } = {} } = customAttributes;
   return getPlainText(
-    subject || lastNonActivityMessage?.content || t('CHAT_LIST.NO_CONTENT')
+    getMessagePreviewContent({ message: lastNonActivityMessage, subject, t })
   );
 });
 

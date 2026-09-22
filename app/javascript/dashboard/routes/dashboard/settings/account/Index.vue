@@ -20,6 +20,7 @@ import AudioTranscription from './components/AudioTranscription.vue';
 import DeletedMessageContent from './components/DeletedMessageContent.vue';
 import LegacyMessageComposer from './components/LegacyMessageComposer.vue';
 import TeamConversationsInMine from './components/TeamConversationsInMine.vue';
+import LastAssigneeAsParticipant from './components/LastAssigneeAsParticipant.vue';
 import SectionLayout from './components/SectionLayout.vue';
 
 export default {
@@ -33,6 +34,7 @@ export default {
     DeletedMessageContent,
     LegacyMessageComposer,
     TeamConversationsInMine,
+    LastAssigneeAsParticipant,
     SectionLayout,
     SwitchControl,
     WithLabel,
@@ -277,6 +279,7 @@ export default {
     <AudioTranscription v-if="showAudioTranscriptionConfig" />
     <DeletedMessageContent />
     <TeamConversationsInMine />
+    <LastAssigneeAsParticipant />
     <LegacyMessageComposer />
     <SectionLayout
       with-border

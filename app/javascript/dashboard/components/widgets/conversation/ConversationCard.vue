@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
 import Avatar from 'next/avatar/Avatar.vue';
+import AvatarPreview from 'dashboard/components-next/avatar/AvatarPreview.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import MessagePreview from './MessagePreview.vue';
 import InboxName from '../InboxName.vue';
@@ -19,6 +20,7 @@ const props = defineProps({
   assignee: { type: Object, default: () => ({}) },
   inbox: { type: Object, default: () => ({}) },
   selected: { type: Boolean, default: false },
+  isPinned: { type: Boolean, default: false },
   isActiveChat: { type: Boolean, default: false },
   showAssignee: { type: Boolean, default: false },
   showInboxName: { type: Boolean, default: false },
@@ -50,7 +52,7 @@ const conversationAvatarSrc = computed(() => {
   return (
     props.chat.group_picture ||
     props.chat.additional_attributes?.group_picture ||
-    props.currentContact.thumbnail
+    ''
   );
 });
 
@@ -134,26 +136,28 @@ watch(
       @mouseenter="onThumbnailHover"
       @mouseleave="onThumbnailLeave"
     >
-      <Avatar
+      <AvatarPreview
         v-if="!hideThumbnail"
+        :key="chat.id"
         :name="conversationAvatarName"
         :src="conversationAvatarSrc"
-        :size="32"
-        :status="currentContact.availability_status"
         :class="!showInboxName ? 'mt-4' : 'mt-8'"
-        hide-offline-status
       >
-        <template #overlay="{ size }">
-          <label
-            v-if="hovered || selected"
-            class="flex items-center justify-center rounded-full cursor-pointer absolute inset-0 z-10 backdrop-blur-[2px]"
-            :style="{ width: `${size}px`, height: `${size}px` }"
-            @click.stop
-          >
-            <Checkbox v-model="selectedModel" />
-          </label>
-        </template>
-      </Avatar>
+        <Avatar
+          :name="conversationAvatarName"
+          :src="conversationAvatarSrc"
+          :size="32"
+          :status="currentContact.availability_status"
+          hide-offline-status
+        />
+      </AvatarPreview>
+      <label
+        v-if="!hideThumbnail && (hovered || selected)"
+        class="absolute -bottom-2 ltr:-right-1 rtl:-left-1 z-10 rounded bg-n-background"
+        @click.stop
+      >
+        <Checkbox v-model="selectedModel" />
+      </label>
     </div>
     <div class="px-0 py-3 flex-1 min-w-0 border-line">
       <div
@@ -166,14 +170,15 @@ watch(
       >
         <InboxName v-if="showInboxName" :inbox="inbox" class="flex-1 min-w-0" />
         <div
-          class="flex items-baseline gap-2 flex-shrink-0"
+          class="flex items-baseline gap-2 min-w-0 max-w-[50%]"
           :class="{
             'flex-1 justify-between': !showInboxName,
           }"
         >
           <span
             v-if="showAssignee && assignee.name"
-            class="text-n-slate-11 text-xs font-medium leading-3 py-0.5 px-0 inline-flex items-center gap-px truncate"
+            :title="assignee.name"
+            class="text-n-slate-11 text-xs font-medium leading-3 py-0.5 px-0 inline-flex items-center gap-px min-w-0 truncate"
           >
             <Icon
               :icon="
@@ -245,6 +250,12 @@ watch(
           v-if="hasUnread"
           :count="unreadCount"
           class="ltr:ml-auto rtl:mr-auto mt-1"
+        />
+        <Icon
+          v-if="isPinned"
+          icon="i-lucide-pin"
+          :aria-label="$t('CONVERSATION.PIN.PINNED')"
+          class="size-3.5 text-n-slate-11 ltr:ml-auto rtl:mr-auto mt-1"
         />
       </div>
       <CardLabels

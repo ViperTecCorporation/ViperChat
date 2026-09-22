@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { messageTimestamp } from 'shared/helpers/timeHelper';
 
 import MessageStatus from './MessageStatus.vue';
+import FavoriteIndicator from './FavoriteIndicator.vue';
 import Icon from 'next/icon/Icon.vue';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { useMessageContext } from './provider.js';
@@ -26,6 +27,8 @@ const {
 
 const {
   status,
+  id,
+  conversationId,
   isPrivate,
   createdAt,
   sourceId,
@@ -141,6 +144,7 @@ const statusToShow = computed(() => {
 
 <template>
   <div class="text-xs flex items-center gap-1.5">
+    <FavoriteIndicator :message-id="id" :conversation-id="conversationId" />
     <div class="inline">
       <time class="inline">{{ readableTime }}</time>
     </div>

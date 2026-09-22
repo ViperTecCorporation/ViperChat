@@ -147,6 +147,25 @@ const mountMessage = props =>
   });
 
 describe('Message', () => {
+  it('shows sending warnings for text and media without a retry error', () => {
+    [[], [imageAttachment]].forEach(attachments => {
+      const wrapper = mountMessage({
+        content: 'Sent successfully',
+        attachments,
+        messageType: MESSAGE_TYPES.OUTGOING,
+        status: MESSAGE_STATUS.READ,
+        contentAttributes: {
+          unoapiWarnings: [{ code: 'REPLY_SENT_WITHOUT_QUOTE' }],
+        },
+      });
+      expect(wrapper.find('details summary').exists()).toBe(true);
+      expect(wrapper.findComponent({ name: 'MessageError' }).exists()).toBe(
+        false
+      );
+      expect(wrapper.props('status')).toBe(MESSAGE_STATUS.READ);
+    });
+  });
+
   it('renders a deleted placeholder instead of an image bubble for deleted media messages', () => {
     const wrapper = mountMessage({
       attachments: [imageAttachment],

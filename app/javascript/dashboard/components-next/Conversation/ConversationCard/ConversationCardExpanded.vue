@@ -19,6 +19,7 @@ const props = defineProps({
   assignee: { type: Object, default: () => ({}) },
   inbox: { type: Object, default: () => ({}) },
   selected: { type: Boolean, default: false },
+  isPinned: { type: Boolean, default: false },
   isActiveChat: { type: Boolean, default: false },
   showAssignee: { type: Boolean, default: false },
   showInboxName: { type: Boolean, default: false },
@@ -88,7 +89,7 @@ const selectedModel = computed({
         <CardPriorityIcon :priority="chat.priority" show-empty />
       </div>
 
-      <div class="w-4 flex items-center justify-center flex-shrink-0">
+      <div class="max-w-32 min-w-0 flex items-center gap-1 flex-shrink-0">
         <Avatar
           v-if="showAssignee && assignee.name"
           v-tooltip.top="{
@@ -101,8 +102,15 @@ const selectedModel = computed({
           :status="assignee.availability_status"
           hide-offline-status
         />
+        <span
+          v-if="showAssignee && assignee.name && chat.meta?.team?.id"
+          :title="assignee.name"
+          class="text-xs text-n-slate-11 truncate"
+        >
+          {{ assignee.name }}
+        </span>
         <Icon
-          v-else
+          v-if="!showAssignee || !assignee.name"
           icon="i-woot-empty-assignee"
           class="size-4 text-n-slate-7"
         />
@@ -163,6 +171,12 @@ const selectedModel = computed({
 
     <!-- RIGHT SECTION -->
     <div class="flex items-center justify-end gap-1.5 flex-shrink-0">
+      <Icon
+        v-if="isPinned"
+        icon="i-lucide-pin"
+        :aria-label="$t('CONVERSATION.PIN.PINNED')"
+        class="size-3.5 text-n-slate-11 shrink-0"
+      />
       <div v-if="showLabelsSection" class="min-w-0 w-full">
         <CardLabels
           :labels="chat.labels"

@@ -67,6 +67,11 @@ const mountComponent = props =>
   });
 
 describe('CompactReplyComposer', () => {
+  it('allows selecting any document extension for WhatsApp', () => {
+    const wrapper = mountComponent({});
+    expect(wrapper.vm.allowedFileTypes).toBe('*');
+  });
+
   it('shows plus, attachment, AI and microphone while empty', () => {
     const wrapper = mountComponent();
     const icons = wrapper

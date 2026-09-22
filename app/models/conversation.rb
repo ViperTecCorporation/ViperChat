@@ -217,6 +217,18 @@ class Conversation < ApplicationRecord
     end
   end
 
+  def group_avatar_url
+    return unless group?
+
+    stored_group_avatar_url.presence || additional_attributes&.dig('group_picture').presence
+  end
+
+  def stored_group_avatar_url
+    return unless primary_contact_is_group?
+
+    Avatar::GroupAvatarService.new(contact, group_source_id: group_source_id).avatar_url
+  end
+
   def cached_label_list_array
     (cached_label_list || '').split(',').map(&:strip)
   end

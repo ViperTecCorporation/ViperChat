@@ -24,6 +24,12 @@ class ActionCableBroadcastJob < ApplicationJob
   # caused by out-of-order events during high-traffic periods. This prevents
   # the conversation job from processing outdated data.
   def prepare_broadcast_data(event_name, data)
+    if event_name == 'conversation.archive_changed'
+      user = User.find(data[:user_id])
+      account = Account.find(data[:account_id])
+      return { account_id: account.id, archived_conversations: Conversations::ArchiveService.new(user, account).ids }
+    end
+
     return data unless CONVERSATION_UPDATE_EVENTS.include?(event_name)
 
     account = Account.find(data[:account_id])

@@ -65,8 +65,8 @@ export const SHORTCUT_KEYS = [
   {
     id: 10,
     label: 'MOVE_TO_NEXT_TAB',
-    displayKeys: [KEYS.ALT, 'N'],
-    keySet: ['Alt+KeyN'],
+    displayKeys: [KEYS.ALT, 'Shift', 'N'],
+    keySet: ['Alt+Shift+KeyN'],
   },
   {
     id: 11,

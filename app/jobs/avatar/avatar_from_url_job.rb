@@ -213,8 +213,12 @@ class Avatar::AvatarFromUrlJob < ApplicationJob # rubocop:disable Metrics/ClassL
     ) do |avatar_file|
       next unless current_avatar_reservation?(avatarable, avatar_url, avatar_metadata)
 
-      attach_avatar(avatarable, avatar_file)
-      attached = true
+      attached = Avatar::GroupAvatarService.new(avatarable).replace do
+        next false unless current_avatar_reservation?(avatarable, avatar_url, avatar_metadata)
+
+        attach_avatar(avatarable, avatar_file)
+        true
+      end
     end
     attached
   end

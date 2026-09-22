@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_09_01_010000) do
+ActiveRecord::Schema[7.1].define(version: 2026_09_21_010000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -749,6 +749,15 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_01_010000) do
     t.index ["name", "account_id"], name: "index_companies_on_name_and_account_id"
   end
 
+  create_table "contact_identity_repair_audits", force: :cascade do |t|
+    t.string "source_table", null: false
+    t.bigint "source_id", null: false
+    t.jsonb "original_row", null: false
+    t.bigint "retained_id"
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["source_table", "source_id"], name: "idx_contact_identity_repair_original", unique: true
+  end
+
   create_table "contact_inboxes", force: :cascade do |t|
     t.bigint "contact_id"
     t.bigint "inbox_id"
@@ -802,6 +811,15 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_01_010000) do
     t.index ["name", "email", "phone_number", "identifier"], name: "index_contacts_on_name_email_phone_number_identifier", opclass: :gin_trgm_ops, using: :gin
     t.index ["phone_number", "account_id"], name: "index_contacts_on_phone_number_and_account_id"
     t.index ["whatsapp_username"], name: "idx_contacts_whatsapp_username_trgm", opclass: :gin_trgm_ops, using: :gin
+  end
+
+  create_table "conversation_identity_repair_audits", force: :cascade do |t|
+    t.string "source_table", null: false
+    t.bigint "source_id", null: false
+    t.jsonb "original_row", null: false
+    t.bigint "retained_id"
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["source_table", "source_id"], name: "idx_conversation_identity_repair_original", unique: true
   end
 
   create_table "conversation_participants", force: :cascade do |t|
@@ -1221,6 +1239,19 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_01_010000) do
     t.index ["user_id"], name: "index_mentions_on_user_id"
   end
 
+  create_table "message_favorites", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "message_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "id"], name: "index_message_favorites_on_account_id_and_user_id_and_id"
+    t.index ["account_id"], name: "index_message_favorites_on_account_id"
+    t.index ["message_id"], name: "index_message_favorites_on_message_id"
+    t.index ["user_id", "message_id"], name: "index_message_favorites_on_user_id_and_message_id", unique: true
+    t.index ["user_id"], name: "index_message_favorites_on_user_id"
+  end
+
   create_table "messages", id: :serial, force: :cascade do |t|
     t.text "content"
     t.integer "account_id", null: false
@@ -1311,6 +1342,15 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_01_010000) do
     t.index ["secondary_actor_type", "secondary_actor_id"], name: "uniq_secondary_actor_per_account_notifications"
     t.index ["user_id", "account_id", "snoozed_until", "read_at"], name: "idx_notifications_performance"
     t.index ["user_id"], name: "index_notifications_on_user_id"
+  end
+
+  create_table "phone_contact_repair_audits", force: :cascade do |t|
+    t.string "source_table", null: false
+    t.bigint "source_id", null: false
+    t.jsonb "original_row", null: false
+    t.bigint "retained_id"
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["source_table", "source_id"], name: "idx_phone_contact_repair_original", unique: true
   end
 
   create_table "platform_app_permissibles", force: :cascade do |t|
@@ -1654,6 +1694,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_01_010000) do
   add_foreign_key "group_contacts", "contacts", on_delete: :cascade
   add_foreign_key "group_contacts", "conversations", on_delete: :cascade
   add_foreign_key "inboxes", "portals"
+  add_foreign_key "message_favorites", "accounts", on_delete: :cascade
+  add_foreign_key "message_favorites", "messages", on_delete: :cascade
+  add_foreign_key "message_favorites", "users", on_delete: :cascade
   add_foreign_key "scheduled_message_items", "messages"
   add_foreign_key "scheduled_message_items", "scheduled_messages"
   add_foreign_key "scheduled_messages", "accounts"

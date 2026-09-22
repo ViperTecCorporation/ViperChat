@@ -1,10 +1,12 @@
 require 'cgi'
 
-class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudService
+class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudService # rubocop:disable Metrics/ClassLength
   def send_message(phone_number, message)
     return super unless pix_payment_request?(message)
 
     send_pix_payment_request(phone_number, message)
+  rescue Whatsapp::Unoapi::StickerTranscoder::Error => e
+    fail_sticker(message, e.message)
   end
 
   def validate_provider_config?
@@ -121,6 +123,37 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
 
   private
 
+  def send_sticker_message(phone_number, message) # rubocop:disable Metrics/MethodLength
+    sticker = whatsapp_channel.inbox.whatsapp_stickers.find_by(
+      id: message.content_attributes&.[]('sticker_id'),
+      account_id: message.account_id
+    )
+    return fail_sticker(message, 'UnoAPI sticker conversion failed: source sticker was not found') if sticker.blank?
+
+    processed_sticker = Whatsapp::Unoapi::StickerTranscoder.new(sticker).perform
+    request_body = {
+      messaging_product: 'whatsapp',
+      recipient_type: recipient_type_for(message),
+      context: whatsapp_reply_context(message),
+      to: phone_number,
+      type: 'sticker',
+      sticker: { link: processed_sticker.file_url }
+    }
+    response = HTTParty.post(
+      messages_path,
+      headers: api_headers,
+      body: outgoing_message_payload(request_body, message).to_json
+    )
+
+    process_response(response, message)
+  end
+
+  def error_message(response)
+    return 'UnoAPI sticker upload failed: converted WebP was rejected as too large (HTTP 413)' if @message&.sticker? && response.code.to_i == 413
+
+    super
+  end
+
   def outgoing_message_payload(request_body, message)
     Whatsapp::Unoapi::OutgoingIdentityPayload.new(request_body: request_body, message: message, inbox: whatsapp_channel.inbox).perform
   end
@@ -201,6 +234,12 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
   end
 
   def fail_pix_payment_request(message, error)
+    message.update!(status: :failed, external_error: error)
+    nil
+  end
+
+  def fail_sticker(message, error)
+    Rails.logger.error("[WHATSAPP] UnoAPI sticker failed message_id=#{message.id}: #{error}")
     message.update!(status: :failed, external_error: error)
     nil
   end

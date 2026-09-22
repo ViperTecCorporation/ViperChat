@@ -30,7 +30,7 @@ const onTabChange = selectedTabIndex => {
 };
 
 const keyboardEvents = {
-  'Alt+KeyN': {
+  'Alt+Shift+KeyN': {
     action: () => {
       if (props.activeTab === wootConstants.ASSIGNEE_TYPE.ALL) {
         onTabChange(0);

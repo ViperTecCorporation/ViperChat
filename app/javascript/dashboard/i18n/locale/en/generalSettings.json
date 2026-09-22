@@ -35,6 +35,12 @@
       }
     },
     "FORM": {
+      "LAST_ASSIGNEE_AS_PARTICIPANT": {
+        "TITLE": "Last assigned agent as participant",
+        "NOTE": "When an agent is assigned, they become the conversation's only participant and the others are removed. When disabled, existing participants are retained. Applies to future assignments.",
+        "SUCCESS": "Preference updated.",
+        "ERROR": "Could not update the preference."
+      },
       "ERROR": "Please fix form errors",
       "GENERAL_SECTION": {
         "TITLE": "General settings",

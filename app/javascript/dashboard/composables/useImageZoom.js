@@ -18,13 +18,16 @@ export const useImageZoom = imageRef => {
   const zoomScale = ref(1);
   const imgTransformOriginPoint = ref(DEFAULT_IMG_TRANSFORM_ORIGIN);
   const activeImageRotation = ref(0);
+  const pan = ref({ x: 0, y: 0 });
+  const isTouching = ref(false);
+  let gesture = null;
 
   const imageWrapperStyle = computed(() => ({
     transform: `rotate(${activeImageRotation.value}deg)`,
   }));
 
   const imageStyle = computed(() => ({
-    transform: `scale(${zoomScale.value})`,
+    transform: `translate(${pan.value.x}px, ${pan.value.y}px) scale(${zoomScale.value})`,
     cursor: zoomScale.value < MAX_ZOOM_LEVEL ? 'zoom-in' : 'zoom-out',
     transformOrigin: `${imgTransformOriginPoint.value}`,
   }));
@@ -48,6 +51,8 @@ export const useImageZoom = imageRef => {
 
     // Reset zoom when rotating
     zoomScale.value = 1;
+    pan.value = { x: 0, y: 0 };
+    gesture = null;
     resetTransformOrigin();
   };
 
@@ -100,6 +105,7 @@ export const useImageZoom = imageRef => {
 
     // Apply the new scale
     zoomScale.value = newScale;
+    if (newScale === MIN_ZOOM_LEVEL) pan.value = { x: 0, y: 0 };
   };
 
   // Handles double-click zoom toggling
@@ -117,6 +123,7 @@ export const useImageZoom = imageRef => {
 
     // Apply the new scale
     zoomScale.value = newScale;
+    pan.value = { x: 0, y: 0 };
   };
 
   // Handles mouse wheel zooming for images
@@ -161,14 +168,82 @@ export const useImageZoom = imageRef => {
     false
   );
 
+  const onTouchStart = event => {
+    const [first, second] = event.touches;
+    isTouching.value = Boolean(first);
+    if (!first) {
+      gesture = null;
+      return;
+    }
+    if (zoomScale.value === MIN_ZOOM_LEVEL) resetTransformOrigin();
+    gesture = {
+      x: first.clientX,
+      y: first.clientY,
+      distance: second
+        ? Math.hypot(
+            second.clientX - first.clientX,
+            second.clientY - first.clientY
+          )
+        : 0,
+      scale: zoomScale.value,
+      pan: { ...pan.value },
+    };
+  };
+
+  const onTouchMove = event => {
+    if (!gesture || !imageRef.value) return;
+    const [first, second] = event.touches;
+    if (!first) return;
+    if (second && gesture.distance) {
+      const distance = Math.hypot(
+        second.clientX - first.clientX,
+        second.clientY - first.clientY
+      );
+      onZoom((gesture.scale * distance) / gesture.distance - zoomScale.value);
+    } else if (!second && zoomScale.value > MIN_ZOOM_LEVEL) {
+      const angle = (activeImageRotation.value * Math.PI) / 180;
+      const dx = first.clientX - gesture.x;
+      const dy = first.clientY - gesture.y;
+      const maxX = (imageRef.value.clientWidth * (zoomScale.value - 1)) / 2;
+      const maxY = (imageRef.value.clientHeight * (zoomScale.value - 1)) / 2;
+      pan.value = {
+        x: Math.max(
+          -maxX,
+          Math.min(
+            maxX,
+            gesture.pan.x + dx * Math.cos(angle) + dy * Math.sin(angle)
+          )
+        ),
+        y: Math.max(
+          -maxY,
+          Math.min(
+            maxY,
+            gesture.pan.y - dx * Math.sin(angle) + dy * Math.cos(angle)
+          )
+        ),
+      };
+    }
+  };
+
+  const onTouchCancel = () => {
+    gesture = null;
+    isTouching.value = false;
+  };
+
   const resetZoomAndRotation = () => {
     activeImageRotation.value = 0;
     zoomScale.value = 1;
+    pan.value = { x: 0, y: 0 };
+    onTouchCancel();
     resetTransformOrigin();
   };
 
   return {
     zoomScale,
+    isTouching,
+    onTouchStart,
+    onTouchMove,
+    onTouchCancel,
     imgTransformOriginPoint,
     activeImageRotation,
     imageWrapperStyle,

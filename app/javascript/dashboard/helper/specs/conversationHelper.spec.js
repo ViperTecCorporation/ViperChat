@@ -12,6 +12,33 @@ import {
 } from './fixtures/conversationFixtures';
 
 describe('conversationHelper', () => {
+  it('does not let an empty reply hide the transcribed audio in the store or API', () => {
+    const audio = {
+      id: 1,
+      created_at: 1,
+      message_type: 0,
+      attachments: [
+        { file_type: 'audio', transcribed_text: 'Audio transcription' },
+      ],
+    };
+    const empty = {
+      id: 2,
+      created_at: 2,
+      message_type: 0,
+      content_type: 'text',
+      content: null,
+      content_attributes: { in_reply_to: 1 },
+    };
+    expect(
+      getLastMessage({
+        messages: [audio, empty],
+        last_non_activity_message: empty,
+      })
+    ).toEqual(audio);
+    expect(
+      getLastMessage({ messages: [empty], last_non_activity_message: audio })
+    ).toEqual(audio);
+  });
   describe('#filterDuplicateSourceMessages', () => {
     it('returns messages without duplicate source_id and all messages without source_id', () => {
       const input = [
