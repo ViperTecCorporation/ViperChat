@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
+import { useIntersectionObserver } from '@vueuse/core';
 import Message from '../Message.vue';
 import {
   ATTACHMENT_TYPES,
@@ -7,6 +8,11 @@ import {
   MESSAGE_STATUS,
   MESSAGE_TYPES,
 } from '../constants';
+
+vi.mock('@vueuse/core', async importOriginal => ({
+  ...(await importOriginal()),
+  useIntersectionObserver: vi.fn(() => ({ stop: vi.fn() })),
+}));
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -147,6 +153,142 @@ const mountMessage = props =>
   });
 
 describe('Message', () => {
+  it('loads the preview only after visibility and retains details if Google fails', async () => {
+    const wrapper = mountMessage({
+      content: 'Viper Tec',
+      attachments: [
+        {
+          id: 5,
+          fileType: ATTACHMENT_TYPES.LOCATION,
+          coordinatesLat: -11.5,
+          coordinatesLong: -54.8,
+        },
+      ],
+    });
+    expect(wrapper.find('iframe').exists()).toBe(false);
+    useIntersectionObserver.mock.calls.at(-1)[1]([{ isIntersecting: true }]);
+    await nextTick();
+    const frame = wrapper.get('iframe');
+    expect(frame.attributes('src')).toContain(
+      '/location-map/preview?lat=-11.5&lng=-54.8'
+    );
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: 'https://untrusted.example',
+        source: frame.element.contentWindow,
+        data: { source: 'viper-location-preview', type: 'error' },
+      })
+    );
+    await nextTick();
+    expect(wrapper.find('iframe').exists()).toBe(true);
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: new URL(frame.attributes('src')).origin,
+        source: frame.element.contentWindow,
+        data: { source: 'viper-location-preview', type: 'error' },
+      })
+    );
+    await nextTick();
+    expect(wrapper.find('iframe').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Viper Tec');
+    expect(wrapper.find('a').exists()).toBe(true);
+    wrapper.unmount();
+  });
+  it.each([MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING])(
+    'uses the location card with details for direction %s',
+    messageType => {
+      const details = 'Viper Tec — R. Afonso Pena, 649 — Cláudia, MT';
+      const wrapper = mountMessage({
+        messageType,
+        content: details,
+        attachments: [
+          {
+            id: 5,
+            fileType: ATTACHMENT_TYPES.LOCATION,
+            coordinatesLat: -15.601,
+            coordinatesLong: -56.0974,
+            fallbackTitle: details,
+          },
+        ],
+      });
+      expect(wrapper.get('a').attributes('href')).toBe(
+        `https://maps.google.com/maps/search/${encodeURIComponent(details)}/@-15.601,-56.0974,17z?hl=pt-BR`
+      );
+      expect(wrapper.text()).toContain(details);
+      expect(wrapper.find('p.whitespace-pre-line').text()).toBe(details);
+      wrapper.unmount();
+    }
+  );
+
+  it('uses message text when an older location attachment has no title', () => {
+    const wrapper = mountMessage({
+      content: 'Rua Teste, 123',
+      attachments: [
+        {
+          id: 5,
+          fileType: ATTACHMENT_TYPES.LOCATION,
+          coordinatesLat: 0,
+          coordinatesLong: 0,
+        },
+      ],
+    });
+    expect(wrapper.get('a').attributes('href')).toBe(
+      'https://maps.google.com/maps/search/Rua%20Teste%2C%20123/@0,0,17z?hl=pt-BR'
+    );
+    expect(wrapper.text()).toContain('Rua Teste, 123');
+    wrapper.unmount();
+  });
+
+  it.each(['Viper Tec', 'Ótica / Centro & Filhos #1'])(
+    'uses the structured place name safely: %s',
+    name => {
+      const wrapper = mountMessage({
+        content: 'Nome e endereço completos',
+        attachments: [
+          {
+            id: 5,
+            fileType: ATTACHMENT_TYPES.LOCATION,
+            coordinates_lat: -11.49931187,
+            coordinates_long: -54.87391999,
+            fallback_title: 'Nome e endereço completos',
+            meta: { name },
+          },
+        ],
+      });
+      expect(wrapper.get('a').attributes('href')).toBe(
+        `https://maps.google.com/maps/search/${encodeURIComponent(name)}/@-11.49931187,-54.87391999,17z?hl=pt-BR`
+      );
+      expect(wrapper.get('[data-bubble-name="location"]').classes()).toContain(
+        'w-80'
+      );
+      expect(wrapper.get('p.font-semibold').text()).toBe(name);
+      expect(wrapper.findAll('a')).toHaveLength(1);
+      expect(wrapper.find('[data-bubble-name="attachment"]').exists()).toBe(
+        false
+      );
+      wrapper.unmount();
+    }
+  );
+
+  it('keeps the coordinate link for an unnamed location', () => {
+    const wrapper = mountMessage({
+      content: '',
+      attachments: [
+        {
+          id: 5,
+          fileType: ATTACHMENT_TYPES.LOCATION,
+          coordinatesLat: 0,
+          coordinatesLong: 0,
+          fallbackTitle: '   ',
+        },
+      ],
+    });
+    expect(wrapper.get('a').attributes('href')).toBe(
+      'https://maps.google.com/?q=0,0'
+    );
+    wrapper.unmount();
+  });
+
   it('shows sending warnings for text and media without a retry error', () => {
     [[], [imageAttachment]].forEach(attachments => {
       const wrapper = mountMessage({

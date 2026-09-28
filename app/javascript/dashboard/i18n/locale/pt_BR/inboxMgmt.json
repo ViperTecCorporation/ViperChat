@@ -1,5 +1,30 @@
 {
   "INBOX_MGMT": {
+    "GMAIL_HISTORY": {
+      "TAB": "Importar histórico",
+      "TITLE": "Importar histórico do Gmail",
+      "HELP": "Somente a Caixa de entrada, incluindo lidas e não lidas. Limite de 12 meses. Importação em segundo plano; pode criar conversas e notificações. Arquivados, enviados, spam e lixeira não são importados.",
+      "PERIODS": {
+        "none": "Somente novas mensagens",
+        "7d": "Últimos 7 dias",
+        "30d": "Últimos 30 dias",
+        "3m": "Últimos 3 meses",
+        "6m": "Últimos 6 meses",
+        "12m": "Últimos 12 meses"
+      },
+      "STATES": {
+        "not_started": "Histórico não solicitado",
+        "running": "Importando histórico",
+        "completed": "Importação concluída",
+        "stopped": "Importação interrompida ou não solicitada",
+        "failed": "Importação pausada por falha. Verifique a conexão Gmail e tente novamente."
+      },
+      "PROGRESS": "Dia em processamento: {day}. Mensagens examinadas: {count}.",
+      "START": "Iniciar importação",
+      "STOP": "Interromper",
+      "REFRESH": "Atualizar progresso",
+      "ERROR": "Não foi possível atualizar a importação. Verifique sua permissão e a conexão."
+    },
     "HEADER": "Caixas de Entrada",
     "DESCRIPTION": "Um canal é o modo de comunicação que seu cliente escolhe para interagir com você. Uma caixa de entrada é onde você gerencia interações para um canal específico. Pode incluir comunicações de várias fontes, como e-mail, chat ao vivo e mídia social.",
     "LEARN_MORE": "Saiba mais sobre as caixas de entrada",
@@ -248,7 +273,7 @@
           "WHATSAPP_CLOUD_DESC": "Configuração rápida via Meta",
           "TWILIO_DESC": "Conectar através de credenciais Twilio",
           "360_DIALOG": "360Dialog",
-          "UNOAPI": "Unoapi"
+          "UNOAPI": "ViperConnect"
         },
         "SELECT_PROVIDER": {
           "TITLE": "Selecione seu provedor de API",
@@ -283,7 +308,7 @@
           "LABEL": "Chave da API",
           "SUBTITLE": "Configure a chave API do WhatsApp.",
           "PLACEHOLDER": "Chave da API",
-          "GLOBAL_PLACEHOLDER": "Token global da UnoAPI configurado",
+          "GLOBAL_PLACEHOLDER": "Token global do ViperConnect configurado",
           "ERROR": "Por favor, insira um valor válido."
         },
         "PIX_PAYMENT": {
@@ -297,7 +322,7 @@
           "TYPE_EMAIL": "E-mail",
           "TYPE_CNPJ": "CNPJ",
           "TYPE_PHONE": "Telefone",
-          "HELP": "O nome do recebedor, a chave e o tipo ficam armazenados somente na configuração desta caixa UnoAPI.",
+          "HELP": "O nome do recebedor, a chave e o tipo ficam armazenados somente na configuração desta caixa ViperConnect.",
           "ERROR": "Informe o nome do recebedor, a chave PIX e selecione um tipo válido."
         },
         "API_CALLBACK": {
@@ -381,7 +406,7 @@
         },
         "USE_GROUP_CONVERSATION_SCHEMA": {
           "LABEL": "Usar novo modelo de conversas em grupo",
-          "HELP": "Armazena grupos como conversas estruturadas, com membros e remetente real. Use somente com Uno API 3.0.63 ou superior ou canal compatível com grupos Meta-like.",
+          "HELP": "Armazena grupos como conversas estruturadas, com membros e remetente real. Requer uma versão do ViperConnect com suporte a grupos estruturados ou canal compatível com grupos Meta-like.",
           "PLACEHOLDER": "Selecione para usar conversas em grupo estruturadas.",
           "ERROR": "Selecione para usar conversas em grupo estruturadas."
         },
@@ -404,7 +429,7 @@
         },
         "IGNORE_OWN_MESSAGES": {
           "LABEL": "Ignorar mensagens próprias",
-          "HELP": "Descarta mensagens enviadas pelo aparelho conectado ou pela própria sessão da UnoAPI.",
+          "HELP": "Descarta mensagens enviadas pelo aparelho conectado ou pela própria sessão do ViperConnect.",
           "PLACEHOLDER": "Selecione para ignorar mensagens próprias.",
           "ERROR": "Selecione para ignorar mensagens próprias."
         },
@@ -428,7 +453,7 @@
         },
         "READ_ON_REPLY": {
           "LABEL": "Ler ao responder",
-          "HELP": "Marca a conversa como lida no WhatsApp quando o Chatwoot envia uma resposta pela UnoAPI.",
+          "HELP": "Marca a conversa como lida no WhatsApp quando o Chatwoot envia uma resposta pelo ViperConnect.",
           "PLACEHOLDER": "Selecione para ler ao responder.",
           "ERROR": "Selecione para ler ao responder."
         },
@@ -496,15 +521,15 @@
         },
         "SEND_PROFILE_PICTURE": {
           "LABEL": "Mostrar foto de perfil",
-          "HELP": "Inclui fotos atualizadas de contatos e grupos nos webhooks, respeitando o intervalo de cache da UnoAPI.",
+          "HELP": "Inclui fotos atualizadas de contatos e grupos nos webhooks, respeitando o intervalo de cache do ViperConnect.",
           "PLACEHOLDER": "Selecione para mostrar a foto de perfil.",
           "ERROR": "Selecione para mostrar a foto de perfil."
         },
         "CONTACT_SYNC": {
           "SECTION": "Sincronização de contatos",
-          "LABEL": "Sincronizar contatos da UnoAPI",
+          "LABEL": "Sincronizar contatos do ViperConnect",
           "HELP": "Cria contatos ausentes e atualiza somente nomes inválidos, identidades e fotos. A primeira sincronização começa 3 minutos após a sessão ficar online; as seguintes ocorrem a cada 3 horas.",
-          "EXPORT_LABEL": "Enviar novos contatos desta caixa para a UnoAPI",
+          "EXPORT_LABEL": "Enviar novos contatos desta caixa para o ViperConnect",
           "EXPORT_HELP": "Após ler a agenda remota, envia somente contatos vinculados a esta caixa que ainda não foram encontrados ou enviados. Contatos globais de outras caixas não são incluídos.",
           "STATUS_LABEL": "Estado",
           "PROGRESS": "Processados",
@@ -522,10 +547,11 @@
           }
         },
         "URL": {
-          "LABEL": "URL do Unoapi",
-          "PLACEHOLDER": "Informe uma URL do Unoapi ou use o padrão https://unoapi.cloud",
+          "LABEL": "URL do ViperConnect",
+          "PLACEHOLDER": "Informe uma URL do ViperConnect ou use o padrão https://unoapi.cloud",
           "ERROR": "Este campo é obrigatório"
-        }
+        },
+        "CHANNEL_RESTRICTED": "A criação deste canal foi desativada para esta conta pelo superadministrador."
       },
       "VOICE": {
         "TITLE": "Canal de Voz",
@@ -961,7 +987,7 @@
       "BOT_CONFIGURATION": "Configuração do Bot",
       "ACCOUNT_HEALTH": "Saúde da conta",
       "CSAT": "CSAT",
-      "UNOAPI_CONFIGURATION": "Configuração do Unoapi"
+      "UNOAPI_CONFIGURATION": "Configuração do ViperConnect"
     },
     "CHANNEL_PREFERENCES": "Preferências do Canal",
     "WIDGET_FEATURES": "Recursos do widget",

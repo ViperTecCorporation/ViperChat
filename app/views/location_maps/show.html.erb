@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= t('location_map_title', default: 'Google Maps') %></title>
+    <%= vite_javascript_tag 'location_map' %>
+  </head>
+  <body>
+    <div id="location-map" data-api-key="<%= @maps_key %>"></div>
+  </body>
+</html>

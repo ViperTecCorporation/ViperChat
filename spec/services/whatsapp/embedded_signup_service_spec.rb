@@ -54,11 +54,24 @@ describe Whatsapp::EmbeddedSignupService do
                                                                         })
     end
 
+    it 'rejects new embedded signup when its account flag is disabled' do
+      account.disable_features!('whatsapp_embedded_signup_inbox_creation')
+      expect(Whatsapp::TokenExchangeService).not_to receive(:new)
+      expect { service.perform }.to(raise_error { |error| expect(error.class.name).to eq('Pundit::NotAuthorizedError') })
+    end
+
     it 'creates channel and sets up webhooks' do
       expect(channel).to receive(:setup_webhooks)
 
       result = service.perform
       expect(result).to eq(channel)
+    end
+
+    it 'rejects new inboxes before exchanging credentials when WhatsApp is disabled' do
+      account.disable_features!('channel_whatsapp')
+      expect(Whatsapp::TokenExchangeService).not_to receive(:new)
+
+      expect { service.perform }.to(raise_error { |error| expect(error.class.name).to eq('Pundit::NotAuthorizedError') })
     end
 
     it 'checks health status after channel creation' do
@@ -174,6 +187,7 @@ describe Whatsapp::EmbeddedSignupService do
       end
 
       it 'uses ReauthorizationService and sets up webhooks' do
+        account.disable_features!('channel_whatsapp', 'whatsapp_embedded_signup_inbox_creation')
         expect(reauth_service).to receive(:perform)
         expect(channel).to receive(:setup_webhooks)
 

@@ -1,0 +1,3 @@
+<% translation_scope = { 'status' => 'statuses', 'role' => 'roles', 'banner_type' => 'banner_types', 'type' => 'user_types' }[field.attribute.to_s] %>
+<% value = translation_scope == 'user_types' ? field.data.presence || 'regular' : field.data %>
+<%= translation_scope && value.present? ? t("super_admin.#{translation_scope}.#{value}", default: value) : value %>

@@ -1,6 +1,7 @@
 import 'chart.js';
 import { createApp, h } from 'vue';
 import VueDOMPurifyHTML from 'vue-dompurify-html';
+import { setupMobileNavigation } from '../superadmin_pages/mobileNavigation';
 
 import PlaygroundIndex from '../superadmin_pages/views/playground/Index.vue';
 import DashboardIndex from '../superadmin_pages/views/dashboard/Index.vue';
@@ -25,6 +26,7 @@ const renderComponent = (componentName, props) => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+  setupMobileNavigation();
   const element = document.getElementById('app');
   if (element) {
     const componentName = element.dataset.componentName;

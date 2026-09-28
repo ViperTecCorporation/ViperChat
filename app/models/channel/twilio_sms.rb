@@ -51,6 +51,8 @@ class Channel::TwilioSms < ApplicationRecord
 
   enum medium: { sms: 0, whatsapp: 1 }
 
+  before_validation :check_whatsapp_creation_permission
+
   def name
     medium == 'sms' ? 'Twilio SMS' : 'Whatsapp'
   end
@@ -76,6 +78,14 @@ class Channel::TwilioSms < ApplicationRecord
   end
 
   private
+
+  def check_whatsapp_creation_permission
+    return unless new_record? || will_save_change_to_medium?
+    return unless whatsapp? && account && !account.feature_enabled?('channel_whatsapp')
+
+    errors.add(:base, I18n.t('super_admin.channel_creation_blocked'))
+    throw :abort
+  end
 
   def send_message_from
     if messaging_service_sid?

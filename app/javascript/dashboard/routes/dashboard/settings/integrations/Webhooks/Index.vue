@@ -58,6 +58,15 @@ export default {
     integration() {
       return this.$store.getters['integrations/getIntegration']('webhook');
     },
+    canCreateWebhook() {
+      return (
+        this.apiAndWebhooksEnabled &&
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.API_AND_WEBHOOKS
+        )
+      );
+    },
     filteredRecords() {
       const query = this.searchQuery.trim();
       if (!query) return this.records;
@@ -85,6 +94,7 @@ export default {
   },
   methods: {
     openAddPopup() {
+      if (!this.canCreateWebhook) return;
       this.showAddPopup = true;
     },
     hideAddPopup() {
@@ -154,7 +164,7 @@ export default {
             }}
           </span>
         </template>
-        <template v-if="apiAndWebhooksEnabled" #actions>
+        <template v-if="canCreateWebhook" #actions>
           <NextButton
             blue
             :label="$t('INTEGRATION_SETTINGS.WEBHOOK.HEADER_BTN_TXT')"
@@ -187,7 +197,7 @@ export default {
       </BaseTable>
     </template>
     <woot-modal
-      v-if="apiAndWebhooksEnabled"
+      v-if="canCreateWebhook"
       v-model:show="showAddPopup"
       :on-close="hideAddPopup"
     >

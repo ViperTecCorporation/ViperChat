@@ -193,7 +193,7 @@
             "ERROR": "Audience is required"
           },
           "UNOAPI_AUDIENCE": {
-            "LABEL": "Audience list (Unoapi)",
+            "LABEL": "Audience list (ViperConnect)",
             "PLACEHOLDER": "One contact per line: phone_number;name;identifier;email;value;due_at;scheduled_at;wait_for_seconds",
             "ERROR": "Select labels or provide an audience list"
           },

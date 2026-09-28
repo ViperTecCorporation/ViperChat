@@ -1,0 +1,1056 @@
+{
+  "pt_BR": {
+    "super_admin": {
+      "features": {
+        "inbound_emails": {
+          "name": "Recebimento de e-mails",
+          "description": "Habilita recursos de recebimento de e-mails. Depende da configuração de entrada de e-mail da instalação."
+        },
+        "channel_email": {
+          "name": "Canal de e-mail",
+          "description": "Disponibiliza o canal de e-mail na configuração de caixas de entrada."
+        },
+        "channel_facebook": {
+          "name": "Canal Facebook Messenger",
+          "description": "Disponibiliza a integração com páginas do Facebook; exige aplicativo Meta configurado."
+        },
+        "conversation_unread_counts": {
+          "name": "Contagem de conversas não lidas",
+          "description": "Recurso interno de contagem de conversas não lidas."
+        },
+        "ip_lookup": {
+          "name": "Localização por IP",
+          "description": "Permite consultar localização aproximada a partir do IP do visitante; depende do serviço configurado."
+        },
+        "disable_branding": {
+          "name": "Remover marca padrão",
+          "description": "Permite recursos de personalização e remoção da marca padrão onde suportados."
+        },
+        "email_continuity_on_api_channel": {
+          "name": "Continuidade por e-mail no canal API",
+          "description": "Permite continuar por e-mail atendimentos originados no canal API."
+        },
+        "help_center": {
+          "name": "Central de ajuda",
+          "description": "Disponibiliza portais, categorias e artigos da central de ajuda."
+        },
+        "agent_bots": {
+          "name": "Bots de atendimento",
+          "description": "Disponibiliza configuração de bots de atendimento e associação às caixas."
+        },
+        "macros": {
+          "name": "Macros",
+          "description": "Permite executar conjuntos de ações pré-configuradas nas conversas."
+        },
+        "agent_management": {
+          "name": "Gerenciamento de agentes",
+          "description": "Disponibiliza o gerenciamento de operadores da conta."
+        },
+        "team_management": {
+          "name": "Gerenciamento de equipes",
+          "description": "Disponibiliza criação e gerenciamento de equipes de atendimento."
+        },
+        "inbox_management": {
+          "name": "Gerenciamento de caixas",
+          "description": "Disponibiliza as configurações das caixas de entrada da conta."
+        },
+        "labels": {
+          "name": "Etiquetas",
+          "description": "Disponibiliza etiquetas para organizar contatos e conversas."
+        },
+        "custom_attributes": {
+          "name": "Atributos personalizados",
+          "description": "Permite campos adicionais para contatos e conversas."
+        },
+        "automations": {
+          "name": "Automações",
+          "description": "Disponibiliza regras que executam ações em resposta a eventos e condições."
+        },
+        "canned_responses": {
+          "name": "Respostas prontas",
+          "description": "Disponibiliza mensagens salvas para agilizar respostas dos agentes."
+        },
+        "integrations": {
+          "name": "Integrações",
+          "description": "Disponibiliza a área de integrações; cada integração pode exigir configuração adicional."
+        },
+        "voice_recorder": {
+          "name": "Gravador de áudio",
+          "description": "Disponibiliza gravação de áudio no editor; depende de permissão do microfone."
+        },
+        "report_rollup": {
+          "name": "Agregação de relatórios",
+          "description": "Controla o recurso de agregação de dados utilizado pelos relatórios."
+        },
+        "channel_website": {
+          "name": "Canal de site",
+          "description": "Disponibiliza a criação do widget de atendimento para sites."
+        },
+        "campaigns": {
+          "name": "Campanhas",
+          "description": "Disponibiliza recursos de campanhas de mensagens."
+        },
+        "reports": {
+          "name": "Relatórios",
+          "description": "Disponibiliza os relatórios de atendimento da conta."
+        },
+        "crm": {
+          "name": "CRM",
+          "description": "Disponibiliza recursos de relacionamento e gestão de contatos."
+        },
+        "auto_resolve_conversations": {
+          "name": "Resolução automática",
+          "description": "Disponibiliza configurações para resolver conversas automaticamente."
+        },
+        "custom_reply_email": {
+          "name": "E-mail de resposta personalizado",
+          "description": "Permite personalizar o endereço utilizado para respostas por e-mail."
+        },
+        "custom_reply_domain": {
+          "name": "Domínio de resposta personalizado",
+          "description": "Permite configurar domínio próprio para respostas por e-mail; exige configuração de DNS."
+        },
+        "audit_logs": {
+          "name": "Logs de auditoria",
+          "description": "Disponibiliza o histórico de ações administrativas e alterações auditadas."
+        },
+        "custom_tools": {
+          "name": "Ferramentas personalizadas",
+          "description": "Disponibiliza configuração de ferramentas personalizadas de integração."
+        },
+        "message_reply_to": {
+          "name": "Resposta com referência (legado)",
+          "description": "Flag legada de referência a mensagens; não é exibida na lista atual de recursos."
+        },
+        "branded_email_templates": {
+          "name": "Modelos de e-mail personalizados",
+          "description": "Permite personalizar o layout visual dos e-mails da conta."
+        },
+        "inbox_view": {
+          "name": "Visualização por caixa (interno)",
+          "description": "Recurso interno de visualização de conversas por caixa."
+        },
+        "sla": {
+          "name": "Acordos de nível de serviço (SLA)",
+          "description": "Disponibiliza políticas e acompanhamento de prazos de atendimento."
+        },
+        "help_center_embedding_search": {
+          "name": "Busca semântica da central de ajuda",
+          "description": "Recurso interno de busca por similaridade nos artigos da central de ajuda."
+        },
+        "linear_integration": {
+          "name": "Integração Linear",
+          "description": "Disponibiliza a integração com o Linear."
+        },
+        "captain_integration": {
+          "name": "Captain — inteligência artificial",
+          "description": "Disponibiliza recursos de IA do Captain; exige provedor e credenciais configurados."
+        },
+        "custom_roles": {
+          "name": "Perfis de acesso personalizados",
+          "description": "Permite criar perfis com conjuntos específicos de permissões."
+        },
+        "chatwoot_v4": {
+          "name": "Interface ViperChat V4",
+          "description": "Controla a disponibilidade da interface V4 onde a flag é utilizada."
+        },
+        "captain_v1_action_classifier": {
+          "name": "Classificador de ações Captain V1",
+          "description": "Recurso interno legado de classificação de ações do Captain."
+        },
+        "contact_chatwoot_support_team": {
+          "name": "Contato com suporte",
+          "description": "Recurso interno de acesso ao suporte da plataforma."
+        },
+        "shopify_integration": {
+          "name": "Integração Shopify",
+          "description": "Recurso interno da integração com Shopify."
+        },
+        "search_with_gin": {
+          "name": "Busca de mensagens com GIN",
+          "description": "Recurso interno que seleciona o caminho de busca com índice GIN; não reconstrói índices."
+        },
+        "channel_instagram": {
+          "name": "Canal Instagram",
+          "description": "Disponibiliza a integração com Instagram; exige aplicativo Meta configurado."
+        },
+        "crm_integration": {
+          "name": "Integração com CRM",
+          "description": "Disponibiliza recursos de integração com sistemas de CRM."
+        },
+        "hide_all_chats_for_agent": {
+          "name": "Ocultar Todas para agentes",
+          "description": "Restringe a visualização de todas as conversas para operadores não administradores, conforme as regras de acesso da conta."
+        },
+        "hide_contacts_for_agent": {
+          "name": "Ocultar contatos para agentes",
+          "description": "Restringe o acesso dos agentes à área de contatos; não altera o papel dos administradores."
+        },
+        "hide_filters_for_agent": {
+          "name": "Ocultar filtros para agentes",
+          "description": "Oculta os filtros de conversas para agentes não administradores."
+        },
+        "send_agent_name_in_whatsapp_message": {
+          "name": "Enviar nome do agente no WhatsApp",
+          "description": "Habilita o recurso de identificação do agente nas mensagens WhatsApp."
+        },
+        "read_message": {
+          "name": "Confirmação de leitura",
+          "description": "Controla o recurso de confirmação de leitura de mensagens nos fluxos que utilizam esta flag."
+        },
+        "disable_whatsapp_messaging_window": {
+          "name": "Desativar bloqueio local da janela WhatsApp",
+          "description": "Desativa o bloqueio da janela de mensagens na aplicação. Não altera regras nem autorizações impostas pela Meta."
+        },
+        "agent_conversation_viewed": {
+          "name": "Indicar visualização por agente",
+          "description": "Permite indicar quais agentes visualizaram a conversa."
+        },
+        "hide_unassigned_for_agent": {
+          "name": "Ocultar Não atribuídas para agentes",
+          "description": "Restringe a visualização de conversas não atribuídas para operadores não administradores."
+        },
+        "hide_delete_message_for_agent": {
+          "name": "Ocultar exclusão de mensagens para agentes",
+          "description": "Restringe a opção de excluir mensagens para agentes não administradores."
+        },
+        "channel_whatsapp": {
+          "name": "Canal WhatsApp oficial",
+          "description": "Permite criar novas caixas WhatsApp via Meta, 360dialog ou Twilio. Ao desativar, oculta a opção e bloqueia criação por API. Não bloqueia caixas existentes nem ViperConnect."
+        },
+        "channel_api": {
+          "name": "Canal API",
+          "description": "Disponibiliza o canal API na configuração de caixas de entrada."
+        },
+        "channel_notifica_me": {
+          "name": "Canal NotificaMe",
+          "description": "Disponibiliza a criação de caixas pelo provedor NotificaMe."
+        },
+        "channel_voice": {
+          "name": "Canal de voz",
+          "description": "Controla recursos de chamadas e o canal de voz; depende do provedor e de credenciais válidas."
+        },
+        "notion_integration": {
+          "name": "Integração Notion",
+          "description": "Disponibiliza a integração com o Notion."
+        },
+        "captain_integration_v2": {
+          "name": "Captain — versão 2",
+          "description": "Disponibiliza a segunda versão dos recursos de IA do Captain."
+        },
+        "whatsapp_embedded_signup": {
+          "name": "Cadastro integrado WhatsApp (legado)",
+          "description": "Flag legada, substituída pelo controle de criação via cadastro integrado."
+        },
+        "whatsapp_campaign": {
+          "name": "Campanhas WhatsApp",
+          "description": "Disponibiliza campanhas pelo WhatsApp, respeitando as exigências do provedor."
+        },
+        "crm_v2": {
+          "name": "CRM — versão 2",
+          "description": "Recurso interno da segunda versão do CRM."
+        },
+        "assignment_v2": {
+          "name": "Distribuição de conversas — versão 2",
+          "description": "Controla recursos da segunda versão de atribuição de conversas."
+        },
+        "captain_document_auto_sync": {
+          "name": "Sincronização automática de documentos Captain",
+          "description": "Permite atualização automática de documentos usados pelo Captain."
+        },
+        "advanced_search": {
+          "name": "Busca avançada",
+          "description": "Recurso de busca avançada. Nesta instalação é mantido ativo pelo backend independentemente desta seleção."
+        },
+        "saml": {
+          "name": "Autenticação SAML",
+          "description": "Disponibiliza autenticação corporativa SAML; exige provedor de identidade configurado."
+        },
+        "advanced_search_indexing": {
+          "name": "Indexação da busca avançada",
+          "description": "Indexação da busca avançada. Nesta instalação é mantida ativa pelo backend independentemente desta seleção."
+        },
+        "reply_mailer_migration": {
+          "name": "Migração do envio de e-mails",
+          "description": "Flag interna de transição para o novo gerador de e-mails."
+        },
+        "unread_count_for_filters": {
+          "name": "Contagem de não lidas em filtros",
+          "description": "Recurso interno de contagem de mensagens não lidas em filtros."
+        },
+        "companies": {
+          "name": "Empresas",
+          "description": "Disponibiliza o cadastro e a associação de empresas aos contatos."
+        },
+        "channel_tiktok": {
+          "name": "Canal TikTok",
+          "description": "Disponibiliza a integração TikTok quando o aplicativo estiver configurado."
+        },
+        "csat_review_notes": {
+          "name": "Notas de avaliação CSAT",
+          "description": "Permite anotações na revisão das avaliações de satisfação."
+        },
+        "captain_tasks": {
+          "name": "Tarefas Captain",
+          "description": "Disponibiliza tarefas e ações do Captain."
+        },
+        "conversation_required_attributes": {
+          "name": "Atributos obrigatórios de conversa",
+          "description": "Permite exigir preenchimento de atributos nas conversas."
+        },
+        "advanced_assignment": {
+          "name": "Distribuição avançada",
+          "description": "Disponibiliza regras avançadas de atribuição de conversas."
+        },
+        "whatsapp_manual_transfer": {
+          "name": "Transferência manual WhatsApp",
+          "description": "Permite transferir a configuração do cadastro integrado para credenciais manuais, conforme as regras da integração."
+        },
+        "data_import": {
+          "name": "Importação de dados",
+          "description": "Disponibiliza assistentes de importação de dados de outras plataformas."
+        },
+        "api_and_webhooks": {
+          "name": "API e webhooks",
+          "description": "Permite criar novas caixas API e webhooks. Ao desativar, preserva as integrações existentes, seus tokens, envios e a manutenção dos webhooks já cadastrados. Não revoga credenciais existentes."
+        },
+        "whatsapp_reconfigure": {
+          "name": "Reconfigurar WhatsApp",
+          "description": "Disponibiliza a reconfiguração da integração WhatsApp."
+        },
+        "whatsapp_embedded_signup_inbox_creation": {
+          "name": "Cadastro integrado WhatsApp",
+          "description": "Permite criar novas caixas pelo cadastro integrado da Meta, inclusive em instalações próprias. Exige o canal WhatsApp habilitado. Desativar não bloqueia caixas existentes, sua reconexão ou o cadastro manual pela Cloud API."
+        },
+        "restrict_assignee_filter_for_agent": {
+          "name": "Limitar filtro de agente ao próprio usuário",
+          "description": "Restringe as opções de agente atribuído para operadores não administradores, respeitando os filtros de acesso."
+        },
+        "disable_channel_unoapi": {
+          "name": "Bloquear novas caixas ViperConnect",
+          "description": "Quando marcado, oculta ViperConnect na criação de caixas e impede novas conexões por API nesta conta. Caixas ViperConnect já conectadas continuam funcionando. Independente do canal WhatsApp oficial."
+        }
+      },
+      "channel_creation_blocked": "A criação deste canal está desativada para esta conta pelo superadministrador.",
+      "feature_help": "O que faz esta opção?",
+      "manually_managed_help": "Recursos mantidos habilitados mesmo quando o plano da conta é reduzido.",
+      "no_manually_managed_features": "Nenhum recurso gerenciado manualmente configurado.",
+      "seed_started": "Geração de dados de demonstração iniciada.",
+      "cache_cleared": "Chaves de cache limpas.",
+      "account_deletion_started": "Exclusão da conta em andamento.",
+      "invalid_action": "Ação inválida.",
+      "statuses": {
+        "active": "Ativa",
+        "suspended": "Suspensa"
+      }
+    }
+  },
+  "pt-BR": {
+    "super_admin": {
+      "features": {
+        "inbound_emails": {
+          "name": "Recebimento de e-mails",
+          "description": "Habilita recursos de recebimento de e-mails. Depende da configuração de entrada de e-mail da instalação."
+        },
+        "channel_email": {
+          "name": "Canal de e-mail",
+          "description": "Disponibiliza o canal de e-mail na configuração de caixas de entrada."
+        },
+        "channel_facebook": {
+          "name": "Canal Facebook Messenger",
+          "description": "Disponibiliza a integração com páginas do Facebook; exige aplicativo Meta configurado."
+        },
+        "conversation_unread_counts": {
+          "name": "Contagem de conversas não lidas",
+          "description": "Recurso interno de contagem de conversas não lidas."
+        },
+        "ip_lookup": {
+          "name": "Localização por IP",
+          "description": "Permite consultar localização aproximada a partir do IP do visitante; depende do serviço configurado."
+        },
+        "disable_branding": {
+          "name": "Remover marca padrão",
+          "description": "Permite recursos de personalização e remoção da marca padrão onde suportados."
+        },
+        "email_continuity_on_api_channel": {
+          "name": "Continuidade por e-mail no canal API",
+          "description": "Permite continuar por e-mail atendimentos originados no canal API."
+        },
+        "help_center": {
+          "name": "Central de ajuda",
+          "description": "Disponibiliza portais, categorias e artigos da central de ajuda."
+        },
+        "agent_bots": {
+          "name": "Bots de atendimento",
+          "description": "Disponibiliza configuração de bots de atendimento e associação às caixas."
+        },
+        "macros": {
+          "name": "Macros",
+          "description": "Permite executar conjuntos de ações pré-configuradas nas conversas."
+        },
+        "agent_management": {
+          "name": "Gerenciamento de agentes",
+          "description": "Disponibiliza o gerenciamento de operadores da conta."
+        },
+        "team_management": {
+          "name": "Gerenciamento de equipes",
+          "description": "Disponibiliza criação e gerenciamento de equipes de atendimento."
+        },
+        "inbox_management": {
+          "name": "Gerenciamento de caixas",
+          "description": "Disponibiliza as configurações das caixas de entrada da conta."
+        },
+        "labels": {
+          "name": "Etiquetas",
+          "description": "Disponibiliza etiquetas para organizar contatos e conversas."
+        },
+        "custom_attributes": {
+          "name": "Atributos personalizados",
+          "description": "Permite campos adicionais para contatos e conversas."
+        },
+        "automations": {
+          "name": "Automações",
+          "description": "Disponibiliza regras que executam ações em resposta a eventos e condições."
+        },
+        "canned_responses": {
+          "name": "Respostas prontas",
+          "description": "Disponibiliza mensagens salvas para agilizar respostas dos agentes."
+        },
+        "integrations": {
+          "name": "Integrações",
+          "description": "Disponibiliza a área de integrações; cada integração pode exigir configuração adicional."
+        },
+        "voice_recorder": {
+          "name": "Gravador de áudio",
+          "description": "Disponibiliza gravação de áudio no editor; depende de permissão do microfone."
+        },
+        "report_rollup": {
+          "name": "Agregação de relatórios",
+          "description": "Controla o recurso de agregação de dados utilizado pelos relatórios."
+        },
+        "channel_website": {
+          "name": "Canal de site",
+          "description": "Disponibiliza a criação do widget de atendimento para sites."
+        },
+        "campaigns": {
+          "name": "Campanhas",
+          "description": "Disponibiliza recursos de campanhas de mensagens."
+        },
+        "reports": {
+          "name": "Relatórios",
+          "description": "Disponibiliza os relatórios de atendimento da conta."
+        },
+        "crm": {
+          "name": "CRM",
+          "description": "Disponibiliza recursos de relacionamento e gestão de contatos."
+        },
+        "auto_resolve_conversations": {
+          "name": "Resolução automática",
+          "description": "Disponibiliza configurações para resolver conversas automaticamente."
+        },
+        "custom_reply_email": {
+          "name": "E-mail de resposta personalizado",
+          "description": "Permite personalizar o endereço utilizado para respostas por e-mail."
+        },
+        "custom_reply_domain": {
+          "name": "Domínio de resposta personalizado",
+          "description": "Permite configurar domínio próprio para respostas por e-mail; exige configuração de DNS."
+        },
+        "audit_logs": {
+          "name": "Logs de auditoria",
+          "description": "Disponibiliza o histórico de ações administrativas e alterações auditadas."
+        },
+        "custom_tools": {
+          "name": "Ferramentas personalizadas",
+          "description": "Disponibiliza configuração de ferramentas personalizadas de integração."
+        },
+        "message_reply_to": {
+          "name": "Resposta com referência (legado)",
+          "description": "Flag legada de referência a mensagens; não é exibida na lista atual de recursos."
+        },
+        "branded_email_templates": {
+          "name": "Modelos de e-mail personalizados",
+          "description": "Permite personalizar o layout visual dos e-mails da conta."
+        },
+        "inbox_view": {
+          "name": "Visualização por caixa (interno)",
+          "description": "Recurso interno de visualização de conversas por caixa."
+        },
+        "sla": {
+          "name": "Acordos de nível de serviço (SLA)",
+          "description": "Disponibiliza políticas e acompanhamento de prazos de atendimento."
+        },
+        "help_center_embedding_search": {
+          "name": "Busca semântica da central de ajuda",
+          "description": "Recurso interno de busca por similaridade nos artigos da central de ajuda."
+        },
+        "linear_integration": {
+          "name": "Integração Linear",
+          "description": "Disponibiliza a integração com o Linear."
+        },
+        "captain_integration": {
+          "name": "Captain — inteligência artificial",
+          "description": "Disponibiliza recursos de IA do Captain; exige provedor e credenciais configurados."
+        },
+        "custom_roles": {
+          "name": "Perfis de acesso personalizados",
+          "description": "Permite criar perfis com conjuntos específicos de permissões."
+        },
+        "chatwoot_v4": {
+          "name": "Interface ViperChat V4",
+          "description": "Controla a disponibilidade da interface V4 onde a flag é utilizada."
+        },
+        "captain_v1_action_classifier": {
+          "name": "Classificador de ações Captain V1",
+          "description": "Recurso interno legado de classificação de ações do Captain."
+        },
+        "contact_chatwoot_support_team": {
+          "name": "Contato com suporte",
+          "description": "Recurso interno de acesso ao suporte da plataforma."
+        },
+        "shopify_integration": {
+          "name": "Integração Shopify",
+          "description": "Recurso interno da integração com Shopify."
+        },
+        "search_with_gin": {
+          "name": "Busca de mensagens com GIN",
+          "description": "Recurso interno que seleciona o caminho de busca com índice GIN; não reconstrói índices."
+        },
+        "channel_instagram": {
+          "name": "Canal Instagram",
+          "description": "Disponibiliza a integração com Instagram; exige aplicativo Meta configurado."
+        },
+        "crm_integration": {
+          "name": "Integração com CRM",
+          "description": "Disponibiliza recursos de integração com sistemas de CRM."
+        },
+        "hide_all_chats_for_agent": {
+          "name": "Ocultar Todas para agentes",
+          "description": "Restringe a visualização de todas as conversas para operadores não administradores, conforme as regras de acesso da conta."
+        },
+        "hide_contacts_for_agent": {
+          "name": "Ocultar contatos para agentes",
+          "description": "Restringe o acesso dos agentes à área de contatos; não altera o papel dos administradores."
+        },
+        "hide_filters_for_agent": {
+          "name": "Ocultar filtros para agentes",
+          "description": "Oculta os filtros de conversas para agentes não administradores."
+        },
+        "send_agent_name_in_whatsapp_message": {
+          "name": "Enviar nome do agente no WhatsApp",
+          "description": "Habilita o recurso de identificação do agente nas mensagens WhatsApp."
+        },
+        "read_message": {
+          "name": "Confirmação de leitura",
+          "description": "Controla o recurso de confirmação de leitura de mensagens nos fluxos que utilizam esta flag."
+        },
+        "disable_whatsapp_messaging_window": {
+          "name": "Desativar bloqueio local da janela WhatsApp",
+          "description": "Desativa o bloqueio da janela de mensagens na aplicação. Não altera regras nem autorizações impostas pela Meta."
+        },
+        "agent_conversation_viewed": {
+          "name": "Indicar visualização por agente",
+          "description": "Permite indicar quais agentes visualizaram a conversa."
+        },
+        "hide_unassigned_for_agent": {
+          "name": "Ocultar Não atribuídas para agentes",
+          "description": "Restringe a visualização de conversas não atribuídas para operadores não administradores."
+        },
+        "hide_delete_message_for_agent": {
+          "name": "Ocultar exclusão de mensagens para agentes",
+          "description": "Restringe a opção de excluir mensagens para agentes não administradores."
+        },
+        "channel_whatsapp": {
+          "name": "Canal WhatsApp oficial",
+          "description": "Permite criar novas caixas WhatsApp via Meta, 360dialog ou Twilio. Ao desativar, oculta a opção e bloqueia criação por API. Não bloqueia caixas existentes nem ViperConnect."
+        },
+        "channel_api": {
+          "name": "Canal API",
+          "description": "Disponibiliza o canal API na configuração de caixas de entrada."
+        },
+        "channel_notifica_me": {
+          "name": "Canal NotificaMe",
+          "description": "Disponibiliza a criação de caixas pelo provedor NotificaMe."
+        },
+        "channel_voice": {
+          "name": "Canal de voz",
+          "description": "Controla recursos de chamadas e o canal de voz; depende do provedor e de credenciais válidas."
+        },
+        "notion_integration": {
+          "name": "Integração Notion",
+          "description": "Disponibiliza a integração com o Notion."
+        },
+        "captain_integration_v2": {
+          "name": "Captain — versão 2",
+          "description": "Disponibiliza a segunda versão dos recursos de IA do Captain."
+        },
+        "whatsapp_embedded_signup": {
+          "name": "Cadastro integrado WhatsApp (legado)",
+          "description": "Flag legada, substituída pelo controle de criação via cadastro integrado."
+        },
+        "whatsapp_campaign": {
+          "name": "Campanhas WhatsApp",
+          "description": "Disponibiliza campanhas pelo WhatsApp, respeitando as exigências do provedor."
+        },
+        "crm_v2": {
+          "name": "CRM — versão 2",
+          "description": "Recurso interno da segunda versão do CRM."
+        },
+        "assignment_v2": {
+          "name": "Distribuição de conversas — versão 2",
+          "description": "Controla recursos da segunda versão de atribuição de conversas."
+        },
+        "captain_document_auto_sync": {
+          "name": "Sincronização automática de documentos Captain",
+          "description": "Permite atualização automática de documentos usados pelo Captain."
+        },
+        "advanced_search": {
+          "name": "Busca avançada",
+          "description": "Recurso de busca avançada. Nesta instalação é mantido ativo pelo backend independentemente desta seleção."
+        },
+        "saml": {
+          "name": "Autenticação SAML",
+          "description": "Disponibiliza autenticação corporativa SAML; exige provedor de identidade configurado."
+        },
+        "advanced_search_indexing": {
+          "name": "Indexação da busca avançada",
+          "description": "Indexação da busca avançada. Nesta instalação é mantida ativa pelo backend independentemente desta seleção."
+        },
+        "reply_mailer_migration": {
+          "name": "Migração do envio de e-mails",
+          "description": "Flag interna de transição para o novo gerador de e-mails."
+        },
+        "unread_count_for_filters": {
+          "name": "Contagem de não lidas em filtros",
+          "description": "Recurso interno de contagem de mensagens não lidas em filtros."
+        },
+        "companies": {
+          "name": "Empresas",
+          "description": "Disponibiliza o cadastro e a associação de empresas aos contatos."
+        },
+        "channel_tiktok": {
+          "name": "Canal TikTok",
+          "description": "Disponibiliza a integração TikTok quando o aplicativo estiver configurado."
+        },
+        "csat_review_notes": {
+          "name": "Notas de avaliação CSAT",
+          "description": "Permite anotações na revisão das avaliações de satisfação."
+        },
+        "captain_tasks": {
+          "name": "Tarefas Captain",
+          "description": "Disponibiliza tarefas e ações do Captain."
+        },
+        "conversation_required_attributes": {
+          "name": "Atributos obrigatórios de conversa",
+          "description": "Permite exigir preenchimento de atributos nas conversas."
+        },
+        "advanced_assignment": {
+          "name": "Distribuição avançada",
+          "description": "Disponibiliza regras avançadas de atribuição de conversas."
+        },
+        "whatsapp_manual_transfer": {
+          "name": "Transferência manual WhatsApp",
+          "description": "Permite transferir a configuração do cadastro integrado para credenciais manuais, conforme as regras da integração."
+        },
+        "data_import": {
+          "name": "Importação de dados",
+          "description": "Disponibiliza assistentes de importação de dados de outras plataformas."
+        },
+        "api_and_webhooks": {
+          "name": "API e webhooks",
+          "description": "Permite criar novas caixas API e webhooks. Ao desativar, preserva as integrações existentes, seus tokens, envios e a manutenção dos webhooks já cadastrados. Não revoga credenciais existentes."
+        },
+        "whatsapp_reconfigure": {
+          "name": "Reconfigurar WhatsApp",
+          "description": "Disponibiliza a reconfiguração da integração WhatsApp."
+        },
+        "whatsapp_embedded_signup_inbox_creation": {
+          "name": "Cadastro integrado WhatsApp",
+          "description": "Permite criar novas caixas pelo cadastro integrado da Meta, inclusive em instalações próprias. Exige o canal WhatsApp habilitado. Desativar não bloqueia caixas existentes, sua reconexão ou o cadastro manual pela Cloud API."
+        },
+        "restrict_assignee_filter_for_agent": {
+          "name": "Limitar filtro de agente ao próprio usuário",
+          "description": "Restringe as opções de agente atribuído para operadores não administradores, respeitando os filtros de acesso."
+        },
+        "disable_channel_unoapi": {
+          "name": "Bloquear novas caixas ViperConnect",
+          "description": "Quando marcado, oculta ViperConnect na criação de caixas e impede novas conexões por API nesta conta. Caixas ViperConnect já conectadas continuam funcionando. Independente do canal WhatsApp oficial."
+        }
+      },
+      "channel_creation_blocked": "A criação deste canal está desativada para esta conta pelo superadministrador.",
+      "feature_help": "O que faz esta opção?",
+      "manually_managed_help": "Recursos mantidos habilitados mesmo quando o plano da conta é reduzido.",
+      "no_manually_managed_features": "Nenhum recurso gerenciado manualmente configurado.",
+      "seed_started": "Geração de dados de demonstração iniciada.",
+      "cache_cleared": "Chaves de cache limpas.",
+      "account_deletion_started": "Exclusão da conta em andamento.",
+      "invalid_action": "Ação inválida.",
+      "statuses": {
+        "active": "Ativa",
+        "suspended": "Suspensa"
+      }
+    }
+  },
+  "pt": {
+    "super_admin": {
+      "features": {
+        "inbound_emails": {
+          "name": "Recebimento de e-mails",
+          "description": "Habilita recursos de recebimento de e-mails. Depende da configuração de entrada de e-mail da instalação."
+        },
+        "channel_email": {
+          "name": "Canal de e-mail",
+          "description": "Disponibiliza o canal de e-mail na configuração de caixas de entrada."
+        },
+        "channel_facebook": {
+          "name": "Canal Facebook Messenger",
+          "description": "Disponibiliza a integração com páginas do Facebook; exige aplicativo Meta configurado."
+        },
+        "conversation_unread_counts": {
+          "name": "Contagem de conversas não lidas",
+          "description": "Recurso interno de contagem de conversas não lidas."
+        },
+        "ip_lookup": {
+          "name": "Localização por IP",
+          "description": "Permite consultar localização aproximada a partir do IP do visitante; depende do serviço configurado."
+        },
+        "disable_branding": {
+          "name": "Remover marca padrão",
+          "description": "Permite recursos de personalização e remoção da marca padrão onde suportados."
+        },
+        "email_continuity_on_api_channel": {
+          "name": "Continuidade por e-mail no canal API",
+          "description": "Permite continuar por e-mail atendimentos originados no canal API."
+        },
+        "help_center": {
+          "name": "Central de ajuda",
+          "description": "Disponibiliza portais, categorias e artigos da central de ajuda."
+        },
+        "agent_bots": {
+          "name": "Bots de atendimento",
+          "description": "Disponibiliza configuração de bots de atendimento e associação às caixas."
+        },
+        "macros": {
+          "name": "Macros",
+          "description": "Permite executar conjuntos de ações pré-configuradas nas conversas."
+        },
+        "agent_management": {
+          "name": "Gerenciamento de agentes",
+          "description": "Disponibiliza o gerenciamento de operadores da conta."
+        },
+        "team_management": {
+          "name": "Gerenciamento de equipes",
+          "description": "Disponibiliza criação e gerenciamento de equipes de atendimento."
+        },
+        "inbox_management": {
+          "name": "Gerenciamento de caixas",
+          "description": "Disponibiliza as configurações das caixas de entrada da conta."
+        },
+        "labels": {
+          "name": "Etiquetas",
+          "description": "Disponibiliza etiquetas para organizar contatos e conversas."
+        },
+        "custom_attributes": {
+          "name": "Atributos personalizados",
+          "description": "Permite campos adicionais para contatos e conversas."
+        },
+        "automations": {
+          "name": "Automações",
+          "description": "Disponibiliza regras que executam ações em resposta a eventos e condições."
+        },
+        "canned_responses": {
+          "name": "Respostas prontas",
+          "description": "Disponibiliza mensagens salvas para agilizar respostas dos agentes."
+        },
+        "integrations": {
+          "name": "Integrações",
+          "description": "Disponibiliza a área de integrações; cada integração pode exigir configuração adicional."
+        },
+        "voice_recorder": {
+          "name": "Gravador de áudio",
+          "description": "Disponibiliza gravação de áudio no editor; depende de permissão do microfone."
+        },
+        "report_rollup": {
+          "name": "Agregação de relatórios",
+          "description": "Controla o recurso de agregação de dados utilizado pelos relatórios."
+        },
+        "channel_website": {
+          "name": "Canal de site",
+          "description": "Disponibiliza a criação do widget de atendimento para sites."
+        },
+        "campaigns": {
+          "name": "Campanhas",
+          "description": "Disponibiliza recursos de campanhas de mensagens."
+        },
+        "reports": {
+          "name": "Relatórios",
+          "description": "Disponibiliza os relatórios de atendimento da conta."
+        },
+        "crm": {
+          "name": "CRM",
+          "description": "Disponibiliza recursos de relacionamento e gestão de contatos."
+        },
+        "auto_resolve_conversations": {
+          "name": "Resolução automática",
+          "description": "Disponibiliza configurações para resolver conversas automaticamente."
+        },
+        "custom_reply_email": {
+          "name": "E-mail de resposta personalizado",
+          "description": "Permite personalizar o endereço utilizado para respostas por e-mail."
+        },
+        "custom_reply_domain": {
+          "name": "Domínio de resposta personalizado",
+          "description": "Permite configurar domínio próprio para respostas por e-mail; exige configuração de DNS."
+        },
+        "audit_logs": {
+          "name": "Logs de auditoria",
+          "description": "Disponibiliza o histórico de ações administrativas e alterações auditadas."
+        },
+        "custom_tools": {
+          "name": "Ferramentas personalizadas",
+          "description": "Disponibiliza configuração de ferramentas personalizadas de integração."
+        },
+        "message_reply_to": {
+          "name": "Resposta com referência (legado)",
+          "description": "Flag legada de referência a mensagens; não é exibida na lista atual de recursos."
+        },
+        "branded_email_templates": {
+          "name": "Modelos de e-mail personalizados",
+          "description": "Permite personalizar o layout visual dos e-mails da conta."
+        },
+        "inbox_view": {
+          "name": "Visualização por caixa (interno)",
+          "description": "Recurso interno de visualização de conversas por caixa."
+        },
+        "sla": {
+          "name": "Acordos de nível de serviço (SLA)",
+          "description": "Disponibiliza políticas e acompanhamento de prazos de atendimento."
+        },
+        "help_center_embedding_search": {
+          "name": "Busca semântica da central de ajuda",
+          "description": "Recurso interno de busca por similaridade nos artigos da central de ajuda."
+        },
+        "linear_integration": {
+          "name": "Integração Linear",
+          "description": "Disponibiliza a integração com o Linear."
+        },
+        "captain_integration": {
+          "name": "Captain — inteligência artificial",
+          "description": "Disponibiliza recursos de IA do Captain; exige provedor e credenciais configurados."
+        },
+        "custom_roles": {
+          "name": "Perfis de acesso personalizados",
+          "description": "Permite criar perfis com conjuntos específicos de permissões."
+        },
+        "chatwoot_v4": {
+          "name": "Interface ViperChat V4",
+          "description": "Controla a disponibilidade da interface V4 onde a flag é utilizada."
+        },
+        "captain_v1_action_classifier": {
+          "name": "Classificador de ações Captain V1",
+          "description": "Recurso interno legado de classificação de ações do Captain."
+        },
+        "contact_chatwoot_support_team": {
+          "name": "Contato com suporte",
+          "description": "Recurso interno de acesso ao suporte da plataforma."
+        },
+        "shopify_integration": {
+          "name": "Integração Shopify",
+          "description": "Recurso interno da integração com Shopify."
+        },
+        "search_with_gin": {
+          "name": "Busca de mensagens com GIN",
+          "description": "Recurso interno que seleciona o caminho de busca com índice GIN; não reconstrói índices."
+        },
+        "channel_instagram": {
+          "name": "Canal Instagram",
+          "description": "Disponibiliza a integração com Instagram; exige aplicativo Meta configurado."
+        },
+        "crm_integration": {
+          "name": "Integração com CRM",
+          "description": "Disponibiliza recursos de integração com sistemas de CRM."
+        },
+        "hide_all_chats_for_agent": {
+          "name": "Ocultar Todas para agentes",
+          "description": "Restringe a visualização de todas as conversas para operadores não administradores, conforme as regras de acesso da conta."
+        },
+        "hide_contacts_for_agent": {
+          "name": "Ocultar contatos para agentes",
+          "description": "Restringe o acesso dos agentes à área de contatos; não altera o papel dos administradores."
+        },
+        "hide_filters_for_agent": {
+          "name": "Ocultar filtros para agentes",
+          "description": "Oculta os filtros de conversas para agentes não administradores."
+        },
+        "send_agent_name_in_whatsapp_message": {
+          "name": "Enviar nome do agente no WhatsApp",
+          "description": "Habilita o recurso de identificação do agente nas mensagens WhatsApp."
+        },
+        "read_message": {
+          "name": "Confirmação de leitura",
+          "description": "Controla o recurso de confirmação de leitura de mensagens nos fluxos que utilizam esta flag."
+        },
+        "disable_whatsapp_messaging_window": {
+          "name": "Desativar bloqueio local da janela WhatsApp",
+          "description": "Desativa o bloqueio da janela de mensagens na aplicação. Não altera regras nem autorizações impostas pela Meta."
+        },
+        "agent_conversation_viewed": {
+          "name": "Indicar visualização por agente",
+          "description": "Permite indicar quais agentes visualizaram a conversa."
+        },
+        "hide_unassigned_for_agent": {
+          "name": "Ocultar Não atribuídas para agentes",
+          "description": "Restringe a visualização de conversas não atribuídas para operadores não administradores."
+        },
+        "hide_delete_message_for_agent": {
+          "name": "Ocultar exclusão de mensagens para agentes",
+          "description": "Restringe a opção de excluir mensagens para agentes não administradores."
+        },
+        "channel_whatsapp": {
+          "name": "Canal WhatsApp oficial",
+          "description": "Permite criar novas caixas WhatsApp via Meta, 360dialog ou Twilio. Ao desativar, oculta a opção e bloqueia criação por API. Não bloqueia caixas existentes nem ViperConnect."
+        },
+        "channel_api": {
+          "name": "Canal API",
+          "description": "Disponibiliza o canal API na configuração de caixas de entrada."
+        },
+        "channel_notifica_me": {
+          "name": "Canal NotificaMe",
+          "description": "Disponibiliza a criação de caixas pelo provedor NotificaMe."
+        },
+        "channel_voice": {
+          "name": "Canal de voz",
+          "description": "Controla recursos de chamadas e o canal de voz; depende do provedor e de credenciais válidas."
+        },
+        "notion_integration": {
+          "name": "Integração Notion",
+          "description": "Disponibiliza a integração com o Notion."
+        },
+        "captain_integration_v2": {
+          "name": "Captain — versão 2",
+          "description": "Disponibiliza a segunda versão dos recursos de IA do Captain."
+        },
+        "whatsapp_embedded_signup": {
+          "name": "Cadastro integrado WhatsApp (legado)",
+          "description": "Flag legada, substituída pelo controle de criação via cadastro integrado."
+        },
+        "whatsapp_campaign": {
+          "name": "Campanhas WhatsApp",
+          "description": "Disponibiliza campanhas pelo WhatsApp, respeitando as exigências do provedor."
+        },
+        "crm_v2": {
+          "name": "CRM — versão 2",
+          "description": "Recurso interno da segunda versão do CRM."
+        },
+        "assignment_v2": {
+          "name": "Distribuição de conversas — versão 2",
+          "description": "Controla recursos da segunda versão de atribuição de conversas."
+        },
+        "captain_document_auto_sync": {
+          "name": "Sincronização automática de documentos Captain",
+          "description": "Permite atualização automática de documentos usados pelo Captain."
+        },
+        "advanced_search": {
+          "name": "Busca avançada",
+          "description": "Recurso de busca avançada. Nesta instalação é mantido ativo pelo backend independentemente desta seleção."
+        },
+        "saml": {
+          "name": "Autenticação SAML",
+          "description": "Disponibiliza autenticação corporativa SAML; exige provedor de identidade configurado."
+        },
+        "advanced_search_indexing": {
+          "name": "Indexação da busca avançada",
+          "description": "Indexação da busca avançada. Nesta instalação é mantida ativa pelo backend independentemente desta seleção."
+        },
+        "reply_mailer_migration": {
+          "name": "Migração do envio de e-mails",
+          "description": "Flag interna de transição para o novo gerador de e-mails."
+        },
+        "unread_count_for_filters": {
+          "name": "Contagem de não lidas em filtros",
+          "description": "Recurso interno de contagem de mensagens não lidas em filtros."
+        },
+        "companies": {
+          "name": "Empresas",
+          "description": "Disponibiliza o cadastro e a associação de empresas aos contatos."
+        },
+        "channel_tiktok": {
+          "name": "Canal TikTok",
+          "description": "Disponibiliza a integração TikTok quando o aplicativo estiver configurado."
+        },
+        "csat_review_notes": {
+          "name": "Notas de avaliação CSAT",
+          "description": "Permite anotações na revisão das avaliações de satisfação."
+        },
+        "captain_tasks": {
+          "name": "Tarefas Captain",
+          "description": "Disponibiliza tarefas e ações do Captain."
+        },
+        "conversation_required_attributes": {
+          "name": "Atributos obrigatórios de conversa",
+          "description": "Permite exigir preenchimento de atributos nas conversas."
+        },
+        "advanced_assignment": {
+          "name": "Distribuição avançada",
+          "description": "Disponibiliza regras avançadas de atribuição de conversas."
+        },
+        "whatsapp_manual_transfer": {
+          "name": "Transferência manual WhatsApp",
+          "description": "Permite transferir a configuração do cadastro integrado para credenciais manuais, conforme as regras da integração."
+        },
+        "data_import": {
+          "name": "Importação de dados",
+          "description": "Disponibiliza assistentes de importação de dados de outras plataformas."
+        },
+        "api_and_webhooks": {
+          "name": "API e webhooks",
+          "description": "Permite criar novas caixas API e webhooks. Ao desativar, preserva as integrações existentes, seus tokens, envios e a manutenção dos webhooks já cadastrados. Não revoga credenciais existentes."
+        },
+        "whatsapp_reconfigure": {
+          "name": "Reconfigurar WhatsApp",
+          "description": "Disponibiliza a reconfiguração da integração WhatsApp."
+        },
+        "whatsapp_embedded_signup_inbox_creation": {
+          "name": "Cadastro integrado WhatsApp",
+          "description": "Permite criar novas caixas pelo cadastro integrado da Meta, inclusive em instalações próprias. Exige o canal WhatsApp habilitado. Desativar não bloqueia caixas existentes, sua reconexão ou o cadastro manual pela Cloud API."
+        },
+        "restrict_assignee_filter_for_agent": {
+          "name": "Limitar filtro de agente ao próprio usuário",
+          "description": "Restringe as opções de agente atribuído para operadores não administradores, respeitando os filtros de acesso."
+        },
+        "disable_channel_unoapi": {
+          "name": "Bloquear novas caixas ViperConnect",
+          "description": "Quando marcado, oculta ViperConnect na criação de caixas e impede novas conexões por API nesta conta. Caixas ViperConnect já conectadas continuam funcionando. Independente do canal WhatsApp oficial."
+        }
+      },
+      "channel_creation_blocked": "A criação deste canal está desativada para esta conta pelo superadministrador.",
+      "feature_help": "O que faz esta opção?",
+      "manually_managed_help": "Recursos mantidos habilitados mesmo quando o plano da conta é reduzido.",
+      "no_manually_managed_features": "Nenhum recurso gerenciado manualmente configurado.",
+      "seed_started": "Geração de dados de demonstração iniciada.",
+      "cache_cleared": "Chaves de cache limpas.",
+      "account_deletion_started": "Exclusão da conta em andamento.",
+      "invalid_action": "Ação inválida.",
+      "statuses": {
+        "active": "Ativa",
+        "suspended": "Suspensa"
+      }
+    }
+  },
+  "en": {
+    "super_admin": {
+      "channel_creation_blocked": "Creation of this channel is disabled for this account by the super administrator.",
+      "feature_help": "What does this option do?",
+      "manually_managed_help": "Features that remain enabled even when the account plan is downgraded.",
+      "no_manually_managed_features": "No manually managed features configured.",
+      "seed_started": "Account seeding triggered",
+      "cache_cleared": "Cache keys cleared",
+      "account_deletion_started": "Account deletion is in progress.",
+      "invalid_action": "Invalid action performed",
+      "statuses": {
+        "active": "Active",
+        "suspended": "Suspended"
+      }
+    }
+  }
+}

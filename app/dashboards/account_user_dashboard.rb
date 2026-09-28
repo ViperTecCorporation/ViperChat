@@ -12,7 +12,7 @@ class AccountUserDashboard < Administrate::BaseDashboard
     user: Field::BelongsToSearch.with_options(class_name: 'User', searchable: true, searchable_field: [:name, :email, :id], order: 'id DESC'),
     inviter: Field::BelongsToSearch.with_options(class_name: 'User', searchable: true, searchable_field: [:name, :email, :id], order: 'id DESC'),
     id: Field::Number,
-    role: Field::Select.with_options(collection: AccountUser.roles.keys),
+    role: Field::Select.with_options(collection: ->(_) { AccountUser.roles.keys.map { |role| [I18n.t("super_admin.roles.#{role}"), role] } }),
     created_at: Field::DateTime,
     updated_at: Field::DateTime
   }.freeze

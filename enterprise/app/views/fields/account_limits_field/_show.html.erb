@@ -1,3 +1,3 @@
 <% JSON.parse(field.to_s).each do |k,v| %>
-<%= k %>: <%= v %> </br>
+<p title="<%= t("super_admin.limits.#{k}.description", default: '') %>"><%= t("super_admin.limits.#{k}.name", default: k) %>: <%= v %></p>
 <% end %>

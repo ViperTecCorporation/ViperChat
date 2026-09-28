@@ -27,6 +27,7 @@ class Webhook < ApplicationRecord
   validates :account_id, presence: true
   validates :url, uniqueness: { scope: [:account_id] }, format: URI::DEFAULT_PARSER.make_regexp(%w[http https])
   validate :validate_webhook_subscriptions
+  validate :validate_creation_permission, on: :create
   enum webhook_type: { account_type: 0, inbox_type: 1 }
 
   ALLOWED_WEBHOOK_EVENTS = %w[conversation_status_changed conversation_updated conversation_created contact_created contact_updated
@@ -34,6 +35,13 @@ class Webhook < ApplicationRecord
                               conversation_typing_on conversation_typing_off].freeze
 
   private
+
+  def validate_creation_permission
+    return unless account
+    return if account.feature_enabled?('api_and_webhooks')
+
+    errors.add(:base, 'New API and webhook configurations are disabled for this account')
+  end
 
   def validate_webhook_subscriptions
     invalid_subscriptions = !subscriptions.instance_of?(Array) ||

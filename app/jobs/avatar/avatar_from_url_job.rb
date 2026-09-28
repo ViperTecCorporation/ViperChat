@@ -178,7 +178,10 @@ class Avatar::AvatarFromUrlJob < ApplicationJob # rubocop:disable Metrics/ClassL
       return unless current_avatar_reservation?(avatarable, avatar_url, avatar_metadata)
 
       avatar_attached = fetch_and_attach_avatar(avatarable, avatar_url, avatar_metadata)
-      update_avatar_sync_attributes(avatarable, avatar_url, avatar_metadata) if avatar_attached
+      if avatar_attached
+        update_avatar_sync_attributes(avatarable, avatar_url, avatar_metadata)
+        Avatar::CleanupGroupAvatarHistoryJob.perform_later(avatarable.id) if Avatar::GroupAvatarService.group_source_id(avatarable)
+      end
     rescue SafeFetch::HttpError => e
       log_http_error(avatar_url, e)
     rescue SafeFetch::Error => e
@@ -226,11 +229,20 @@ class Avatar::AvatarFromUrlJob < ApplicationJob # rubocop:disable Metrics/ClassL
   def attach_avatar(avatarable, avatar_file)
     raise SafeFetch::FetchError, 'Invalid file' unless valid_file?(avatar_file)
 
-    avatarable.avatar.attach(
+    attributes = {
       io: avatar_file.tempfile,
       filename: avatar_file.original_filename,
       content_type: avatar_file.content_type
-    )
+    }
+    # Archiving a group attachment touches another instance of the contact.
+    # Rails may run after_commit on that instance, losing the deferred upload.
+    # Upload explicitly; a failure rolls back the archive and keeps the old photo.
+    attachable = if Avatar::GroupAvatarService.group_source_id(avatarable)
+                   ActiveStorage::Blob.create_and_upload!(**attributes)
+                 else
+                   attributes
+                 end
+    avatarable.avatar.attach(attachable)
   end
 
   def log_http_error(avatar_url, error)

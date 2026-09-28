@@ -1,4 +1,5 @@
 class Api::V1::Accounts::MacrosController < Api::V1::Accounts::BaseController
+  require_account_feature 'macros', only: [:create, :update, :destroy]
   include AttachmentConcern
 
   before_action :fetch_macro, only: [:show, :update, :destroy, :execute]

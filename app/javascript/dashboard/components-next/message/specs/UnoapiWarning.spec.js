@@ -18,6 +18,20 @@ const render = contentAttributes =>
   });
 
 describe('UnoAPI sending notice', () => {
+  it('shows VIDEO_TRANSCODED as a notice, never a retry button', () => {
+    const attrs = {
+      unoapi_warnings: [
+        { code: 'VIDEO_TRANSCODED', message: '<script>malicious()</script>' },
+      ],
+    };
+    const wrapper = render(attrs);
+    expect(wrapper.text()).toContain('O ViperConnect precisou converter');
+    expect(wrapper.find('button').exists()).toBe(false);
+    expect(wrapper.find('script').exists()).toBe(false);
+    expect(render(JSON.parse(JSON.stringify(attrs))).text()).toContain(
+      'não é necessário reenviar'
+    );
+  });
   it('does not render without warnings', () => {
     expect(render({}).find('details').exists()).toBe(false);
   });

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C33000012FEC000100000001 /* NativeVideoPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33000112FEC000100000001 /* NativeVideoPlugin.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -52,6 +53,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C33000112FEC000100000001 /* NativeVideoPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeVideoPlugin.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -123,6 +125,7 @@
 				A11000122FEA000100000001 /* SecureStoragePlugin.swift */,
 				A11000132FEA000100000001 /* NativeSharePlugin.swift */,
 				A11000152FEA000100000001 /* NativeAppSettingsPlugin.swift */,
+				C33000112FEC000100000001 /* NativeVideoPlugin.swift */,
 				A11000142FEA000100000001 /* GoogleService-Info.plist */,
 				A11000162FEA000100000001 /* PrivacyInfo.xcprivacy */,
 				B22000152FEB000100000001 /* App.entitlements */,
@@ -285,6 +288,7 @@
 				A11000022FEA000100000001 /* SecureStoragePlugin.swift in Sources */,
 				A11000032FEA000100000001 /* NativeSharePlugin.swift in Sources */,
 				A11000052FEA000100000001 /* NativeAppSettingsPlugin.swift in Sources */,
+				C33000012FEC000100000001 /* NativeVideoPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

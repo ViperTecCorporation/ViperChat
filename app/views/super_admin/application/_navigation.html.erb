@@ -24,7 +24,7 @@ as defined by the routes in the `admin/` namespace
   ]
 %>
 
-<div class="border-slate-100 border-r w-56 flex-shrink-0 justify-between h-full flex flex-col" role="navigation">
+<div id="super-admin-navigation" class="hidden md:flex border-slate-100 border-b md:border-b-0 md:border-r w-full md:w-56 shrink-0 justify-between flex-col md:min-h-screen" role="navigation" aria-label="<%= t('super_admin.mobile.menu') %>">
   <div>
     <div class="flex mx-4 mb-4 border-slate-100 border-b py-6">
       <%= link_to image_tag('/brand-assets/logo_thumbnail.svg', alt: t('super_admin.navigation.logo_alt'), class: 'h-10'), super_admin_root_url %>

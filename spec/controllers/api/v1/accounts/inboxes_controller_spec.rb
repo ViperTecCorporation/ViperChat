@@ -7,6 +7,24 @@ RSpec.describe 'Inboxes API', type: :request do
   let(:agent) { create(:user, account: account, role: :agent) }
   let(:admin) { create(:user, account: account, role: :administrator) }
 
+  describe 'WhatsApp channel creation restrictions' do
+    %w[whatsapp_cloud unoapi].each do |provider|
+      it "rejects a direct API request for a restricted #{provider} channel" do
+        account.disable_features!('channel_whatsapp')
+        account.enable_features!('disable_channel_unoapi')
+
+        expect do
+          post "/api/v1/accounts/#{account.id}/inboxes",
+               headers: admin.create_new_auth_token,
+               params: { name: 'Restricted channel', channel: { type: 'whatsapp', provider: provider, phone_number: '+5511999999999' } },
+               as: :json
+        end.not_to change(account.inboxes, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+  end
+
   describe 'GET /api/v1/accounts/{account.id}/inboxes' do
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do

@@ -100,8 +100,7 @@ export function usePolicy() {
       );
     }
 
-    // default to true
-    return true;
+    return isFeatureFlagEnabled(flag);
   };
 
   const shouldShowPaywall = featureFlag => {

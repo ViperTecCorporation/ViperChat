@@ -10,6 +10,10 @@ class Whatsapp::EmbeddedSignupService
 
   def perform
     validate_parameters!
+    if @inbox_id.blank? && (!@account.feature_enabled?('channel_whatsapp') ||
+                           !@account.feature_enabled?('whatsapp_embedded_signup_inbox_creation'))
+      raise Pundit::NotAuthorizedError, I18n.t('super_admin.channel_creation_blocked')
+    end
 
     access_token = exchange_code_for_token
     phone_info = fetch_phone_info(access_token)

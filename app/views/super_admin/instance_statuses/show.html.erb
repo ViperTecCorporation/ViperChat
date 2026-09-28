@@ -14,8 +14,8 @@
   </tr>
   <% @metrics.each do |key,value| %>
    <tr>
-   <td> <%= key %> </td>
-   <td> <%= value %></td>
+   <td><%= t('super_admin.metrics', default: {}).with_indifferent_access.fetch(key, key) %></td>
+   <td><%= t('super_admin.metric_values', default: {}).with_indifferent_access.fetch(value.to_s, value) %></td>
   </tr>
   <% end %>
 </table>

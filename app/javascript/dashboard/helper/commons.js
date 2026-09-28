@@ -73,7 +73,20 @@ export const createPendingMessage = data => {
     })) || [];
   const tempAttachments = [{ id: tempMessageId }];
   let attachments = null;
-  if (pendingContactAttachments.length > 0) {
+  if (normalizedContentAttributes?.location) {
+    const location = normalizedContentAttributes.location;
+    attachments = [
+      {
+        id: tempMessageId,
+        file_type: 'location',
+        coordinates_lat: location.latitude,
+        coordinates_long: location.longitude,
+        fallback_title: [location.name, location.address]
+          .filter(Boolean)
+          .join(' — '),
+      },
+    ];
+  } else if (pendingContactAttachments.length > 0) {
     attachments = pendingContactAttachments;
   } else if (file) {
     attachments = tempAttachments;

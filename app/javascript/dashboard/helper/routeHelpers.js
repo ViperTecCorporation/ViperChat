@@ -53,7 +53,7 @@ const validateActiveAccountRoutes = (to, user) => {
   return isAccessible ? null : defaultRedirectPage(to, userPermissions);
 };
 
-export const validateLoggedInRoutes = (to, user) => {
+export const validateLoggedInRoutes = (to, user, accountFeatures) => {
   const currentAccount = getCurrentAccount(user, Number(to.params.accountId));
   // If current account is missing, either user does not have
   // access to the account or the account is deleted, return to login screen
@@ -64,6 +64,13 @@ export const validateLoggedInRoutes = (to, user) => {
   const isCurrentAccountActive = currentAccount.status === 'active';
 
   if (isCurrentAccountActive) {
+    const features = accountFeatures || currentAccount.features || {};
+    const requiredFeatures = [...(to.matched || []), to]
+      .map(route => route.meta?.featureFlag)
+      .filter(Boolean);
+    if (requiredFeatures.some(feature => !features[feature])) {
+      return `accounts/${to.params.accountId}/dashboard`;
+    }
     return validateActiveAccountRoutes(to, user);
   }
 

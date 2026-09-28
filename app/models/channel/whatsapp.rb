@@ -27,6 +27,7 @@ class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLengt
 
   # default at the moment is 360dialog lets change later.
   PROVIDERS = %w[default whatsapp_cloud unoapi].freeze
+  before_validation :check_channel_creation_permission
   before_validation :ensure_unoapi_group_conversation_schema_default
   before_validation :normalize_unoapi_pix_config
   before_validation :ensure_webhook_verify_token
@@ -165,6 +166,17 @@ class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLengt
   end
 
   private
+
+  def check_channel_creation_permission
+    return unless new_record? || will_save_change_to_provider?
+    return unless account
+
+    allowed = provider == 'unoapi' ? !account.feature_enabled?('disable_channel_unoapi') : account.feature_enabled?('channel_whatsapp')
+    return if allowed
+
+    errors.add(:base, I18n.t('super_admin.channel_creation_blocked'))
+    throw :abort
+  end
 
   def resolve_unoapi_config(environment_key, provider_config_key)
     provider_config[provider_config_key].presence ||

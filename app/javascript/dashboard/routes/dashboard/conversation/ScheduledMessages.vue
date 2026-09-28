@@ -9,7 +9,7 @@ import {
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
-import { DirectUpload } from 'activestorage';
+import { DirectUpload } from 'dashboard/helper/multipartUpload';
 import { getAllowedFileTypesByChannel } from '@chatwoot/utils';
 
 import scheduledMessagesApi from 'dashboard/api/scheduledMessages';

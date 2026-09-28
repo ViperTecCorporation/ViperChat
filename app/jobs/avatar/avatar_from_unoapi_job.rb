@@ -44,6 +44,7 @@ class Avatar::AvatarFromUnoapiJob < ApplicationJob
 
     result = Whatsapp::Unoapi::ProfilePictureClient.new(channel).fetch(picture_id)
     sync_avatar(contact, result, picture_id, options)
+    Avatar::CleanupGroupAvatarHistoryJob.perform_later(contact.id) if Avatar::GroupAvatarService.group_source_id(contact)
   rescue Whatsapp::Unoapi::ProfilePictureClient::NotFoundError
     enqueue_fallback(contact, options)
     release_reservation(contact, options[:signature])

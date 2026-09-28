@@ -35,7 +35,7 @@ RSpec.describe 'Viper Chat native discovery', type: :request do
           'webPush' => true,
           'voiceNotes' => true,
           'nativeVoiceCalls' => false,
-          'locationSharing' => false
+          'locationSharing' => true
         ),
         'limits' => {
           'maxAttachmentBytes' => 50.megabytes,

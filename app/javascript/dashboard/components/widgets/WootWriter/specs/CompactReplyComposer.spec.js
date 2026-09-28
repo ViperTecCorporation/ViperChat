@@ -67,6 +67,14 @@ const mountComponent = props =>
   });
 
 describe('CompactReplyComposer', () => {
+  it.each([
+    { mode: 'NOTE' },
+    { isEditorDisabled: true },
+    { isReplyRestricted: true },
+    { inbox: { channel_type: 'Channel::Email' } },
+  ])('hides location in unsupported contexts %j', props => {
+    expect(mountComponent(props).vm.canShareLocation).toBe(false);
+  });
   it('allows selecting any document extension for WhatsApp', () => {
     const wrapper = mountComponent({});
     expect(wrapper.vm.allowedFileTypes).toBe('*');
@@ -99,10 +107,11 @@ describe('CompactReplyComposer', () => {
     await wrapper.find('[data-icon="i-lucide-plus"]').trigger('click');
     const labels = wrapper
       .findAll('.compact-composer__menu-item')
-      .slice(0, 5)
+      .slice(0, 6)
       .map(item => item.text().trim());
 
     expect(labels).toEqual([
+      'CONVERSATION.LOCATION_PICKER.TITLE',
       'CONVERSATION.REPLYBOX.COMPACT.EMOJI',
       'CONVERSATION.REPLYBOX.COMPACT.CONTACT',
       'CONVERSATION.REPLYBOX.COMPACT.PIX',

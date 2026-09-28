@@ -94,6 +94,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     raise e unless existing_contact
 
     @contact = existing_contact
+    authorize @contact, :show?
     update_existing_contact_from_params
     @contact_inbox = build_contact_inbox
     process_avatar_from_url
@@ -220,6 +221,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     contact_scope = Current.account.contacts
     contact_scope = contact_scope.includes(contact_inboxes: [:inbox]) if @include_contact_inboxes
     @contact = contact_scope.find(params[:id])
+    authorize @contact, :show?
   end
 
   def process_avatar_from_url

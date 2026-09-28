@@ -2,6 +2,7 @@ class Api::V1::Accounts::Google::AuthorizationsController < Api::V1::Accounts::O
   include GoogleConcern
 
   def create
+    Google::EmailHistory.validate!(params[:history_period]) if params.key?(:history_period)
     redirect_url = google_client.auth_code.authorize_url(
       {
         redirect_uri: "#{base_url}/google/callback",
@@ -19,5 +20,17 @@ class Api::V1::Accounts::Google::AuthorizationsController < Api::V1::Accounts::O
     else
       render json: { success: false }, status: :unprocessable_entity
     end
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  private
+
+  def state
+    return super unless params.key?(:history_period)
+
+    Rails.application.message_verifier('gmail-history').generate(
+      { 'account_state' => super, 'period' => params[:history_period], 'return_to' => params[:return_to] }, expires_in: 15.minutes
+    )
   end
 end

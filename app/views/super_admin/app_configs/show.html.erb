@@ -1,5 +1,6 @@
 <% content_for(:title) do %>
-  <%= t('super_admin.app_configs.title', config: @config.titleize) %>
+  <% config_name = @config == 'general' ? t('super_admin.general_settings') : t("super_admin.installation_features.#{@config}.name", default: @config.titleize) %>
+  <%= t('super_admin.app_configs.title', config: config_name) %>
 <% end %>
 
 <header class="main-content__header" role="banner">
@@ -17,9 +18,9 @@
 <section class="main-content__body">
   <%= form_with url: super_admin_app_config_url(config: @config) , method: :post do |form| %>
     <% @allowed_configs.each do |key| %>
-      <div class="flex mb-8">
+      <div class="flex flex-col md:flex-row mb-8">
         <div class="field-unit__label">
-          <%= form.label "app_config[#{key}]", @installation_configs[key]&.dig('display_title') || key %>
+          <%= form.label "app_config[#{key}]", t("super_admin.config_fields.#{key}.name", default: @installation_configs[key]&.dig('display_title') || key), title: t("super_admin.config_fields.#{key}.description", default: @installation_configs[key]&.dig('description') || '') %>
         </div>
         <div class="-mt-2 field-unit__field ">
           <% if @installation_configs[key]&.dig('type') == 'boolean' %>
@@ -62,9 +63,10 @@
         <% else %>
           <%= form.text_field "app_config[#{key}]", value: @app_config[key] %>
         <% end %>
-          <%if @installation_configs[key]&.dig('description').present? %>
+          <% description = t("super_admin.config_fields.#{key}.description", default: @installation_configs[key]&.dig('description') || '') %>
+          <% if description.present? %>
             <p class="pt-2 text-xs italic text-slate-400">
-              <%= @installation_configs[key]&.dig('description') %>
+              <%= description %>
             </p>
           <% end %>
         </div>

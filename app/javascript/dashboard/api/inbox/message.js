@@ -63,6 +63,7 @@ class MessageApi extends ApiClient {
   }
 
   create({
+    onUploadProgress,
     conversationId,
     message,
     private: isPrivate,
@@ -83,6 +84,7 @@ class MessageApi extends ApiClient {
     const normalizedContentType = contentType || contentTypeSnake;
     return axios({
       method: 'post',
+      onUploadProgress,
       url: `${this.url}/${conversationId}/messages`,
       data: buildCreatePayload({
         message,

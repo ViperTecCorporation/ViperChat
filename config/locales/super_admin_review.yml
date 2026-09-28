@@ -1,0 +1,244 @@
+{
+  "pt_BR": {
+    "super_admin": {
+      "mfa": {
+        "title": "Autenticação de dois fatores",
+        "enabled": "Ativada",
+        "disabled": "Desativada"
+      },
+      "metrics": {
+        "ViperChat edition": "Edição do ViperChat",
+        "Database Migrations": "Migrações do banco",
+        "ViperChat version": "Versão do ViperChat",
+        "Git SHA": "Revisão do código (Git SHA)",
+        "Postgres alive": "PostgreSQL disponível",
+        "Redis alive": "Redis disponível",
+        "Redis version": "Versão do Redis",
+        "Redis number of connected clients": "Clientes conectados ao Redis",
+        "Redis 'maxclients' setting": "Limite de clientes do Redis",
+        "Redis memory used": "Memória usada pelo Redis",
+        "Redis memory peak": "Pico de memória do Redis",
+        "Redis total memory available": "Memória total disponível",
+        "Redis 'maxmemory' setting": "Limite de memória do Redis",
+        "Redis 'maxmemory_policy' setting": "Política de descarte de memória do Redis"
+      },
+      "metric_values": {
+        "true": "Sim",
+        "false": "Não",
+        "pending": "Pendentes",
+        "completed": "Concluídas",
+        "Community": "Comunitária",
+        "Custom": "Personalizada",
+        "Enterprise": "Empresarial"
+      },
+      "playground": {
+        "back": "Voltar",
+        "title": "Teste de inteligência artificial",
+        "subtitle": "Converse com a fonte e avalie suas respostas.",
+        "placeholder": "Digite uma mensagem… [Ctrl/Cmd + Enter para enviar]",
+        "error": "Não foi possível obter a resposta. Tente novamente."
+      },
+      "secrets": {
+        "toggle": "Mostrar ou ocultar valor",
+        "copy": "Copiar valor"
+      }
+    },
+    "administrate": {
+      "field_hints": {
+        "account": {
+          "status": "Suspender a conta impede seu uso. Não confunda com bloquear a criação de novos canais.",
+          "locale": "Idioma padrão da conta. Cada usuário pode ter sua própria preferência.",
+          "all_features": "Ative ou desative recursos desta conta. Consulte a explicação de cada opção antes de alterar."
+        },
+        "user": {
+          "type": "Superadministradores podem gerenciar todas as contas e configurações desta instalação. Conceda este acesso somente a pessoas autorizadas.",
+          "password": "Ao editar, deixe em branco para manter a senha atual.",
+          "confirmed_at": "Definir a confirmação permite acesso sem aguardar a confirmação de e-mail."
+        },
+        "agent_bot": {
+          "outgoing_url": "Endpoint que recebe os eventos enviados ao bot. Use uma URL HTTPS confiável."
+        },
+        "platform_app": {
+          "name": "Aplicativo de integração com acesso pela API da plataforma. Proteja o token gerado."
+        },
+        "installation_config": {
+          "value": "Configuração global: pode afetar todas as contas. Alguns valores exigem reiniciar os processos web e worker."
+        },
+        "account_user": {
+          "role": "Administrador gerencia a conta; agente atende conforme permissões, equipes e caixas atribuídas."
+        },
+        "platform_banner": {
+          "active": "Quando ativado, o aviso é exibido aos usuários da plataforma."
+        }
+      }
+    }
+  },
+  "pt-BR": {
+    "super_admin": {
+      "mfa": {
+        "title": "Autenticação de dois fatores",
+        "enabled": "Ativada",
+        "disabled": "Desativada"
+      },
+      "metrics": {
+        "ViperChat edition": "Edição do ViperChat",
+        "Database Migrations": "Migrações do banco",
+        "ViperChat version": "Versão do ViperChat",
+        "Git SHA": "Revisão do código (Git SHA)",
+        "Postgres alive": "PostgreSQL disponível",
+        "Redis alive": "Redis disponível",
+        "Redis version": "Versão do Redis",
+        "Redis number of connected clients": "Clientes conectados ao Redis",
+        "Redis 'maxclients' setting": "Limite de clientes do Redis",
+        "Redis memory used": "Memória usada pelo Redis",
+        "Redis memory peak": "Pico de memória do Redis",
+        "Redis total memory available": "Memória total disponível",
+        "Redis 'maxmemory' setting": "Limite de memória do Redis",
+        "Redis 'maxmemory_policy' setting": "Política de descarte de memória do Redis"
+      },
+      "metric_values": {
+        "true": "Sim",
+        "false": "Não",
+        "pending": "Pendentes",
+        "completed": "Concluídas",
+        "Community": "Comunitária",
+        "Custom": "Personalizada",
+        "Enterprise": "Empresarial"
+      },
+      "playground": {
+        "back": "Voltar",
+        "title": "Teste de inteligência artificial",
+        "subtitle": "Converse com a fonte e avalie suas respostas.",
+        "placeholder": "Digite uma mensagem… [Ctrl/Cmd + Enter para enviar]",
+        "error": "Não foi possível obter a resposta. Tente novamente."
+      },
+      "secrets": {
+        "toggle": "Mostrar ou ocultar valor",
+        "copy": "Copiar valor"
+      }
+    },
+    "administrate": {
+      "field_hints": {
+        "account": {
+          "status": "Suspender a conta impede seu uso. Não confunda com bloquear a criação de novos canais.",
+          "locale": "Idioma padrão da conta. Cada usuário pode ter sua própria preferência.",
+          "all_features": "Ative ou desative recursos desta conta. Consulte a explicação de cada opção antes de alterar."
+        },
+        "user": {
+          "type": "Superadministradores podem gerenciar todas as contas e configurações desta instalação. Conceda este acesso somente a pessoas autorizadas.",
+          "password": "Ao editar, deixe em branco para manter a senha atual.",
+          "confirmed_at": "Definir a confirmação permite acesso sem aguardar a confirmação de e-mail."
+        },
+        "agent_bot": {
+          "outgoing_url": "Endpoint que recebe os eventos enviados ao bot. Use uma URL HTTPS confiável."
+        },
+        "platform_app": {
+          "name": "Aplicativo de integração com acesso pela API da plataforma. Proteja o token gerado."
+        },
+        "installation_config": {
+          "value": "Configuração global: pode afetar todas as contas. Alguns valores exigem reiniciar os processos web e worker."
+        },
+        "account_user": {
+          "role": "Administrador gerencia a conta; agente atende conforme permissões, equipes e caixas atribuídas."
+        },
+        "platform_banner": {
+          "active": "Quando ativado, o aviso é exibido aos usuários da plataforma."
+        }
+      }
+    }
+  },
+  "pt": {
+    "super_admin": {
+      "mfa": {
+        "title": "Autenticação de dois fatores",
+        "enabled": "Ativada",
+        "disabled": "Desativada"
+      },
+      "metrics": {
+        "ViperChat edition": "Edição do ViperChat",
+        "Database Migrations": "Migrações do banco",
+        "ViperChat version": "Versão do ViperChat",
+        "Git SHA": "Revisão do código (Git SHA)",
+        "Postgres alive": "PostgreSQL disponível",
+        "Redis alive": "Redis disponível",
+        "Redis version": "Versão do Redis",
+        "Redis number of connected clients": "Clientes conectados ao Redis",
+        "Redis 'maxclients' setting": "Limite de clientes do Redis",
+        "Redis memory used": "Memória usada pelo Redis",
+        "Redis memory peak": "Pico de memória do Redis",
+        "Redis total memory available": "Memória total disponível",
+        "Redis 'maxmemory' setting": "Limite de memória do Redis",
+        "Redis 'maxmemory_policy' setting": "Política de descarte de memória do Redis"
+      },
+      "metric_values": {
+        "true": "Sim",
+        "false": "Não",
+        "pending": "Pendentes",
+        "completed": "Concluídas",
+        "Community": "Comunitária",
+        "Custom": "Personalizada",
+        "Enterprise": "Empresarial"
+      },
+      "playground": {
+        "back": "Voltar",
+        "title": "Teste de inteligência artificial",
+        "subtitle": "Converse com a fonte e avalie suas respostas.",
+        "placeholder": "Digite uma mensagem… [Ctrl/Cmd + Enter para enviar]",
+        "error": "Não foi possível obter a resposta. Tente novamente."
+      },
+      "secrets": {
+        "toggle": "Mostrar ou ocultar valor",
+        "copy": "Copiar valor"
+      }
+    },
+    "administrate": {
+      "field_hints": {
+        "account": {
+          "status": "Suspender a conta impede seu uso. Não confunda com bloquear a criação de novos canais.",
+          "locale": "Idioma padrão da conta. Cada usuário pode ter sua própria preferência.",
+          "all_features": "Ative ou desative recursos desta conta. Consulte a explicação de cada opção antes de alterar."
+        },
+        "user": {
+          "type": "Superadministradores podem gerenciar todas as contas e configurações desta instalação. Conceda este acesso somente a pessoas autorizadas.",
+          "password": "Ao editar, deixe em branco para manter a senha atual.",
+          "confirmed_at": "Definir a confirmação permite acesso sem aguardar a confirmação de e-mail."
+        },
+        "agent_bot": {
+          "outgoing_url": "Endpoint que recebe os eventos enviados ao bot. Use uma URL HTTPS confiável."
+        },
+        "platform_app": {
+          "name": "Aplicativo de integração com acesso pela API da plataforma. Proteja o token gerado."
+        },
+        "installation_config": {
+          "value": "Configuração global: pode afetar todas as contas. Alguns valores exigem reiniciar os processos web e worker."
+        },
+        "account_user": {
+          "role": "Administrador gerencia a conta; agente atende conforme permissões, equipes e caixas atribuídas."
+        },
+        "platform_banner": {
+          "active": "Quando ativado, o aviso é exibido aos usuários da plataforma."
+        }
+      }
+    }
+  },
+  "en": {
+    "super_admin": {
+      "mfa": {
+        "title": "Two-factor authentication",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "playground": {
+        "back": "Back",
+        "title": "AI playground",
+        "subtitle": "Chat with the source and evaluate its responses.",
+        "placeholder": "Type a message… [Ctrl/Cmd + Enter to send]",
+        "error": "Could not retrieve a response. Please try again."
+      },
+      "secrets": {
+        "toggle": "Show or hide value",
+        "copy": "Copy value"
+      }
+    }
+  }
+}

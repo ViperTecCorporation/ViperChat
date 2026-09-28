@@ -35,12 +35,14 @@ class BaseRefreshOauthTokenService
   end
 
   def update_channel_provider_config(new_tokens)
-    channel.provider_config = {
+    tokens = {
       access_token: new_tokens[:access_token],
       refresh_token: new_tokens[:refresh_token],
       expires_on: Time.at(new_tokens[:expires_at]).utc.to_s
     }
-    channel.save!
+    channel.with_lock do
+      channel.update!(provider_config: channel.provider_config.to_h.merge(tokens.stringify_keys))
+    end
   end
 
   private

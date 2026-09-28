@@ -8,10 +8,23 @@ class ConversationPolicy < ApplicationPolicy
   end
 
   def show?
-    administrator? || agent_bot? || agent_can_view_conversation? || participant_access?
+    return false unless record.account_id == account&.id
+    return true if administrator? || agent_bot? || participant_access?
+
+    assignment_visible? && agent_can_view_conversation?
+  end
+
+  def delete_message?
+    show? && (administrator? || agent_bot? || !account.feature_enabled?('hide_delete_message_for_agent'))
   end
 
   private
+
+  def assignment_visible?
+    return false unless account_user
+
+    Search::ConversationVisibilityService.new(current_user: user, current_account: account).allows_assignment?(record)
+  end
 
   def agent_can_view_conversation?
     inbox_access? || team_access?

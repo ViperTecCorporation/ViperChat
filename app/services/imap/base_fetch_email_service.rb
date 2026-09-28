@@ -101,7 +101,7 @@ class Imap::BaseFetchEmailService
 
   def append_message_ids_for_batch(batch, message_ids_with_seq)
     # Fetch only message-id only without mail body or contents.
-    batch_message_ids = imap_client.fetch(batch, ['UID', 'BODY.PEEK[HEADER]'])
+    batch_message_ids = imap_client.fetch(batch, header_fetch_attributes)
     Rails.logger.info "[IMAP::FETCH_EMAIL_SERVICE] Fetching the batch for #{channel.email}. Found #{batch_message_ids&.length} messages."
 
     # .fetch returns an array of Net::IMAP::FetchData or nil
@@ -137,6 +137,10 @@ class Imap::BaseFetchEmailService
     return nil if email_already_present?(channel, message_id)
 
     [data.seqno, message_id]
+  end
+
+  def header_fetch_attributes
+    ['UID', 'BODY.PEEK[HEADER]']
   end
 
   # Sends a SEARCH command to search the mailbox for messages that were

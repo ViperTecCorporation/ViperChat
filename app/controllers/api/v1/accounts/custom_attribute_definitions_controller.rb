@@ -1,4 +1,5 @@
 class Api::V1::Accounts::CustomAttributeDefinitionsController < Api::V1::Accounts::BaseController
+  require_account_feature 'custom_attributes', only: [:create, :update, :destroy]
   before_action :fetch_custom_attributes_definitions, except: [:create]
   before_action :fetch_custom_attribute_definition, only: [:show, :update, :destroy]
   before_action :check_authorization

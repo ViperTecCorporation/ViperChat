@@ -1,6 +1,6 @@
 <script>
 import { defineAsyncComponent, useTemplateRef } from 'vue';
-import { DirectUpload } from 'activestorage';
+import { DirectUpload } from 'dashboard/helper/multipartUpload';
 import { useWindowSize } from '@vueuse/core';
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
@@ -66,6 +66,7 @@ import {
   CAPTAIN_EVENTS,
 } from '../../../helper/AnalyticsHelper/events';
 import fileUploadMixin from 'dashboard/mixins/fileUploadMixin';
+import mediaEditorMixin from 'dashboard/mixins/mediaEditorMixin';
 import {
   appendSignature,
   removeSignature,
@@ -123,8 +124,16 @@ export default {
     CopilotEditorSection,
     CopilotReplyBottomPanel,
     CompactReplyComposer,
+    MediaEditor: defineAsyncComponent(
+      () => import('dashboard/components-next/Conversation/MediaEditor.vue')
+    ),
   },
-  mixins: [inboxMixin, fileUploadMixin, keyboardEventListenerMixins],
+  mixins: [
+    inboxMixin,
+    fileUploadMixin,
+    mediaEditorMixin,
+    keyboardEventListenerMixins,
+  ],
   props: {
     popOutReplyBox: {
       type: Boolean,
@@ -221,7 +230,6 @@ export default {
       messageSignature: 'getMessageSignature',
       currentUser: 'getCurrentUser',
       lastEmail: 'getLastEmailInSelectedChat',
-      globalConfig: 'globalConfig/get',
       accountLabels: 'labels/getLabels',
       getAccount: 'accounts/getAccount',
     }),
@@ -412,6 +420,7 @@ export default {
       return this.maxLength - this.message.length;
     },
     isReplyButtonDisabled() {
+      if (this.mediaEditorSession) return true;
       if (this.isEditorDisabled) return true;
       if (this.isATwitterInbox) return true;
       if (
@@ -1726,7 +1735,7 @@ export default {
         let caption =
           this.isAnInstagramChannel || this.isATiktokChannel ? '' : message;
         this.attachedFiles.forEach(attachment => {
-          const attachedFile = this.globalConfig.directUploadsEnabled
+          const attachedFile = attachment.blobSignedId
             ? attachment.blobSignedId
             : attachment.resource.file;
           let attachmentPayload = {
@@ -1794,7 +1803,7 @@ export default {
       if (this.attachedFiles && this.attachedFiles.length) {
         messagePayload.files = [];
         this.attachedFiles.forEach(attachment => {
-          if (this.globalConfig.directUploadsEnabled) {
+          if (attachment.blobSignedId) {
             messagePayload.files.push(attachment.blobSignedId);
           } else {
             messagePayload.files.push(attachment.resource.file);
@@ -1933,6 +1942,18 @@ export default {
 </script>
 
 <template>
+  <MediaEditor
+    v-if="mediaEditorSession"
+    :files="mediaEditorFiles"
+    :caption="mediaEditorSession.caption"
+    :recipient="currentChat.meta?.sender?.name || ''"
+    :max-caption="Math.min(1024, maxLength)"
+    :max-video-output-bytes="
+      Math.min(256, maxSizeFor('video/mp4')) * 1024 * 1024
+    "
+    :submit-file="submitEditedMedia"
+    @close="closeMediaEditor"
+  />
   <ReplyBoxBanner :message="message" :is-on-private-note="isOnPrivateNote" />
   <div ref="replyEditor" class="reply-box" :class="replyBoxClass">
     <ReplyTopPanel

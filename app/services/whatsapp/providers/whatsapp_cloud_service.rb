@@ -8,6 +8,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       send_sticker_message(phone_number, message)
     elsif contact_message?(message)
       send_contacts_message(phone_number, message)
+    elsif message.attachments.any?(&:location?)
+      send_location_message(phone_number, message)
     elsif message.attachments.present?
       send_attachments(phone_number, message)
     elsif message.content_type == 'input_select'
@@ -367,6 +369,24 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       body: outgoing_message_payload(request_body, message).to_json
     )
 
+    process_response(response, message)
+  end
+
+  def send_location_message(phone_number, message)
+    attachment = message.attachments.find(&:location?)
+    location = {
+      latitude: attachment.coordinates_lat, longitude: attachment.coordinates_long,
+      name: attachment.meta&.[]('name'), address: attachment.meta&.[]('address')
+    }.compact_blank
+    request_body = {
+      messaging_product: 'whatsapp', recipient_type: recipient_type_for(message),
+      context: whatsapp_reply_context(message), to: phone_number, type: 'location', location: location
+    }
+    response = HTTParty.post(
+      "#{phone_id_path}/messages",
+      headers: api_headers,
+      body: outgoing_message_payload(request_body, message).to_json
+    )
     process_response(response, message)
   end
 

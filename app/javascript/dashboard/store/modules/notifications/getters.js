@@ -14,9 +14,15 @@ export const getters = {
   },
   getFilteredNotificationsV4: $state => filters => {
     const sortOrder = filters.sortOrder === 'desc' ? 'newest' : 'oldest';
-    const sortedNotifications = Object.values($state.records).sort((n1, n2) =>
-      sortComparator(n1, n2, sortOrder)
-    );
+    const includes = [filters.status, filters.type];
+    const sortedNotifications = Object.values($state.records)
+      .filter(notification => {
+        const matchesRead = includes.includes('read') || !notification.read_at;
+        const matchesSnoozed =
+          includes.includes('snoozed') || !notification.snoozed_until;
+        return matchesRead && matchesSnoozed;
+      })
+      .sort((n1, n2) => sortComparator(n1, n2, sortOrder));
     return camelcaseKeys(sortedNotifications, { deep: true });
   },
   getNotificationById: $state => id => {

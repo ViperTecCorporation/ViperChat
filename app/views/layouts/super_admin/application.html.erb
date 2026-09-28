@@ -18,7 +18,7 @@ By default, it renders:
 <head>
   <meta charset="utf-8">
   <meta name="ROBOTS" content="NOODP">
-  <meta name="viewport" content="initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>
     <%= content_for(:title) %> - <%= application_title %>
   </title>
@@ -27,11 +27,30 @@ By default, it renders:
   <%= vite_javascript_tag 'superadmin' %>
   <%= csrf_meta_tags %>
 </head>
-<body class="antialiased w-full h-full">
+<body class="antialiased w-full h-full" data-super-admin-labels="<%= t('super_admin.playground').to_json %>">
   <%= render "icons" %>
-  <div class="flex w-full h-full">
+  <div class="flex flex-col md:flex-row w-full min-h-full">
+    <header class="flex md:hidden items-center justify-between gap-3 border-b border-slate-100 p-3">
+      <span class="text-sm font-medium"><%= t('super_admin.navigation.console') %></span>
+      <button type="button" id="super-admin-menu-toggle" aria-controls="super-admin-navigation" aria-expanded="false" class="!m-0 !min-h-11 !px-4">
+        <%= t('super_admin.mobile.menu') %>
+      </button>
+    </header>
     <%= render "navigation" -%>
-    <main class="w-full overflow-auto" role="main">
+    <main class="w-full min-w-0 flex-1 overflow-x-auto
+      max-md:[&_.main-content\_\_header]:!p-4 max-md:[&_.main-content\_\_header]:!flex-wrap max-md:[&_.main-content\_\_header]:!gap-3
+      max-md:[&_.main-content\_\_body]:!p-4 max-md:[&_.main-content\_\_page-title]:!whitespace-normal max-md:[&_.main-content\_\_page-title]:!break-words
+      [&_fieldset]:min-w-0 [&_.attribute-data]:min-w-0 [&_.attribute-data]:break-words [&_.field-unit]:min-w-0
+      max-md:[&_.attribute-label]:!w-full max-md:[&_.attribute-label]:!float-none max-md:[&_.attribute-label]:!text-left
+      max-md:[&_.attribute-data]:!w-full max-md:[&_.attribute-data]:!ml-0 max-md:[&_.attribute-data]:!float-none
+      max-md:[&_.field-unit]:!flex-col max-md:[&_.field-unit]:!items-stretch max-md:[&_.field-unit--nested]:!ml-0
+      max-md:[&_.field-unit\_\_hint]:!ml-0
+      max-md:[&_.field-unit\_\_label]:!w-full max-md:[&_.field-unit\_\_label]:!ml-0 max-md:[&_.field-unit\_\_label]:!text-left
+      max-md:[&_.field-unit\_\_field]:!w-full max-md:[&_.field-unit\_\_field]:!ml-0 max-md:[&_.field-unit\_\_field]:!mt-2
+      max-md:[&_input:not([type=checkbox]):not([type=radio])]:!max-w-full max-md:[&_input]:!text-base
+      max-md:[&_select]:!max-w-full max-md:[&_select]:!text-base max-md:[&_textarea]:!max-w-full max-md:[&_textarea]:!text-base
+      max-md:[&_.form-actions]:!ml-0 max-md:[&_.form-actions]:!p-4
+      max-md:[&_.field-unit\_\_field_.grid]:!grid-cols-1" role="main">
       <%= render "flashes" -%>
       <%= yield %>
     </main>

@@ -1,4 +1,5 @@
 class Api::V1::Accounts::SlaPoliciesController < Api::V1::Accounts::EnterpriseAccountsController
+  require_account_feature 'sla', only: [:create, :update, :destroy]
   before_action :fetch_sla, only: [:show, :update, :destroy]
   before_action :check_authorization
 

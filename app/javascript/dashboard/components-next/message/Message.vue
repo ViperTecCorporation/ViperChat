@@ -444,6 +444,7 @@ const componentToRender = computed(() => {
     const fileType = props.attachments[0].fileType;
 
     if (fileType === ATTACHMENT_TYPES.FALLBACK) return FallbackBubble;
+    if (fileType === ATTACHMENT_TYPES.LOCATION) return LocationBubble;
 
     if (!props.content) {
       if (fileType === ATTACHMENT_TYPES.IMAGE) return ImageBubble;
@@ -452,7 +453,6 @@ const componentToRender = computed(() => {
       if (fileType === ATTACHMENT_TYPES.VIDEO) return VideoBubble;
       if (fileType === ATTACHMENT_TYPES.IG_REEL) return VideoBubble;
       if (fileType === ATTACHMENT_TYPES.EMBED) return EmbedBubble;
-      if (fileType === ATTACHMENT_TYPES.LOCATION) return LocationBubble;
     }
     // Attachment content is the name of the contact
     if (fileType === ATTACHMENT_TYPES.CONTACT) return ContactBubble;

@@ -1,6 +1,10 @@
 module SuperAdmin::FeaturesHelper
   def self.available_features
-    YAML.load(ERB.new(Rails.root.join('app/helpers/super_admin/features.yml').read).result).with_indifferent_access
+    features = YAML.load(ERB.new(Rails.root.join('app/helpers/super_admin/features.yml').read).result).with_indifferent_access
+    features.each do |key, feature|
+      feature[:name] = I18n.t("super_admin.installation_features.#{key}.name", default: feature[:name])
+      feature[:description] = I18n.t("super_admin.installation_features.#{key}.description", default: feature[:description])
+    end
   end
 
   def self.plan_details
@@ -8,9 +12,9 @@ module SuperAdmin::FeaturesHelper
     quantity = ChatwootHub.pricing_plan_quantity
 
     if plan == 'premium'
-      "You are currently on the <span class='font-semibold'>#{plan}</span> plan with <span class='font-semibold'>#{quantity} agents</span>."
+      I18n.t('super_admin.plan_agents', plan: plan, quantity: quantity)
     else
-      "You are currently on the <span class='font-semibold'>#{plan}</span> edition plan."
+      I18n.t('super_admin.plan_edition', plan: plan)
     end
   end
 end

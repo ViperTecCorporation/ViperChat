@@ -1,5 +1,7 @@
 module Enterprise::Api::V1::Accounts::CsatSurveyResponsesController
   def update
+    raise Pundit::NotAuthorizedError unless Current.account.feature_enabled?('csat_review_notes')
+
     @csat_survey_response = Current.account.csat_survey_responses.find(params[:id])
     authorize @csat_survey_response
 

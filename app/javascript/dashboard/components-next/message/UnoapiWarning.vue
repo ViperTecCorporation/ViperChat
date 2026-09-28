@@ -12,10 +12,13 @@ const warnings = computed(() => {
     props.contentAttributes.unoapi_warnings;
   return Array.isArray(values) ? values.filter(value => value?.code) : [];
 });
-const warningText = warning =>
-  warning.code === 'REPLY_SENT_WITHOUT_QUOTE'
-    ? t('CONVERSATION.UNOAPI_WARNING.WITHOUT_QUOTE')
-    : warning.message || warning.code;
+const warningText = warning => {
+  if (warning.code === 'REPLY_SENT_WITHOUT_QUOTE')
+    return t('CONVERSATION.UNOAPI_WARNING.WITHOUT_QUOTE');
+  if (warning.code === 'VIDEO_TRANSCODED')
+    return t('CONVERSATION.UNOAPI_WARNING.VIDEO_TRANSCODED');
+  return warning.message || warning.code;
+};
 </script>
 
 <template>

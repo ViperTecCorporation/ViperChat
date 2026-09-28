@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -14,7 +14,7 @@ const { accountId, currentAccount } = useAccount();
 
 const globalConfig = useMapGetter('globalConfig/get');
 
-const enabledFeatures = ref({});
+const enabledFeatures = computed(() => currentAccount.value?.features || {});
 
 const hasTiktokConfigured = computed(() => {
   return window.chatwootConfig?.tiktokAppId;
@@ -23,6 +23,12 @@ const hasTiktokConfigured = computed(() => {
 const channelList = computed(() => {
   const { apiChannelName } = globalConfig.value;
   const channels = [
+    {
+      key: 'unoapi',
+      title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.UNOAPI'),
+      description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.UNOAPI'),
+      icon: 'i-woot-whatsapp',
+    },
     {
       key: 'website',
       title: t('INBOX_MGMT.ADD.AUTH.CHANNEL.WEBSITE.TITLE'),
@@ -106,24 +112,30 @@ const channelList = computed(() => {
     });
   }
 
-  return channels;
+  return channels.filter(channel => {
+    if (channel.key === 'whatsapp')
+      return enabledFeatures.value.channel_whatsapp;
+    if (channel.key === 'unoapi') {
+      return (
+        Object.keys(enabledFeatures.value).length > 0 &&
+        !enabledFeatures.value.disable_channel_unoapi
+      );
+    }
+    return true;
+  });
 });
-
-const initializeEnabledFeatures = async () => {
-  enabledFeatures.value = currentAccount.value.features;
-};
 
 const initChannelAuth = channel => {
   const params = {
-    sub_page: channel,
+    sub_page: channel === 'unoapi' ? 'whatsapp' : channel,
     accountId: accountId.value,
   };
-  router.push({ name: 'settings_inboxes_page_channel', params });
+  router.push({
+    name: 'settings_inboxes_page_channel',
+    params,
+    query: channel === 'unoapi' ? { provider: 'unoapi' } : {},
+  });
 };
-
-onMounted(() => {
-  initializeEnabledFeatures();
-});
 </script>
 
 <template>

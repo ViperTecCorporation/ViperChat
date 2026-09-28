@@ -4,6 +4,7 @@ import PlaygroundHeader from '../../components/playground/Header.vue';
 import UserMessage from '../../components/playground/UserMessage.vue';
 import BotMessage from '../../components/playground/BotMessage.vue';
 import TypingIndicator from '../../components/playground/TypingIndicator.vue';
+import { superAdminText } from '../../labels';
 
 export default {
   components: {
@@ -22,6 +23,7 @@ export default {
     const { formatMessage } = useMessageFormatter();
     return {
       formatMessage,
+      superAdminText,
     };
   },
   data() {
@@ -85,10 +87,7 @@ export default {
         const { message } = await response.json();
         this.addMessageToData('Bot', message);
       } catch (error) {
-        this.addMessageToData(
-          'bot',
-          'Error: Could not retrieve response. Please check the console for more details.'
-        );
+        this.addMessageToData('bot', superAdminText('error'));
       } finally {
         this.isWaiting = false;
         this.focusInput();
@@ -124,7 +123,7 @@ export default {
         v-model="messageContent"
         :rows="4"
         class="resize-none block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border !outline-2 border-slate-100 focus:ring-woot-500 focus:border-woot-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-woot-500 dark:focus:border-woot-500"
-        placeholder="Type a message... [CMD/CTRL + Enter to send]"
+        :placeholder="superAdminText('placeholder')"
         autofocus
         autocomplete="off"
         @keydown.meta.enter="onMessageSend"

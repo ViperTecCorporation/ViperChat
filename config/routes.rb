@@ -138,6 +138,13 @@ Rails.application.routes.draw do
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
           resources :scheduled_messages, only: [:index, :create, :update, :destroy]
           resources :message_favorites, only: [:index, :create, :destroy]
+          resources :multipart_uploads, only: [:index, :create, :destroy] do
+            member do
+              post :part
+              put :part
+              post :complete
+            end
+          end
           resources :whatsapp_stickers, only: [:index, :create, :destroy] do
             delete :bulk_destroy, on: :collection
           end
@@ -379,6 +386,7 @@ Rails.application.routes.draw do
           end
 
           namespace :google do
+            resource :email_history, only: [:show, :create, :destroy], controller: 'email_histories'
             resource :authorization, only: [:create]
           end
 
@@ -722,6 +730,8 @@ Rails.application.routes.draw do
   get 'notion/callback', to: 'notion/callbacks#show'
   # ----------------------------------------------------------------------
   # Routes for external service verifications
+  get 'location-map', to: 'location_maps#show'
+  get 'location-map/preview', to: 'location_maps#preview'
   get '.well-known/viper-chat' => 'native_app#discovery'
   get '.well-known/assetlinks.json' => 'android_app#assetlinks'
   get '.well-known/apple-app-site-association' => 'apple_app#site_association'

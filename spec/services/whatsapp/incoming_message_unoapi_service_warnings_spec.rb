@@ -13,6 +13,17 @@ RSpec.describe Whatsapp::IncomingMessageUnoapiService do
   let(:params) { { entry: [{ changes: [{ value: { statuses: [status] } }] }] }.with_indifferent_access }
   let(:service) { described_class.new(inbox: channel.inbox, params: params) }
 
+  it 'keeps VIDEO_TRANSCODED on the original delivered message without resend or status regression' do
+    message.update!(status: :delivered)
+    status[:warnings] = [{ code: 'VIDEO_TRANSCODED', message: 'Converted video' }]
+    expect { service.perform }.not_to have_enqueued_job(SendReplyJob)
+    expect { service.perform }.not_to have_enqueued_job(SendReplyJob)
+    expect(message.reload.status).to eq('delivered')
+    expect(message.source_id).to eq('uno-warning-id')
+    expect(message.content_attributes['unoapi_warnings'].pluck('code')).to eq(['VIDEO_TRANSCODED'])
+    expect(message.external_error).to be_blank
+  end
+
   it 'persists a success warning and the original reference without sending again' do
     expect { service.perform }.not_to have_enqueued_job(SendReplyJob)
     expect(message.reload.status).to eq('sent')

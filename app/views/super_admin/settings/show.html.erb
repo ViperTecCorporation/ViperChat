@@ -1,15 +1,15 @@
 <% content_for(:title) do %>
   <%= t('super_admin.settings.title') %>
 <% end %>
-<header class="flex px-8 py-4 items-center border-b border-n-weak" role="banner">
+<header class="flex px-4 md:px-8 py-4 items-center border-b border-n-weak" role="banner">
   <div class="border border-n-weak mr-4 p-2 rounded-full">
     <svg width="24" height="24"><use xlink:href="#icon-settings-2-line" /></svg>
   </div>
-  <div class="flex flex-col h-14 justify-center">
+  <div class="flex flex-col min-w-0 justify-center">
     <h1 class="text-base font-medium leading-6 text-n-slate-12" id="page-title">
       <%= content_for(:title) %>
     </h1>
-    <p class="text-sm font-normal leading-5 text-slate-500 m-0"><%= t('super_admin.settings.subtitle') %></p>
+    <p class="text-sm font-normal leading-5 text-slate-500 m-0 break-words"><%= t('super_admin.settings.subtitle') %></p>
   </div>
 </header>
 <section class="main-content__body px-8">
@@ -23,8 +23,8 @@
 
   <div class="bg-white py-2 px-4 xl:px-0">
     <%= javascript_include_tag "secretField" %>
-    <div class="flex items-center mb-6">
-      <h4 class="text-sm font-medium leading-5 h-5 text-n-slate-12 mr-4"><%= t('super_admin.settings.installation_identifier') %></h4>
+    <div class="flex flex-wrap items-center gap-3 mb-6">
+      <h4 class="text-sm font-medium leading-5 text-n-slate-12 mr-4"><%= t('super_admin.settings.installation_identifier') %></h4>
       <div data-secret-text="<%= ChatwootHub.installation_identifier %>" class="cell-data__secret-field text-sm leading-5 h-5 text-n-slate-11">
         <span data-secret-masked="true" class="select-none"></span>
         <button type="button" onclick="toggleSecretField(event)" data-secret-toggler class="inline-flex items-center justify-center h-5 w-5 p-0 rounded text-n-slate-11 hover:text-n-slate-12 transition-colors focus:outline-none">
@@ -49,7 +49,7 @@
               <span><%= t('super_admin.settings.refresh') %></span>
             </a>
           </div>
-          <p class="text-n-slate-11 m-0 text-sm"><%= SuperAdmin::FeaturesHelper.plan_details.html_safe %></p>
+          <p class="text-n-slate-11 m-0 text-sm"><%= SuperAdmin::FeaturesHelper.plan_details %></p>
         </div>
         <a href="<%= ChatwootHub.billing_url %>" target="_blank" rel="noopener noreferrer">
           <button class="mt-4 md:mt-0 flex gap-1 items-center bg-transparent shadow-sm h-9 hover:text-n-slate-12 hover:bg-slate-50 outline outline-1 outline-n-container rounded text-n-slate-11 font-medium p-2 focus:outline-none">
@@ -109,13 +109,13 @@
           </div>
           <% end %>
           <div class="flex items-center justify-between mb-1.5 mt-4">
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap min-w-0 items-center gap-2">
               <h3 class="text-n-slate-12 font-medium"><%= attrs[:name] %></h3>
               <% if attrs[:enterprise] %>
                 <span class="px-2 h-4 leading-4 rounded-xl text-green-800 font-medium bg-green-100/70 text-xxs">EE</span>
               <% end %>
               <% if attrs[:config_key].present? && attrs[:enabled] %>
-                <a class="inline-flex items-center justify-center h-5 w-5 hover:bg-slate-50 rounded-sm" href="/super_admin/app_config?config=<%= attrs[:config_key] %>">
+                <a class="inline-flex items-center justify-center h-5 w-5 hover:bg-slate-50 rounded-sm" title="<%= attrs[:description] %>" aria-label="<%= attrs[:name] %>" href="/super_admin/app_config?config=<%= attrs[:config_key] %>">
                   <svg width="18" height="18"><use xlink:href="#icon-gear" /></svg>
                 </a>
               <% end %>

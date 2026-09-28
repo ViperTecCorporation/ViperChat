@@ -30,6 +30,47 @@ describe Whatsapp::Providers::UnoapiService do
     end
   end
 
+  describe 'video quality payload' do
+    let(:message) { instance_double(Message, content_attributes: { 'video_quality' => quality }) }
+    let(:identity_payload) { instance_double(Whatsapp::Unoapi::OutgoingIdentityPayload) }
+
+    before do
+      allow(Whatsapp::Unoapi::OutgoingIdentityPayload).to receive(:new) do |**args|
+        allow(identity_payload).to receive(:perform).and_return(args[:request_body])
+        identity_payload
+      end
+    end
+
+    %w[sd hd].each do |selected_quality|
+      context "with #{selected_quality}" do
+        let(:quality) { selected_quality }
+
+        it 'adds quality inside video and preserves the link and caption' do
+          payload = { 'type' => 'video', 'video' => { 'link' => 'https://example.com/v.mp4', 'caption' => 'Caption' } }
+          result = service.send(:outgoing_message_payload, payload, message)
+          expect(result['video']).to eq('link' => 'https://example.com/v.mp4', 'caption' => 'Caption', 'quality' => selected_quality)
+        end
+
+        it 'does not add quality to an image' do
+          payload = { 'type' => 'image', 'image' => { link: 'https://example.com/i.jpg' } }
+          expect(service.send(:outgoing_message_payload, payload, message)).to eq(payload)
+          expect(payload['image']).not_to have_key('quality')
+        end
+      end
+    end
+
+    [nil, 'invalid'].each do |value|
+      context "with missing or invalid quality #{value.inspect}" do
+        let(:quality) { value }
+
+        it 'preserves legacy behavior without specifying quality' do
+          payload = { 'type' => 'video', 'video' => { link: 'https://example.com/v.mp4' } }
+          expect(service.send(:outgoing_message_payload, payload, message)['video']).not_to have_key('quality')
+        end
+      end
+    end
+  end
+
   describe '#send_message' do
     let(:conversation) do
       create(:conversation, account: whatsapp_channel.account, inbox: whatsapp_channel.inbox)

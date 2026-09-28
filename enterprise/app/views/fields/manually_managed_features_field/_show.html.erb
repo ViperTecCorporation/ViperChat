@@ -11,7 +11,7 @@
 
 <% if selected_features.present? %>
   <div class="w-full">
-    <p class="text-gray-400 text-xs italic mb-2">Features that remain enabled even when account plan is downgraded</p>
+    <p class="text-gray-400 text-xs italic mb-2"><%= t('super_admin.manually_managed_help') %></p>
     
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       <% selected_features.each do |feature| %>
@@ -27,5 +27,5 @@
     <hr class="my-8 border-t border-n-weak">
   </div>
 <% else %>
-  <p class="text-gray-400 text-xs italic">No manually managed features configured</p>
+  <p class="text-gray-400 text-xs italic"><%= t('super_admin.no_manually_managed_features') %></p>
 <% end %>

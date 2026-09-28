@@ -34,7 +34,7 @@ Rails.application.configure do
 
   config.active_job.queue_adapter = :sidekiq
 
-  Rails.application.routes.default_url_options = { host: ENV['FRONTEND_URL'] }
+  Rails.application.routes.default_url_options = { host: ENV.fetch('FRONTEND_URL', nil) }
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
@@ -58,15 +58,19 @@ Rails.application.configure do
 
   # Use an evented file watcher to asynchronously detect changes in source code,
   # routes, locales, etc. This feature depends on the listen gem.
-  config.file_watcher = ActiveSupport::EventedFileUpdateChecker
+  config.file_watcher = if ENV['VIPER_DEV_POLLING'] == 'true'
+                          ActiveSupport::FileUpdateChecker
+                        else
+                          ActiveSupport::EventedFileUpdateChecker
+                        end
 
   # Disable host check during development
   config.hosts = nil
-  
+
   # GitHub Codespaces configuration
   if ENV['CODESPACES']
     # Allow web console access from any IP
-    config.web_console.allowed_ips = %w(0.0.0.0/0 ::/0)
+    config.web_console.allowed_ips = %w[0.0.0.0/0 ::/0]
     # Allow CSRF from codespace URLs
     config.force_ssl = false
     config.action_controller.forgery_protection_origin_check = false

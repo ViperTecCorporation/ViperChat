@@ -1,14 +1,14 @@
 class ContactPolicy < ApplicationPolicy
   def index?
-    true
+    directory_access?
   end
 
   def active?
-    true
+    directory_access?
   end
 
   def import?
-    @account_user.administrator?
+    @account_user.administrator? && account.feature_enabled?('data_import')
   end
 
   def export?
@@ -16,27 +16,36 @@ class ContactPolicy < ApplicationPolicy
   end
 
   def search?
-    true
+    directory_access?
   end
 
   def filter?
-    true
+    directory_access?
   end
 
   def update?
-    true
+    show?
   end
 
   def contactable_inboxes?
-    true
+    show?
   end
 
   def destroy_custom_attributes?
-    true
+    show?
   end
 
   def show?
-    true
+    return true unless record.is_a?(Contact)
+    return false unless record.account_id == account.id
+    return true if user.is_a?(AgentBot)
+    return true if @account_user.administrator?
+
+    visibility = Search::ConversationVisibilityService.new(current_user: user, current_account: account)
+    return true unless visibility.assignment_restricted?
+    return true if visibility.conversations.exists?(contact_id: record.id)
+
+    !account.conversations.exists?(contact_id: record.id)
   end
 
   def create?
@@ -44,11 +53,19 @@ class ContactPolicy < ApplicationPolicy
   end
 
   def avatar?
-    true
+    show?
   end
 
   def destroy?
     @account_user.administrator?
+  end
+
+  private
+
+  def directory_access?
+    return true if user.is_a?(AgentBot)
+
+    @account_user.administrator? || !account.feature_enabled?('hide_contacts_for_agent')
   end
 end
 

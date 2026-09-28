@@ -132,6 +132,7 @@ class Conversation < ApplicationRecord
   before_save :ensure_snooze_until_reset
   before_create :determine_conversation_status
   before_create :ensure_waiting_since
+  before_update :reset_inactivity_after_reopening
 
   after_update_commit :execute_after_update_commit_callbacks
   after_create_commit :notify_conversation_creation
@@ -306,6 +307,16 @@ class Conversation < ApplicationRecord
     # rubocop:disable Rails/SkipsModelValidations
     update_column(:waiting_since, nil)
     # rubocop:enable Rails/SkipsModelValidations
+  end
+
+  def reset_inactivity_after_reopening
+    return unless will_save_change_to_status? && status_in_database == 'resolved' && open?
+
+    self.last_activity_at = Time.current
+    # Resolution templates, activity entries and private notes are not replies
+    # to the contact. Restore waiting only from the public conversation.
+    last_reply = messages.where(private: false, message_type: [:incoming, :outgoing]).order(created_at: :desc, id: :desc).first
+    self.waiting_since ||= Time.current if last_reply&.incoming?
   end
 
   def ensure_snooze_until_reset

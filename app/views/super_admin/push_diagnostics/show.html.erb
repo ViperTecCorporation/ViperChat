@@ -11,11 +11,11 @@
 
   <div class="mb-8">
     <h2 class="text-base font-semibold mb-2"><%= t('super_admin.push_diagnostics.lookup.title') %></h2>
-    <%= form_with url: super_admin_push_diagnostics_path, method: :get, local: true, class: 'flex gap-2 items-center' do |f| %>
+    <%= form_with url: super_admin_push_diagnostics_path, method: :get, local: true, class: 'flex flex-wrap gap-2 items-center' do |f| %>
       <%= f.text_field :user_query,
                        value: @query,
                        placeholder: t('super_admin.push_diagnostics.lookup.placeholder'),
-                       class: 'border border-slate-100 p-1.5 rounded-md w-80' %>
+                       class: 'border border-slate-100 p-1.5 rounded-md w-full sm:w-80 min-w-0' %>
       <%= f.submit t('super_admin.push_diagnostics.lookup.submit'), class: 'border border-slate-200 bg-slate-50 px-3 py-1.5 rounded-md cursor-pointer' %>
     <% end %>
     <% if @query.present? && @user.nil? %>

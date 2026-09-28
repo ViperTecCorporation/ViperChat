@@ -1,4 +1,5 @@
 class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
+  require_account_feature 'agent_management', only: [:create, :bulk_create, :update, :destroy]
   before_action :fetch_agent, except: [:create, :index, :bulk_create]
   before_action :check_authorization
   before_action :validate_limit, only: [:create]

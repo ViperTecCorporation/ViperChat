@@ -14,6 +14,11 @@
 # options: For select types, its required to have options for the select in the following pattern: "option_value":"Human readable option"
 
 # ------- Branding Related Config ------- #
+- name: GOOGLE_MAPS_API_KEY
+  value: ''
+  display_title: 'Google Maps — chave pública do navegador'
+  description: 'Ative Maps JavaScript API e Places API (New) para buscar empresas e endereços. Restrinja esta chave aos sites autorizados e a essas APIs; ela é pública no navegador. Configure cotas no Google Cloud.'
+  locked: false
 - name: INSTALLATION_NAME
   value: 'ViperChat'
   display_title: 'Installation Name'
@@ -472,12 +477,12 @@
 # MARK: UNOAPI Channel Config
 - name: UNOAPI_API_URL
   value:
-  display_title: 'UNO API URL'
-  description: 'Default UNO API base URL. An URL configured in the inbox takes precedence over this value.'
+  display_title: 'ViperConnect URL'
+  description: 'Default ViperConnect base URL. An URL configured in the inbox takes precedence over this value.'
 - name: UNOAPI_AUTH_TOKEN
   value:
-  display_title: 'UNO API Auth Token'
-  description: 'Default Auth Token for UNO API. A token configured in the inbox takes precedence over this value.'
+  display_title: 'ViperConnect Auth Token'
+  description: 'Default Auth Token for ViperConnect. A token configured in the inbox takes precedence over this value.'
   type: secret
 # End of UNOAPI Channel Config
 # ------- TikTok Channel Related Config ------- #
