@@ -24,5 +24,6 @@ final class ViperBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(SecureStoragePlugin())
         bridge?.registerPluginInstance(NativeSharePlugin())
         bridge?.registerPluginInstance(NativeAppSettingsPlugin())
+        bridge?.registerPluginInstance(NativeVideoPlugin())
     }
 }

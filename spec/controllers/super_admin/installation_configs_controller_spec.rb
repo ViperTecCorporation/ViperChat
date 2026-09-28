@@ -57,7 +57,8 @@ RSpec.describe 'Super Admin Installation Config API', type: :request do
 
       it 'shows a restart success notice for runtime config changes' do
         sign_in(super_admin, scope: :super_admin)
-        config = create(:installation_config, name: 'OTEL_PROVIDER', value: 'langfuse', locked: false)
+        config = InstallationConfig.find_or_initialize_by(name: 'OTEL_PROVIDER')
+        config.update!(value: 'langfuse', locked: false)
 
         patch "/super_admin/installation_configs/#{config.id}", params: {
           installation_config: { name: config.name, value: 'langfuse' }

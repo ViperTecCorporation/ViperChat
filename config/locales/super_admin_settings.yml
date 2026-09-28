@@ -1,0 +1,386 @@
+{
+  "pt_BR": {
+    "super_admin": {
+      "installation_features": {
+        "saml": {
+          "name": "Acesso único SAML",
+          "description": "Configura a disponibilidade do acesso único por SAML. Requer a integração e a edição compatível."
+        },
+        "custom_branding": {
+          "name": "Identidade visual",
+          "description": "Personaliza a marca e a aparência desta instalação."
+        },
+        "agent_capacity": {
+          "name": "Capacidade dos agentes",
+          "description": "Define limites para a atribuição automática de conversas aos agentes."
+        },
+        "audit_logs": {
+          "name": "Registros de auditoria",
+          "description": "Permite consultar registros de atividades das contas."
+        },
+        "disable_branding": {
+          "name": "Remover marca",
+          "description": "Remove a marca do widget de atendimento e dos e-mails externos."
+        },
+        "help_center": {
+          "name": "Central de ajuda",
+          "description": "Permite criar artigos e publicá-los em um portal de ajuda."
+        },
+        "captain": {
+          "name": "Captain — inteligência artificial",
+          "description": "Configura o serviço de inteligência artificial usado no atendimento."
+        },
+        "live_chat": {
+          "name": "Chat no site",
+          "description": "Disponibiliza o widget de atendimento para incorporar em sites."
+        },
+        "email": {
+          "name": "E-mail",
+          "description": "Configura os limites e o domínio de recebimento de e-mail."
+        },
+        "sms": {
+          "name": "SMS",
+          "description": "Permite atender mensagens SMS por um provedor configurado."
+        },
+        "messenger": {
+          "name": "Facebook Messenger",
+          "description": "Configura credenciais e webhooks do aplicativo Facebook Messenger."
+        },
+        "instagram": {
+          "name": "Instagram",
+          "description": "Configura credenciais, webhooks e verificações do aplicativo Instagram."
+        },
+        "tiktok": {
+          "name": "TikTok",
+          "description": "Configura as credenciais de integração com o TikTok."
+        },
+        "whatsapp": {
+          "name": "WhatsApp oficial",
+          "description": "Integra o atendimento com a plataforma oficial do WhatsApp."
+        },
+        "telegram": {
+          "name": "Telegram",
+          "description": "Permite atendimento por bots do Telegram."
+        },
+        "line": {
+          "name": "LINE",
+          "description": "Permite atendimento pelo canal LINE."
+        },
+        "google": {
+          "name": "Google",
+          "description": "Configura as credenciais OAuth para autenticação com Google."
+        },
+        "microsoft": {
+          "name": "Microsoft",
+          "description": "Configura as credenciais do aplicativo Microsoft para integração de e-mail."
+        },
+        "linear": {
+          "name": "Linear",
+          "description": "Configura a integração com tarefas do Linear."
+        },
+        "notion": {
+          "name": "Notion",
+          "description": "Configura a integração com o Notion."
+        },
+        "slack": {
+          "name": "Slack",
+          "description": "Configura a integração com o Slack."
+        },
+        "whatsapp_embedded": {
+          "name": "Cadastro integrado do WhatsApp",
+          "description": "Configura o aplicativo Meta e o fluxo de conexão integrado do WhatsApp."
+        },
+        "shopify": {
+          "name": "Shopify",
+          "description": "Configura as credenciais de integração com lojas Shopify."
+        },
+        "unoapi": {
+          "name": "WhatsApp — ViperConnect",
+          "description": "Configura a URL e a credencial compartilhada do ViperConnect. A autorização de novas caixas é controlada separadamente por conta."
+        }
+      },
+      "limits": {
+        "agents": {
+          "name": "Agentes",
+          "description": "Quantidade máxima de agentes permitida na conta."
+        },
+        "inboxes": {
+          "name": "Caixas de entrada",
+          "description": "Quantidade máxima de caixas de entrada permitida na conta."
+        },
+        "captain_responses": {
+          "name": "Respostas do Captain",
+          "description": "Limite de respostas de inteligência artificial disponível para a conta."
+        },
+        "captain_documents": {
+          "name": "Documentos do Captain",
+          "description": "Limite de documentos da base de conhecimento do Captain."
+        },
+        "emails": {
+          "name": "E-mails",
+          "description": "Limite de envio de e-mails da conta."
+        }
+      },
+      "plan_agents": "Plano atual: %{plan}, com %{quantity} agentes.",
+      "plan_edition": "Edição atual: %{plan}."
+    }
+  },
+  "pt-BR": {
+    "super_admin": {
+      "installation_features": {
+        "saml": {
+          "name": "Acesso único SAML",
+          "description": "Configura a disponibilidade do acesso único por SAML. Requer a integração e a edição compatível."
+        },
+        "custom_branding": {
+          "name": "Identidade visual",
+          "description": "Personaliza a marca e a aparência desta instalação."
+        },
+        "agent_capacity": {
+          "name": "Capacidade dos agentes",
+          "description": "Define limites para a atribuição automática de conversas aos agentes."
+        },
+        "audit_logs": {
+          "name": "Registros de auditoria",
+          "description": "Permite consultar registros de atividades das contas."
+        },
+        "disable_branding": {
+          "name": "Remover marca",
+          "description": "Remove a marca do widget de atendimento e dos e-mails externos."
+        },
+        "help_center": {
+          "name": "Central de ajuda",
+          "description": "Permite criar artigos e publicá-los em um portal de ajuda."
+        },
+        "captain": {
+          "name": "Captain — inteligência artificial",
+          "description": "Configura o serviço de inteligência artificial usado no atendimento."
+        },
+        "live_chat": {
+          "name": "Chat no site",
+          "description": "Disponibiliza o widget de atendimento para incorporar em sites."
+        },
+        "email": {
+          "name": "E-mail",
+          "description": "Configura os limites e o domínio de recebimento de e-mail."
+        },
+        "sms": {
+          "name": "SMS",
+          "description": "Permite atender mensagens SMS por um provedor configurado."
+        },
+        "messenger": {
+          "name": "Facebook Messenger",
+          "description": "Configura credenciais e webhooks do aplicativo Facebook Messenger."
+        },
+        "instagram": {
+          "name": "Instagram",
+          "description": "Configura credenciais, webhooks e verificações do aplicativo Instagram."
+        },
+        "tiktok": {
+          "name": "TikTok",
+          "description": "Configura as credenciais de integração com o TikTok."
+        },
+        "whatsapp": {
+          "name": "WhatsApp oficial",
+          "description": "Integra o atendimento com a plataforma oficial do WhatsApp."
+        },
+        "telegram": {
+          "name": "Telegram",
+          "description": "Permite atendimento por bots do Telegram."
+        },
+        "line": {
+          "name": "LINE",
+          "description": "Permite atendimento pelo canal LINE."
+        },
+        "google": {
+          "name": "Google",
+          "description": "Configura as credenciais OAuth para autenticação com Google."
+        },
+        "microsoft": {
+          "name": "Microsoft",
+          "description": "Configura as credenciais do aplicativo Microsoft para integração de e-mail."
+        },
+        "linear": {
+          "name": "Linear",
+          "description": "Configura a integração com tarefas do Linear."
+        },
+        "notion": {
+          "name": "Notion",
+          "description": "Configura a integração com o Notion."
+        },
+        "slack": {
+          "name": "Slack",
+          "description": "Configura a integração com o Slack."
+        },
+        "whatsapp_embedded": {
+          "name": "Cadastro integrado do WhatsApp",
+          "description": "Configura o aplicativo Meta e o fluxo de conexão integrado do WhatsApp."
+        },
+        "shopify": {
+          "name": "Shopify",
+          "description": "Configura as credenciais de integração com lojas Shopify."
+        },
+        "unoapi": {
+          "name": "WhatsApp — ViperConnect",
+          "description": "Configura a URL e a credencial compartilhada do ViperConnect. A autorização de novas caixas é controlada separadamente por conta."
+        }
+      },
+      "limits": {
+        "agents": {
+          "name": "Agentes",
+          "description": "Quantidade máxima de agentes permitida na conta."
+        },
+        "inboxes": {
+          "name": "Caixas de entrada",
+          "description": "Quantidade máxima de caixas de entrada permitida na conta."
+        },
+        "captain_responses": {
+          "name": "Respostas do Captain",
+          "description": "Limite de respostas de inteligência artificial disponível para a conta."
+        },
+        "captain_documents": {
+          "name": "Documentos do Captain",
+          "description": "Limite de documentos da base de conhecimento do Captain."
+        },
+        "emails": {
+          "name": "E-mails",
+          "description": "Limite de envio de e-mails da conta."
+        }
+      },
+      "plan_agents": "Plano atual: %{plan}, com %{quantity} agentes.",
+      "plan_edition": "Edição atual: %{plan}."
+    }
+  },
+  "pt": {
+    "super_admin": {
+      "installation_features": {
+        "saml": {
+          "name": "Acesso único SAML",
+          "description": "Configura a disponibilidade do acesso único por SAML. Requer a integração e a edição compatível."
+        },
+        "custom_branding": {
+          "name": "Identidade visual",
+          "description": "Personaliza a marca e a aparência desta instalação."
+        },
+        "agent_capacity": {
+          "name": "Capacidade dos agentes",
+          "description": "Define limites para a atribuição automática de conversas aos agentes."
+        },
+        "audit_logs": {
+          "name": "Registros de auditoria",
+          "description": "Permite consultar registros de atividades das contas."
+        },
+        "disable_branding": {
+          "name": "Remover marca",
+          "description": "Remove a marca do widget de atendimento e dos e-mails externos."
+        },
+        "help_center": {
+          "name": "Central de ajuda",
+          "description": "Permite criar artigos e publicá-los em um portal de ajuda."
+        },
+        "captain": {
+          "name": "Captain — inteligência artificial",
+          "description": "Configura o serviço de inteligência artificial usado no atendimento."
+        },
+        "live_chat": {
+          "name": "Chat no site",
+          "description": "Disponibiliza o widget de atendimento para incorporar em sites."
+        },
+        "email": {
+          "name": "E-mail",
+          "description": "Configura os limites e o domínio de recebimento de e-mail."
+        },
+        "sms": {
+          "name": "SMS",
+          "description": "Permite atender mensagens SMS por um provedor configurado."
+        },
+        "messenger": {
+          "name": "Facebook Messenger",
+          "description": "Configura credenciais e webhooks do aplicativo Facebook Messenger."
+        },
+        "instagram": {
+          "name": "Instagram",
+          "description": "Configura credenciais, webhooks e verificações do aplicativo Instagram."
+        },
+        "tiktok": {
+          "name": "TikTok",
+          "description": "Configura as credenciais de integração com o TikTok."
+        },
+        "whatsapp": {
+          "name": "WhatsApp oficial",
+          "description": "Integra o atendimento com a plataforma oficial do WhatsApp."
+        },
+        "telegram": {
+          "name": "Telegram",
+          "description": "Permite atendimento por bots do Telegram."
+        },
+        "line": {
+          "name": "LINE",
+          "description": "Permite atendimento pelo canal LINE."
+        },
+        "google": {
+          "name": "Google",
+          "description": "Configura as credenciais OAuth para autenticação com Google."
+        },
+        "microsoft": {
+          "name": "Microsoft",
+          "description": "Configura as credenciais do aplicativo Microsoft para integração de e-mail."
+        },
+        "linear": {
+          "name": "Linear",
+          "description": "Configura a integração com tarefas do Linear."
+        },
+        "notion": {
+          "name": "Notion",
+          "description": "Configura a integração com o Notion."
+        },
+        "slack": {
+          "name": "Slack",
+          "description": "Configura a integração com o Slack."
+        },
+        "whatsapp_embedded": {
+          "name": "Cadastro integrado do WhatsApp",
+          "description": "Configura o aplicativo Meta e o fluxo de conexão integrado do WhatsApp."
+        },
+        "shopify": {
+          "name": "Shopify",
+          "description": "Configura as credenciais de integração com lojas Shopify."
+        },
+        "unoapi": {
+          "name": "WhatsApp — ViperConnect",
+          "description": "Configura a URL e a credencial compartilhada do ViperConnect. A autorização de novas caixas é controlada separadamente por conta."
+        }
+      },
+      "limits": {
+        "agents": {
+          "name": "Agentes",
+          "description": "Quantidade máxima de agentes permitida na conta."
+        },
+        "inboxes": {
+          "name": "Caixas de entrada",
+          "description": "Quantidade máxima de caixas de entrada permitida na conta."
+        },
+        "captain_responses": {
+          "name": "Respostas do Captain",
+          "description": "Limite de respostas de inteligência artificial disponível para a conta."
+        },
+        "captain_documents": {
+          "name": "Documentos do Captain",
+          "description": "Limite de documentos da base de conhecimento do Captain."
+        },
+        "emails": {
+          "name": "E-mails",
+          "description": "Limite de envio de e-mails da conta."
+        }
+      },
+      "plan_agents": "Plano atual: %{plan}, com %{quantity} agentes.",
+      "plan_edition": "Edição atual: %{plan}."
+    }
+  },
+  "en": {
+    "super_admin": {
+      "plan_agents": "Current plan: %{plan}, with %{quantity} agents.",
+      "plan_edition": "Current edition: %{plan}."
+    }
+  }
+}

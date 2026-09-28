@@ -1,6 +1,52 @@
 import { getters } from '../../notifications/getters';
+import { reactive, computed } from 'vue';
+import { mutations } from '../../notifications/mutations';
+import types from '../../../mutation-types';
 
 describe('#getters', () => {
+  it('reactively hides read items without removing the active conversation record', () => {
+    const state = reactive({
+      records: { 1: { id: 1, read_at: null, primary_actor: { id: 42 } } },
+    });
+    const visible = computed(() =>
+      getters.getFilteredNotificationsV4(state)({ sortOrder: 'desc' })
+    );
+    expect(visible.value.map(item => item.id)).toEqual([1]);
+    mutations[types.READ_NOTIFICATION](state, {
+      id: 1,
+      read_at: '2026-09-25T12:00:00Z',
+    });
+    expect(visible.value).toEqual([]);
+    expect(
+      getters.getFilteredNotifications(state)({ sortOrder: 'desc' })[0]
+        .primary_actor.id
+    ).toBe(42);
+    mutations[types.READ_NOTIFICATION](state, { id: 1, read_at: null });
+    expect(visible.value.map(item => item.id)).toEqual([1]);
+  });
+
+  it('preserves read and snoozed items only when their display options are enabled', () => {
+    const state = {
+      records: {
+        1: { id: 1, read_at: null, snoozed_until: null },
+        2: { id: 2, read_at: true, snoozed_until: null },
+        3: { id: 3, read_at: null, snoozed_until: '2030-01-01' },
+        4: { id: 4, read_at: true, snoozed_until: '2030-01-01' },
+      },
+    };
+    const ids = filters =>
+      getters
+        .getFilteredNotificationsV4(state)(filters)
+        .map(item => item.id);
+    expect(ids({})).toEqual([1]);
+    expect(ids({ type: 'read' })).toEqual([1, 2]);
+    expect(ids({ status: 'snoozed' })).toEqual([1, 3]);
+    expect(ids({ type: 'read', status: 'snoozed' })).toEqual([1, 2, 3, 4]);
+    mutations[types.UPDATE_ALL_NOTIFICATIONS](state);
+    expect(ids({})).toEqual([]);
+    expect(ids({ type: 'read' })).toEqual([1, 2]);
+  });
+
   it('getNotifications', () => {
     const state = {
       records: {

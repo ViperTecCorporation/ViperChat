@@ -68,6 +68,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     ActiveRecord::Base.transaction do
       resolve_direct_recipient if params[:recipient].present?
       @conversation = ConversationBuilder.new(params: params, contact_inbox: @contact_inbox).perform
+      authorize @conversation, :show?
       authorize_direct_conversation if params[:recipient].present?
       Messages::MessageBuilder.new(Current.user, @conversation, params[:message]).perform if params[:message].present?
     end
@@ -235,6 +236,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     return if params[:contact_id].blank?
 
     @contact = Current.account.contacts.find(params[:contact_id])
+    authorize @contact, :show?
   end
 
   def contact_inbox
@@ -243,7 +245,8 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # fallback for the old case where we do look up only using source id
     # In future we need to change this and make sure we do look up on combination of inbox_id and source_id
     # and deprecate the support of passing only source_id as the param
-    @contact_inbox ||= ::ContactInbox.find_by!(source_id: params[:source_id])
+    source_inboxes = @inbox ? [@inbox.id] : Current.account.inboxes.select(:id)
+    @contact_inbox ||= ::ContactInbox.where(inbox_id: source_inboxes).find_by!(source_id: params[:source_id])
     authorize @contact_inbox.inbox, :show?
   rescue ActiveRecord::RecordNotUnique
     render json: { error: 'source_id should be unique' }, status: :unprocessable_entity

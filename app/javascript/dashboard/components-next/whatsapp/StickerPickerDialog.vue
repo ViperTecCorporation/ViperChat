@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { DirectUpload } from 'activestorage';
+import { DirectUpload } from 'dashboard/helper/multipartUpload';
 import { getDirectUploadUrl } from 'dashboard/helper/directUploadsHelper';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';

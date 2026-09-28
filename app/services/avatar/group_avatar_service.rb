@@ -1,5 +1,6 @@
 # A group may have several legacy has_one attachments. Never purge those blobs
 # while choosing or replacing its photo: keep old links under archival names.
+# Successful sync jobs clean that history only after verifying the current file.
 class Avatar::GroupAvatarService
   def self.group_source_id(contact)
     return unless contact.is_a?(Contact)

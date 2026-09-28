@@ -12,7 +12,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import MultiselectDropdownItems from 'shared/components/ui/MultiselectDropdownItems.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 import FileUpload from 'vue-upload-component';
-import { DirectUpload } from 'activestorage';
+import { DirectUpload } from 'dashboard/helper/multipartUpload';
 import { getDirectUploadUrl } from 'dashboard/helper/directUploadsHelper';
 import {
   ALLOWED_FILE_TYPES,

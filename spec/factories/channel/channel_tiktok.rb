@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :channel_tiktok, class: 'Channel::Tiktok' do
-    account
+    association :account, :with_tiktok
     business_id { SecureRandom.hex(16) }
     access_token { SecureRandom.hex(32) }
     refresh_token { SecureRandom.hex(32) }

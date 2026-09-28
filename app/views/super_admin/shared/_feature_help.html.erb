@@ -1,0 +1,7 @@
+<% description = SuperAdmin::AccountFeaturesHelper.feature_description(feature_key) %>
+<% if description.present? %>
+  <details class="mt-1 text-xs text-slate-600">
+    <summary class="cursor-pointer break-words" title="<%= description %>"><%= t('super_admin.feature_help') %></summary>
+    <p class="mt-2 whitespace-normal break-words"><%= description %></p>
+  </details>
+<% end %>

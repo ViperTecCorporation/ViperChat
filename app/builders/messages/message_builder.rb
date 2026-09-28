@@ -22,12 +22,17 @@ class Messages::MessageBuilder
   end
 
   def perform
+    if content_attributes.with_indifferent_access[:location].present? && (@attachments.present? || contact_attachments.present?)
+      raise ArgumentError, 'Location must be sent separately'
+    end
+
     if split_attachments_per_message?
       build_multiple_attachment_messages
     else
       @message = @conversation.messages.build(message_params)
       process_attachments
       process_contact_attachments
+      process_location_attachment
       process_emails
       # When the message has no quoted content, it will just be rendered as a regular message
       # The frontend is equipped to handle this case
@@ -39,6 +44,29 @@ class Messages::MessageBuilder
   end
 
   private
+
+  def process_location_attachment
+    location = content_attributes.with_indifferent_access[:location]
+    return if location.nil?
+
+    supported = @conversation.inbox.whatsapp? && %w[unoapi whatsapp_cloud].include?(@conversation.inbox.channel.provider)
+    raise ArgumentError, 'Location requires an outgoing WhatsApp message' unless supported && @message.outgoing? && !@message.private?
+    raise ArgumentError, 'Location must be sent separately' if @attachments.present? || contact_attachments.present?
+    raise ArgumentError, 'Invalid location' unless location.is_a?(Hash)
+
+    latitude = Float(location[:latitude], exception: false)
+    longitude = Float(location[:longitude], exception: false)
+    unless latitude&.finite? && longitude&.finite? && latitude.between?(-90, 90) && longitude.between?(-180, 180)
+      raise ArgumentError, 'Invalid location coordinates'
+    end
+
+    @message.attachments.build(
+      account_id: @account.id, file_type: :location,
+      coordinates_lat: latitude, coordinates_long: longitude,
+      fallback_title: [location[:name], location[:address]].compact_blank.join(' — ').truncate(1000),
+      meta: { name: location[:name].to_s.first(256), address: location[:address].to_s.first(512) }
+    )
+  end
 
   # Extracts content attributes from the given params.
   # - Converts ActionController::Parameters to a regular hash if needed.

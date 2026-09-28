@@ -27,7 +27,7 @@ class NativeAppController < ApplicationController
       voiceNotes: true,
       nativeVoiceCalls: false,
       nativeVideoCalls: false,
-      locationSharing: false
+      locationSharing: true
     }
   end
 

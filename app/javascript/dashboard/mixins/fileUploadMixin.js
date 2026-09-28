@@ -2,7 +2,7 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { getMaxUploadSizeByChannel } from '@chatwoot/utils';
-import { DirectUpload } from 'activestorage';
+import { DirectUpload, needsMultipart } from 'dashboard/helper/multipartUpload';
 import {
   getDirectUploadUrl,
   setDirectUploadAuthHeaders,
@@ -57,7 +57,10 @@ export default {
       );
     },
     onFileUpload(file) {
-      if (this.globalConfig.directUploadsEnabled) {
+      if (
+        this.globalConfig.directUploadsEnabled ||
+        needsMultipart(file?.file)
+      ) {
         return this.onDirectFileUpload(file);
       }
       return this.onIndirectFileUpload(file);
@@ -80,6 +83,7 @@ export default {
           `/api/v1/accounts/${this.accountId}/conversations/${this.currentChat.id}/direct_uploads`
         ),
         {
+          indirect: !this.globalConfig.directUploadsEnabled,
           directUploadWillCreateBlobWithXHR: xhr => {
             setDirectUploadAuthHeaders(xhr);
           },

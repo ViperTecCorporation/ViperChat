@@ -14,13 +14,17 @@ RSpec.describe CampaignMessageJob do
   let(:account) { create(:account) }
   let!(:unoapi_channel) { create(:channel_whatsapp, account: account, provider: 'unoapi', sync_templates: false, validate_provider_config: false) }
   let!(:unoapi_inbox) { create(:inbox, account: account, channel: unoapi_channel) }
-  let(:phone_number) { Faker::PhoneNumber.cell_phone_in_e164 }
+  let(:phone_number) { '+14155552671' }
   let(:name) { Faker::Name.name }
   let(:identifier) { rand(999..1000).to_s }
   let(:audience_1) { { phone_number: phone_number, name: name } }
   let(:audience) { [audience_1] }
   let!(:campaign) do
     create(:campaign, inbox: unoapi_inbox, account: account, audience: [audience], message: 'hello #name')
+  end
+
+  around do |example|
+    with_modified_env(GROQ_API_KEY: nil) { example.run }
   end
 
   it 'enqueues the job' do

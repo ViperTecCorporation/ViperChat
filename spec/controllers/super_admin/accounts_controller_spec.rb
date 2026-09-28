@@ -216,7 +216,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         now_timestamp = Time.now.utc.to_i
         post "/super_admin/accounts/#{account.id}/reset_cache"
         expect(response).to have_http_status(:redirect)
-        expect(flash[:notice]).to eq('Cache keys cleared')
+        expect(flash[:notice]).to eq(I18n.t('super_admin.cache_cleared', locale: ENV.fetch('DEFAULT_LOCALE', 'pt_BR')))
 
         range = now_timestamp..(now_timestamp + 10)
         expect(account.reload.cache_keys.values.all? { |v| range.cover?(v.to_i) }).to be(true)

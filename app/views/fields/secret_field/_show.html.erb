@@ -5,12 +5,12 @@
 
 <div data-secret-text="<%= field.data %>" class="cell-data__secret-field">
   <span data-secret-masked="true"></span>
-  <button onclick="toggleSecretField(event)" data-secret-toggler>
+  <button type="button" onclick="toggleSecretField(event)" data-secret-toggler title="<%= t('super_admin.secrets.toggle') %>" aria-label="<%= t('super_admin.secrets.toggle') %>">
     <svg width="20" height="20">
       <use xlink:href="#eye-show" />
     </svg>
   </button>
-  <button onclick="copySecretField(event)" data-secret-copier>
+  <button type="button" onclick="copySecretField(event)" data-secret-copier title="<%= t('super_admin.secrets.copy') %>" aria-label="<%= t('super_admin.secrets.copy') %>">
     <svg width="20" height="20">
       <use xlink:href="#icon-copy" />
     </svg>

@@ -1,4 +1,5 @@
 class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAccountsController
+  require_account_feature 'custom_roles', only: [:create, :update, :destroy]
   before_action :fetch_custom_role, only: [:show, :update, :destroy]
   before_action :check_authorization
 

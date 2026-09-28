@@ -35,6 +35,18 @@ const isActive = computed(() => {
   if (key === 'website') {
     return props.enabledFeatures.channel_website;
   }
+  if (key === 'api') {
+    return (
+      props.enabledFeatures.channel_api &&
+      props.enabledFeatures.api_and_webhooks
+    );
+  }
+  if (key === 'whatsapp') {
+    return props.enabledFeatures.channel_whatsapp;
+  }
+  if (key === 'unoapi') {
+    return !props.enabledFeatures.disable_channel_unoapi;
+  }
   if (key === 'facebook') {
     return props.enabledFeatures.channel_facebook && hasFbConfigured.value;
   }

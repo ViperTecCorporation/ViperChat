@@ -1,0 +1,648 @@
+{
+  "pt_BR": {
+    "super_admin": {
+      "config_fields": {
+        "ENABLE_ACCOUNT_SIGNUP": {
+          "name": "Permitir cadastro de contas",
+          "description": "Permite que visitantes criem novas contas nesta instalação."
+        },
+        "FIREBASE_PROJECT_ID": {
+          "name": "ID do projeto Firebase",
+          "description": "Identifica o projeto Firebase utilizado pelas notificações push."
+        },
+        "FIREBASE_CREDENTIALS": {
+          "name": "Credenciais do Firebase",
+          "description": "Credenciais da conta de serviço para enviar notificações. Mantenha este conteúdo em sigilo."
+        },
+        "WEBHOOK_TIMEOUT": {
+          "name": "Tempo limite dos webhooks",
+          "description": "Tempo máximo de espera, em segundos, para requisições de webhook."
+        },
+        "MAXIMUM_FILE_UPLOAD_SIZE": {
+          "name": "Tamanho máximo dos arquivos",
+          "description": "Limite de upload de arquivos, em megabytes."
+        },
+        "WIDGET_TOKEN_EXPIRY": {
+          "name": "Validade do token do widget",
+          "description": "Prazo de validade, em dias, do token da sessão do visitante no widget."
+        },
+        "MAILER_INBOUND_EMAIL_DOMAIN": {
+          "name": "Domínio de recebimento de e-mail",
+          "description": "Domínio usado para endereços de entrada e encaminhamento de e-mail."
+        },
+        "ACCOUNT_EMAILS_LIMIT": {
+          "name": "Limite de e-mails por conta",
+          "description": "Define o limite padrão de envio de e-mails das contas."
+        },
+        "ACCOUNT_EMAILS_PLAN_LIMITS": {
+          "name": "Limites de e-mail por plano",
+          "description": "Define limites de envio específicos por plano, no formato esperado pela configuração."
+        },
+        "UNOAPI_API_URL": {
+          "name": "URL do ViperConnect",
+          "description": "Endereço base do servidor ViperConnect usado ao conectar novas caixas."
+        },
+        "UNOAPI_AUTH_TOKEN": {
+          "name": "Token do ViperConnect",
+          "description": "Credencial de acesso ao servidor ViperConnect. Não compartilhe este valor."
+        },
+        "CAPTAIN_OPEN_AI_API_KEY": {
+          "name": "Chave da API de inteligência artificial",
+          "description": "Credencial usada pelo Captain para acessar o provedor de inteligência artificial."
+        },
+        "CAPTAIN_OPEN_AI_MODEL": {
+          "name": "Modelo de inteligência artificial",
+          "description": "Nome do modelo usado pelo Captain."
+        },
+        "CAPTAIN_OPEN_AI_ENDPOINT": {
+          "name": "Endpoint da inteligência artificial",
+          "description": "Endereço da API compatível usada pelo Captain."
+        },
+        "WHATSAPP_CONFIGURATION_ID": {
+          "name": "ID da configuração do WhatsApp",
+          "description": "Identificador da configuração de cadastro integrado no aplicativo Meta."
+        },
+        "GOOGLE_OAUTH_REDIRECT_URI": {
+          "name": "URL de retorno do Google",
+          "description": "URL de redirecionamento OAuth; deve coincidir com a cadastrada no Google."
+        },
+        "ENABLE_GOOGLE_OAUTH_LOGIN": {
+          "name": "Permitir login com Google",
+          "description": "Habilita autenticação com Google usando as credenciais configuradas."
+        },
+        "ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT": {
+          "name": "Atendimento humano no Messenger",
+          "description": "Habilita o uso da extensão de atendimento humano quando autorizada pela Meta."
+        },
+        "ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT": {
+          "name": "Atendimento humano no Instagram",
+          "description": "Habilita o uso da extensão de atendimento humano quando autorizada pela Meta."
+        },
+        "ENABLE_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION": {
+          "name": "Verificar assinatura dos webhooks do Instagram",
+          "description": "Valida a autenticidade dos webhooks recebidos. Desativar reduz a proteção contra eventos falsificados."
+        },
+        "INSTAGRAM_WEBHOOK_APP_SECRET": {
+          "name": "Segredo de assinatura do webhook Instagram",
+          "description": "Segredo do aplicativo usado para validar a assinatura dos eventos recebidos."
+        },
+        "FB_VERIFY_TOKEN": {
+          "name": "Token de verificação do Facebook",
+          "description": "Valor usado na confirmação do endpoint de webhook no painel Meta."
+        },
+        "IG_VERIFY_TOKEN": {
+          "name": "Token de verificação legado do Instagram",
+          "description": "Valor usado para verificar o webhook da integração Instagram via Facebook."
+        },
+        "INSTAGRAM_VERIFY_TOKEN": {
+          "name": "Token de verificação do Instagram",
+          "description": "Valor usado na confirmação do endpoint de webhook do Instagram."
+        },
+        "FB_APP_ID": {
+          "name": "ID do aplicativo Facebook",
+          "description": "Identificador do aplicativo cadastrado no provedor Facebook."
+        },
+        "FB_APP_SECRET": {
+          "name": "Segredo do aplicativo Facebook",
+          "description": "Credencial privada do aplicativo Facebook. Não compartilhe este valor."
+        },
+        "AZURE_APP_ID": {
+          "name": "ID do aplicativo Microsoft Azure",
+          "description": "Identificador do aplicativo cadastrado no provedor Microsoft Azure."
+        },
+        "AZURE_APP_SECRET": {
+          "name": "Segredo do aplicativo Microsoft Azure",
+          "description": "Credencial privada do aplicativo Microsoft Azure. Não compartilhe este valor."
+        },
+        "INSTAGRAM_APP_ID": {
+          "name": "ID do aplicativo Instagram",
+          "description": "Identificador do aplicativo cadastrado no provedor Instagram."
+        },
+        "INSTAGRAM_APP_SECRET": {
+          "name": "Segredo do aplicativo Instagram",
+          "description": "Credencial privada do aplicativo Instagram. Não compartilhe este valor."
+        },
+        "TIKTOK_APP_ID": {
+          "name": "ID do aplicativo TikTok",
+          "description": "Identificador do aplicativo cadastrado no provedor TikTok."
+        },
+        "TIKTOK_APP_SECRET": {
+          "name": "Segredo do aplicativo TikTok",
+          "description": "Credencial privada do aplicativo TikTok. Não compartilhe este valor."
+        },
+        "WHATSAPP_APP_ID": {
+          "name": "ID do aplicativo WhatsApp",
+          "description": "Identificador do aplicativo cadastrado no provedor WhatsApp."
+        },
+        "WHATSAPP_APP_SECRET": {
+          "name": "Segredo do aplicativo WhatsApp",
+          "description": "Credencial privada do aplicativo WhatsApp. Não compartilhe este valor."
+        },
+        "SHOPIFY_CLIENT_ID": {
+          "name": "ID do cliente Shopify",
+          "description": "Identificador OAuth da integração Shopify."
+        },
+        "SHOPIFY_CLIENT_SECRET": {
+          "name": "Segredo do cliente Shopify",
+          "description": "Credencial privada OAuth da integração Shopify. Não compartilhe este valor."
+        },
+        "LINEAR_CLIENT_ID": {
+          "name": "ID do cliente Linear",
+          "description": "Identificador OAuth da integração Linear."
+        },
+        "LINEAR_CLIENT_SECRET": {
+          "name": "Segredo do cliente Linear",
+          "description": "Credencial privada OAuth da integração Linear. Não compartilhe este valor."
+        },
+        "SLACK_CLIENT_ID": {
+          "name": "ID do cliente Slack",
+          "description": "Identificador OAuth da integração Slack."
+        },
+        "SLACK_CLIENT_SECRET": {
+          "name": "Segredo do cliente Slack",
+          "description": "Credencial privada OAuth da integração Slack. Não compartilhe este valor."
+        },
+        "NOTION_CLIENT_ID": {
+          "name": "ID do cliente Notion",
+          "description": "Identificador OAuth da integração Notion."
+        },
+        "NOTION_CLIENT_SECRET": {
+          "name": "Segredo do cliente Notion",
+          "description": "Credencial privada OAuth da integração Notion. Não compartilhe este valor."
+        },
+        "GOOGLE_OAUTH_CLIENT_ID": {
+          "name": "ID do cliente Google OAuth",
+          "description": "Identificador OAuth da integração Google OAuth."
+        },
+        "GOOGLE_OAUTH_CLIENT_SECRET": {
+          "name": "Segredo do cliente Google OAuth",
+          "description": "Credencial privada OAuth da integração Google OAuth. Não compartilhe este valor."
+        },
+        "FACEBOOK_API_VERSION": {
+          "name": "Versão da API FACEBOOK",
+          "description": "Versão da API utilizada nas chamadas à integração FACEBOOK. Verifique a compatibilidade antes de alterar."
+        },
+        "INSTAGRAM_API_VERSION": {
+          "name": "Versão da API INSTAGRAM",
+          "description": "Versão da API utilizada nas chamadas à integração INSTAGRAM. Verifique a compatibilidade antes de alterar."
+        },
+        "TIKTOK_API_VERSION": {
+          "name": "Versão da API TIKTOK",
+          "description": "Versão da API utilizada nas chamadas à integração TIKTOK. Verifique a compatibilidade antes de alterar."
+        },
+        "WHATSAPP_API_VERSION": {
+          "name": "Versão da API WHATSAPP",
+          "description": "Versão da API utilizada nas chamadas à integração WHATSAPP. Verifique a compatibilidade antes de alterar."
+        }
+      },
+      "config_saved": "Configurações atualizadas com sucesso.",
+      "config_restart": "Reinicie os processos web e de processamento em segundo plano para aplicar a alteração em toda a instalação.",
+      "general_settings": "Configurações gerais",
+      "roles": {
+        "agent": "Agente",
+        "administrator": "Administrador"
+      },
+      "banner_types": {
+        "info": "Informação",
+        "warning": "Aviso",
+        "error": "Erro"
+      }
+    }
+  },
+  "pt-BR": {
+    "super_admin": {
+      "config_fields": {
+        "ENABLE_ACCOUNT_SIGNUP": {
+          "name": "Permitir cadastro de contas",
+          "description": "Permite que visitantes criem novas contas nesta instalação."
+        },
+        "FIREBASE_PROJECT_ID": {
+          "name": "ID do projeto Firebase",
+          "description": "Identifica o projeto Firebase utilizado pelas notificações push."
+        },
+        "FIREBASE_CREDENTIALS": {
+          "name": "Credenciais do Firebase",
+          "description": "Credenciais da conta de serviço para enviar notificações. Mantenha este conteúdo em sigilo."
+        },
+        "WEBHOOK_TIMEOUT": {
+          "name": "Tempo limite dos webhooks",
+          "description": "Tempo máximo de espera, em segundos, para requisições de webhook."
+        },
+        "MAXIMUM_FILE_UPLOAD_SIZE": {
+          "name": "Tamanho máximo dos arquivos",
+          "description": "Limite de upload de arquivos, em megabytes."
+        },
+        "WIDGET_TOKEN_EXPIRY": {
+          "name": "Validade do token do widget",
+          "description": "Prazo de validade, em dias, do token da sessão do visitante no widget."
+        },
+        "MAILER_INBOUND_EMAIL_DOMAIN": {
+          "name": "Domínio de recebimento de e-mail",
+          "description": "Domínio usado para endereços de entrada e encaminhamento de e-mail."
+        },
+        "ACCOUNT_EMAILS_LIMIT": {
+          "name": "Limite de e-mails por conta",
+          "description": "Define o limite padrão de envio de e-mails das contas."
+        },
+        "ACCOUNT_EMAILS_PLAN_LIMITS": {
+          "name": "Limites de e-mail por plano",
+          "description": "Define limites de envio específicos por plano, no formato esperado pela configuração."
+        },
+        "UNOAPI_API_URL": {
+          "name": "URL do ViperConnect",
+          "description": "Endereço base do servidor ViperConnect usado ao conectar novas caixas."
+        },
+        "UNOAPI_AUTH_TOKEN": {
+          "name": "Token do ViperConnect",
+          "description": "Credencial de acesso ao servidor ViperConnect. Não compartilhe este valor."
+        },
+        "CAPTAIN_OPEN_AI_API_KEY": {
+          "name": "Chave da API de inteligência artificial",
+          "description": "Credencial usada pelo Captain para acessar o provedor de inteligência artificial."
+        },
+        "CAPTAIN_OPEN_AI_MODEL": {
+          "name": "Modelo de inteligência artificial",
+          "description": "Nome do modelo usado pelo Captain."
+        },
+        "CAPTAIN_OPEN_AI_ENDPOINT": {
+          "name": "Endpoint da inteligência artificial",
+          "description": "Endereço da API compatível usada pelo Captain."
+        },
+        "WHATSAPP_CONFIGURATION_ID": {
+          "name": "ID da configuração do WhatsApp",
+          "description": "Identificador da configuração de cadastro integrado no aplicativo Meta."
+        },
+        "GOOGLE_OAUTH_REDIRECT_URI": {
+          "name": "URL de retorno do Google",
+          "description": "URL de redirecionamento OAuth; deve coincidir com a cadastrada no Google."
+        },
+        "ENABLE_GOOGLE_OAUTH_LOGIN": {
+          "name": "Permitir login com Google",
+          "description": "Habilita autenticação com Google usando as credenciais configuradas."
+        },
+        "ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT": {
+          "name": "Atendimento humano no Messenger",
+          "description": "Habilita o uso da extensão de atendimento humano quando autorizada pela Meta."
+        },
+        "ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT": {
+          "name": "Atendimento humano no Instagram",
+          "description": "Habilita o uso da extensão de atendimento humano quando autorizada pela Meta."
+        },
+        "ENABLE_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION": {
+          "name": "Verificar assinatura dos webhooks do Instagram",
+          "description": "Valida a autenticidade dos webhooks recebidos. Desativar reduz a proteção contra eventos falsificados."
+        },
+        "INSTAGRAM_WEBHOOK_APP_SECRET": {
+          "name": "Segredo de assinatura do webhook Instagram",
+          "description": "Segredo do aplicativo usado para validar a assinatura dos eventos recebidos."
+        },
+        "FB_VERIFY_TOKEN": {
+          "name": "Token de verificação do Facebook",
+          "description": "Valor usado na confirmação do endpoint de webhook no painel Meta."
+        },
+        "IG_VERIFY_TOKEN": {
+          "name": "Token de verificação legado do Instagram",
+          "description": "Valor usado para verificar o webhook da integração Instagram via Facebook."
+        },
+        "INSTAGRAM_VERIFY_TOKEN": {
+          "name": "Token de verificação do Instagram",
+          "description": "Valor usado na confirmação do endpoint de webhook do Instagram."
+        },
+        "FB_APP_ID": {
+          "name": "ID do aplicativo Facebook",
+          "description": "Identificador do aplicativo cadastrado no provedor Facebook."
+        },
+        "FB_APP_SECRET": {
+          "name": "Segredo do aplicativo Facebook",
+          "description": "Credencial privada do aplicativo Facebook. Não compartilhe este valor."
+        },
+        "AZURE_APP_ID": {
+          "name": "ID do aplicativo Microsoft Azure",
+          "description": "Identificador do aplicativo cadastrado no provedor Microsoft Azure."
+        },
+        "AZURE_APP_SECRET": {
+          "name": "Segredo do aplicativo Microsoft Azure",
+          "description": "Credencial privada do aplicativo Microsoft Azure. Não compartilhe este valor."
+        },
+        "INSTAGRAM_APP_ID": {
+          "name": "ID do aplicativo Instagram",
+          "description": "Identificador do aplicativo cadastrado no provedor Instagram."
+        },
+        "INSTAGRAM_APP_SECRET": {
+          "name": "Segredo do aplicativo Instagram",
+          "description": "Credencial privada do aplicativo Instagram. Não compartilhe este valor."
+        },
+        "TIKTOK_APP_ID": {
+          "name": "ID do aplicativo TikTok",
+          "description": "Identificador do aplicativo cadastrado no provedor TikTok."
+        },
+        "TIKTOK_APP_SECRET": {
+          "name": "Segredo do aplicativo TikTok",
+          "description": "Credencial privada do aplicativo TikTok. Não compartilhe este valor."
+        },
+        "WHATSAPP_APP_ID": {
+          "name": "ID do aplicativo WhatsApp",
+          "description": "Identificador do aplicativo cadastrado no provedor WhatsApp."
+        },
+        "WHATSAPP_APP_SECRET": {
+          "name": "Segredo do aplicativo WhatsApp",
+          "description": "Credencial privada do aplicativo WhatsApp. Não compartilhe este valor."
+        },
+        "SHOPIFY_CLIENT_ID": {
+          "name": "ID do cliente Shopify",
+          "description": "Identificador OAuth da integração Shopify."
+        },
+        "SHOPIFY_CLIENT_SECRET": {
+          "name": "Segredo do cliente Shopify",
+          "description": "Credencial privada OAuth da integração Shopify. Não compartilhe este valor."
+        },
+        "LINEAR_CLIENT_ID": {
+          "name": "ID do cliente Linear",
+          "description": "Identificador OAuth da integração Linear."
+        },
+        "LINEAR_CLIENT_SECRET": {
+          "name": "Segredo do cliente Linear",
+          "description": "Credencial privada OAuth da integração Linear. Não compartilhe este valor."
+        },
+        "SLACK_CLIENT_ID": {
+          "name": "ID do cliente Slack",
+          "description": "Identificador OAuth da integração Slack."
+        },
+        "SLACK_CLIENT_SECRET": {
+          "name": "Segredo do cliente Slack",
+          "description": "Credencial privada OAuth da integração Slack. Não compartilhe este valor."
+        },
+        "NOTION_CLIENT_ID": {
+          "name": "ID do cliente Notion",
+          "description": "Identificador OAuth da integração Notion."
+        },
+        "NOTION_CLIENT_SECRET": {
+          "name": "Segredo do cliente Notion",
+          "description": "Credencial privada OAuth da integração Notion. Não compartilhe este valor."
+        },
+        "GOOGLE_OAUTH_CLIENT_ID": {
+          "name": "ID do cliente Google OAuth",
+          "description": "Identificador OAuth da integração Google OAuth."
+        },
+        "GOOGLE_OAUTH_CLIENT_SECRET": {
+          "name": "Segredo do cliente Google OAuth",
+          "description": "Credencial privada OAuth da integração Google OAuth. Não compartilhe este valor."
+        },
+        "FACEBOOK_API_VERSION": {
+          "name": "Versão da API FACEBOOK",
+          "description": "Versão da API utilizada nas chamadas à integração FACEBOOK. Verifique a compatibilidade antes de alterar."
+        },
+        "INSTAGRAM_API_VERSION": {
+          "name": "Versão da API INSTAGRAM",
+          "description": "Versão da API utilizada nas chamadas à integração INSTAGRAM. Verifique a compatibilidade antes de alterar."
+        },
+        "TIKTOK_API_VERSION": {
+          "name": "Versão da API TIKTOK",
+          "description": "Versão da API utilizada nas chamadas à integração TIKTOK. Verifique a compatibilidade antes de alterar."
+        },
+        "WHATSAPP_API_VERSION": {
+          "name": "Versão da API WHATSAPP",
+          "description": "Versão da API utilizada nas chamadas à integração WHATSAPP. Verifique a compatibilidade antes de alterar."
+        }
+      },
+      "config_saved": "Configurações atualizadas com sucesso.",
+      "config_restart": "Reinicie os processos web e de processamento em segundo plano para aplicar a alteração em toda a instalação.",
+      "general_settings": "Configurações gerais",
+      "roles": {
+        "agent": "Agente",
+        "administrator": "Administrador"
+      },
+      "banner_types": {
+        "info": "Informação",
+        "warning": "Aviso",
+        "error": "Erro"
+      }
+    }
+  },
+  "pt": {
+    "super_admin": {
+      "config_fields": {
+        "ENABLE_ACCOUNT_SIGNUP": {
+          "name": "Permitir cadastro de contas",
+          "description": "Permite que visitantes criem novas contas nesta instalação."
+        },
+        "FIREBASE_PROJECT_ID": {
+          "name": "ID do projeto Firebase",
+          "description": "Identifica o projeto Firebase utilizado pelas notificações push."
+        },
+        "FIREBASE_CREDENTIALS": {
+          "name": "Credenciais do Firebase",
+          "description": "Credenciais da conta de serviço para enviar notificações. Mantenha este conteúdo em sigilo."
+        },
+        "WEBHOOK_TIMEOUT": {
+          "name": "Tempo limite dos webhooks",
+          "description": "Tempo máximo de espera, em segundos, para requisições de webhook."
+        },
+        "MAXIMUM_FILE_UPLOAD_SIZE": {
+          "name": "Tamanho máximo dos arquivos",
+          "description": "Limite de upload de arquivos, em megabytes."
+        },
+        "WIDGET_TOKEN_EXPIRY": {
+          "name": "Validade do token do widget",
+          "description": "Prazo de validade, em dias, do token da sessão do visitante no widget."
+        },
+        "MAILER_INBOUND_EMAIL_DOMAIN": {
+          "name": "Domínio de recebimento de e-mail",
+          "description": "Domínio usado para endereços de entrada e encaminhamento de e-mail."
+        },
+        "ACCOUNT_EMAILS_LIMIT": {
+          "name": "Limite de e-mails por conta",
+          "description": "Define o limite padrão de envio de e-mails das contas."
+        },
+        "ACCOUNT_EMAILS_PLAN_LIMITS": {
+          "name": "Limites de e-mail por plano",
+          "description": "Define limites de envio específicos por plano, no formato esperado pela configuração."
+        },
+        "UNOAPI_API_URL": {
+          "name": "URL do ViperConnect",
+          "description": "Endereço base do servidor ViperConnect usado ao conectar novas caixas."
+        },
+        "UNOAPI_AUTH_TOKEN": {
+          "name": "Token do ViperConnect",
+          "description": "Credencial de acesso ao servidor ViperConnect. Não compartilhe este valor."
+        },
+        "CAPTAIN_OPEN_AI_API_KEY": {
+          "name": "Chave da API de inteligência artificial",
+          "description": "Credencial usada pelo Captain para acessar o provedor de inteligência artificial."
+        },
+        "CAPTAIN_OPEN_AI_MODEL": {
+          "name": "Modelo de inteligência artificial",
+          "description": "Nome do modelo usado pelo Captain."
+        },
+        "CAPTAIN_OPEN_AI_ENDPOINT": {
+          "name": "Endpoint da inteligência artificial",
+          "description": "Endereço da API compatível usada pelo Captain."
+        },
+        "WHATSAPP_CONFIGURATION_ID": {
+          "name": "ID da configuração do WhatsApp",
+          "description": "Identificador da configuração de cadastro integrado no aplicativo Meta."
+        },
+        "GOOGLE_OAUTH_REDIRECT_URI": {
+          "name": "URL de retorno do Google",
+          "description": "URL de redirecionamento OAuth; deve coincidir com a cadastrada no Google."
+        },
+        "ENABLE_GOOGLE_OAUTH_LOGIN": {
+          "name": "Permitir login com Google",
+          "description": "Habilita autenticação com Google usando as credenciais configuradas."
+        },
+        "ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT": {
+          "name": "Atendimento humano no Messenger",
+          "description": "Habilita o uso da extensão de atendimento humano quando autorizada pela Meta."
+        },
+        "ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT": {
+          "name": "Atendimento humano no Instagram",
+          "description": "Habilita o uso da extensão de atendimento humano quando autorizada pela Meta."
+        },
+        "ENABLE_INSTAGRAM_WEBHOOK_SIGNATURE_VERIFICATION": {
+          "name": "Verificar assinatura dos webhooks do Instagram",
+          "description": "Valida a autenticidade dos webhooks recebidos. Desativar reduz a proteção contra eventos falsificados."
+        },
+        "INSTAGRAM_WEBHOOK_APP_SECRET": {
+          "name": "Segredo de assinatura do webhook Instagram",
+          "description": "Segredo do aplicativo usado para validar a assinatura dos eventos recebidos."
+        },
+        "FB_VERIFY_TOKEN": {
+          "name": "Token de verificação do Facebook",
+          "description": "Valor usado na confirmação do endpoint de webhook no painel Meta."
+        },
+        "IG_VERIFY_TOKEN": {
+          "name": "Token de verificação legado do Instagram",
+          "description": "Valor usado para verificar o webhook da integração Instagram via Facebook."
+        },
+        "INSTAGRAM_VERIFY_TOKEN": {
+          "name": "Token de verificação do Instagram",
+          "description": "Valor usado na confirmação do endpoint de webhook do Instagram."
+        },
+        "FB_APP_ID": {
+          "name": "ID do aplicativo Facebook",
+          "description": "Identificador do aplicativo cadastrado no provedor Facebook."
+        },
+        "FB_APP_SECRET": {
+          "name": "Segredo do aplicativo Facebook",
+          "description": "Credencial privada do aplicativo Facebook. Não compartilhe este valor."
+        },
+        "AZURE_APP_ID": {
+          "name": "ID do aplicativo Microsoft Azure",
+          "description": "Identificador do aplicativo cadastrado no provedor Microsoft Azure."
+        },
+        "AZURE_APP_SECRET": {
+          "name": "Segredo do aplicativo Microsoft Azure",
+          "description": "Credencial privada do aplicativo Microsoft Azure. Não compartilhe este valor."
+        },
+        "INSTAGRAM_APP_ID": {
+          "name": "ID do aplicativo Instagram",
+          "description": "Identificador do aplicativo cadastrado no provedor Instagram."
+        },
+        "INSTAGRAM_APP_SECRET": {
+          "name": "Segredo do aplicativo Instagram",
+          "description": "Credencial privada do aplicativo Instagram. Não compartilhe este valor."
+        },
+        "TIKTOK_APP_ID": {
+          "name": "ID do aplicativo TikTok",
+          "description": "Identificador do aplicativo cadastrado no provedor TikTok."
+        },
+        "TIKTOK_APP_SECRET": {
+          "name": "Segredo do aplicativo TikTok",
+          "description": "Credencial privada do aplicativo TikTok. Não compartilhe este valor."
+        },
+        "WHATSAPP_APP_ID": {
+          "name": "ID do aplicativo WhatsApp",
+          "description": "Identificador do aplicativo cadastrado no provedor WhatsApp."
+        },
+        "WHATSAPP_APP_SECRET": {
+          "name": "Segredo do aplicativo WhatsApp",
+          "description": "Credencial privada do aplicativo WhatsApp. Não compartilhe este valor."
+        },
+        "SHOPIFY_CLIENT_ID": {
+          "name": "ID do cliente Shopify",
+          "description": "Identificador OAuth da integração Shopify."
+        },
+        "SHOPIFY_CLIENT_SECRET": {
+          "name": "Segredo do cliente Shopify",
+          "description": "Credencial privada OAuth da integração Shopify. Não compartilhe este valor."
+        },
+        "LINEAR_CLIENT_ID": {
+          "name": "ID do cliente Linear",
+          "description": "Identificador OAuth da integração Linear."
+        },
+        "LINEAR_CLIENT_SECRET": {
+          "name": "Segredo do cliente Linear",
+          "description": "Credencial privada OAuth da integração Linear. Não compartilhe este valor."
+        },
+        "SLACK_CLIENT_ID": {
+          "name": "ID do cliente Slack",
+          "description": "Identificador OAuth da integração Slack."
+        },
+        "SLACK_CLIENT_SECRET": {
+          "name": "Segredo do cliente Slack",
+          "description": "Credencial privada OAuth da integração Slack. Não compartilhe este valor."
+        },
+        "NOTION_CLIENT_ID": {
+          "name": "ID do cliente Notion",
+          "description": "Identificador OAuth da integração Notion."
+        },
+        "NOTION_CLIENT_SECRET": {
+          "name": "Segredo do cliente Notion",
+          "description": "Credencial privada OAuth da integração Notion. Não compartilhe este valor."
+        },
+        "GOOGLE_OAUTH_CLIENT_ID": {
+          "name": "ID do cliente Google OAuth",
+          "description": "Identificador OAuth da integração Google OAuth."
+        },
+        "GOOGLE_OAUTH_CLIENT_SECRET": {
+          "name": "Segredo do cliente Google OAuth",
+          "description": "Credencial privada OAuth da integração Google OAuth. Não compartilhe este valor."
+        },
+        "FACEBOOK_API_VERSION": {
+          "name": "Versão da API FACEBOOK",
+          "description": "Versão da API utilizada nas chamadas à integração FACEBOOK. Verifique a compatibilidade antes de alterar."
+        },
+        "INSTAGRAM_API_VERSION": {
+          "name": "Versão da API INSTAGRAM",
+          "description": "Versão da API utilizada nas chamadas à integração INSTAGRAM. Verifique a compatibilidade antes de alterar."
+        },
+        "TIKTOK_API_VERSION": {
+          "name": "Versão da API TIKTOK",
+          "description": "Versão da API utilizada nas chamadas à integração TIKTOK. Verifique a compatibilidade antes de alterar."
+        },
+        "WHATSAPP_API_VERSION": {
+          "name": "Versão da API WHATSAPP",
+          "description": "Versão da API utilizada nas chamadas à integração WHATSAPP. Verifique a compatibilidade antes de alterar."
+        }
+      },
+      "config_saved": "Configurações atualizadas com sucesso.",
+      "config_restart": "Reinicie os processos web e de processamento em segundo plano para aplicar a alteração em toda a instalação.",
+      "general_settings": "Configurações gerais",
+      "roles": {
+        "agent": "Agente",
+        "administrator": "Administrador"
+      },
+      "banner_types": {
+        "info": "Informação",
+        "warning": "Aviso",
+        "error": "Erro"
+      }
+    }
+  },
+  "en": {
+    "super_admin": {
+      "config_saved": "Settings updated successfully.",
+      "config_restart": "Restart Chatwoot web and worker processes to apply this change everywhere.",
+      "general_settings": "General settings",
+      "roles": {
+        "agent": "Agent",
+        "administrator": "Administrator"
+      },
+      "banner_types": {
+        "info": "Information",
+        "warning": "Warning",
+        "error": "Error"
+      }
+    }
+  }
+}

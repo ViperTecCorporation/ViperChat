@@ -17,6 +17,15 @@ describe Whatsapp::OneoffUnoapiCampaignService do
   end
 
   describe 'perform' do
+    it 'does not dispatch or complete a campaign when its feature is disabled' do
+      account.disable_features!('whatsapp_campaign')
+      allow(CampaignMessageJob).to receive(:set)
+
+      expect { unoapi_campaign_service.perform }.to raise_error 'WhatsApp campaigns feature not enabled'
+      expect(CampaignMessageJob).not_to have_received(:set)
+      expect(campaign.reload.completed?).to be false
+    end
+
     it 'raises error if the campaign is completed' do
       campaign.completed!
 

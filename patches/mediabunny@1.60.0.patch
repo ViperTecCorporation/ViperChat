@@ -1,0 +1,14 @@
+diff --git a/dist/modules/src/isobmff/isobmff-boxes.js b/dist/modules/src/isobmff/isobmff-boxes.js
+--- a/dist/modules/src/isobmff/isobmff-boxes.js
++++ b/dist/modules/src/isobmff/isobmff-boxes.js
+@@ -591,3 +591,0 @@
+-    if (trackData.info.pixelAspectRatio.num === trackData.info.pixelAspectRatio.den) {
+-        return null;
+-    }
+diff --git a/src/isobmff/isobmff-boxes.ts b/src/isobmff/isobmff-boxes.ts
+--- a/src/isobmff/isobmff-boxes.ts
++++ b/src/isobmff/isobmff-boxes.ts
+@@ -793,3 +793,0 @@
+-	if (trackData.info.pixelAspectRatio.num === trackData.info.pixelAspectRatio.den) {
+-		return null;
+-	}

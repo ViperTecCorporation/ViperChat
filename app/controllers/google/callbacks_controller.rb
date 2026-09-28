@@ -12,6 +12,32 @@ class Google::CallbacksController < OauthCallbackController
 
   private
 
+  def account_from_signed_id
+    @history_options = Rails.application.message_verifier('gmail-history').verified(params[:state].to_s)
+    return super unless @history_options
+
+    Google::EmailHistory.validate!(@history_options.fetch('period'))
+    @return_to = @history_options['return_to']
+    purpose = @return_to == 'onboarding' ? 'onboarding' : 'default'
+    GlobalID::Locator.locate_signed(@history_options.fetch('account_state'), for: purpose) || raise('Invalid or expired state')
+  end
+
+  def update_channel(channel_email)
+    # Resolve signed options before creating any import configuration.
+    account
+    channel_email.with_lock do
+      previous = channel_email.provider_config.to_h
+      super
+      channel_email.update!(provider_config: previous.merge(channel_email.provider_config.to_h))
+    end
+    Google::EmailHistory.start!(channel_email, @history_options['period'], new_channel: @new_history_channel == true) if @history_options
+  end
+
+  def create_channel_with_inbox
+    @new_history_channel = true
+    super
+  end
+
   def provider_name
     'google'
   end

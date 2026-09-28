@@ -16,7 +16,7 @@ RSpec.describe 'Super Admin Instance status', type: :request do
         sign_in(super_admin, scope: :super_admin)
         get '/super_admin/instance_status'
         expect(response).to have_http_status(:success)
-        expect(response.body).to include('ViperChat version')
+        expect(response.body).to include(I18n.t('super_admin.metrics', locale: :pt_BR).with_indifferent_access.fetch('ViperChat version'))
         expect(response.body).to include(GIT_HASH)
       end
     end

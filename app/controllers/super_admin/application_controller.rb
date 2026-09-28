@@ -46,9 +46,7 @@ class SuperAdmin::ApplicationController < Administrate::ApplicationController
   end
 
   def invalid_action_perfomed
-    # rubocop:disable Rails/I18nLocaleTexts
-    flash[:error] = 'Invalid action performed'
-    # rubocop:enable Rails/I18nLocaleTexts
+    flash[:error] = I18n.t('super_admin.invalid_action')
     redirect_back(fallback_location: root_path)
   end
 end

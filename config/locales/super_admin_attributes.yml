@@ -1,0 +1,554 @@
+{
+  "pt_BR": {
+    "administrate": {
+      "attributes": {
+        "account": {
+          "captain_models": "Modelos de inteligência artificial"
+        },
+        "account_user": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "user": "Usuário",
+          "inviter": "Convidado por",
+          "role": "Perfil de acesso"
+        },
+        "agent_bot": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "access_token": "Token de acesso",
+          "avatar": "Foto",
+          "avatar_url": "Foto",
+          "description": "Descrição",
+          "outgoing_url": "URL de destino"
+        },
+        "installation_config": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "value": "Valor"
+        },
+        "access_token": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "owner": "Proprietário",
+          "token": "Token de acesso"
+        },
+        "platform_app": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "access_token": "Token de acesso"
+        },
+        "platform_banner": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "banner_message": "Mensagem do aviso",
+          "banner_type": "Tipo de aviso",
+          "active": "Ativo"
+        },
+        "user": {
+          "account_users": "Vínculos com contas"
+        }
+      }
+    },
+    "activerecord": {
+      "attributes": {
+        "account": {
+          "id": "ID",
+          "name": "Nome",
+          "locale": "Idioma",
+          "users": "Usuários",
+          "conversations": "Conversas",
+          "status": "Status",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account_users": "Usuários da conta",
+          "custom_attributes": "Atributos personalizados",
+          "limits": "Limites",
+          "manually_managed_features": "Recursos gerenciados manualmente",
+          "all_features": "Recursos",
+          "captain_models": "Modelos de inteligência artificial"
+        },
+        "account_user": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "user": "Usuário",
+          "inviter": "Convidado por",
+          "role": "Perfil de acesso"
+        },
+        "agent_bot": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "access_token": "Token de acesso",
+          "avatar": "Foto",
+          "avatar_url": "Foto",
+          "description": "Descrição",
+          "outgoing_url": "URL de destino"
+        },
+        "installation_config": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "value": "Valor"
+        },
+        "access_token": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "owner": "Proprietário",
+          "token": "Token de acesso"
+        },
+        "platform_app": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "access_token": "Token de acesso"
+        },
+        "platform_banner": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "banner_message": "Mensagem do aviso",
+          "banner_type": "Tipo de aviso",
+          "active": "Ativo"
+        },
+        "user": {
+          "id": "ID",
+          "avatar_url": "Avatar",
+          "avatar": "Avatar",
+          "provider": "Provedor",
+          "uid": "UID",
+          "password": "Senha",
+          "sign_in_count": "Quantidade de logins",
+          "current_sign_in_at": "Último login atual",
+          "last_sign_in_at": "Último login",
+          "current_sign_in_ip": "IP do login atual",
+          "last_sign_in_ip": "IP do último login",
+          "confirmation_token": "Token de confirmação",
+          "confirmed_at": "Confirmado em",
+          "confirmation_sent_at": "Confirmação enviada em",
+          "unconfirmed_email": "Email não confirmado",
+          "name": "Nome",
+          "display_name": "Nome de exibição",
+          "email": "Email",
+          "tokens": "Tokens",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "pubsub_token": "Token PubSub",
+          "type": "Tipo",
+          "accounts": "Contas",
+          "access_token": "Token de acesso",
+          "account_users": "Vínculos com contas"
+        }
+      },
+      "models": {
+        "account": "Conta",
+        "user": "Usuário",
+        "super_admin": "Superadministrador",
+        "account_user": "Usuário da conta",
+        "agent_bot": "Bot de agente",
+        "platform_app": "Aplicativo da plataforma",
+        "platform_banner": "Aviso da plataforma",
+        "access_token": "Token de acesso",
+        "installation_config": "Configuração da instalação"
+      }
+    },
+    "helpers": {
+      "submit": {
+        "create": "Criar %{model}",
+        "update": "Salvar alterações",
+        "submit": "Salvar %{model}"
+      }
+    }
+  },
+  "pt-BR": {
+    "administrate": {
+      "attributes": {
+        "account": {
+          "captain_models": "Modelos de inteligência artificial"
+        },
+        "account_user": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "user": "Usuário",
+          "inviter": "Convidado por",
+          "role": "Perfil de acesso"
+        },
+        "agent_bot": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "access_token": "Token de acesso",
+          "avatar": "Foto",
+          "avatar_url": "Foto",
+          "description": "Descrição",
+          "outgoing_url": "URL de destino"
+        },
+        "installation_config": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "value": "Valor"
+        },
+        "access_token": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "owner": "Proprietário",
+          "token": "Token de acesso"
+        },
+        "platform_app": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "access_token": "Token de acesso"
+        },
+        "platform_banner": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "banner_message": "Mensagem do aviso",
+          "banner_type": "Tipo de aviso",
+          "active": "Ativo"
+        },
+        "user": {
+          "account_users": "Vínculos com contas"
+        }
+      }
+    },
+    "activerecord": {
+      "attributes": {
+        "account": {
+          "id": "ID",
+          "name": "Nome",
+          "locale": "Idioma",
+          "users": "Usuários",
+          "conversations": "Conversas",
+          "status": "Status",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account_users": "Usuários da conta",
+          "custom_attributes": "Atributos personalizados",
+          "limits": "Limites",
+          "manually_managed_features": "Recursos gerenciados manualmente",
+          "all_features": "Recursos",
+          "captain_models": "Modelos de inteligência artificial"
+        },
+        "account_user": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "user": "Usuário",
+          "inviter": "Convidado por",
+          "role": "Perfil de acesso"
+        },
+        "agent_bot": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "access_token": "Token de acesso",
+          "avatar": "Foto",
+          "avatar_url": "Foto",
+          "description": "Descrição",
+          "outgoing_url": "URL de destino"
+        },
+        "installation_config": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "value": "Valor"
+        },
+        "access_token": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "owner": "Proprietário",
+          "token": "Token de acesso"
+        },
+        "platform_app": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "access_token": "Token de acesso"
+        },
+        "platform_banner": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "banner_message": "Mensagem do aviso",
+          "banner_type": "Tipo de aviso",
+          "active": "Ativo"
+        },
+        "user": {
+          "id": "ID",
+          "avatar_url": "Avatar",
+          "avatar": "Avatar",
+          "provider": "Provedor",
+          "uid": "UID",
+          "password": "Senha",
+          "sign_in_count": "Quantidade de logins",
+          "current_sign_in_at": "Último login atual",
+          "last_sign_in_at": "Último login",
+          "current_sign_in_ip": "IP do login atual",
+          "last_sign_in_ip": "IP do último login",
+          "confirmation_token": "Token de confirmação",
+          "confirmed_at": "Confirmado em",
+          "confirmation_sent_at": "Confirmação enviada em",
+          "unconfirmed_email": "Email não confirmado",
+          "name": "Nome",
+          "display_name": "Nome de exibição",
+          "email": "Email",
+          "tokens": "Tokens",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "pubsub_token": "Token PubSub",
+          "type": "Tipo",
+          "accounts": "Contas",
+          "access_token": "Token de acesso",
+          "account_users": "Vínculos com contas"
+        }
+      },
+      "models": {
+        "account": "Conta",
+        "user": "Usuário",
+        "super_admin": "Superadministrador",
+        "account_user": "Usuário da conta",
+        "agent_bot": "Bot de agente",
+        "platform_app": "Aplicativo da plataforma",
+        "platform_banner": "Aviso da plataforma",
+        "access_token": "Token de acesso",
+        "installation_config": "Configuração da instalação"
+      }
+    },
+    "helpers": {
+      "submit": {
+        "create": "Criar %{model}",
+        "update": "Salvar alterações",
+        "submit": "Salvar %{model}"
+      }
+    }
+  },
+  "pt": {
+    "administrate": {
+      "attributes": {
+        "account": {
+          "captain_models": "Modelos de inteligência artificial"
+        },
+        "account_user": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "user": "Usuário",
+          "inviter": "Convidado por",
+          "role": "Perfil de acesso"
+        },
+        "agent_bot": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "access_token": "Token de acesso",
+          "avatar": "Foto",
+          "avatar_url": "Foto",
+          "description": "Descrição",
+          "outgoing_url": "URL de destino"
+        },
+        "installation_config": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "value": "Valor"
+        },
+        "access_token": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "owner": "Proprietário",
+          "token": "Token de acesso"
+        },
+        "platform_app": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "access_token": "Token de acesso"
+        },
+        "platform_banner": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "banner_message": "Mensagem do aviso",
+          "banner_type": "Tipo de aviso",
+          "active": "Ativo"
+        },
+        "user": {
+          "account_users": "Vínculos com contas"
+        }
+      }
+    },
+    "activerecord": {
+      "attributes": {
+        "account": {
+          "id": "ID",
+          "name": "Nome",
+          "locale": "Idioma",
+          "users": "Usuários",
+          "conversations": "Conversas",
+          "status": "Status",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account_users": "Usuários da conta",
+          "custom_attributes": "Atributos personalizados",
+          "limits": "Limites",
+          "manually_managed_features": "Recursos gerenciados manualmente",
+          "all_features": "Recursos",
+          "captain_models": "Modelos de inteligência artificial"
+        },
+        "account_user": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "user": "Usuário",
+          "inviter": "Convidado por",
+          "role": "Perfil de acesso"
+        },
+        "agent_bot": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "account": "Conta",
+          "access_token": "Token de acesso",
+          "avatar": "Foto",
+          "avatar_url": "Foto",
+          "description": "Descrição",
+          "outgoing_url": "URL de destino"
+        },
+        "installation_config": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "value": "Valor"
+        },
+        "access_token": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "owner": "Proprietário",
+          "token": "Token de acesso"
+        },
+        "platform_app": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "access_token": "Token de acesso"
+        },
+        "platform_banner": {
+          "id": "ID",
+          "name": "Nome",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "banner_message": "Mensagem do aviso",
+          "banner_type": "Tipo de aviso",
+          "active": "Ativo"
+        },
+        "user": {
+          "id": "ID",
+          "avatar_url": "Avatar",
+          "avatar": "Avatar",
+          "provider": "Provedor",
+          "uid": "UID",
+          "password": "Senha",
+          "sign_in_count": "Quantidade de logins",
+          "current_sign_in_at": "Último login atual",
+          "last_sign_in_at": "Último login",
+          "current_sign_in_ip": "IP do login atual",
+          "last_sign_in_ip": "IP do último login",
+          "confirmation_token": "Token de confirmação",
+          "confirmed_at": "Confirmado em",
+          "confirmation_sent_at": "Confirmação enviada em",
+          "unconfirmed_email": "Email não confirmado",
+          "name": "Nome",
+          "display_name": "Nome de exibição",
+          "email": "Email",
+          "tokens": "Tokens",
+          "created_at": "Criado em",
+          "updated_at": "Atualizado em",
+          "pubsub_token": "Token PubSub",
+          "type": "Tipo",
+          "accounts": "Contas",
+          "access_token": "Token de acesso",
+          "account_users": "Vínculos com contas"
+        }
+      },
+      "models": {
+        "account": "Conta",
+        "user": "Usuário",
+        "super_admin": "Superadministrador",
+        "account_user": "Usuário da conta",
+        "agent_bot": "Bot de agente",
+        "platform_app": "Aplicativo da plataforma",
+        "platform_banner": "Aviso da plataforma",
+        "access_token": "Token de acesso",
+        "installation_config": "Configuração da instalação"
+      }
+    },
+    "helpers": {
+      "submit": {
+        "create": "Criar %{model}",
+        "update": "Salvar alterações",
+        "submit": "Salvar %{model}"
+      }
+    }
+  }
+}

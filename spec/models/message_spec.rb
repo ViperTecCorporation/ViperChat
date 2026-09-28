@@ -791,8 +791,6 @@ RSpec.describe Message do
       before do
         allow(ChatwootApp).to receive(:chatwoot_cloud?).and_return(true)
         account.disable_features('advanced_search_indexing')
-        allow(account).to receive(:feature_enabled?).and_call_original
-        allow(account).to receive(:feature_enabled?).with('advanced_search_indexing').and_return(false)
       end
 
       it 'returns false' do
@@ -806,8 +804,8 @@ RSpec.describe Message do
         account.disable_features('advanced_search_indexing')
       end
 
-      it 'returns true' do
-        expect(message.should_index?).to be true
+      it 'returns false' do
+        expect(message.should_index?).to be false
       end
     end
 

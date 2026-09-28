@@ -32,7 +32,7 @@ as well as a link to its edit page.
   </header>
 
   <section class="main-content__body">
-    <div class="pr-16">
+    <div class="md:pr-16 min-w-0">
       <% page.attributes.each do |title, attributes| %>
         <% if title.present? && title == 'all_features' %>
           <% regular_features, premium_features =

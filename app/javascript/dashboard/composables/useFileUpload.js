@@ -1,7 +1,7 @@
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
-import { DirectUpload } from 'activestorage';
+import { DirectUpload, needsMultipart } from 'dashboard/helper/multipartUpload';
 import {
   getDirectUploadUrl,
   setDirectUploadAuthHeaders,
@@ -55,9 +55,12 @@ export const useFileUpload = ({ attachFile }) => {
     const upload = new DirectUpload(
       file.file,
       getDirectUploadUrl(
-        `/api/v1/accounts/${accountId.value}/conversations/${currentChat.value.id}/direct_uploads`
+        currentChat.value?.id
+          ? `/api/v1/accounts/${accountId.value}/conversations/${currentChat.value.id}/direct_uploads`
+          : '/rails/active_storage/direct_uploads'
       ),
       {
+        indirect: !globalConfig.value.directUploadsEnabled,
         directUploadWillCreateBlobWithXHR: xhr => {
           setDirectUploadAuthHeaders(xhr);
         },
@@ -88,7 +91,7 @@ export const useFileUpload = ({ attachFile }) => {
   };
 
   const onFileUpload = file => {
-    if (globalConfig.value.directUploadsEnabled) {
+    if (globalConfig.value.directUploadsEnabled || needsMultipart(file?.file)) {
       handleDirectFileUpload(file);
     } else {
       handleIndirectFileUpload(file);

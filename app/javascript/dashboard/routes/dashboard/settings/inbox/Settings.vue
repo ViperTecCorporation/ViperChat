@@ -17,6 +17,7 @@ import TiktokReauthorize from './channels/tiktok/Reauthorize.vue';
 import DuplicateInboxBanner from './channels/instagram/DuplicateInboxBanner.vue';
 import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
 import GoogleReauthorize from './channels/google/Reauthorize.vue';
+import GoogleEmailHistory from './channels/google/EmailHistory.vue';
 import WhatsappReauthorize from './channels/whatsapp/Reauthorize.vue';
 import InboxHealthAPI from 'dashboard/api/inboxHealth';
 import PreChatFormSettings from './PreChatForm/Settings.vue';
@@ -68,6 +69,7 @@ export default {
     LockToSingleConversationPreview,
     MicrosoftReauthorize,
     GoogleReauthorize,
+    GoogleEmailHistory,
     NextButton,
     SpinnerLoader,
     InstagramReauthorize,
@@ -197,6 +199,16 @@ export default {
           name: this.$t('INBOX_MGMT.TABS.CSAT'),
         },
       ];
+
+      if (
+        this.inbox.channel_type === 'Channel::Email' &&
+        this.inbox.provider === 'google'
+      ) {
+        visibleToAllChannelTabs.push({
+          key: 'import-history',
+          name: this.$t('INBOX_MGMT.GMAIL_HISTORY.TAB'),
+        });
+      }
 
       if (this.isAWebWidgetInbox) {
         visibleToAllChannelTabs = [
@@ -759,6 +771,15 @@ export default {
     </SettingIntroBanner>
     <section class="w-full overflow-auto py-8">
       <div class="max-w-7xl mx-auto w-full">
+        <GoogleEmailHistory
+          v-if="
+            selectedTabKey === 'import-history' &&
+            inbox.channel_type === 'Channel::Email' &&
+            inbox.provider === 'google'
+          "
+          :key="inbox.id"
+          :inbox-id="inbox.id"
+        />
         <MicrosoftReauthorize
           v-if="microsoftUnauthorized"
           :inbox="inbox"

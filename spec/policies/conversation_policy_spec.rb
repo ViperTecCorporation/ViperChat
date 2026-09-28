@@ -49,6 +49,24 @@ RSpec.describe ConversationPolicy, type: :policy do
       it 'allows access' do
         expect(subject).to permit(agent_context, conversation)
       end
+
+      it 'denies other assignees when all conversations are hidden' do
+        account.enable_features!('hide_all_chats_for_agent')
+        conversation.update!(assignee: administrator)
+        expect(subject).not_to permit(agent_context, conversation)
+      end
+
+      it 'allows the agent own conversation when both restrictions are enabled' do
+        account.enable_features!('hide_all_chats_for_agent', 'hide_unassigned_for_agent')
+        conversation.update!(assignee: agent)
+        expect(subject).to permit(agent_context, conversation)
+      end
+
+      it 'denies unassigned conversations when they are hidden' do
+        account.enable_features!('hide_unassigned_for_agent')
+        conversation.update!(assignee: nil, team: nil)
+        expect(subject).not_to permit(agent_context, conversation)
+      end
     end
 
     context 'when agent has team access' do

@@ -67,6 +67,28 @@ describe('#defaultRedirectPage', () => {
 });
 
 describe('#validateLoggedInRoutes', () => {
+  it('blocks a disabled feature even for administrators and checks parent routes', () => {
+    const user = {
+      accounts: [
+        {
+          id: 1,
+          status: 'active',
+          permissions: ['administrator'],
+          features: {},
+        },
+      ],
+    };
+    const to = {
+      params: { accountId: 1 },
+      meta: { permissions: ['administrator'] },
+      matched: [{ meta: { featureFlag: 'team_management' } }],
+    };
+    expect(validateLoggedInRoutes(to, user)).toBe('accounts/1/dashboard');
+    expect(
+      validateLoggedInRoutes(to, user, { team_management: true })
+    ).toBeNull();
+  });
+
   describe('when account access is missing', () => {
     it('should return the login route', () => {
       expect(

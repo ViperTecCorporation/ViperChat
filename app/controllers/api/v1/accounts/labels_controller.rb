@@ -1,4 +1,5 @@
 class Api::V1::Accounts::LabelsController < Api::V1::Accounts::BaseController
+  require_account_feature 'labels', only: [:create, :update, :destroy]
   before_action :current_account
   before_action :fetch_label, except: [:index, :create]
   before_action :check_authorization

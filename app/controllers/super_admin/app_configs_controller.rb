@@ -54,7 +54,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       'tiktok' => %w[TIKTOK_APP_ID TIKTOK_APP_SECRET TIKTOK_API_VERSION],
       'whatsapp_embedded' => %w[WHATSAPP_APP_ID WHATSAPP_APP_SECRET WHATSAPP_CONFIGURATION_ID WHATSAPP_API_VERSION],
       'notion' => %w[NOTION_CLIENT_ID NOTION_CLIENT_SECRET],
-      'google' => %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN],
+      'google' => %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN GOOGLE_MAPS_API_KEY],
       'unoapi' => %w[UNOAPI_API_URL UNOAPI_AUTH_TOKEN],
       'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT]
     }
@@ -66,10 +66,10 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
   end
 
   def success_notice
-    message = "#{@config.titleize} settings updated successfully"
+    message = I18n.t('super_admin.config_saved')
     return message unless restart_required_config_saved?
 
-    "#{message.delete_suffix('.')}. Restart Chatwoot web and worker processes to apply this change everywhere."
+    "#{message} #{I18n.t('super_admin.config_restart')}"
   end
 
   def success_flash

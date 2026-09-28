@@ -96,8 +96,8 @@ describe WebhookListener do
     context 'when api_and_webhooks feature is disabled on self-hosted' do
       it 'still triggers account webhooks' do
         allow(ChatwootApp).to receive(:chatwoot_cloud?).and_return(false)
-        account.disable_features!('api_and_webhooks')
         webhook = create(:webhook, inbox: inbox, account: account)
+        account.disable_features!('api_and_webhooks')
 
         expect(WebhookJob).to receive(:perform_later).with(
           webhook.url, message.webhook_data.merge(event: 'message_created'), :account_webhook,

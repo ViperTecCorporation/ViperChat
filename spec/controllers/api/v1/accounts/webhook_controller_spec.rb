@@ -7,6 +7,57 @@ RSpec.describe 'Webhooks API', type: :request do
   let(:administrator) { create(:user, account: account, role: :administrator) }
   let(:agent) { create(:user, account: account, role: :agent) }
 
+  describe 'creation-only restrictions on self-hosted accounts' do
+    before do
+      allow(ChatwootApp).to receive(:chatwoot_cloud?).and_return(false)
+      webhook
+      account.disable_features!('api_and_webhooks')
+    end
+
+    it 'rejects new webhooks from the dashboard' do
+      expect do
+        post "/api/v1/accounts/#{account.id}/webhooks", headers: administrator.create_new_auth_token,
+                                                        params: { url: 'https://new.example.com', subscriptions: ['message_created'] }, as: :json
+      end.not_to change(Webhook, :count)
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'rejects new webhooks using an existing API token without revoking its read access' do
+      headers = { api_access_token: administrator.access_token.token }
+      get "/api/v1/accounts/#{account.id}/webhooks", headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+      post "/api/v1/accounts/#{account.id}/webhooks", headers: headers,
+                                                      params: { url: 'https://new.example.com', subscriptions: ['message_created'] }, as: :json
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'allows updating and deleting an existing webhook' do
+      put "/api/v1/accounts/#{account.id}/webhooks/#{webhook.id}", headers: administrator.create_new_auth_token,
+                                                                   params: { name: 'Updated', url: 'https://updated.example.com' }, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(webhook.reload.url).to eq('https://updated.example.com')
+      delete "/api/v1/accounts/#{account.id}/webhooks/#{webhook.id}", headers: administrator.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'enforces creation restrictions outside the controller as well' do
+      new_hook = build(:webhook, account: account, inbox: inbox, url: 'https://new.example.com')
+      expect(new_hook.save).to be false
+      channel = build(:channel_api, account: account)
+      expect(channel.save).to be false
+      account.enable_features!('api_and_webhooks')
+      expect(new_hook.save).to be true
+      expect(channel.save).to be true
+    end
+
+    it 'preserves an existing API channel and its webhook URL' do
+      account.enable_features!('api_and_webhooks')
+      channel = create(:channel_api, account: account)
+      account.disable_features!('api_and_webhooks')
+      expect(channel.update(webhook_url: 'https://updated.example.com')).to be true
+    end
+  end
+
   describe 'GET /api/v1/accounts/<account_id>/webhooks' do
     context 'when it is an authenticated agent' do
       it 'returns unauthorized' do

@@ -1,4 +1,5 @@
 class Api::V1::Accounts::WebhooksController < Api::V1::Accounts::BaseController
+  require_account_feature 'api_and_webhooks', only: :create
   before_action :check_authorization
   before_action :fetch_webhook, only: [:update, :destroy]
 

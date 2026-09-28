@@ -1,8 +1,27 @@
 {
   "CONVERSATION": {
+    "LOCATION_PICKER": {
+      "TITLE": "Send location",
+      "HELP": "When opened, we request your location with your permission. You can also search for a business or choose a point on the map.",
+      "LOCATING": "Getting your location…",
+      "SEARCH": "Search business or address",
+      "MAP": "Location selection map",
+      "CURRENT": "Use my current location",
+      "ACCURACY": "Approximate accuracy: {meters} meters",
+      "NAME": "Place name (optional)",
+      "ADDRESS": "Address (optional)",
+      "SEND": "Send location",
+      "CANCEL": "Cancel",
+      "MAP_ERROR": "Could not load Google Maps. Check the key, enabled APIs and restrictions.",
+      "NOT_CONFIGURED": "An administrator must configure the Google Maps key in Super Admin.",
+      "GPS_ERROR": "Could not get your location. Check permission and GPS, or select a point on the map.",
+      "SEARCH_ERROR": "Could not search for this place. Check your connection, Places API (New) activation, Google key restrictions and quotas.",
+      "NO_RESULTS": "No place found. Try including the city and state."
+    },
     "UNOAPI_WARNING": {
       "TITLE": "Sending notice",
       "WITHOUT_QUOTE": "Sent without a quote. The original message could not be found on WhatsApp.",
+      "VIDEO_TRANSCODED": "ViperConnect converted the video for compatibility. This notice is not a sending failure; do not resend.",
       "REFERENCE_NOT_SENT": "Reference not sent"
     },
     "ARCHIVE": {
@@ -108,7 +127,7 @@
       "APPROVE_JOIN_REQUEST": "Approve",
       "REJECT_JOIN_REQUEST": "Reject",
       "CREATE_GROUP": "Create group",
-      "CREATE_GROUP_SUBTITLE": "Choose an UnoAPI inbox, group details, and members to invite.",
+      "CREATE_GROUP_SUBTITLE": "Choose a ViperConnect inbox, group details, and members to invite.",
       "SELECT_INBOX": "Select inbox",
       "CREATE_SELECTED": "{count} selected",
       "CREATE_REQUIRED": "Choose an inbox and enter a group title",

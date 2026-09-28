@@ -10,6 +10,7 @@ class Inboxes::FetchImapEmailsJob < MutexApplicationJob
 
     with_lock(key, 5.minutes) do
       process_email_for_channel(channel, interval)
+      process_google_history(channel)
     end
   rescue *ExceptionList::IMAP_EXCEPTIONS => e
     Rails.logger.error "Authorization error for email channel - #{channel.inbox.id} : #{e.message}"
@@ -23,6 +24,12 @@ class Inboxes::FetchImapEmailsJob < MutexApplicationJob
   end
 
   private
+
+  def process_google_history(channel)
+    return unless channel.google? && !channel.reauthorization_required?
+
+    Imap::GoogleHistoryService.new(channel: channel).perform
+  end
 
   def should_fetch_email?(channel)
     channel.imap_enabled? && !channel.reauthorization_required?

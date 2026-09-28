@@ -126,7 +126,7 @@ export const prepareAttachmentPayload = (
 ) => {
   const files = [];
   attachedFiles.forEach(attachment => {
-    if (directUploadsEnabled) {
+    if (attachment.blobSignedId || directUploadsEnabled) {
       files.push(attachment.blobSignedId);
     } else {
       files.push(attachment.resource.file);

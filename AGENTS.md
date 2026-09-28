@@ -11,7 +11,8 @@
 - Nunca remova bin/obj inteiros, node_modules, caches compartilhados ou builds do
   usuario por rotina. Nao encerre processos do usuario para liberar arquivos.
 - Preserve fontes, testes, AGENTS.md, .codex de configuracao, .github, .vscode,
-  planos, evidencias solicitadas, backups, credenciais e pacotes de implantacao.
+  planos, evidencias solicitadas, backups de recuperacao ainda necessarios,
+  credenciais e pacotes de implantacao ainda pendentes de uso.
   Pastas .codex-tmp podem conter entregaveis e exigem revisao antes da remocao.
 - Excluir do Nextcloud nao significa apagar. Use regras especificas por projeto
   para saidas geradas; nunca exclua bin, build, dist ou todas as pastas ocultas
@@ -21,6 +22,18 @@
   de arquivos de autenticacao ao ajustar exclusoes.
 - Informe na entrega o que foi removido, se e recuperavel e qualquer temporario
   preservado por estar em uso, ser entregavel ou ter origem incerta.
+
+### Recuperação de espaço após builds e testes
+
+- Regra explícita do usuário: armazenamento é limitado. Apagar os temporários criados pelo agente assim que seu uso terminar e o resultado for validado, também no Windows (Temp, diretório do usuário, `.codex-tmp` e `.codex/runtime`) e no Mac usado por SSH. Não esperar o usuário cobrar a limpeza nem preservar indefinidamente um arquivo só por chamá-lo de backup.
+- Pacotes de transferência, arquivos compactados da réplica e dumps usados apenas para importar o ambiente são intermediários: após confirmar a transferência/importação e que não são a única cópia necessária para recuperação, remover a cópia temporária. Preservar backups de recuperação necessários e entregáveis pendentes; se houver dúvida, explicar o motivo e pedir decisão, sem apagar bancos ativos, volumes ou arquivos do usuário.
+- A autorização de 2026-09-27 inclui excluir especificamente `C:\Users\caita\.codex\runtime\viperchat-replica-20260926\runtime.tar.gz` e `C:\Users\caita\.codex\runtime\viperchat-replica-20260926\database.dump`, cópias temporárias da réplica já utilizada; não recriá-las só para guardar backup desta limpeza.
+- Medir o espaço livre do host antes e depois de builds grandes e da limpeza. Ao concluir uma tarefa, inventariar e remover os temporários descartáveis criados pelo agente; não deixar pacotes de transferência, vídeos sintéticos e intermediários abandonados sem explicar por que foram preservados.
+- Antes de limpar Docker, conferir o contexto/builder, `docker system df`, o cache recuperável e a ausência de builds em andamento. Cache compartilhado não deve ser apagado por rotina: apresentar impacto e obter autorização específica; não tratar esta regra como autorização permanente para prune global.
+- Quando o usuário autorizar recuperar o cache de build não utilizado, usar a limpeza específica `docker builder prune --all --force` no contexto local conferido. Isso descarta cache regenerável e pode tornar builds futuros mais lentos; não é limpeza de bancos ou volumes. Não substituir por `docker system prune`, `docker volume prune` nem remoção de imagens/containers.
+- ViperChat e ViperConnect locais devem permanecer ativos durante a recuperação de espaço. Preservar volumes, bancos, uploads, fontes, dependências em uso, credenciais, backups, APKs e Archives de entrega. Conferir os containers ativos antes e depois.
+- No Docker Desktop/WSL, distinguir bytes recuperados dentro do Docker do aumento real do espaço livre no SSD Windows. Medir ambos; não prometer que o VHDX encolheu com o prune. Se for necessária compactação que exija parar Docker/WSL, pedir autorização separada e não executar enquanto os serviços precisarem permanecer ativos.
+- Informar o total efetivamente recuperado, o espaço livre final e qualquer pendência. Cache apagado pode ser regenerado por novos builds; não afirmar que foi feito backup dele.
 
 
 ## Build / Test / Lint
@@ -59,6 +72,32 @@
 - A native smoke test must cover the changed behavior and its adjacent critical path, including login/session persistence, navigation, loading states, back/foreground transitions, permissions, uploads/media, and push notifications when relevant.
 - If a platform, toolchain, emulator, or device is unavailable, state exactly what was and was not packaged or tested and why. Never report cross-platform validation as complete when one of the required targets was not actually exercised.
 - Keep Web/PWA behavior independent and regression-tested when changing native wrappers, bridges, permissions, or notification handling. A native fix must not silently alter the browser/PWA contract.
+
+## iOS: Archive e chaveiro pelo SSH no Mac
+
+- A compilação e assinatura do Archive iOS podem ser feitas pelo SSH; não exigir que o usuário opere o Xcode manualmente antes de verificar esse caminho. Procedimento confirmado em 2026-09-27: desbloqueio interativo do chaveiro seguido de Archive da build `4161225`, com assinatura verificada.
+- Referência do ambiente (revalidar antes de usar): Mac `192.168.0.120`, usuário SSH `Rodrgo`, diretório home `/Users/rodrgo`, projeto `/Users/rodrgo/Developer/ViperChat-ios-validation-20260927`. Preservar o projeto anterior em `/Users/rodrgo/Developer/ViperChat`, os perfis, certificados e ajustes de assinatura existentes.
+- Conectar com terminal interativo: `ssh -tt -o ConnectTimeout=8 -o NumberOfPasswordPrompts=1 Rodrgo@192.168.0.120 /bin/bash`. Usar somente credenciais autorizadas pelo usuário e digitá-las apenas no prompt; nunca registrar senhas em comandos, arquivos, logs ou neste documento.
+- Se o CodeSign falhar com `errSecInternalComponent`, não concluir automaticamente que precisa da interface gráfica ou de novo certificado. Conferir o erro e, com autorização e credencial disponíveis, executar na sessão SSH:
+
+  ```bash
+  security unlock-keychain '/Users/rodrgo/Library/Keychains/login.keychain-db'
+  ```
+
+  Informar a senha somente quando o comando apresentar o prompt. Confirmar que o desbloqueio teve sucesso antes de repetir o Archive. Não alterar ACLs, usar `-A`, mudar confiança dos certificados, desabilitar bloqueio ou ampliar acesso à chave como atalho. Se o desbloqueio falhar ou ainda houver exigência de autorização da chave, parar e pedir a ação necessária ao usuário.
+- Sincronizar os assets/plugins atuais e conferir o `Info.plist` antes do Archive. Não sobrescrever cegamente `project.pbxproj`, assinatura do app/extensão, App Groups, Firebase ou assets corrigidos no Mac. Selecionar o scheme `App`; manter o número de build consistente entre app e extensão e usar um número novo para novo upload ao TestFlight.
+- Exemplo de Archive, executado no diretório do projeto: substituir `<BUILD>` por um número conferido e `<ARCHIVE_ABSOLUTO>` por um destino novo, sem sobrescrever Archives anteriores.
+
+  ```bash
+  xcodebuild -project ios/App/App.xcodeproj -scheme App \
+    -configuration Release -destination 'generic/platform=iOS' \
+    -derivedDataPath build -archivePath '<ARCHIVE_ABSOLUTO>' \
+    CURRENT_PROJECT_VERSION=<BUILD> -jobs 2 archive
+  codesign --verify --deep --strict '<ARCHIVE_ABSOLUTO>/Products/Applications/App.app'
+  ```
+
+- Verificar o código de saída e `ARCHIVE SUCCEEDED`, a assinatura, `CFBundleVersion`, os assets e as descrições de permissão no app arquivado. `open '<ARCHIVE_ABSOLUTO>'` pela sessão SSH permite mostrar o resultado no Xcode.
+- Distinguir explicitamente: Archive compilado/assinado, validação Apple, upload ao App Store Connect, disponibilidade no TestFlight e teste no iPhone. Archive local e `codesign` aprovados não comprovam publicação nem funcionamento no aparelho. Não enviar ao App Store Connect sem autorização correspondente.
 
 ## Mandatory Mobile Responsiveness
 

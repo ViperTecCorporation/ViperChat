@@ -1,4 +1,5 @@
 class Api::V1::Accounts::TeamsController < Api::V1::Accounts::BaseController
+  require_account_feature 'team_management', only: [:create, :update, :destroy]
   before_action :fetch_team, only: [:show, :update, :destroy]
   before_action :check_authorization
 

@@ -163,8 +163,8 @@ RSpec.describe 'Super Admin Users API', type: :request do
       labels = doc.css('dt.attribute-label').map { |label| label.text.squish }
 
       expect(response).to have_http_status(:success)
-      expect(labels).to include('MFA')
-      expect(response.body).to include('Enabled')
+      expect(labels).to include(I18n.t('super_admin.mfa.title', locale: :pt_BR))
+      expect(response.body).to include(I18n.t('super_admin.mfa.enabled', locale: :pt_BR))
       expect(response.body).to include(CGI.escapeHTML(user.name))
     end
   end

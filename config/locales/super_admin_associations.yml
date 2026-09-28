@@ -1,0 +1,18 @@
+pt_BR: &super_admin_associations
+  activerecord:
+    attributes:
+      account_user:
+        user_id: Usuário
+        account_id: Conta
+        inviter_id: Convidado por
+  super_admin:
+    user_types:
+      regular: Usuário comum
+      SuperAdmin: Superadministrador
+pt-BR: *super_admin_associations
+pt: *super_admin_associations
+en:
+  super_admin:
+    user_types:
+      regular: Regular user
+      SuperAdmin: Super administrator

@@ -1,0 +1,440 @@
+{
+  "pt_BR": {
+    "super_admin": {
+      "config_fields": {
+        "LOGO_THUMBNAIL": {
+          "name": "Ícone da instalação",
+          "description": "URL do ícone usado em áreas compactas."
+        },
+        "LOGO": {
+          "name": "Logotipo claro",
+          "description": "URL do logotipo para fundos claros."
+        },
+        "LOGO_DARK": {
+          "name": "Logotipo escuro",
+          "description": "URL do logotipo para fundos escuros."
+        },
+        "BRAND_NAME": {
+          "name": "Nome da marca",
+          "description": "Nome exibido na identificação da marca."
+        },
+        "INSTALLATION_NAME": {
+          "name": "Nome da instalação",
+          "description": "Nome apresentado nesta instalação."
+        },
+        "BRAND_URL": {
+          "name": "Site da marca",
+          "description": "Destino dos links da marca."
+        },
+        "WIDGET_BRAND_URL": {
+          "name": "Site da marca no widget",
+          "description": "Destino da identificação de marca no widget."
+        },
+        "TERMS_URL": {
+          "name": "Termos de uso",
+          "description": "URL pública dos termos de uso."
+        },
+        "PRIVACY_URL": {
+          "name": "Política de privacidade",
+          "description": "URL pública da política de privacidade."
+        },
+        "DISPLAY_MANIFEST": {
+          "name": "Manifesto do aplicativo web",
+          "description": "Controla a disponibilização do manifesto de instalação do aplicativo web."
+        },
+        "CONVERSATION_STYLE_CSS": {
+          "name": "Estilos das conversas",
+          "description": "CSS personalizado. Valide a responsividade antes de alterar."
+        },
+        "ENABLE_SAML_SSO_LOGIN": {
+          "name": "Login único por SAML",
+          "description": "Habilita o login corporativo SAML quando a integração está configurada."
+        },
+        "CAPTAIN_EMBEDDING_MODEL": {
+          "name": "Modelo de indexação do Captain",
+          "description": "Modelo usado para representar os documentos na busca."
+        },
+        "CAPTAIN_FIRECRAWL_API_KEY": {
+          "name": "Chave do Firecrawl",
+          "description": "Credencial para leitura de páginas pelo Captain. Mantenha em sigilo."
+        },
+        "CHATWOOT_INBOX_TOKEN": {
+          "name": "Token do atendimento da instalação",
+          "description": "Identifica a caixa de atendimento usada pelo console."
+        },
+        "CHATWOOT_INBOX_HMAC_KEY": {
+          "name": "Chave HMAC do atendimento",
+          "description": "Valida a identidade no atendimento da instalação. Mantenha em sigilo."
+        },
+        "CLOUD_ANALYTICS_TOKEN": {
+          "name": "Token de análise da nuvem",
+          "description": "Credencial da integração de métricas da nuvem."
+        },
+        "CLEARBIT_API_KEY": {
+          "name": "Chave da Clearbit",
+          "description": "Credencial de enriquecimento de dados."
+        },
+        "CONTEXT_DEV_API_KEY": {
+          "name": "Chave da Context",
+          "description": "Credencial da integração Context."
+        },
+        "DASHBOARD_SCRIPTS": {
+          "name": "Scripts do painel",
+          "description": "Código executado no painel. Insira somente scripts confiáveis."
+        },
+        "INACTIVE_WHATSAPP_NUMBERS": {
+          "name": "Números WhatsApp inativos",
+          "description": "Configuração interna dos números considerados inativos."
+        },
+        "SKIP_INCOMING_BCC_PROCESSING": {
+          "name": "Ignorar cópias ocultas recebidas",
+          "description": "Controla o processamento de destinatários em cópia oculta."
+        },
+        "CAPTAIN_CLOUD_PLAN_LIMITS": {
+          "name": "Limites dos planos Captain",
+          "description": "Limites de uso por plano na nuvem."
+        },
+        "MARKETING_CONVERSION_TRACKING_CONFIG": {
+          "name": "Rastreamento de conversões",
+          "description": "Configuração das integrações de conversão de marketing."
+        },
+        "ACCOUNT_SECURITY_NOTIFICATION_WEBHOOK_URL": {
+          "name": "Webhook de segurança",
+          "description": "URL que recebe eventos de segurança das contas."
+        },
+        "CHATWOOT_INSTANCE_ADMIN_EMAIL": {
+          "name": "E-mail do administrador da instalação",
+          "description": "Contato administrativo desta instalação."
+        },
+        "OG_IMAGE_CDN_URL": {
+          "name": "CDN das imagens de compartilhamento",
+          "description": "URL do serviço de imagens de prévia."
+        },
+        "OG_IMAGE_CLIENT_REF": {
+          "name": "Referência do cliente de imagens",
+          "description": "Identificador usado pelo serviço de imagens de prévia."
+        },
+        "CLOUDFLARE_API_KEY": {
+          "name": "Chave da Cloudflare",
+          "description": "Credencial da integração Cloudflare. Mantenha em sigilo."
+        },
+        "CLOUDFLARE_ZONE_ID": {
+          "name": "Zona da Cloudflare",
+          "description": "Identifica a zona DNS usada pela integração."
+        },
+        "BLOCKED_EMAIL_DOMAINS": {
+          "name": "Domínios de e-mail bloqueados",
+          "description": "Lista de domínios impedidos de se cadastrar."
+        },
+        "OTEL_PROVIDER": {
+          "name": "Provedor de observabilidade",
+          "description": "Destino da telemetria. Pode exigir reinício dos processos."
+        },
+        "LANGFUSE_PUBLIC_KEY": {
+          "name": "Chave pública do Langfuse",
+          "description": "Identifica o projeto de observabilidade de IA."
+        },
+        "LANGFUSE_SECRET_KEY": {
+          "name": "Chave secreta do Langfuse",
+          "description": "Autentica a telemetria de IA. Mantenha em sigilo."
+        },
+        "LANGFUSE_BASE_URL": {
+          "name": "URL do Langfuse",
+          "description": "Endereço do serviço de observabilidade de IA."
+        }
+      }
+    }
+  },
+  "pt-BR": {
+    "super_admin": {
+      "config_fields": {
+        "LOGO_THUMBNAIL": {
+          "name": "Ícone da instalação",
+          "description": "URL do ícone usado em áreas compactas."
+        },
+        "LOGO": {
+          "name": "Logotipo claro",
+          "description": "URL do logotipo para fundos claros."
+        },
+        "LOGO_DARK": {
+          "name": "Logotipo escuro",
+          "description": "URL do logotipo para fundos escuros."
+        },
+        "BRAND_NAME": {
+          "name": "Nome da marca",
+          "description": "Nome exibido na identificação da marca."
+        },
+        "INSTALLATION_NAME": {
+          "name": "Nome da instalação",
+          "description": "Nome apresentado nesta instalação."
+        },
+        "BRAND_URL": {
+          "name": "Site da marca",
+          "description": "Destino dos links da marca."
+        },
+        "WIDGET_BRAND_URL": {
+          "name": "Site da marca no widget",
+          "description": "Destino da identificação de marca no widget."
+        },
+        "TERMS_URL": {
+          "name": "Termos de uso",
+          "description": "URL pública dos termos de uso."
+        },
+        "PRIVACY_URL": {
+          "name": "Política de privacidade",
+          "description": "URL pública da política de privacidade."
+        },
+        "DISPLAY_MANIFEST": {
+          "name": "Manifesto do aplicativo web",
+          "description": "Controla a disponibilização do manifesto de instalação do aplicativo web."
+        },
+        "CONVERSATION_STYLE_CSS": {
+          "name": "Estilos das conversas",
+          "description": "CSS personalizado. Valide a responsividade antes de alterar."
+        },
+        "ENABLE_SAML_SSO_LOGIN": {
+          "name": "Login único por SAML",
+          "description": "Habilita o login corporativo SAML quando a integração está configurada."
+        },
+        "CAPTAIN_EMBEDDING_MODEL": {
+          "name": "Modelo de indexação do Captain",
+          "description": "Modelo usado para representar os documentos na busca."
+        },
+        "CAPTAIN_FIRECRAWL_API_KEY": {
+          "name": "Chave do Firecrawl",
+          "description": "Credencial para leitura de páginas pelo Captain. Mantenha em sigilo."
+        },
+        "CHATWOOT_INBOX_TOKEN": {
+          "name": "Token do atendimento da instalação",
+          "description": "Identifica a caixa de atendimento usada pelo console."
+        },
+        "CHATWOOT_INBOX_HMAC_KEY": {
+          "name": "Chave HMAC do atendimento",
+          "description": "Valida a identidade no atendimento da instalação. Mantenha em sigilo."
+        },
+        "CLOUD_ANALYTICS_TOKEN": {
+          "name": "Token de análise da nuvem",
+          "description": "Credencial da integração de métricas da nuvem."
+        },
+        "CLEARBIT_API_KEY": {
+          "name": "Chave da Clearbit",
+          "description": "Credencial de enriquecimento de dados."
+        },
+        "CONTEXT_DEV_API_KEY": {
+          "name": "Chave da Context",
+          "description": "Credencial da integração Context."
+        },
+        "DASHBOARD_SCRIPTS": {
+          "name": "Scripts do painel",
+          "description": "Código executado no painel. Insira somente scripts confiáveis."
+        },
+        "INACTIVE_WHATSAPP_NUMBERS": {
+          "name": "Números WhatsApp inativos",
+          "description": "Configuração interna dos números considerados inativos."
+        },
+        "SKIP_INCOMING_BCC_PROCESSING": {
+          "name": "Ignorar cópias ocultas recebidas",
+          "description": "Controla o processamento de destinatários em cópia oculta."
+        },
+        "CAPTAIN_CLOUD_PLAN_LIMITS": {
+          "name": "Limites dos planos Captain",
+          "description": "Limites de uso por plano na nuvem."
+        },
+        "MARKETING_CONVERSION_TRACKING_CONFIG": {
+          "name": "Rastreamento de conversões",
+          "description": "Configuração das integrações de conversão de marketing."
+        },
+        "ACCOUNT_SECURITY_NOTIFICATION_WEBHOOK_URL": {
+          "name": "Webhook de segurança",
+          "description": "URL que recebe eventos de segurança das contas."
+        },
+        "CHATWOOT_INSTANCE_ADMIN_EMAIL": {
+          "name": "E-mail do administrador da instalação",
+          "description": "Contato administrativo desta instalação."
+        },
+        "OG_IMAGE_CDN_URL": {
+          "name": "CDN das imagens de compartilhamento",
+          "description": "URL do serviço de imagens de prévia."
+        },
+        "OG_IMAGE_CLIENT_REF": {
+          "name": "Referência do cliente de imagens",
+          "description": "Identificador usado pelo serviço de imagens de prévia."
+        },
+        "CLOUDFLARE_API_KEY": {
+          "name": "Chave da Cloudflare",
+          "description": "Credencial da integração Cloudflare. Mantenha em sigilo."
+        },
+        "CLOUDFLARE_ZONE_ID": {
+          "name": "Zona da Cloudflare",
+          "description": "Identifica a zona DNS usada pela integração."
+        },
+        "BLOCKED_EMAIL_DOMAINS": {
+          "name": "Domínios de e-mail bloqueados",
+          "description": "Lista de domínios impedidos de se cadastrar."
+        },
+        "OTEL_PROVIDER": {
+          "name": "Provedor de observabilidade",
+          "description": "Destino da telemetria. Pode exigir reinício dos processos."
+        },
+        "LANGFUSE_PUBLIC_KEY": {
+          "name": "Chave pública do Langfuse",
+          "description": "Identifica o projeto de observabilidade de IA."
+        },
+        "LANGFUSE_SECRET_KEY": {
+          "name": "Chave secreta do Langfuse",
+          "description": "Autentica a telemetria de IA. Mantenha em sigilo."
+        },
+        "LANGFUSE_BASE_URL": {
+          "name": "URL do Langfuse",
+          "description": "Endereço do serviço de observabilidade de IA."
+        }
+      }
+    }
+  },
+  "pt": {
+    "super_admin": {
+      "config_fields": {
+        "LOGO_THUMBNAIL": {
+          "name": "Ícone da instalação",
+          "description": "URL do ícone usado em áreas compactas."
+        },
+        "LOGO": {
+          "name": "Logotipo claro",
+          "description": "URL do logotipo para fundos claros."
+        },
+        "LOGO_DARK": {
+          "name": "Logotipo escuro",
+          "description": "URL do logotipo para fundos escuros."
+        },
+        "BRAND_NAME": {
+          "name": "Nome da marca",
+          "description": "Nome exibido na identificação da marca."
+        },
+        "INSTALLATION_NAME": {
+          "name": "Nome da instalação",
+          "description": "Nome apresentado nesta instalação."
+        },
+        "BRAND_URL": {
+          "name": "Site da marca",
+          "description": "Destino dos links da marca."
+        },
+        "WIDGET_BRAND_URL": {
+          "name": "Site da marca no widget",
+          "description": "Destino da identificação de marca no widget."
+        },
+        "TERMS_URL": {
+          "name": "Termos de uso",
+          "description": "URL pública dos termos de uso."
+        },
+        "PRIVACY_URL": {
+          "name": "Política de privacidade",
+          "description": "URL pública da política de privacidade."
+        },
+        "DISPLAY_MANIFEST": {
+          "name": "Manifesto do aplicativo web",
+          "description": "Controla a disponibilização do manifesto de instalação do aplicativo web."
+        },
+        "CONVERSATION_STYLE_CSS": {
+          "name": "Estilos das conversas",
+          "description": "CSS personalizado. Valide a responsividade antes de alterar."
+        },
+        "ENABLE_SAML_SSO_LOGIN": {
+          "name": "Login único por SAML",
+          "description": "Habilita o login corporativo SAML quando a integração está configurada."
+        },
+        "CAPTAIN_EMBEDDING_MODEL": {
+          "name": "Modelo de indexação do Captain",
+          "description": "Modelo usado para representar os documentos na busca."
+        },
+        "CAPTAIN_FIRECRAWL_API_KEY": {
+          "name": "Chave do Firecrawl",
+          "description": "Credencial para leitura de páginas pelo Captain. Mantenha em sigilo."
+        },
+        "CHATWOOT_INBOX_TOKEN": {
+          "name": "Token do atendimento da instalação",
+          "description": "Identifica a caixa de atendimento usada pelo console."
+        },
+        "CHATWOOT_INBOX_HMAC_KEY": {
+          "name": "Chave HMAC do atendimento",
+          "description": "Valida a identidade no atendimento da instalação. Mantenha em sigilo."
+        },
+        "CLOUD_ANALYTICS_TOKEN": {
+          "name": "Token de análise da nuvem",
+          "description": "Credencial da integração de métricas da nuvem."
+        },
+        "CLEARBIT_API_KEY": {
+          "name": "Chave da Clearbit",
+          "description": "Credencial de enriquecimento de dados."
+        },
+        "CONTEXT_DEV_API_KEY": {
+          "name": "Chave da Context",
+          "description": "Credencial da integração Context."
+        },
+        "DASHBOARD_SCRIPTS": {
+          "name": "Scripts do painel",
+          "description": "Código executado no painel. Insira somente scripts confiáveis."
+        },
+        "INACTIVE_WHATSAPP_NUMBERS": {
+          "name": "Números WhatsApp inativos",
+          "description": "Configuração interna dos números considerados inativos."
+        },
+        "SKIP_INCOMING_BCC_PROCESSING": {
+          "name": "Ignorar cópias ocultas recebidas",
+          "description": "Controla o processamento de destinatários em cópia oculta."
+        },
+        "CAPTAIN_CLOUD_PLAN_LIMITS": {
+          "name": "Limites dos planos Captain",
+          "description": "Limites de uso por plano na nuvem."
+        },
+        "MARKETING_CONVERSION_TRACKING_CONFIG": {
+          "name": "Rastreamento de conversões",
+          "description": "Configuração das integrações de conversão de marketing."
+        },
+        "ACCOUNT_SECURITY_NOTIFICATION_WEBHOOK_URL": {
+          "name": "Webhook de segurança",
+          "description": "URL que recebe eventos de segurança das contas."
+        },
+        "CHATWOOT_INSTANCE_ADMIN_EMAIL": {
+          "name": "E-mail do administrador da instalação",
+          "description": "Contato administrativo desta instalação."
+        },
+        "OG_IMAGE_CDN_URL": {
+          "name": "CDN das imagens de compartilhamento",
+          "description": "URL do serviço de imagens de prévia."
+        },
+        "OG_IMAGE_CLIENT_REF": {
+          "name": "Referência do cliente de imagens",
+          "description": "Identificador usado pelo serviço de imagens de prévia."
+        },
+        "CLOUDFLARE_API_KEY": {
+          "name": "Chave da Cloudflare",
+          "description": "Credencial da integração Cloudflare. Mantenha em sigilo."
+        },
+        "CLOUDFLARE_ZONE_ID": {
+          "name": "Zona da Cloudflare",
+          "description": "Identifica a zona DNS usada pela integração."
+        },
+        "BLOCKED_EMAIL_DOMAINS": {
+          "name": "Domínios de e-mail bloqueados",
+          "description": "Lista de domínios impedidos de se cadastrar."
+        },
+        "OTEL_PROVIDER": {
+          "name": "Provedor de observabilidade",
+          "description": "Destino da telemetria. Pode exigir reinício dos processos."
+        },
+        "LANGFUSE_PUBLIC_KEY": {
+          "name": "Chave pública do Langfuse",
+          "description": "Identifica o projeto de observabilidade de IA."
+        },
+        "LANGFUSE_SECRET_KEY": {
+          "name": "Chave secreta do Langfuse",
+          "description": "Autentica a telemetria de IA. Mantenha em sigilo."
+        },
+        "LANGFUSE_BASE_URL": {
+          "name": "URL do Langfuse",
+          "description": "Endereço do serviço de observabilidade de IA."
+        }
+      }
+    }
+  }
+}

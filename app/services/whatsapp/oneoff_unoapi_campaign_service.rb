@@ -2,6 +2,8 @@ class Whatsapp::OneoffUnoapiCampaignService
   pattr_initialize [:campaign!]
 
   def perform
+    raise 'WhatsApp campaigns feature not enabled' unless campaign.account.feature_enabled?(:whatsapp_campaign)
+
     raise "Invalid campaign #{campaign.id}" if inbox.inbox_type != 'Whatsapp' || channel.provider != 'unoapi' || !campaign.one_off?
     raise 'Completed Campaign' if campaign.completed?
 

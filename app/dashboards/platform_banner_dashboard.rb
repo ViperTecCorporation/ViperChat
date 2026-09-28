@@ -4,7 +4,11 @@ class PlatformBannerDashboard < Administrate::BaseDashboard
   ATTRIBUTE_TYPES = {
     id: Field::Number,
     banner_message: Field::Text.with_options(truncate: 200),
-    banner_type: Field::Select.with_options(collection: %w[info warning error]),
+    banner_type: Field::Select.with_options(collection: lambda { |_|
+      %w[info warning error].map do |type|
+        [I18n.t("super_admin.banner_types.#{type}"), type]
+      end
+    }),
     active: Field::Boolean,
     created_at: Field::DateTime,
     updated_at: Field::DateTime

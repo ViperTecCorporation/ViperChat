@@ -22,7 +22,7 @@ const prepareData = sourceData => {
         type: 'bar',
         backgroundColor: 'rgb(31, 147, 255)',
         yAxisID: 'y',
-        label: 'Conversations',
+        label: props.componentData.labels?.conversations || 'Conversations',
         data: data,
       },
     ],
@@ -51,7 +51,7 @@ const {
     </header>
 
     <section class="main-content__body main-content__body--flush">
-      <div class="report--list">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div class="report-card">
           <div class="metric">{{ accountsCount }}</div>
           <div>{{ labels.accounts || 'Accounts' }}</div>
@@ -70,11 +70,6 @@ const {
         </div>
       </div>
     </section>
-    <!-- eslint-disable vue/no-static-inline-styles -->
-    <BarChart
-      class="p-8 w-full"
-      :collection="chartData"
-      style="max-height: 500px"
-    />
+    <BarChart class="p-4 md:p-8 w-full max-h-[500px]" :collection="chartData" />
   </div>
 </template>

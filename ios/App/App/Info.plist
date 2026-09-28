@@ -41,6 +41,8 @@
 	<string>O ViperChat usa a câmera para tirar fotos e enviar imagens nas conversas.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>O ViperChat usa sua localização quando você escolhe compartilhá-la em uma conversa.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>O ViperChat usa sua localização quando você escolhe compartilhá-la em uma conversa.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>O ViperChat usa o microfone para gravar áudios e realizar ligações.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

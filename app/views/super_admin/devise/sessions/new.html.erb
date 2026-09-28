@@ -2,6 +2,7 @@
 <% brand_palette_class = ENV['BRAND_PALETTE'] == 'default' ? nil : 'brand-viper' %>
 <html class="<%= brand_palette_class %>">
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><%= t('super_admin.auth.title', brand: 'ViperChat') %></title>
     <%= vite_client_tag %>
     <%= vite_javascript_tag 'superadmin' %>
@@ -16,7 +17,7 @@
             <%= t('super_admin.auth.greeting') %>
           </h2>
         </section>
-        <section class="bg-white shadow sm:mx-auto mt-11 sm:w-full sm:max-w-lg dark:bg-slate-800 p-11 sm:shadow-lg sm:rounded-lg mb-8 mt-15">
+        <section class="bg-white shadow sm:mx-auto mt-11 sm:w-full sm:max-w-lg dark:bg-slate-800 p-4 sm:p-11 sm:shadow-lg sm:rounded-lg mb-8 mt-15">
           <div>
             <%= form_for(resource, as: resource_name, url: '/super_admin/sign_in') do |f| %>
               <% if flash[:error].present? %>

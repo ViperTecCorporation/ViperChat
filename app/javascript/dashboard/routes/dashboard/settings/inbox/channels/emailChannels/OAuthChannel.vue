@@ -5,6 +5,7 @@ import microsoftClient from 'dashboard/api/channel/microsoftClient';
 import googleClient from 'dashboard/api/channel/googleClient';
 import SettingsSubPageHeader from '../../../SettingsSubPageHeader.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import HistoryPeriod from '../google/HistoryPeriod.vue';
 
 import { useAlert } from 'dashboard/composables';
 
@@ -33,6 +34,7 @@ const props = defineProps({
 });
 
 const isRequestingAuthorization = ref(false);
+const historyPeriod = ref('none');
 
 const client = computed(() => {
   if (props.provider === 'microsoft') {
@@ -45,7 +47,11 @@ const client = computed(() => {
 async function requestAuthorization() {
   try {
     isRequestingAuthorization.value = true;
-    const response = await client.value.generateAuthorization();
+    const response = await client.value.generateAuthorization(
+      props.provider === 'google'
+        ? { history_period: historyPeriod.value }
+        : undefined
+    );
     const {
       data: { url },
     } = response;
@@ -66,6 +72,11 @@ async function requestAuthorization() {
       :header-content="description"
     />
     <form class="mt-6" @submit.prevent="requestAuthorization">
+      <HistoryPeriod
+        v-if="provider === 'google'"
+        v-model="historyPeriod"
+        :disabled="isRequestingAuthorization"
+      />
       <NextButton
         :is-loading="isRequestingAuthorization"
         type="submit"

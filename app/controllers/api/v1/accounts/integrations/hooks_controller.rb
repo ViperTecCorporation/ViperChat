@@ -1,4 +1,5 @@
 class Api::V1::Accounts::Integrations::HooksController < Api::V1::Accounts::BaseController
+  require_account_feature 'integrations', only: [:create, :update, :destroy]
   before_action :fetch_hook, except: [:create]
   before_action :check_authorization
 

@@ -1,4 +1,5 @@
 class Api::V1::Accounts::AutomationRulesController < Api::V1::Accounts::BaseController
+  require_account_feature 'automations', only: [:create, :update, :destroy]
   include AttachmentConcern
 
   before_action :check_authorization

@@ -1194,7 +1194,7 @@ RSpec.describe Conversation do
       expect(conversation.waiting_since).to be_nil
     end
 
-    it 'records zero reply time if an agent sends a message after resolution' do
+    it 'counts reply time from reopening when the customer was still waiting' do
       create_customer_message(conversation, created_at: conversation_start_time)
       create_agent_message(conversation, created_at: 4.hours.ago)
       create_customer_message(conversation, created_at: 3.hours.ago)
@@ -1206,13 +1206,14 @@ RSpec.describe Conversation do
       expect(conversation.status).to eq('open')
 
       conversation.reload
-      expect(conversation.waiting_since).to be_nil
+      reopened_at = conversation.waiting_since
+      expect(reopened_at).to be_within(2.seconds).of(Time.current)
 
-      create_agent_message(conversation, created_at: 1.hour.ago)
-      # update_waiting_since will ensure that no events were created since the waiting_since was nil
-      # if the event is created it should log zero value, we have handled that in the reporting_event_listener
+      travel_to(reopened_at + 5.minutes) { create_agent_message(conversation, created_at: Time.current) }
       reply_events = account.reporting_events.where(name: 'reply_time', conversation_id: conversation.id)
-      expect(reply_events.count).to eq(0)
+      expect(reply_events.count).to eq(1)
+      expect(reply_events.first.value).to be_within(2.seconds).of(5.minutes)
+      expect(conversation.reload.waiting_since).to be_nil
     end
 
     context 'when AgentBot responds between customer messages' do

@@ -1,0 +1,11 @@
+{
+  "MULTIPART_UPLOAD": {
+    "PREPARING": "Preparing upload",
+    "UPLOADING": "Uploading",
+    "COMPLETING": "Finalizing upload",
+    "FAILED": "Upload failed",
+    "CANCELLED": "Upload cancelled",
+    "CANCEL": "Cancel",
+    "CLOSE": "Close"
+  }
+}

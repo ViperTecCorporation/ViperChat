@@ -16,7 +16,7 @@ Rails.application.config.active_storage.content_types_allowed_inline += %w[
 ]
 
 module ActiveStorageDirectUploadMetadataFilter
-  INTERNAL_METADATA_KEYS = %w[identified analyzed composed].freeze
+  INTERNAL_METADATA_KEYS = %w[identified analyzed composed multipart].freeze
 
   private
 

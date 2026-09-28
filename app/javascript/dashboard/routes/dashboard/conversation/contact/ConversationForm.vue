@@ -103,7 +103,6 @@ export default {
       uiFlags: 'contacts/getUIFlags',
       conversationsUiFlags: 'contactConversations/getUIFlags',
       currentUser: 'getCurrentUser',
-      globalConfig: 'globalConfig/get',
       messageSignature: 'getMessageSignature',
     }),
     sendWithSignature() {
@@ -241,7 +240,7 @@ export default {
     },
     setAttachmentPayload(payload) {
       this.attachedFiles.forEach(attachment => {
-        if (this.globalConfig.directUploadsEnabled) {
+        if (attachment.blobSignedId) {
           payload.files.push(attachment.blobSignedId);
         } else {
           payload.files.push(attachment.resource.file);

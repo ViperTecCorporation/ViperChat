@@ -24,7 +24,25 @@ class Search::ConversationVisibilityService
       current_account.feature_enabled?('hide_unassigned_for_agent')
   end
 
+  def allows_assignment?(conversation)
+    return false unless conversation.account_id == current_account.id
+    return true if account_user.administrator?
+
+    unassigned = conversation.assignee_id.nil? && conversation.team_id.nil?
+    return !current_account.feature_enabled?('hide_unassigned_for_agent') if unassigned
+    return true unless current_account.feature_enabled?('hide_all_chats_for_agent')
+
+    assigned_to_user_or_team?(conversation)
+  end
+
   private
+
+  def assigned_to_user_or_team?(conversation)
+    return true if conversation.assignee_id == current_user.id
+    return false unless current_account.include_team_conversations_in_mine?
+
+    current_user.teams.where(account_id: current_account.id).exists?(id: conversation.team_id)
+  end
 
   def permission_scope
     Conversations::PermissionFilterService.new(

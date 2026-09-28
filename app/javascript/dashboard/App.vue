@@ -22,6 +22,7 @@ import ReconnectService from 'dashboard/helper/ReconnectService';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import NativeShareInbox from '../native/components/NativeShareInbox.vue';
 import NativePushPrompt from '../native/components/NativePushPrompt.vue';
+import MultipartUploadQueue from './components/app/MultipartUploadQueue.vue';
 
 export default {
   name: 'App',
@@ -36,6 +37,7 @@ export default {
     PendingEmailVerificationBanner,
     NativeShareInbox,
     NativePushPrompt,
+    MultipartUploadQueue,
   },
   setup() {
     const router = useRouter();
@@ -183,6 +185,7 @@ export default {
     </router-view>
     <WootSnackbarBox />
     <NetworkNotification />
+    <MultipartUploadQueue :key="currentAccountId" />
     <NativeShareInbox v-if="isNativeApp" />
     <NativePushPrompt v-if="isNativeApp" />
   </div>

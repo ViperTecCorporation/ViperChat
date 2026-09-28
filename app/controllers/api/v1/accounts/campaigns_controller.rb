@@ -1,4 +1,5 @@
 class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
+  require_account_feature 'campaigns', only: [:create, :update, :destroy]
   before_action :campaign, except: [:index, :create]
   before_action :check_authorization
 

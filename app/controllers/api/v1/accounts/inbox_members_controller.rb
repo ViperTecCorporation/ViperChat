@@ -1,4 +1,5 @@
 class Api::V1::Accounts::InboxMembersController < Api::V1::Accounts::BaseController
+  require_account_feature 'inbox_management', only: [:create, :update, :destroy]
   before_action :fetch_inbox
   before_action :current_agents_ids, only: [:create, :update]
 

@@ -145,8 +145,8 @@ shopify:
   icon: 'icon-shopify'
   config_key: 'shopify'
 unoapi:
-  name: 'Unoapi'
-  description: 'Configuration for setting up Unoapi'
+  name: 'ViperConnect'
+  description: 'Configuration for setting up ViperConnect'
   enabled: true
   icon: 'icon-chat-smile-3-line'
   config_key: 'unoapi'

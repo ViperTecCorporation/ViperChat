@@ -177,6 +177,7 @@ RSpec.describe Account do
         whatsapp_reconfigure
         whatsapp_embedded_signup_inbox_creation
         restrict_assignee_filter_for_agent
+        disable_channel_unoapi
       ]
       expected_mapping = extension_features.each_with_index.to_h do |feature, index|
         ["feature_#{feature}".to_sym, 1 << index]

@@ -1,0 +1,7 @@
+<div class="flex min-w-0 items-start justify-between gap-3 p-3 bg-white rounded-lg shadow-sm outline outline-1 outline-n-container">
+  <div class="min-w-0 flex-1">
+    <%= label_tag "enabled_features_feature_#{feature_key}", display_name, class: "text-sm text-slate-700 break-words", title: SuperAdmin::AccountFeaturesHelper.feature_description(feature_key) %>
+    <%= render 'super_admin/shared/feature_help', feature_key: feature_key %>
+  </div>
+  <%= check_box "enabled_features", "feature_#{feature_key}", { checked: SuperAdmin::AccountFeaturesHelper.boolean_enabled?(value), disabled: disabled, class: "mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-violet-600 focus:ring-violet-600" }, 'true', 'false' %>
+</div>

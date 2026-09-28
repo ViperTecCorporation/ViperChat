@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe 'TikTok Callbacks', type: :request do
-  let(:account) { create(:account) }
+  let(:account) { create(:account, :with_tiktok) }
 
   let(:client_secret) { 'tiktok-app-secret' }
   let(:client_id) { 'tiktok-app-id' }

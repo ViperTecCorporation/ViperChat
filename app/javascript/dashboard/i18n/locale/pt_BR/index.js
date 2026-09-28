@@ -1,4 +1,5 @@
 import advancedFilters from './advancedFilters.json';
+import mediaEditor from './mediaEditor.json';
 import agentBots from './agentBots.json';
 import agentMgmt from './agentMgmt.json';
 import attributesMgmt from './attributesMgmt.json';
@@ -28,6 +29,7 @@ import integrations from './integrations.json';
 import labelsMgmt from './labelsMgmt.json';
 import login from './login.json';
 import macros from './macros.json';
+import multipartUpload from './multipartUpload.json';
 import mfa from './mfa.json';
 import report from './report.json';
 import resetPassword from './resetPassword.json';
@@ -45,6 +47,7 @@ import yearInReview from './yearInReview.json';
 
 export default {
   ...advancedFilters,
+  ...mediaEditor,
   ...agentBots,
   ...agentMgmt,
   ...attributesMgmt,
@@ -74,6 +77,7 @@ export default {
   ...labelsMgmt,
   ...login,
   ...macros,
+  ...multipartUpload,
   ...mfa,
   ...report,
   ...resetPassword,

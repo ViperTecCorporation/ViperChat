@@ -1,8 +1,27 @@
 {
   "CONVERSATION": {
+    "LOCATION_PICKER": {
+      "TITLE": "Enviar localização",
+      "HELP": "Ao abrir, buscamos sua localização com sua permissão. Você também pode pesquisar uma empresa ou escolher um ponto no mapa.",
+      "LOCATING": "Obtendo sua localização…",
+      "SEARCH": "Pesquisar empresa ou endereço",
+      "MAP": "Mapa para selecionar localização",
+      "CURRENT": "Usar minha localização atual",
+      "ACCURACY": "Precisão aproximada: {meters} metros",
+      "NAME": "Nome do local (opcional)",
+      "ADDRESS": "Endereço (opcional)",
+      "SEND": "Enviar localização",
+      "CANCEL": "Cancelar",
+      "MAP_ERROR": "Não foi possível carregar o Google Maps. Verifique a chave, as APIs habilitadas e suas restrições.",
+      "NOT_CONFIGURED": "O administrador precisa configurar a chave do Google Maps no Super Admin.",
+      "GPS_ERROR": "Não foi possível obter sua localização. Verifique a permissão e o GPS, ou escolha um ponto no mapa.",
+      "SEARCH_ERROR": "Não foi possível pesquisar o local. Verifique a conexão, a ativação da Places API (New), as restrições e cotas da chave Google.",
+      "NO_RESULTS": "Nenhum local encontrado. Tente incluir cidade e estado."
+    },
     "UNOAPI_WARNING": {
       "TITLE": "Aviso de envio",
       "WITHOUT_QUOTE": "Enviada sem citação. Não foi possível localizar a mensagem original no WhatsApp.",
+      "VIDEO_TRANSCODED": "O ViperConnect precisou converter o vídeo para compatibilidade. Este aviso não indica falha de envio; não é necessário reenviar.",
       "REFERENCE_NOT_SENT": "Referência não enviada"
     },
     "ARCHIVE": {
@@ -108,7 +127,7 @@
       "APPROVE_JOIN_REQUEST": "Aprovar",
       "REJECT_JOIN_REQUEST": "Rejeitar",
       "CREATE_GROUP": "Criar grupo",
-      "CREATE_GROUP_SUBTITLE": "Escolha uma caixa UnoAPI, os dados do grupo e os membros para convidar.",
+      "CREATE_GROUP_SUBTITLE": "Escolha uma caixa ViperConnect, os dados do grupo e os membros para convidar.",
       "SELECT_INBOX": "Selecionar caixa de entrada",
       "CREATE_SELECTED": "{count} selecionados",
       "CREATE_REQUIRED": "Escolha uma caixa de entrada e informe o titulo do grupo",

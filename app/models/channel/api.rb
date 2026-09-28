@@ -29,6 +29,7 @@ class Channel::Api < ApplicationRecord
   has_secure_token :hmac_token
   include WebhookSecretable
   validate :ensure_valid_agent_reply_time_window
+  validate :validate_creation_permission, on: :create
   validates :webhook_url, length: { maximum: Limits::URL_LENGTH_LIMIT }
 
   def name
@@ -36,6 +37,13 @@ class Channel::Api < ApplicationRecord
   end
 
   private
+
+  def validate_creation_permission
+    return unless account
+    return if account.feature_enabled?('api_and_webhooks')
+
+    errors.add(:base, I18n.t('super_admin.channel_creation_blocked'))
+  end
 
   def ensure_valid_agent_reply_time_window
     return if additional_attributes['agent_reply_time_window'].blank?

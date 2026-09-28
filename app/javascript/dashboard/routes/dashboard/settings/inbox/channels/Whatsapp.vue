@@ -14,7 +14,14 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
-const { isCloudFeatureEnabled, isOnChatwootCloud } = useAccount();
+const { currentAccount } = useAccount();
+const providerAllowed = provider => {
+  const features = currentAccount.value?.features;
+  if (!features) return false;
+  return provider === 'unoapi'
+    ? !features.disable_channel_unoapi
+    : Boolean(features.channel_whatsapp);
+};
 
 const PROVIDER_TYPES = {
   WHATSAPP: 'whatsapp',
@@ -37,41 +44,46 @@ const selectedProvider = computed(() => route.query.provider);
 
 const showProviderSelection = computed(() => !selectedProvider.value);
 
-const showConfiguration = computed(() => Boolean(selectedProvider.value));
+const showConfiguration = computed(
+  () =>
+    Boolean(selectedProvider.value) && providerAllowed(selectedProvider.value)
+);
 
 const shouldShowWhatsappEmbeddedSignup = computed(() => {
   return (
     selectedProvider.value === PROVIDER_TYPES.WHATSAPP &&
     hasWhatsappAppId.value &&
-    (!isOnChatwootCloud.value ||
-      isCloudFeatureEnabled(
-        FEATURE_FLAGS.WHATSAPP_EMBEDDED_SIGNUP_INBOX_CREATION
-      ))
+    currentAccount.value?.features?.[
+      FEATURE_FLAGS.WHATSAPP_EMBEDDED_SIGNUP_INBOX_CREATION
+    ]
   );
 });
 
-const availableProviders = computed(() => [
-  {
-    key: PROVIDER_TYPES.WHATSAPP,
-    title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD'),
-    description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD_DESC'),
-    icon: 'i-woot-whatsapp',
-  },
-  {
-    key: PROVIDER_TYPES.TWILIO,
-    title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO'),
-    description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO_DESC'),
-    icon: 'i-woot-twilio',
-  },
-  {
-    key: PROVIDER_TYPES.UNOAPI,
-    title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.UNOAPI'),
-    description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.UNOAPI'),
-    icon: 'i-woot-whatsapp',
-  },
-]);
+const availableProviders = computed(() =>
+  [
+    {
+      key: PROVIDER_TYPES.WHATSAPP,
+      title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD'),
+      description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD_DESC'),
+      icon: 'i-woot-whatsapp',
+    },
+    {
+      key: PROVIDER_TYPES.TWILIO,
+      title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO'),
+      description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO_DESC'),
+      icon: 'i-woot-twilio',
+    },
+    {
+      key: PROVIDER_TYPES.UNOAPI,
+      title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.UNOAPI'),
+      description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.UNOAPI'),
+      icon: 'i-woot-whatsapp',
+    },
+  ].filter(provider => providerAllowed(provider.key))
+);
 
 const selectProvider = providerValue => {
+  if (!providerAllowed(providerValue)) return;
   router.push({
     name: route.name,
     params: route.params,
@@ -94,7 +106,7 @@ const handleManualLinkClick = () => {
 
 <template>
   <div class="overflow-auto col-span-6 p-6 w-full h-full">
-    <div v-if="showProviderSelection">
+    <div v-if="showProviderSelection && availableProviders.length">
       <div class="mb-10 text-left">
         <h1 class="mb-2 text-lg font-medium text-n-slate-12">
           {{ $t('INBOX_MGMT.ADD.WHATSAPP.SELECT_PROVIDER.TITLE') }}
@@ -104,7 +116,7 @@ const handleManualLinkClick = () => {
         </p>
       </div>
 
-      <div class="flex gap-6 justify-start">
+      <div class="flex flex-wrap gap-6 justify-start">
         <ChannelSelector
           v-for="provider in availableProviders"
           :key="provider.key"
@@ -116,6 +128,13 @@ const handleManualLinkClick = () => {
       </div>
     </div>
 
+    <p
+      v-else-if="!showConfiguration"
+      role="alert"
+      class="text-sm text-n-slate-11"
+    >
+      {{ $t('INBOX_MGMT.ADD.WHATSAPP.CHANNEL_RESTRICTED') }}
+    </p>
     <div v-else-if="showConfiguration">
       <div class="px-6 py-5 rounded-2xl border border-n-weak">
         <div v-if="shouldShowWhatsappEmbeddedSignup">

@@ -1,5 +1,5 @@
 <script>
-import { ref } from 'vue';
+import { ref, defineAsyncComponent } from 'vue';
 import { vOnClickOutside } from '@vueuse/components';
 import FileUpload from 'vue-upload-component';
 import * as ActiveStorage from 'activestorage';
@@ -20,6 +20,9 @@ import { REPLY_EDITOR_MODES, CHAR_LENGTH_WARNING } from './constants';
 export default {
   name: 'CompactReplyComposer',
   components: {
+    LocationPicker: defineAsyncComponent(
+      () => import('dashboard/components-next/Conversation/LocationPicker.vue')
+    ),
     CopilotMenuBar,
     FileUpload,
     NextButton,
@@ -172,6 +175,7 @@ export default {
   setup(props, { emit }) {
     const uploadRef = ref(false);
     const showActionsMenu = ref(false);
+    const showLocationPicker = ref(false);
     const showCopilotMenu = ref(false);
     const copilotToggleRef = ref(null);
     const { captainTasksEnabled } = useCaptain();
@@ -201,12 +205,21 @@ export default {
       handleCopilotAction,
       setSignatureFlagForInbox,
       showActionsMenu,
+      showLocationPicker,
       showCopilotMenu,
       toggleCopilotMenu,
       uploadRef,
     };
   },
   computed: {
+    canShareLocation() {
+      return (
+        !this.isNote &&
+        !this.isEditorDisabled &&
+        !this.isReplyRestricted &&
+        (this.isAWhatsAppCloudChannel || this.isAUnoapiChannel)
+      );
+    },
     ...mapGetters({
       accountId: 'getCurrentAccountId',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
@@ -324,10 +337,22 @@ export default {
         : this.$t('CONVERSATION.REPLYBOX.COMPACT.PRIVATE_NOTE');
     },
   },
+  watch: {
+    conversationId() {
+      this.showLocationPicker = false;
+    },
+    canShareLocation(value) {
+      if (!value) this.showLocationPicker = false;
+    },
+  },
   mounted() {
     ActiveStorage.start();
   },
   methods: {
+    openLocationPicker() {
+      this.showLocationPicker = true;
+      this.closeActionsMenu();
+    },
     closeActionsMenu() {
       this.showActionsMenu = false;
     },
@@ -459,6 +484,15 @@ export default {
             @click="showActionsMenu = !showActionsMenu"
           />
           <div v-if="showActionsMenu" class="compact-composer__menu">
+            <button
+              v-if="canShareLocation"
+              type="button"
+              class="compact-composer__menu-item"
+              @click="openLocationPicker"
+            >
+              <span class="i-lucide-map-pin size-4" />
+              {{ $t('CONVERSATION.LOCATION_PICKER.TITLE') }}
+            </button>
             <button
               v-if="!isEditorDisabled"
               type="button"
@@ -669,6 +703,12 @@ export default {
       </div>
     </template>
 
+    <LocationPicker
+      v-if="showLocationPicker && canShareLocation"
+      :key="conversationId"
+      :conversation-id="conversationId"
+      @close="showLocationPicker = false"
+    />
     <transition name="modal-fade">
       <div
         v-show="uploadRef && uploadRef.dropActive"
