@@ -31,7 +31,7 @@ RSpec.describe 'Google email history', type: :request do
 
   it 'carries the period in an expiring signed OAuth state' do
     post "/api/v1/accounts/#{account.id}/google/authorization", headers: admin.create_new_auth_token,
-         params: { history_period: '12m' }, as: :json
+                                                                params: { history_period: '12m' }, as: :json
     expect(response).to have_http_status(:ok)
     state = CGI.parse(URI.parse(response.parsed_body['url']).query)['state'].first
     data = Rails.application.message_verifier('gmail-history').verified(state)

@@ -2,6 +2,10 @@ require 'rails_helper'
 
 RSpec.describe 'Viper Chat native discovery', type: :request do
   describe 'GET /.well-known/viper-chat' do
+    around do |example|
+      with_modified_env(VIPER_NATIVE_PUSH_ENABLED: 'false', DEFAULT_LOCALE: 'pt_BR') { example.run }
+    end
+
     before do
       allow(ChatwootHub).to receive(:installation_identifier).and_return('inst-123')
       allow(Chatwoot).to receive(:config).and_return({ version: '4.16.11-viper' })

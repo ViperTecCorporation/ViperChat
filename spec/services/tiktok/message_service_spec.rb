@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Tiktok::MessageService do
-  let(:account) { create(:account) }
+  let(:account) { create(:account, :with_tiktok) }
   let(:channel) { create(:channel_tiktok, account: account, business_id: 'biz-123') }
   let(:inbox) { channel.inbox }
   let(:contact) { create(:contact, account: account) }

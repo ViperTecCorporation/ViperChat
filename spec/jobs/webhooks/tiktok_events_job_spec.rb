@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Webhooks::TiktokEventsJob do
-  let(:account) { create(:account) }
+  let(:account) { create(:account, :with_tiktok) }
   let!(:channel) { create(:channel_tiktok, account: account, business_id: 'biz-123') }
   let(:job) { described_class.new }
 

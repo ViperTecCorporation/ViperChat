@@ -6,5 +6,9 @@ FactoryBot.define do
     status { 'active' }
     domain { 'test.com' }
     support_email { 'support@test.com' }
+
+    trait :with_tiktok do
+      after(:create) { |account| account.enable_features!('channel_tiktok') }
+    end
   end
 end

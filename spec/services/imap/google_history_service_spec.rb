@@ -17,7 +17,9 @@ RSpec.describe Imap::GoogleHistoryService do
 
   it 'uses date boundaries without unread filtering and processes one batch' do
     service.perform
-    expect(imap).to have_received(:uid_search).with(['SINCE', Time.current.utc.strftime('%d-%b-%Y'), 'BEFORE', 1.day.from_now.utc.strftime('%d-%b-%Y')])
+    expect(imap).to have_received(:uid_search).with(
+      ['SINCE', Time.current.utc.strftime('%d-%b-%Y'), 'BEFORE', 1.day.from_now.utc.strftime('%d-%b-%Y')]
+    )
     expect(mailbox).to have_received(:process).once
     expect(channel.reload.provider_config.dig('email_history', 'processed')).to eq(1)
   end
