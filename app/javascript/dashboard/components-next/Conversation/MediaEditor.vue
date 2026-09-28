@@ -368,6 +368,7 @@ async function send() {
     emit('close');
   } catch (exception) {
     exportIssues.value = exception.issues || [];
+    const fallbackError = sending.value ? 'UPLOAD_FAILED' : 'IMAGE_ERROR';
     if (exception.name !== 'AbortError')
       error.value = label(
         [
@@ -378,7 +379,7 @@ async function send() {
           'VIDEO_UNSUPPORTED',
         ].includes(exception.message)
           ? exception.message
-          : 'IMAGE_ERROR'
+          : fallbackError
       );
   } finally {
     busy.value = false;

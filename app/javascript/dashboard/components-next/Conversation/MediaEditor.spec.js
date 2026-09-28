@@ -144,6 +144,19 @@ describe('media editor batch', () => {
     expect(wrapper.emitted('close')).toBeUndefined();
     wrapper.unmount();
   });
+  it('does not report an upload exception as an image preparation error', async () => {
+    const submitFile = vi
+      .fn()
+      .mockRejectedValue(new TypeError('Upload failed'));
+    const wrapper = mountEditor({ submitFile });
+    await wrapper.get('[aria-label="MEDIA_EDITOR.SEND"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('MEDIA_EDITOR.UPLOAD_FAILED');
+    expect(wrapper.text()).not.toContain('MEDIA_EDITOR.IMAGE_ERROR');
+    expect(wrapper.text()).not.toContain('TypeError');
+    expect(wrapper.emitted('close')).toBeUndefined();
+    wrapper.unmount();
+  });
   it('closes an empty editor after dispatch failure and directs retry to the existing bubble', async () => {
     const submitFile = vi
       .fn()

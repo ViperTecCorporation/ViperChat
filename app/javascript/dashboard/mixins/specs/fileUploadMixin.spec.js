@@ -3,6 +3,7 @@ import { useAlert } from 'dashboard/composables';
 import fileUploadMixin from 'dashboard/mixins/fileUploadMixin';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { reactive } from 'vue';
+import { createStore } from 'vuex';
 
 vi.mock('shared/helpers/FileHelper', () => ({
   checkFileSizeLimit: vi.fn(),
@@ -21,6 +22,26 @@ vi.mock('dashboard/composables', () => ({
 }));
 
 describe('FileUploadMixin', () => {
+  it('gets upload configuration from the store without a parent computed property', () => {
+    const config = { directUploadsEnabled: true, maximumFileUploadSize: 64 };
+    const store = createStore({
+      getters: {
+        'globalConfig/get': () => config,
+        getCurrentAccountId: () => 1,
+      },
+    });
+    const component = shallowMount(
+      { mixins: [fileUploadMixin], template: '<div />' },
+      { global: { plugins: [store] } }
+    );
+    expect(component.vm.globalConfig).toBe(config);
+    expect(component.vm.installationLimit).toBe(64);
+    component.vm.onDirectFileUpload = vi.fn();
+    component.vm.onFileUpload({});
+    expect(component.vm.onDirectFileUpload).toHaveBeenCalled();
+    component.unmount();
+  });
+
   let wrapper;
   let mockGlobalConfig;
   let mockCurrentChat;
@@ -42,9 +63,11 @@ describe('FileUploadMixin', () => {
 
     wrapper = shallowMount({
       mixins: [fileUploadMixin],
+      computed: {
+        globalConfig: () => mockGlobalConfig,
+      },
       data() {
         return {
-          globalConfig: mockGlobalConfig,
           currentChat: mockCurrentChat,
           currentUser: mockCurrentUser,
           isATwilioSMSChannel: false,
