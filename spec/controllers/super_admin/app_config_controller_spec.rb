@@ -4,6 +4,16 @@ RSpec.describe 'Super Admin Application Config API', type: :request do
   let(:super_admin) { create(:super_admin) }
 
   describe 'GET /super_admin/app_config' do
+    it 'shows the compatibility default for Gmail API before the setting is saved' do
+      InstallationConfig.where(name: 'GOOGLE_GMAIL_API_ENABLED').destroy_all
+      sign_in(super_admin, scope: :super_admin)
+      get '/super_admin/app_config?config=google'
+      expect(response).to have_http_status(:ok)
+      page = Nokogiri::HTML(response.body)
+      selected = page.at_css('select[name="app_config[GOOGLE_GMAIL_API_ENABLED]"] option[selected]')
+      expect(selected['value']).to eq('false')
+    end
+
     context 'when it is an unauthenticated super admin' do
       it 'returns unauthorized' do
         get '/super_admin/app_config'
@@ -26,6 +36,15 @@ RSpec.describe 'Super Admin Application Config API', type: :request do
   end
 
   describe 'POST /super_admin/app_config' do
+    it 'saves Gmail API as the new connection default without requiring a restart' do
+      sign_in(super_admin, scope: :super_admin)
+      post '/super_admin/app_config?config=google', params: { app_config: { GOOGLE_GMAIL_API_ENABLED: 'true' } }
+      expect(response).to redirect_to(super_admin_settings_path)
+      expect(InstallationConfig.find_by!(name: 'GOOGLE_GMAIL_API_ENABLED').value).to eq('true')
+      expect(flash[:notice]).to be_present
+      expect(flash[:success]).to be_blank
+    end
+
     context 'when it is an unauthenticated super admin' do
       it 'returns unauthorized' do
         post '/super_admin/app_config', params: { app_config: { TESTKEY: 'TESTVALUE' } }

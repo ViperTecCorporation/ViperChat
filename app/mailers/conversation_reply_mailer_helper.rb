@@ -18,6 +18,7 @@ module ConversationReplyMailerHelper
     end
     oauth_smtp_settings
     set_delivery_method
+    configure_gmail_delivery
 
     # Email type detection logic:
     # - email_reply: Sets @message with a single message
@@ -56,6 +57,16 @@ module ConversationReplyMailerHelper
       openssl_verify_mode: 'none',
       **smtp_timeout_settings,
       authentication: 'xoauth2'
+    }
+  end
+
+  def configure_gmail_delivery
+    return unless @inbox.email? && @channel.gmail_api?
+
+    @options[:delivery_method] = :gmail_api
+    @options[:delivery_method_options] = {
+      channel_id: @channel.id,
+      thread_id: @conversation.messages.incoming.last&.external_source_ids&.dig('gmail_thread_id')
     }
   end
 

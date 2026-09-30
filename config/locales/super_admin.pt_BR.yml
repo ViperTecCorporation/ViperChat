@@ -1,5 +1,9 @@
 pt_BR:
   super_admin:
+    config_fields:
+      GOOGLE_GMAIL_API_ENABLED:
+        name: "Usar Gmail API por padrão"
+        description: "Usa gmail.readonly e gmail.send em caixas Gmail novas ou reconectadas. Caixas existentes mantêm seu modo até a reconexão. Desativado: IMAP/SMTP legado com o escopo mail.google.com."
     navigation:
       logo_alt: "Painel Admin ViperChat"
       console: "Console Super Admin"

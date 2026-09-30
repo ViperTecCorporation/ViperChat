@@ -531,6 +531,12 @@
   value:
   locked: false
   description: 'The redirect URI configured in your Google OAuth app'
+- name: GOOGLE_GMAIL_API_ENABLED
+  display_title: 'Use Gmail API by default'
+  value: false
+  locked: false
+  description: 'Use gmail.readonly and gmail.send for new or reconnected Gmail inboxes. Existing inboxes keep their transport until reconnected. Disabled: legacy IMAP/SMTP with mail.google.com scope.'
+  type: boolean
 - name: ENABLE_GOOGLE_OAUTH_LOGIN
   display_title: 'Enable Google OAuth login'
   value: true

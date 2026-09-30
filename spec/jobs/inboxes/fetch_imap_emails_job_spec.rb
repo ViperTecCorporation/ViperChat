@@ -10,6 +10,19 @@ RSpec.describe Inboxes::FetchImapEmailsJob do
   let(:microsoft_imap_email_channel) { create(:channel_email, :microsoft_email) }
 
   describe '#perform' do
+    it 'routes Gmail API inboxes to API polling and history without opening IMAP' do
+      channel = create(:channel_email, provider: 'google', imap_enabled: true, provider_config: { gmail_transport: 'api' })
+      sync = instance_double(Google::GmailSyncService, perform: true)
+      history = instance_double(Google::GmailHistoryService, perform: true)
+      allow(Google::GmailSyncService).to receive(:new).with(channel: channel, interval: 1).and_return(sync)
+      allow(Google::GmailHistoryService).to receive(:new).with(channel: channel).and_return(history)
+      expect(Imap::GoogleFetchEmailService).not_to receive(:new)
+      expect(Imap::GoogleHistoryService).not_to receive(:new)
+      described_class.perform_now(channel)
+      expect(sync).to have_received(:perform)
+      expect(history).to have_received(:perform)
+    end
+
     it 'enqueues the job' do
       expect do
         described_class.perform_later(imap_email_channel, 1)

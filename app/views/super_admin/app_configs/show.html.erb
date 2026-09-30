@@ -26,7 +26,7 @@
           <% if @installation_configs[key]&.dig('type') == 'boolean' %>
             <%= form.select "app_config[#{key}]",
               [[t('super_admin.app_configs.true'), true], [t('super_admin.app_configs.false'), false]],
-              { selected: ActiveModel::Type::Boolean.new.cast(@app_config[key]) },
+              { selected: ActiveModel::Type::Boolean.new.cast(@app_config.fetch(key) { @installation_configs[key]&.dig('value') }) },
               class: "mt-2 border border-slate-100 p-1 rounded-md"
             %>
           <% elsif @installation_configs[key]&.dig('type') == 'code' %>
