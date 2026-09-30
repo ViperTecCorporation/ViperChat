@@ -19,7 +19,7 @@ RSpec.describe 'Gmail API authorization', type: :request do
   end
 
   it 'requests only read/send mail scopes and signs the transport even without history options' do
-    create(:installation_config, name: 'GOOGLE_GMAIL_API_ENABLED', value: true)
+    InstallationConfig.find_or_initialize_by(name: 'GOOGLE_GMAIL_API_ENABLED').update!(value: true)
     post "/api/v1/accounts/#{account.id}/google/authorization", headers: admin.create_new_auth_token
     query = CGI.parse(URI.parse(response.parsed_body['url']).query)
     expect(query['scope'].first.split).to eq(['email', 'profile'] + Google::GmailClient::SCOPES)
@@ -28,7 +28,7 @@ RSpec.describe 'Gmail API authorization', type: :request do
   end
 
   it 'uses the signed selection even if the global default is disabled before callback' do
-    create(:installation_config, name: 'GOOGLE_GMAIL_API_ENABLED', value: false)
+    InstallationConfig.find_or_initialize_by(name: 'GOOGLE_GMAIL_API_ENABLED').update!(value: false)
     get '/google/callback', params: { code: 'test', state: state }
     expect(response).to have_http_status(:redirect)
     expect(account.inboxes.last.channel.gmail_api?).to be(true)
@@ -45,7 +45,7 @@ RSpec.describe 'Gmail API authorization', type: :request do
 
   it 'preserves a legacy channel when the global default changes' do
     channel = create(:channel_email, provider: 'google', account: account)
-    create(:installation_config, name: 'GOOGLE_GMAIL_API_ENABLED', value: true)
+    InstallationConfig.find_or_initialize_by(name: 'GOOGLE_GMAIL_API_ENABLED').update!(value: true)
     expect(channel.reload.gmail_api?).to be(false)
   end
 

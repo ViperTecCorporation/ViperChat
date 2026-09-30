@@ -17,6 +17,10 @@ class Google::GmailClient
     request(:post, '/messages/send', body: payload.to_json)
   end
 
+  def message_metadata(id)
+    request(:get, "/messages/#{ERB::Util.url_encode(id)}", query: { format: 'metadata', metadataHeaders: ['Message-ID'] })
+  end
+
   private
 
   def request(method, path, options)

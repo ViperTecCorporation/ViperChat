@@ -103,13 +103,13 @@ RSpec.describe Google::GmailClient do
     it 'does not recreate messages deleted locally' do
       tracker = instance_double(Imap::DeletedMessageTracker, deleted?: true)
       allow(Imap::DeletedMessageTracker).to receive(:new).and_return(tracker)
-      expect(Imap::ImapMailbox).not_to receive(:new)
+      expect(Google::GmailMailbox).not_to receive(:new)
       Google::GmailMessageService.new(channel: channel, client: client).perform('msg1')
     end
 
     it 'skips a message deleted from Gmail between listing and fetching' do
       stub_request(:get, "#{base_url}/messages/msg1").with(query: { format: 'raw' }).to_return(status: 404)
-      expect(Imap::ImapMailbox).not_to receive(:new)
+      expect(Google::GmailMailbox).not_to receive(:new)
       expect { Google::GmailMessageService.new(channel: channel, client: client).perform('msg1') }.not_to raise_error
     end
   end
@@ -149,6 +149,9 @@ RSpec.describe Google::GmailClient do
 
     before do
       allow(Net::SMTP).to receive(:new).and_raise('SMTP must not be used for Gmail API')
+      stub_request(:get, "#{base_url}/messages/sent1")
+        .with(query: { format: 'metadata', metadataHeaders: ['Message-ID'] })
+        .to_return(body: { payload: { headers: [{ name: 'Message-Id', value: '<rewritten@gmail.com>' }] } }.to_json)
     end
 
     it 'uses the API even with old SMTP settings, and records the outgoing source ID' do
@@ -159,8 +162,66 @@ RSpec.describe Google::GmailClient do
       expect(Net::SMTP).not_to receive(:new)
       Email::SendOnEmailService.new(message: message).perform
       expect(request).to have_been_requested.once
-      expect(message.reload.source_id).to include("messages/#{message.id}@")
+      expect(message.reload.source_id).to eq('rewritten@gmail.com')
+      expect(message.external_source_ids).to include('gmail_message_id' => 'sent1', 'gmail_thread_id' => 'thread1')
       expect(message.status).not_to eq('failed')
+    end
+
+    it 'groups an incoming reply to the rewritten Gmail Message-ID into the original conversation' do
+      stub_request(:post, "#{base_url}/messages/send").to_return(body: { id: 'sent1', threadId: 'thread1' }.to_json)
+      Email::SendOnEmailService.new(message: message).perform
+      mail.in_reply_to = 'rewritten@gmail.com'
+      mail.references = 'rewritten@gmail.com'
+      stub_request(:get, "#{base_url}/messages/msg1").with(query: { format: 'raw' }).to_return(body: raw_response.to_json)
+
+      expect { Google::GmailMessageService.new(channel: channel, client: client).perform('msg1') }
+        .not_to(change { channel.inbox.conversations.count })
+      expect(channel.inbox.messages.incoming.last.conversation_id).to eq(conversation.id)
+    end
+
+    it 'groups a reply by Gmail thread while Message-ID lookup is pending' do
+      stub_request(:post, "#{base_url}/messages/send").to_return(body: { id: 'sent1', threadId: 'thread1' }.to_json)
+      stub_request(:get, "#{base_url}/messages/sent1")
+        .with(query: { format: 'metadata', metadataHeaders: ['Message-ID'] }).to_return(status: 503)
+      Email::SendOnEmailService.new(message: message).perform
+      mail.in_reply_to = 'rewritten@gmail.com'
+      stub_request(:get, "#{base_url}/messages/msg1").with(query: { format: 'raw' }).to_return(body: raw_response.to_json)
+
+      expect { Google::GmailMessageService.new(channel: channel, client: client).perform('msg1') }
+        .not_to(change { channel.inbox.conversations.count })
+      expect(channel.inbox.messages.incoming.last.conversation_id).to eq(conversation.id)
+    end
+
+    it 'does not match a Gmail thread from another inbox' do
+      other = create(:conversation, additional_attributes: { gmail_thread_id: 'thread1' })
+      stub_request(:get, "#{base_url}/messages/msg1").with(query: { format: 'raw' }).to_return(body: raw_response.to_json)
+      Google::GmailMessageService.new(channel: channel, client: client).perform('msg1')
+      expect(channel.inbox.messages.incoming.last.conversation_id).not_to eq(other.id)
+    end
+
+    it 'reuses the Gmail thread on subsequent outgoing mail before receiving a reply' do
+      conversation.update!(additional_attributes: { gmail_thread_id: 'thread1' })
+      request = stub_request(:post, "#{base_url}/messages/send")
+                .with { |req| JSON.parse(req.body)['threadId'] == 'thread1' }
+                .to_return(body: { id: 'sent1', threadId: 'thread1' }.to_json)
+      Email::SendOnEmailService.new(message: message).perform
+      expect(request).to have_been_requested.once
+    end
+
+    it 'retries only metadata after a lookup failure, without failing or resending an accepted email' do
+      request = stub_request(:post, "#{base_url}/messages/send").to_return(body: { id: 'sent1', threadId: 'thread1' }.to_json)
+      metadata = stub_request(:get, "#{base_url}/messages/sent1")
+                 .with(query: { format: 'metadata', metadataHeaders: ['Message-ID'] })
+                 .to_return(status: 503)
+      expect { Email::SendOnEmailService.new(message: message).perform }
+        .to have_enqueued_job(Google::SyncSentMessageJob).with(message)
+      expect(message.reload.status).not_to eq('failed')
+      expect(message.source_id).to be_present
+      Email::SendOnEmailService.new(message: message).perform
+      remove_request_stub(metadata)
+      Google::SyncSentMessageJob.perform_now(message)
+      expect(message.reload.source_id).to eq('rewritten@gmail.com')
+      expect(request).to have_been_requested.once
     end
 
     it 'marks an API error as failed without pretending the message was sent' do

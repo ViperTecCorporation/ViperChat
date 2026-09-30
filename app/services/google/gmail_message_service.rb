@@ -18,7 +18,7 @@ class Google::GmailMessageService
 
   def ingest(mail, data)
     ActiveRecord::Base.transaction do
-      Imap::ImapMailbox.new.process(mail, channel)
+      Google::GmailMailbox.new(thread_id: data['threadId']).process(mail, channel)
       message = channel.inbox.messages.find_by(source_id: mail.message_id)
       message&.update!(external_source_ids: message.external_source_ids.to_h.merge('gmail_thread_id' => data['threadId']))
     end

@@ -66,7 +66,8 @@ module ConversationReplyMailerHelper
     @options[:delivery_method] = :gmail_api
     @options[:delivery_method_options] = {
       channel_id: @channel.id,
-      thread_id: @conversation.messages.incoming.last&.external_source_ids&.dig('gmail_thread_id')
+      thread_id: @conversation.additional_attributes['gmail_thread_id'] ||
+                 @conversation.messages.incoming.last&.external_source_ids&.dig('gmail_thread_id')
     }
   end
 
