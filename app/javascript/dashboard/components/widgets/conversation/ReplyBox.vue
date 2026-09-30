@@ -216,6 +216,7 @@ export default {
       newConversationModalActive: false,
       showArticleSearchPopover: false,
       hasRecordedAudio: false,
+      recordedAudioViewOnce: false,
       isRecordedAudioUploadPending: false,
       sendRecordedAudioAfterUpload: false,
       copilotAcceptedMessages: {},
@@ -1320,6 +1321,23 @@ export default {
       });
     },
     confirmOnSendReply() {
+      const invalidContact = this.attachedContacts
+        .map(contact => this.serializeAttachedContact(contact))
+        .find(
+          contact =>
+            !contact.formatted_name?.trim() ||
+            (!contact.phone_number?.trim() && !contact.email?.trim())
+        );
+      if (invalidContact) {
+        useAlert(
+          this.$t('CONVERSATION.CONTACT_BUNDLE.INVALID', {
+            name:
+              invalidContact.formatted_name ||
+              this.$t('CONVERSATION.CONTACT_BUNDLE.TITLE'),
+          })
+        );
+        return;
+      }
       if (this.isReplyButtonDisabled) {
         return;
       }
@@ -1747,6 +1765,16 @@ export default {
           };
 
           attachmentPayload = this.setReplyToInPayload(attachmentPayload);
+          if (
+            this.isAUnoapiChannel &&
+            attachment.isRecordedAudio &&
+            this.recordedAudioViewOnce
+          ) {
+            attachmentPayload.contentAttributes = {
+              ...attachmentPayload.contentAttributes,
+              view_once: true,
+            };
+          }
           attachmentPayload = this.withGroupMentionsInPayload(
             attachmentPayload,
             attachmentPayload.message
@@ -1900,6 +1928,7 @@ export default {
       this.showArticleSearchPopover = !this.showArticleSearchPopover;
     },
     resetAudioRecorderInput() {
+      this.recordedAudioViewOnce = false;
       this.recordingAudioDurationText = '00:00';
       this.isRecordingAudio = false;
       this.recordingAudioState = '';
@@ -1946,6 +1975,7 @@ export default {
     v-if="mediaEditorSession"
     :files="mediaEditorFiles"
     :caption="mediaEditorSession.caption"
+    :allow-view-once="isAUnoapiChannel"
     :recipient="currentChat.meta?.sender?.name || ''"
     :max-caption="Math.min(1024, maxLength)"
     :max-video-output-bytes="
@@ -2046,10 +2076,13 @@ export default {
           :recording-audio-state="recordingAudioState"
           :recording-audio-duration-text="recordingAudioDurationText"
           :has-recorded-audio="hasRecordedAudio"
+          :allow-audio-view-once="isAUnoapiChannel && !isPrivate"
+          :audio-view-once="recordedAudioViewOnce"
           :is-recorded-audio-send-pending="sendRecordedAudioAfterUpload"
           :is-copilot-active="copilot.isActive.value"
           :on-file-upload="onFileUpload"
           :send-button-text="replyButtonLabel"
+          @update:audio-view-once="recordedAudioViewOnce = $event"
           @cancel-audio-recorder="cancelAudioRecorder"
           @execute-copilot-action="executeCopilotAction"
           @open-contact-picker="openContactAttachmentModal"
@@ -2244,6 +2277,10 @@ export default {
       <ReplyBottomPanel
         v-else-if="!useCompactMessageComposer"
         key="reply-bottom-panel"
+        :allow-audio-view-once="
+          isAUnoapiChannel && hasRecordedAudio && !isPrivate
+        "
+        :audio-view-once="recordedAudioViewOnce"
         :conversation-id="conversationId"
         :enable-multiple-file-upload="enableMultipleFileUpload"
         :enable-whats-app-templates="showWhatsappTemplates"
@@ -2273,6 +2310,7 @@ export default {
         :message="message"
         :portal-slug="connectedPortalSlug"
         :new-conversation-modal-active="newConversationModalActive"
+        @update:audio-view-once="recordedAudioViewOnce = $event"
         @open-contact-picker="openContactAttachmentModal"
         @toggle-sticker-picker="showStickerPickerModal"
         @select-whatsapp-template="openWhatsappTemplateModal"

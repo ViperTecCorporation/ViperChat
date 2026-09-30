@@ -129,7 +129,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="flex flex-col justify-between flex-1 h-full m-0 overflow-auto bg-n-surface-1"
+    class="flex min-w-0 min-h-0 flex-col justify-between flex-1 h-full m-0 overflow-hidden bg-n-surface-1"
   >
     <ContactsDetailsLayout
       :button-label="$t('CONTACTS_LAYOUT.HEADER.SEND_MESSAGE')"
@@ -152,11 +152,11 @@ onMounted(() => {
         @go-to-contacts-list="goToContactsList"
       />
       <template #sidebarHeader>
-        <div class="px-6 pt-6 pb-3">
+        <div class="mx-3 lg:mx-6 pt-4 lg:pt-6 pb-3 min-w-0 overflow-x-auto">
           <TabBar
             :tabs="tabs"
             :initial-active-tab="activeTabIndex"
-            class="w-full [&>button]:w-full bg-n-alpha-black2"
+            class="min-w-full !w-max !h-11 [&>div:first-child]:!h-11 [&>button]:shrink-0 [&>button]:!min-h-11 [&>button]:!whitespace-nowrap [&>button]:!overflow-visible bg-n-alpha-black2"
             @tab-changed="handleTabChange"
           />
         </div>

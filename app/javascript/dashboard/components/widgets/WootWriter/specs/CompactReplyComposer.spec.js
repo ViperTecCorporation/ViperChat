@@ -155,4 +155,19 @@ describe('CompactReplyComposer', () => {
     ]);
     expect(wrapper.text()).toContain('00:03');
   });
+  it('offers view once after recording and emits the selected value', async () => {
+    const wrapper = mountComponent({
+      isRecordingAudio: true,
+      recordingAudioState: 'stopped',
+      hasRecordedAudio: true,
+      allowAudioViewOnce: true,
+    });
+    await wrapper
+      .get('[aria-label="CONVERSATION.VIEW_ONCE_ENABLE"]')
+      .trigger('click');
+    expect(wrapper.emitted('update:audioViewOnce')).toEqual([[true]]);
+    await wrapper.setProps({ hasRecordedAudio: false });
+    expect(wrapper.find('[aria-pressed]').exists()).toBe(false);
+    wrapper.unmount();
+  });
 });

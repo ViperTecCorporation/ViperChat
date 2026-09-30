@@ -59,6 +59,7 @@ class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsapp
 
   def message_content_attributes(message)
     attributes = super
+    attributes[:view_once] = true if view_once_message?
     return attributes.merge(catalog_normalization[:content_attributes]) if catalog_message?
     return attributes.merge(interactive_normalization[:content_attributes]) if interactive_normalization
 
@@ -79,6 +80,8 @@ class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsapp
   end
 
   def reconcile_existing_message(source_id)
+    return reconcile_view_once_message(source_id) if view_once_message?
+
     return super unless catalog_message? || interactive_normalization
     return false unless find_message_by_source_id(source_id)
 
@@ -86,6 +89,19 @@ class Whatsapp::IncomingMessageUnoapiService < Whatsapp::IncomingMessageWhatsapp
     update_message_with_status(@message, status: 'delivered') if outgoing_echo
     reconcile_normalized_content
     @message.send_update_event if document_added
+    true
+  end
+
+  def view_once_message?
+    message = messages_data&.first
+    message&.dig(:message_type) == 'view_once' && %w[image video audio].include?(message[:type])
+  end
+
+  def reconcile_view_once_message(source_id)
+    return false unless find_message_by_source_id(source_id)
+
+    update_message_with_status(@message, status: 'delivered') if outgoing_echo
+    @message.update!(content_attributes: @message.content_attributes.merge('view_once' => true)) unless @message.content_attributes['view_once']
     true
   end
 

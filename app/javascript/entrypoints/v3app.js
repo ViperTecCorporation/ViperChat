@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import { mountWebApp, onDocumentReady } from 'shared/helpers/mountWebApp';
 import { createI18n } from 'vue-i18n';
 
 import i18nMessages from 'dashboard/i18n';
@@ -61,6 +62,4 @@ initializeChatwootEvents();
 initializeAnalyticsEvents();
 initalizeRouter();
 
-window.onload = () => {
-  app.mount('#app');
-};
+onDocumentReady(() => mountWebApp(app, router));

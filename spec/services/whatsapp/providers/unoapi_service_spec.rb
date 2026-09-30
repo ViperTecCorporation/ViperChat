@@ -71,6 +71,38 @@ describe Whatsapp::Providers::UnoapiService do
     end
   end
 
+  describe 'view once payload' do
+    let(:message) { instance_double(Message, content_attributes: { 'view_once' => true }) }
+
+    before do
+      allow(Whatsapp::Unoapi::OutgoingIdentityPayload).to receive(:new) do |**args|
+        instance_double(Whatsapp::Unoapi::OutgoingIdentityPayload, perform: args[:request_body])
+      end
+    end
+
+    %w[image video audio].each do |type|
+      it "adds a boolean inside #{type} without losing its link" do
+        payload = { 'type' => type, type => { 'link' => 'https://example.com/media' } }
+        result = service.send(:outgoing_message_payload, payload, message)
+        expect(result[type]).to eq('link' => 'https://example.com/media', 'view_once' => true)
+        expect(result).not_to have_key('view_once')
+      end
+    end
+
+    [nil, false, 'true'].each do |value|
+      it "omits the option for #{value.inspect}" do
+        allow(message).to receive(:content_attributes).and_return('view_once' => value)
+        payload = { 'type' => 'image', 'image' => { 'link' => 'https://example.com/media' } }
+        expect(service.send(:outgoing_message_payload, payload, message)['image']).not_to have_key('view_once')
+      end
+    end
+
+    it 'does not add the option to documents' do
+      payload = { type: 'document', document: { link: 'https://example.com/file.pdf' } }
+      expect(service.send(:outgoing_message_payload, payload, message)).to eq(payload)
+    end
+  end
+
   describe '#send_message' do
     let(:conversation) do
       create(:conversation, account: whatsapp_channel.account, inbox: whatsapp_channel.inbox)

@@ -40,6 +40,7 @@ describe('authenticationService', () => {
   beforeEach(() => {
     secureValues.clear();
     vi.unstubAllGlobals();
+    window.history.replaceState(null, '', '/');
   });
 
   it('stores only the session headers returned by a successful login', async () => {
@@ -82,6 +83,16 @@ describe('authenticationService', () => {
       instanceName: 'ViperChat',
     });
     expect(JSON.stringify(context)).not.toContain('access-token');
+  });
+
+  it('uses the selected route account in the share context after switching', async () => {
+    window.history.replaceState(null, '', '/#/app/accounts/20/dashboard');
+    const context = await syncShareContext({
+      installation,
+      user: { account_id: 1, accounts: [{ id: 1 }, { id: 20 }] },
+    });
+    expect(context.accountId).toBe(20);
+    window.history.replaceState(null, '', '/');
   });
 
   it('removes an expired session after validation', async () => {

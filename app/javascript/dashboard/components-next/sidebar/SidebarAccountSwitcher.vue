@@ -42,6 +42,13 @@ const sortedCurrentUserAccounts = computed(() => {
 
 const onChangeAccount = newId => {
   const accountUrl = `/app/accounts/${newId}/dashboard`;
+  if (window.chatwootConfig?.isNativeApp) {
+    // Native routing uses the hash. Reload to reset account-scoped stores,
+    // subscriptions and requests, just as the web account switch does.
+    window.history.replaceState(null, '', `/#${accountUrl}`);
+    window.location.reload();
+    return;
+  }
   window.location.href = accountUrl;
 };
 

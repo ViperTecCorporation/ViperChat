@@ -1,0 +1,17 @@
+<dialog open id="dashboard-boot" aria-labelledby="dashboard-boot-brand"
+  class="fixed inset-0 z-[9999] m-0 box-border flex h-full w-full max-w-none items-center justify-center border-0 bg-slate-50 p-6 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+  data-session="<%= t('dashboard_boot.session') %>"
+  data-opening="<%= t('dashboard_boot.opening') %>"
+  data-slow="<%= t('dashboard_boot.slow') %>"
+  data-failed="<%= t('dashboard_boot.failed') %>">
+  <div class="w-full max-w-sm text-center">
+    <img src="<%= @global_config['LOGO_THUMBNAIL'] %>" width="64" height="64" alt="" class="mx-auto mb-4 object-contain" />
+    <h1 id="dashboard-boot-brand" class="break-words text-xl font-semibold"><%= @global_config['INSTALLATION_NAME'] %></h1>
+    <p id="dashboard-boot-status" role="status" aria-live="polite" class="my-4 text-base"><%= t('dashboard_boot.loading') %></p>
+    <progress id="dashboard-boot-progress" aria-labelledby="dashboard-boot-status" class="h-2 w-full accent-teal-600"></progress>
+    <p id="dashboard-boot-notice" role="alert" hidden></p>
+    <button id="dashboard-boot-retry" type="button" hidden class="mt-4 min-h-11 rounded-lg border-0 bg-teal-700 px-5 py-3 text-base text-white"><%= t('dashboard_boot.retry') %></button>
+    <noscript><p><%= t('dashboard_boot.javascript') %></p></noscript>
+  </div>
+</dialog>
+<script src="/dashboard-boot-v1.js"></script>

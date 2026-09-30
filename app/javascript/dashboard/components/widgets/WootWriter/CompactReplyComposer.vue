@@ -13,6 +13,7 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import { CAPTAIN_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import inboxMixin from 'shared/mixins/inboxMixin';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import ViewOnceToggle from 'dashboard/components-next/Conversation/ViewOnceToggle.vue';
 import CopilotMenuBar from './CopilotMenuBar.vue';
 import VideoCallButton from '../VideoCallButton.vue';
 import { REPLY_EDITOR_MODES, CHAR_LENGTH_WARNING } from './constants';
@@ -20,6 +21,7 @@ import { REPLY_EDITOR_MODES, CHAR_LENGTH_WARNING } from './constants';
 export default {
   name: 'CompactReplyComposer',
   components: {
+    ViewOnceToggle,
     LocationPicker: defineAsyncComponent(
       () => import('dashboard/components-next/Conversation/LocationPicker.vue')
     ),
@@ -33,6 +35,8 @@ export default {
   },
   mixins: [inboxMixin],
   props: {
+    allowAudioViewOnce: { type: Boolean, default: false },
+    audioViewOnce: { type: Boolean, default: false },
     mode: {
       type: String,
       default: REPLY_EDITOR_MODES.REPLY,
@@ -155,6 +159,7 @@ export default {
     },
   },
   emits: [
+    'update:audioViewOnce',
     'cancelAudioRecorder',
     'executeCopilotAction',
     'openContactPicker',
@@ -417,6 +422,7 @@ export default {
     :class="{
       'compact-composer--note': isNote,
       'compact-composer--audio': isRecordingAudio,
+      'flex-wrap': isRecordingAudio,
       'compact-composer--copilot': isCopilotActive,
     }"
   >
@@ -453,6 +459,12 @@ export default {
         variant="ghost"
         sm
         @click="$emit('restartAudioRecorder')"
+      />
+      <ViewOnceToggle
+        v-if="hasRecordedAudio && allowAudioViewOnce"
+        :model-value="audioViewOnce"
+        :disabled="isRecordedAudioSendPending"
+        @update:model-value="$emit('update:audioViewOnce', $event)"
       />
       <NextButton
         v-if="hasRecordedAudio"

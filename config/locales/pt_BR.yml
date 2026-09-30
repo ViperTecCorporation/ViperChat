@@ -17,6 +17,14 @@
 #To learn more, please read the Rails Internationalization guide
 #available at https://guides.rubyonrails.org/i18n.html.
 pt_BR:
+  dashboard_boot:
+    loading: 'Carregando aplicação…'
+    session: 'Preparando sua sessão…'
+    opening: 'Abrindo sua tela…'
+    slow: 'Está demorando mais que o esperado. Confira sua conexão ou tente novamente.'
+    failed: 'Não foi possível iniciar a aplicação. Confira sua conexão e tente novamente.'
+    retry: 'Tentar novamente'
+    javascript: 'Ative o JavaScript para abrir a aplicação.'
   hello: 'Olá, mundo'
   activerecord:
     attributes:

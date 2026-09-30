@@ -111,6 +111,10 @@ export const actions = {
     } catch (error) {
       if (error?.response?.status === 401) {
         clearCookiesOnLogout();
+      } else if (window.chatwootConfig?.isNativeApp) {
+        // Do not turn an unreachable server into a signed-out route/reload loop.
+        // The native startup shell handles this without clearing credentials.
+        throw error;
       }
     }
   },

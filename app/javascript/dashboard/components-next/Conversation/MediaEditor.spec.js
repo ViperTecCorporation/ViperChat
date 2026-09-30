@@ -53,6 +53,25 @@ describe('media editor batch', () => {
     );
     wrapper.unmount();
   });
+  it('sets view once only for the selected item in a batch', async () => {
+    const submitFile = vi.fn(async () => ({ ok: true, dispatched: true }));
+    const wrapper = mountEditor({
+      files: [image(), image()],
+      allowViewOnce: true,
+      submitFile,
+    });
+    await wrapper
+      .getComponent({ name: 'ViewOnceToggle' })
+      .get('button')
+      .trigger('click');
+    expect(wrapper.get('[aria-pressed="true"]').exists()).toBe(true);
+    await wrapper.get('[aria-label="MEDIA_EDITOR.SEND"]').trigger('click');
+    await flushPromises();
+    expect(submitFile).toHaveBeenCalledTimes(2);
+    expect(submitFile.mock.calls[0][2].viewOnce).toBe(true);
+    expect(submitFile.mock.calls[1][2].viewOnce).toBeUndefined();
+    wrapper.unmount();
+  });
   it('offers explicit server processing when the exported file fails acceptance', async () => {
     prepareVideo.mockRejectedValueOnce(new Error('VIDEO_EXPORT_NONCONFORMING'));
     const wrapper = mountEditor({

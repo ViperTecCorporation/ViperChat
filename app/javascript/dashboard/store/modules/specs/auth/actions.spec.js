@@ -17,6 +17,19 @@ vi.mock('axios');
 
 describe('#actions', () => {
   describe('#validityCheck', () => {
+    it('propagates native network failures without discarding the session', async () => {
+      const previousConfig = window.chatwootConfig;
+      window.chatwootConfig = { isNativeApp: true };
+      const error = new Error('offline');
+      axios.get.mockRejectedValue(error);
+      try {
+        await expect(actions.validityCheck({ commit })).rejects.toBe(error);
+        expect(APIHelpers.clearCookiesOnLogout).not.toHaveBeenCalled();
+        expect(commit).not.toHaveBeenCalled();
+      } finally {
+        window.chatwootConfig = previousConfig;
+      }
+    });
     it('sends correct actions if API is success', async () => {
       axios.get.mockResolvedValue({
         data: { payload: { data: { id: 1, name: 'John' } } },

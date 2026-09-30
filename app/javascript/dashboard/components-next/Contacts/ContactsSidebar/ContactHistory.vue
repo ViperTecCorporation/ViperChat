@@ -36,7 +36,7 @@ const contactConversations = computed(() =>
   </div>
   <div
     v-else-if="contactConversations.length > 0"
-    class="px-6 divide-y divide-n-strong [&>*:hover]:!border-y-transparent [&>*:hover+*]:!border-t-transparent"
+    class="min-w-0 px-3 lg:px-6 divide-y divide-n-strong [&>*:hover]:!border-y-transparent [&>*:hover+*]:!border-t-transparent"
   >
     <ConversationCard
       v-for="conversation in contactConversations"

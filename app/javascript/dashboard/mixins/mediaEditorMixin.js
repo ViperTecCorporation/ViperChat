@@ -72,7 +72,11 @@ export default {
       this.mediaEditorFiles = [];
       this.mediaEditorSession = null;
     },
-    async submitEditedMedia(file, caption, { videoQuality, onProgress } = {}) {
+    async submitEditedMedia(
+      file,
+      caption,
+      { videoQuality, onProgress, viewOnce } = {}
+    ) {
       const session = this.mediaEditorSession;
       const valid = () =>
         session &&
@@ -148,6 +152,16 @@ export default {
       };
       if (session.reply.id)
         payload.contentAttributes = { in_reply_to: session.reply.id };
+      if (
+        this.isAUnoapiChannel &&
+        viewOnce === true &&
+        /^(image|video)\//.test(file.type)
+      ) {
+        payload.contentAttributes = {
+          ...payload.contentAttributes,
+          view_once: true,
+        };
+      }
       if (
         this.isAUnoapiChannel &&
         file.type.startsWith('video/') &&

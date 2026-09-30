@@ -28,6 +28,7 @@ import Avatar from 'next/avatar/Avatar.vue';
 import TextBubble from './bubbles/Text/Index.vue';
 import ActivityBubble from './bubbles/Activity.vue';
 import ImageBubble from './bubbles/Image.vue';
+import ViewOnceBubble from './bubbles/ViewOnce.vue';
 import FileBubble from './bubbles/File.vue';
 import AudioBubble from './bubbles/Audio.vue';
 import VideoBubble from './bubbles/Video.vue';
@@ -37,6 +38,7 @@ import InstagramStoryBubble from './bubbles/InstagramStory.vue';
 import EmailBubble from './bubbles/Email/Index.vue';
 import UnsupportedBubble from './bubbles/Unsupported.vue';
 import ContactBubble from './bubbles/Contact.vue';
+import ContactsBubble from './bubbles/Contacts.vue';
 import DyteBubble from './bubbles/Dyte.vue';
 import LocationBubble from './bubbles/Location.vue';
 import CSATBubble from './bubbles/CSAT.vue';
@@ -375,10 +377,17 @@ const shouldRenderDeletedPlaceholder = computed(() => {
   return isMessageDeleted.value && !isDeletedContentPreserved.value;
 });
 
+const viewOnceRevealed = ref(false);
 const componentToRender = computed(() => {
   if (shouldRenderDeletedPlaceholder.value) {
     return TextBubble;
   }
+
+  if (
+    (props.contentAttributes.viewOnce || props.contentAttributes.view_once) &&
+    !viewOnceRevealed.value
+  )
+    return ViewOnceBubble;
 
   if (props.isEmailInbox && !props.private) {
     const emailInboxTypes = [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING];
@@ -438,6 +447,16 @@ const componentToRender = computed(() => {
   ];
   if (instagramSharedTypes.includes(props.contentAttributes.imageType)) {
     return InstagramStoryBubble;
+  }
+
+  const contactAttachments = (props.attachments || []).filter(
+    attachment => attachment.fileType === ATTACHMENT_TYPES.CONTACT
+  );
+  if (
+    contactAttachments.length > 1 ||
+    (!contactAttachments.length && props.contentAttributes?.contacts?.length)
+  ) {
+    return ContactsBubble;
   }
 
   if (Array.isArray(props.attachments) && props.attachments.length === 1) {
@@ -555,6 +574,7 @@ const shouldRenderMessage = computed(() => {
 
   return (
     hasAttachments ||
+    props.contentAttributes?.contacts?.length ||
     props.content ||
     isEmailContentType ||
     isUnsupported ||
@@ -872,7 +892,10 @@ provideMessageContext({
           >
             {{ t('CONVERSATION.SENT_BY') }} {{ senderDisplayName }}
           </span>
-          <Component :is="componentToRender" />
+          <Component
+            :is="componentToRender"
+            @reveal="viewOnceRevealed = true"
+          />
           <UnoapiWarning :content-attributes="contentAttributes" />
           <span
             v-if="shouldShowDeletedMediaNotice"

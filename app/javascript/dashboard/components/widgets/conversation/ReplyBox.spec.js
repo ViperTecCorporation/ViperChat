@@ -1,5 +1,52 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReplyBox from './ReplyBox.vue';
+import { useAlert } from 'dashboard/composables';
+
+vi.mock('dashboard/composables', async importOriginal => ({
+  ...(await importOriginal()),
+  useAlert: vi.fn(),
+}));
+
+describe('ReplyBox contact validation', () => {
+  it('warns before sending and preserves the selected contacts', () => {
+    const attachedContacts = [
+      { name: 'Incomplete', phone_number: '', email: '' },
+    ];
+    const context = {
+      attachedContacts,
+      serializeAttachedContact: ReplyBox.methods.serializeAttachedContact,
+      $t: (key, values) => `${key}: ${values?.name || ''}`,
+      sendMessageAsMultipleMessages: vi.fn(),
+    };
+    ReplyBox.methods.confirmOnSendReply.call(context);
+    expect(useAlert).toHaveBeenCalledWith(
+      expect.stringContaining('Incomplete')
+    );
+    expect(context.sendMessageAsMultipleMessages).not.toHaveBeenCalled();
+    expect(context.attachedContacts).toBe(attachedContacts);
+  });
+
+  it('keeps multiple valid contacts in a single outgoing payload', () => {
+    const context = {
+      attachedContacts: [
+        { name: 'First', phone_number: '+15555550101' },
+        { name: 'Second', email: 'second@example.com' },
+      ],
+      attachedFiles: [],
+      currentChat: { id: 1 },
+      sender: { id: 1 },
+      serializeAttachedContact: ReplyBox.methods.serializeAttachedContact,
+      setReplyToInPayload: payload => payload,
+      withGroupMentionsInPayload: payload => payload,
+    };
+    const messages = ReplyBox.methods.getMultipleMessagesPayload.call(
+      context,
+      ''
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0].contentAttributes.contacts).toHaveLength(2);
+  });
+});
 
 const createContext = overrides => ({
   isFocused: true,
@@ -178,6 +225,49 @@ describe('ReplyBox compact composer', () => {
     expect(ReplyBox.computed.messagePlaceHolder.call(context)).toBe(
       'CONVERSATION.REPLYBOX.COMPACT.PLACEHOLDER_WITH_SCHEDULE'
     );
+  });
+});
+
+describe('ReplyBox view-once audio', () => {
+  it.each([true, false])(
+    'marks only recorded audio when selected: %s',
+    selected => {
+      const context = {
+        isAUnoapiChannel: true,
+        recordedAudioViewOnce: selected,
+        attachedContacts: [],
+        attachedFiles: [
+          { isRecordedAudio: true, blobSignedId: 'audio-blob' },
+          { blobSignedId: 'document-blob' },
+        ],
+        currentChat: { id: 9 },
+        sender: { id: 7 },
+        setReplyToInPayload: payload => ({
+          ...payload,
+          contentAttributes: { in_reply_to: 42 },
+        }),
+        withGroupMentionsInPayload: payload => payload,
+      };
+      const messages = ReplyBox.methods.getMultipleMessagesPayload.call(
+        context,
+        ''
+      );
+      expect(messages[0].contentAttributes).toEqual({
+        in_reply_to: 42,
+        ...(selected ? { view_once: true } : {}),
+      });
+      expect(messages[1].contentAttributes).toEqual({ in_reply_to: 42 });
+    }
+  );
+
+  it('clears the selection when resetting the recorder', () => {
+    const context = {
+      recordedAudioViewOnce: true,
+      attachedFiles: [],
+      revokeAttachmentPreview: vi.fn(),
+    };
+    ReplyBox.methods.resetAudioRecorderInput.call(context);
+    expect(context.recordedAudioViewOnce).toBe(false);
   });
 });
 

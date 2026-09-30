@@ -30,6 +30,14 @@
 # available at https://guides.rubyonrails.org/i18n.html.
 
 en:
+  dashboard_boot:
+    loading: 'Loading application…'
+    session: 'Preparing your session…'
+    opening: 'Opening your screen…'
+    slow: 'This is taking longer than expected. Check your connection or try again.'
+    failed: 'The application could not start. Check your connection and try again.'
+    retry: 'Try again'
+    javascript: 'Enable JavaScript to open the application.'
   hello: 'Hello world'
   inbox:
     reauthorization:

@@ -139,6 +139,7 @@ onUnmounted(() => {
     <div
       v-if="conversations.length > 0"
       v-bind="attrs"
+      data-testid="conversation-bulk-bar"
       class="px-2 absolute bottom-20 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 w-full origin-bottom"
     >
       <div
@@ -148,15 +149,19 @@ onUnmounted(() => {
         {{ $t('BULK_ACTION.ALL_CONVERSATIONS_SELECTED_ALERT') }}
       </div>
       <div
-        class="flex items-center justify-between p-2 bg-n-button-color outline outline-1 -outline-offset-1 rounded-[10px] outline-n-weak shadow-[0_0_12px_0_rgba(27,40,59,0.08)]"
+        class="flex flex-wrap items-center justify-between gap-2 p-2 min-w-0 bg-n-button-color outline outline-1 -outline-offset-1 rounded-[10px] outline-n-weak shadow-[0_0_12px_0_rgba(27,40,59,0.08)]"
       >
-        <div class="ltr:ml-0.5 rtl:mr-0.5 flex items-center gap-1">
-          <label class="cursor-pointer flex items-center gap-1.5">
+        <div
+          class="flex flex-1 basis-64 min-w-0 items-center justify-between gap-2"
+        >
+          <label
+            class="cursor-pointer flex min-w-0 items-center gap-1.5 text-sm"
+          >
             <Checkbox
               v-model="allSelected"
               :indeterminate="!allConversationsSelected"
             />
-            <span class="cursor-pointer">
+            <span class="cursor-pointer min-w-0 break-words">
               {{
                 $t('BULK_ACTION.CONVERSATIONS_SELECTED', {
                   conversationCount: conversations.length,
@@ -164,16 +169,18 @@ onUnmounted(() => {
               }}
             </span>
           </label>
-          <div class="w-px h-3 bg-n-weak rounded-lg ltr:ml-1 rtl:mr-1" />
           <NextButton
             :label="$t('BULK_ACTION.CLEAR_SELECTION')"
             ghost
-            class="!text-n-blue-11 !px-1 !h-6"
+            class="shrink-0 !text-n-blue-11 !px-1 !min-h-11 sm:!min-h-8"
             sm
             @click="allSelected = false"
           />
         </div>
-        <div class="flex items-center gap-2">
+        <div
+          data-testid="conversation-bulk-actions"
+          class="relative flex flex-1 basis-64 min-w-0 items-center justify-between gap-1 [&>div]:!static [&>div>button]:!size-11 sm:[&>div>button]:!size-8 [&>div>div]:!inset-x-0 [&>div>div]:!bottom-full [&>div>div]:!w-full [&>div>div]:!max-h-[min(20rem,calc(100dvh-16rem))]"
+        >
           <BulkLabelActions @assign="onAssignLabels" />
           <BulkLabelActions
             action="remove"

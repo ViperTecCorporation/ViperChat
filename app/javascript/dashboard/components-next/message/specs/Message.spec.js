@@ -136,6 +136,7 @@ const mountMessage = props =>
     global: {
       stubs: {
         Avatar: true,
+        ContactsBubble: { template: '<div data-testid="contacts-bubble" />' },
         BaseBubble: {
           template: '<div v-bind="$attrs"><slot /></div>',
         },
@@ -153,6 +154,48 @@ const mountMessage = props =>
   });
 
 describe('Message', () => {
+  it('renders multiple contact attachments as a single contact bundle', () => {
+    const wrapper = mountMessage({
+      content: null,
+      attachments: [
+        { id: 1, fileType: 'contact' },
+        { id: 2, fileType: 'contact' },
+      ],
+    });
+    expect(wrapper.findAll('[data-testid="contacts-bubble"]')).toHaveLength(1);
+  });
+
+  it('renders old contact metadata without attachments', () => {
+    const wrapper = mountMessage({
+      content: null,
+      contentAttributes: {
+        contacts: [{ formattedName: 'Old contact' }],
+      },
+    });
+    expect(wrapper.find('[data-testid="contacts-bubble"]').exists()).toBe(true);
+  });
+  it.each([MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING])(
+    'hides view-once media until explicitly opened for direction %s',
+    async messageType => {
+      const props = {
+        messageType,
+        attachments: [imageAttachment],
+        contentAttributes: { view_once: true },
+      };
+      const wrapper = mountMessage(props);
+      expect(wrapper.find('[data-testid="image-bubble"]').exists()).toBe(false);
+      expect(wrapper.find('video, audio, img').exists()).toBe(false);
+      await wrapper.get('button').trigger('click');
+      expect(wrapper.find('[data-testid="image-bubble"]').exists()).toBe(true);
+      wrapper.unmount();
+      const reopened = mountMessage(props);
+      expect(reopened.find('[data-testid="image-bubble"]').exists()).toBe(
+        false
+      );
+      reopened.unmount();
+    }
+  );
+
   it('loads the preview only after visibility and retains details if Google fails', async () => {
     const wrapper = mountMessage({
       content: 'Viper Tec',

@@ -157,7 +157,18 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
   def outgoing_message_payload(request_body, message)
     quality = message.content_attributes&.[]('video_quality')
     request_body['video']['quality'] = quality if request_body['type'] == 'video' && %w[sd hd].include?(quality)
+    apply_view_once_option(request_body, message)
     Whatsapp::Unoapi::OutgoingIdentityPayload.new(request_body: request_body, message: message, inbox: whatsapp_channel.inbox).perform
+  end
+
+  def apply_view_once_option(request_body, message)
+    return unless message.content_attributes&.[]('view_once') == true
+
+    media_type = (request_body['type'] || request_body[:type]).to_s
+    return unless %w[image video audio].include?(media_type)
+
+    media = request_body[media_type] || request_body[media_type.to_sym]
+    media['view_once'] = true
   end
 
   def should_prefix_sender_name?(message)
