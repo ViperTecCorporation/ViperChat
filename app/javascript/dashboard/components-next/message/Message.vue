@@ -146,6 +146,7 @@ const props = defineProps({
   senderId: { type: Number, default: null },
   senderType: { type: String, default: null },
   sourceId: { type: String, default: '' }, // eslint-disable-line vue/no-unused-properties
+  deliveryDestination: { type: String, default: 'channel' }, // eslint-disable-line vue/no-unused-properties
   isForwardSelectionActive: { type: Boolean, default: false },
   isForwardSelected: { type: Boolean, default: false },
 });

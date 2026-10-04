@@ -7,7 +7,7 @@ class Messages::MessageBuilder
 
   def initialize(user, conversation, params)
     @params = params
-    @private = params[:private] || false
+    @private = ActiveModel::Type::Boolean.new.cast(params[:private]) || false
     @conversation = conversation
     @user = user
     @account = conversation.account
@@ -49,7 +49,8 @@ class Messages::MessageBuilder
     location = content_attributes.with_indifferent_access[:location]
     return if location.nil?
 
-    supported = @conversation.inbox.whatsapp? && %w[unoapi whatsapp_cloud].include?(@conversation.inbox.channel.provider)
+    supported = @params[:delivery_destination] == 'web' ||
+                (@conversation.inbox.whatsapp? && %w[unoapi whatsapp_cloud].include?(@conversation.inbox.channel.provider))
     raise ArgumentError, 'Location requires an outgoing WhatsApp message' unless supported && @message.outgoing? && !@message.private?
     raise ArgumentError, 'Location must be sent separately' if @attachments.present? || contact_attachments.present?
     raise ArgumentError, 'Invalid location' unless location.is_a?(Hash)
@@ -270,6 +271,7 @@ class Messages::MessageBuilder
       items: @items,
       in_reply_to: @in_reply_to,
       echo_id: @params[:echo_id],
+      delivery_destination: @private ? 'channel' : (@params[:delivery_destination].presence || 'channel'),
     }.merge(external_created_at)
       .merge(automation_rule_id)
       .merge(campaign_id)
@@ -279,6 +281,8 @@ class Messages::MessageBuilder
   end
 
   def params_status_progress?
+    return false if @params[:delivery_destination] == 'web'
+
     @params[:status].blank? && @message_type == 'outgoing' && !@private && @params[:action] == 'create' && (@conversation.inbox&.whatsapp? || @conversation.inbox&.notifica_me?)
   end
 

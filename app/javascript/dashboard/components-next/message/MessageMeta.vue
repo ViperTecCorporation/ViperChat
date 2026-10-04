@@ -32,6 +32,7 @@ const {
   isPrivate,
   createdAt,
   sourceId,
+  deliveryDestination,
   messageType,
   contentAttributes,
 } = useMessageContext();
@@ -138,6 +139,8 @@ const isRead = computed(() => {
 });
 
 const statusToShow = computed(() => {
+  if (deliveryDestination?.value === 'web') return status.value;
+
   if (isRead.value) return MESSAGE_STATUS.READ;
   if (isDelivered.value) return MESSAGE_STATUS.DELIVERED;
   if (isSent.value) return MESSAGE_STATUS.SENT;

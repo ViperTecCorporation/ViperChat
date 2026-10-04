@@ -2,11 +2,30 @@ require 'cgi'
 
 class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudService # rubocop:disable Metrics/ClassLength
   def send_message(phone_number, message)
+    return send_web_attendance_invitation(phone_number, message) if message.content_attributes['web_attendance_invitation_id'].present?
+
     return super unless pix_payment_request?(message)
 
     send_pix_payment_request(phone_number, message)
   rescue Whatsapp::Unoapi::StickerTranscoder::Error => e
     fail_sticker(message, e.message)
+  end
+
+  def web_invitation_messages_path
+    messages_path
+  end
+
+  def web_invitation_payload(phone_number, message, invitation)
+    if message.content_attributes['web_attendance_text_fallback']
+      return { messaging_product: 'whatsapp', to: phone_number, type: 'text',
+               text: { body: "#{message.outgoing_content}\n#{invitation.link}" } }
+    end
+
+    cta = { title: message.content_attributes.dig('web_attendance_cta', 'title'), link: invitation.link,
+            webview_presentation: 'full', webview_interaction: true }
+    { messaging_product: 'whatsapp', to: phone_number, type: 'interactive',
+      interactive: { type: 'button', body: { text: message.outgoing_content },
+                     action: { buttons: [{ type: 'cta_url', url: cta }] } } }
   end
 
   def validate_provider_config?

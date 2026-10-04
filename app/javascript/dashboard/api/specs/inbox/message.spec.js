@@ -53,6 +53,31 @@ describe('#ConversationAPI', () => {
     });
   });
   describe('#buildCreatePayload', () => {
+    it('routes text, contacts and location JSON to Web', () => {
+      [
+        undefined,
+        { contacts: [{ name: 'A' }] },
+        { location: { latitude: 1, longitude: 2 } },
+      ].forEach(contentAttributes => {
+        expect(
+          buildCreatePayload({
+            message: 'Web',
+            deliveryDestination: 'web',
+            contentAttributes,
+          }).delivery_destination
+        ).toBe('web');
+      });
+    });
+
+    it('routes attachments and recorded audio FormData to Web', () => {
+      const payload = buildCreatePayload({
+        files: [new Blob(['audio'], { type: 'audio/ogg' })],
+        isVoiceMessage: true,
+        deliveryDestination: 'web',
+      });
+      expect(payload.get('delivery_destination')).toBe('web');
+      expect(payload.get('is_voice_message')).toBe('true');
+    });
     it('builds form payload if file is available', () => {
       const formPayload = buildCreatePayload({
         message: 'test content',

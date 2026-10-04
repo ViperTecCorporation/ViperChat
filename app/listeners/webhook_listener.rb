@@ -1,5 +1,7 @@
 class WebhookListener < BaseListener
   def conversation_status_changed(event)
+    return if event.data[:web_attendance]
+
     conversation = extract_conversation_and_account(event)[0]
     changed_attributes = extract_changed_attributes(event)
     inbox = conversation.inbox
@@ -8,6 +10,8 @@ class WebhookListener < BaseListener
   end
 
   def conversation_updated(event)
+    return if event.data[:web_attendance]
+
     conversation = extract_conversation_and_account(event)[0]
     changed_attributes = extract_changed_attributes(event)
     inbox = conversation.inbox
@@ -16,6 +20,8 @@ class WebhookListener < BaseListener
   end
 
   def conversation_created(event)
+    return if event.data[:web_attendance]
+
     conversation = extract_conversation_and_account(event)[0]
     inbox = conversation.inbox
     payload = conversation.webhook_data.merge(event: __method__.to_s)
@@ -26,6 +32,7 @@ class WebhookListener < BaseListener
     message = extract_message_and_account(event)[0]
     inbox = message.inbox
 
+    return if event.data[:web_attendance] || message.web_attendance?
     return unless message.webhook_sendable?
 
     payload = message.webhook_data.merge(event: __method__.to_s)
@@ -36,6 +43,7 @@ class WebhookListener < BaseListener
     message = extract_message_and_account(event)[0]
     inbox = message.inbox
 
+    return if event.data[:web_attendance] || message.web_attendance?
     return unless message.webhook_sendable?
 
     payload = message.webhook_data.merge(event: __method__.to_s)
@@ -52,12 +60,16 @@ class WebhookListener < BaseListener
   end
 
   def contact_created(event)
+    return if event.data[:web_attendance]
+
     contact, account = extract_contact_and_account(event)
     payload = contact.webhook_data.merge(event: __method__.to_s)
     deliver_account_webhooks(payload, account)
   end
 
   def contact_updated(event)
+    return if event.data[:web_attendance]
+
     contact, account = extract_contact_and_account(event)
     changed_attributes = extract_changed_attributes(event)
     return if changed_attributes.blank?

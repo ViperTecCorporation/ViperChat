@@ -6,14 +6,28 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   end
 
   def perform_reply
+    return send_web_invitation if message.content_attributes['web_attendance_invitation_id'].present?
+
     return if message.message_type == :outgoing && message.source_id&.is_present? # is message send by own
 
-    should_send_template_message = template_params.present? || (template_required? && !message.conversation.can_reply?)
-    if should_send_template_message
+    if should_send_template_message?
       send_template_message
     else
       send_session_message
     end
+  end
+
+  def should_send_template_message?
+    template_params.present? || (template_required? && !message.conversation.can_reply?)
+  end
+
+  def send_web_invitation
+    unless message.conversation.can_reply?
+      message.update!(status: :failed, external_error: 'The WhatsApp reply window is closed; an approved template is required')
+      return
+    end
+
+    send_session_message
   end
 
   def send_template_message

@@ -10,6 +10,54 @@ RSpec.describe Message do
     # rubocop:enable RSpec/AnyInstance
   end
 
+  describe 'notification reading on agent reply' do
+    let(:conversation) { create(:conversation) }
+    let(:account) { conversation.account }
+    let(:agent) { create(:user, account: account) }
+    let!(:notification) { create(:notification, account: account, primary_actor: conversation, user: agent) }
+
+    it 'marks only the replying agent notifications as read and broadcasts the update' do
+      other_agent = create(:notification, account: account, primary_actor: conversation)
+      other_conversation = create(:notification, account: account, user: agent)
+      allow(Rails.configuration.dispatcher).to receive(:dispatch)
+      create(:message, account: account, conversation: conversation, sender: agent, message_type: :outgoing)
+
+      expect(notification.reload.read_at).to be_present
+      expect(other_agent.reload.read_at).to be_nil
+      expect(other_conversation.reload.read_at).to be_nil
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+        'notification.updated', kind_of(Time), notification: notification
+      )
+    end
+
+    it 'works for public Web replies without sending the message through WhatsApp' do
+      channel = create(:channel_whatsapp, account: account, provider: 'unoapi', sync_templates: false, validate_provider_config: false)
+      channel.inbox.update!(web_attendance_enabled: true)
+      conversation.update!(inbox: channel.inbox)
+      expect(SendReplyJob).not_to receive(:perform_later)
+      create(:message, account: account, conversation: conversation, sender: agent, message_type: :outgoing, delivery_destination: 'web')
+      expect(notification.reload.read_at).to be_present
+    end
+
+    it 'does not treat private notes, incoming messages, automated replies or failed messages as agent replies' do
+      create(:message, account: account, conversation: conversation, sender: agent, message_type: :outgoing, private: true)
+      create(:message, account: account, conversation: conversation, sender: conversation.contact, message_type: :incoming)
+      create(:message, account: account, conversation: conversation, sender: agent, message_type: :outgoing,
+                       content_attributes: { automation_rule_id: 1 })
+      create(:message, account: account, conversation: conversation, sender: agent, message_type: :outgoing, status: :failed)
+      expect(notification.reload.read_at).to be_nil
+    end
+
+    it 'preserves existing read timestamps and notifications newer than the reply' do
+      notification.update!(read_at: 1.hour.ago)
+      original_read_at = notification.reload.read_at
+      newer = create(:notification, account: account, primary_actor: conversation, user: agent, created_at: 1.minute.from_now)
+      create(:message, account: account, conversation: conversation, sender: agent, message_type: :outgoing)
+      expect(notification.reload.read_at).to eq(original_read_at)
+      expect(newer.reload.read_at).to be_nil
+    end
+  end
+
   context 'with validations' do
     it { is_expected.to validate_presence_of(:inbox_id) }
     it { is_expected.to validate_presence_of(:conversation_id) }

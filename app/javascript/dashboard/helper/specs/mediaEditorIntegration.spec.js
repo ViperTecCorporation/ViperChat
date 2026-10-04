@@ -41,6 +41,18 @@ const makeVm = () => {
   };
 };
 describe('editor upload and message integration', () => {
+  it('keeps the session web destination through an edited-media upload', async () => {
+    const vm = makeVm();
+    vm.mediaEditorSession.deliveryDestination = 'web';
+    vm.isAUnoapiChannel = true;
+    await mixin.methods.submitEditedMedia.call(vm, file, 'Web image', {
+      viewOnce: true,
+    });
+    expect(vm.$store.dispatch.mock.calls[0][1]).toMatchObject({
+      delivery_destination: 'web',
+      contentAttributes: { view_once: true },
+    });
+  });
   it.each([true, false])(
     'preserves the view-once choice %s in the pending message',
     async viewOnce => {

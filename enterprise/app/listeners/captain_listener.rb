@@ -2,6 +2,8 @@ class CaptainListener < BaseListener
   include ::Events::Types
 
   def conversation_resolved(event)
+    return if event.data[:web_attendance]
+
     conversation = extract_conversation_and_account(event)[0]
     assistant = conversation.inbox.captain_assistant
 

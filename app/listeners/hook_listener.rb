@@ -37,6 +37,8 @@ class HookListener < BaseListener
   private
 
   def execute_hooks(event, message)
+    return if event.data[:web_attendance] || message.web_attendance?
+
     message.account.hooks.find_each do |hook|
       # In case of dialogflow, we would have a hook for each inbox.
       # Which means we will execute the same hook multiple times if the below filter isn't there
@@ -48,6 +50,8 @@ class HookListener < BaseListener
   end
 
   def execute_account_hooks(event, account, event_data = {})
+    return if event.data[:web_attendance]
+
     account.hooks.account_hooks.find_each do |hook|
       next unless supported_hook_event?(hook, event.name)
 

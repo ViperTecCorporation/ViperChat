@@ -100,6 +100,7 @@ export const createPendingMessage = data => {
     created_at: timestamp,
     message_type: MESSAGE_TYPE.OUTGOING,
     conversation_id: data.conversationId,
+    delivery_destination: data.delivery_destination || 'channel',
     attachments,
   };
 

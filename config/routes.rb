@@ -1,4 +1,13 @@
 Rails.application.routes.draw do
+  get '/web-attendance', to: 'web_attendance#show'
+  scope '/web-attendance/api', module: :web_attendance do
+    post '/session', to: 'sessions#create'
+    get '/session', to: 'sessions#show'
+    post '/messages', to: 'sessions#messages'
+    post '/seen', to: 'sessions#seen'
+    post '/presence', to: 'presence#create'
+    get '/attachments/:id', to: 'sessions#attachment'
+  end
   # AUTH STARTS
   mount_devise_token_auth_for 'User', at: 'auth', controllers: {
     confirmations: 'devise_overrides/confirmations',
@@ -165,6 +174,10 @@ Rails.application.routes.draw do
             end
             scope module: :conversations do
               resources :links, only: [:index]
+              resource :web_attendance, only: [:show, :create, :destroy], controller: :web_attendance do
+                post :seen
+                post :fallback
+              end
               resources :messages, only: [:index, :create, :destroy, :update] do
                 member do
                   post :translate

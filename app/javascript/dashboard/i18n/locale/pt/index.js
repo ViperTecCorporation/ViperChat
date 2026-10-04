@@ -1,4 +1,5 @@
 import advancedFilters from './advancedFilters.json';
+import webAttendance from './webAttendance.json';
 import agentBots from './agentBots.json';
 import agentMgmt from './agentMgmt.json';
 import attributesMgmt from './attributesMgmt.json';
@@ -38,6 +39,7 @@ import whatsappTemplates from './whatsappTemplates.json';
 import webphone from './webphone.json';
 
 export default {
+  ...webAttendance,
   ...advancedFilters,
   ...agentBots,
   ...agentMgmt,

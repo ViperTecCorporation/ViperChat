@@ -89,6 +89,7 @@ import {
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { emitter } from 'shared/helpers/mitt';
+import { attendanceDraftKey } from 'dashboard/helper/webAttendance';
 
 const GROUP_CONTACT_MENTION_REGEX =
   /\[@([^\]]+)\]\(mention:\/\/group[_-]contact\/(\d+)\/([^)]+)\)|mention:\/\/group[_-]contact\/(\d+)\/([^\s)]+)/g;
@@ -135,12 +136,17 @@ export default {
     keyboardEventListenerMixins,
   ],
   props: {
+    deliveryDestination: { type: String, default: 'channel' },
+    isComposerActive: { type: Boolean, default: true },
+    managedDestinations: { type: Boolean, default: false },
+    initialReplyMode: { type: String, default: REPLY_EDITOR_MODES.REPLY },
+    webAttendanceActive: { type: Boolean, default: false },
     popOutReplyBox: {
       type: Boolean,
       default: false,
     },
   },
-  emits: ['update:popOutReplyBox', 'toggleEditorSize'],
+  emits: ['update:popOutReplyBox', 'toggleEditorSize', 'setReplyMode'],
   setup() {
     const {
       uiSettings,
@@ -182,7 +188,9 @@ export default {
       isRecordingAudio: false,
       recordingAudioState: '',
       recordingAudioDurationText: '',
-      replyType: REPLY_EDITOR_MODES.REPLY,
+      replyType: this.managedDestinations
+        ? this.initialReplyMode
+        : REPLY_EDITOR_MODES.REPLY,
       bccEmails: '',
       ccEmails: '',
       toEmails: '',
@@ -226,6 +234,9 @@ export default {
     };
   },
   computed: {
+    isWebDestination() {
+      return this.deliveryDestination === 'web';
+    },
     ...mapGetters({
       currentChat: 'getSelectedChat',
       messageSignature: 'getMessageSignature',
@@ -252,6 +263,7 @@ export default {
       const config = this.inbox?.provider_config || {};
 
       return (
+        !this.isWebDestination &&
         this.isAUnoapiChannel &&
         !this.isOnPrivateNote &&
         !this.currentChat?.group &&
@@ -292,6 +304,7 @@ export default {
     },
     canUseGroupMentions() {
       return (
+        !this.isWebDestination &&
         this.currentChat?.group &&
         this.isAUnoapiChannel &&
         !this.isOnPrivateNote
@@ -313,13 +326,18 @@ export default {
         this.inboxId
       );
       return (
+        !this.isWebDestination &&
         !!(templates && templates.length) &&
         !this.isPrivate &&
         !this.isAUnoapiChannel
       );
     },
     showContentTemplates() {
-      return this.isATwilioWhatsAppChannel && !this.isPrivate;
+      return (
+        !this.isWebDestination &&
+        this.isATwilioWhatsAppChannel &&
+        !this.isPrivate
+      );
     },
     isPrivate() {
       if (
@@ -347,6 +365,7 @@ export default {
       return !!stripped.trim();
     },
     isReplyRestricted() {
+      if (this.isWebDestination) return !this.webAttendanceActive;
       return (
         !this.currentChat?.can_reply &&
         !(this.isAWhatsAppChannel || this.isAPIInbox)
@@ -372,7 +391,10 @@ export default {
         if (this.isPrivate) {
           return this.$t('CONVERSATION.REPLYBOX.COMPACT.PRIVATE_PLACEHOLDER');
         }
-        if (this.inbox?.channel_type === 'Channel::Whatsapp') {
+        if (
+          !this.isWebDestination &&
+          this.inbox?.channel_type === 'Channel::Whatsapp'
+        ) {
           return this.$t(
             'CONVERSATION.REPLYBOX.COMPACT.PLACEHOLDER_WITH_SCHEDULE'
           );
@@ -383,7 +405,11 @@ export default {
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
       const shortcuts = [];
-      if (!this.isPrivate && this.inbox?.channel_type === 'Channel::Whatsapp') {
+      if (
+        !this.isWebDestination &&
+        !this.isPrivate &&
+        this.inbox?.channel_type === 'Channel::Whatsapp'
+      ) {
         shortcuts.push(this.$t('CONVERSATION.FOOTER.SCHEDULE_SHORTCUT'));
       }
       if (this.captainTasksEnabled) {
@@ -401,6 +427,7 @@ export default {
       return this.getAccount(this.currentChat?.account_id)?.settings || {};
     },
     useCompactMessageComposer() {
+      if (this.managedDestinations) return true;
       return (
         !this.isAnEmailChannel &&
         this.accountSettings.use_legacy_message_composer !== true
@@ -581,7 +608,7 @@ export default {
       return this.conversationId;
     },
     editorStateId() {
-      return `draft-${this.conversationIdByRoute}-${this.replyType}`;
+      return this.getDraftKey();
     },
     audioRecordFormat() {
       if (this.isAWhatsAppCloudChannel) {
@@ -657,6 +684,9 @@ export default {
       return !this.showAudioRecorderEditor && !this.copilot.isActive.value;
     },
     isEditorDisabled() {
+      if (!this.isComposerActive) return true;
+      if (this.isWebDestination && !this.isOnPrivateNote)
+        return !this.webAttendanceActive;
       return (
         (this.isAWhatsAppChannel || this.isAPIInbox) &&
         !this.isOnPrivateNote &&
@@ -665,6 +695,23 @@ export default {
     },
   },
   watch: {
+    isComposerActive(active) {
+      if (!active) {
+        this.isFocused = false;
+        this.saveDraft(this.conversationIdByRoute, this.replyType);
+        this.showContactAttachmentModal = false;
+        this.showWhatsAppTemplatesModal = false;
+        this.showContentTemplatesModal = false;
+        this.showScheduleModal = false;
+        this.showStickerPicker = false;
+        this.showEmojiPicker = false;
+        if (this.isRecordingAudio && !this.hasRecordedAudio) {
+          this.$refs.audioRecorderInput?.stopRecording();
+        } else if (this.recordingAudioState === 'playing') {
+          this.$refs.audioRecorderInput?.playPause();
+        }
+      }
+    },
     currentChat(conversation, oldConversation) {
       const { can_reply: canReply } = conversation;
       if (oldConversation && oldConversation.id !== conversation.id) {
@@ -676,6 +723,12 @@ export default {
         this.copilot.reset();
       }
 
+      if (this.managedDestinations) {
+        if (oldConversation && oldConversation.id !== conversation.id) {
+          this.inReplyTo = {};
+        }
+        return;
+      }
       if (this.isOnPrivateNote) {
         return;
       }
@@ -753,6 +806,7 @@ export default {
     emitter.on(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   unmounted() {
+    this.saveDraft(this.conversationIdByRoute, this.replyType);
     this.revokeAttachmentPreviews();
     clearTimeout(this.groupMentionFetchTimeout);
     document.removeEventListener('paste', this.onPaste);
@@ -768,7 +822,17 @@ export default {
     emitter.off(CMD_AI_ASSIST, this.executeCopilotAction);
   },
   methods: {
+    keydownWrapper(handler) {
+      const callback = keyboardEventListenerMixins.methods.keydownWrapper.call(
+        this,
+        handler
+      );
+      return event => {
+        if (this.isComposerActive) callback(event);
+      };
+    },
     onNativeShareReceived({ text, subject, files = [] }) {
+      if (!this.isComposerActive) return;
       const sharedText = [subject, text].filter(Boolean).join('\n');
       if (sharedText) this.addIntoEditor(sharedText);
 
@@ -797,6 +861,7 @@ export default {
       });
     },
     handleScheduleShortcut(event) {
+      if (!this.isComposerActive || this.isWebDestination) return;
       if (
         (event.ctrlKey || event.metaKey) &&
         event.key.toLowerCase() === 's' &&
@@ -915,7 +980,11 @@ export default {
       conversationId = this.conversationIdByRoute,
       replyType = this.replyType
     ) {
-      return `draft-${conversationId}-${replyType}`;
+      return attendanceDraftKey(
+        conversationId,
+        replyType,
+        this.deliveryDestination
+      );
     },
     getCopilotAcceptedMessage(replyType = this.replyType) {
       const key = this.getDraftKey(this.conversationIdByRoute, replyType);
@@ -1107,6 +1176,7 @@ export default {
       );
     },
     onPaste(e) {
+      if (!this.isComposerActive) return;
       // Don't handle paste if compose new conversation modal is open
       if (this.newConversationModalActive) return;
 
@@ -1189,6 +1259,7 @@ export default {
       this.showStickerPicker = true;
     },
     openScheduleModal() {
+      if (this.isWebDestination) return;
       this.scheduledAt = this.toDatetimeLocal(new Date(Date.now() + 300000));
       this.scheduledLabelId = '';
       this.scheduledReason = '';
@@ -1433,6 +1504,7 @@ export default {
           });
     },
     async onSendReply() {
+      if (this.isComposerActive === false || this.isEditorDisabled) return;
       if (this.hasRecordedAudio && this.isRecordedAudioUploadPending) {
         this.sendRecordedAudioAfterUpload = true;
         return;
@@ -1484,10 +1556,12 @@ export default {
       copilotAcceptedMessage = ''
     ) {
       try {
-        await this.$store.dispatch(
-          'createPendingMessageAndSend',
-          messagePayload
-        );
+        await this.$store.dispatch('createPendingMessageAndSend', {
+          ...messagePayload,
+          delivery_destination: messagePayload.private
+            ? 'channel'
+            : this.deliveryDestination || 'channel',
+        });
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
         emitter.emit(BUS_EVENTS.MESSAGE_SENT);
         this.removeFromDraft();
@@ -1516,6 +1590,10 @@ export default {
       this.hideContentTemplatesModal();
     },
     setReplyMode(mode = REPLY_EDITOR_MODES.REPLY) {
+      if (this.managedDestinations) {
+        this.$emit('setReplyMode', mode);
+        return;
+      }
       // Clear attachments when switching between private note and reply modes
       // This is to prevent from breaking the upload rules
       if (this.attachedFiles.length > 0) this.clearAttachedFiles();
@@ -1535,10 +1613,12 @@ export default {
       this.updateEditorSelectionWith = '';
     },
     addIntoEditor(content) {
+      if (!this.isComposerActive) return;
       this.updateEditorSelectionWith = content;
       this.onFocus();
     },
     executeCopilotAction(action, data) {
+      if (!this.isComposerActive) return;
       this.copilot.execute(action, data);
     },
     clearMessage() {
@@ -1644,6 +1724,7 @@ export default {
       useAlert(this.$t('CONVERSATION.REPLYBOX.TIP_AUDIORECORDER_ERROR'));
     },
     toggleTyping(status) {
+      if (!this.isComposerActive || this.isWebDestination) return;
       const conversationId = this.currentChat.id;
       const isPrivate = this.isPrivate;
 
@@ -1883,6 +1964,7 @@ export default {
       this.bccEmails = bcc.join(', ');
     },
     fetchAndSetReplyTo() {
+      if (!this.isComposerActive) return;
       const replyStorageKey = LOCAL_STORAGE_KEYS.MESSAGE_REPLY_TO;
       const replyToMessageId = LocalStorage.getFromJsonStore(
         replyStorageKey,
@@ -1897,6 +1979,7 @@ export default {
       });
     },
     onReplyToMessage(message) {
+      if (!this.isComposerActive) return;
       this.inReplyTo = message || null;
       if (!this.inReplyTo) {
         this.fetchAndSetReplyTo();
@@ -1972,7 +2055,7 @@ export default {
 
 <template>
   <MediaEditor
-    v-if="mediaEditorSession"
+    v-if="mediaEditorSession && isComposerActive"
     :files="mediaEditorFiles"
     :caption="mediaEditorSession.caption"
     :allow-view-once="isAUnoapiChannel"
@@ -2051,6 +2134,7 @@ export default {
           :mode="replyType"
           :conversation-id="conversationId"
           :inbox="inbox"
+          :delivery-destination="deliveryDestination"
           :editor-content="message"
           :has-content="hasComposerContent"
           :is-send-disabled="isReplyButtonDisabled"
@@ -2059,7 +2143,9 @@ export default {
           :show-file-upload="showFileUpload"
           :show-audio-recorder="showAudioRecorder"
           :enable-multiple-file-upload="enableMultipleFileUpload"
-          :new-conversation-modal-active="newConversationModalActive"
+          :new-conversation-modal-active="
+            newConversationModalActive || !isComposerActive
+          "
           :conversation-type="conversationType"
           :enable-whats-app-templates="showWhatsappTemplates"
           :enable-content-templates="showContentTemplates"
@@ -2128,7 +2214,7 @@ export default {
             @send="copilot.sendFollowUp"
           />
           <WootMessageEditor
-            v-else-if="!showAudioRecorderEditor"
+            v-else-if="!showAudioRecorderEditor && isComposerActive"
             ref="messageEditor"
             v-model="message"
             :conversation-id="conversationId"
@@ -2188,7 +2274,7 @@ export default {
             @send="copilot.sendFollowUp"
           />
           <WootMessageEditor
-            v-else-if="!showAudioRecorderEditor"
+            v-else-if="!showAudioRecorderEditor && isComposerActive"
             ref="messageEditor"
             v-model="message"
             :conversation-id="conversationId"

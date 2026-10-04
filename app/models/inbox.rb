@@ -58,6 +58,11 @@ class Inbox < ApplicationRecord
   validates :out_of_office_message, length: { maximum: Limits::OUT_OF_OFFICE_MESSAGE_MAX_LENGTH }
   validates :greeting_message, length: { maximum: Limits::GREETING_MESSAGE_MAX_LENGTH }
   validate :ensure_valid_max_assignment_limit
+  validates :web_attendance_button_text, presence: true, length: { maximum: :web_attendance_button_limit }
+  validates :web_attendance_invitation_message, length: { maximum: :web_attendance_content_limit }
+  validates :greeting_message, length: { maximum: :web_attendance_content_limit }, if: :web_attendance_greeting_enabled?
+  before_validation :normalize_cloud_web_attendance_button
+  validate :validate_web_attendance_provider
 
   belongs_to :account
   belongs_to :portal, optional: true
@@ -84,6 +89,7 @@ class Inbox < ApplicationRecord
 
   enum sender_name_type: { friendly: 0, professional: 1 }
 
+  after_update :revoke_disabled_web_attendance
   before_destroy :capture_filtered_unread_count_user_ids, prepend: true
   after_destroy :delete_round_robin_agents
 
@@ -170,6 +176,39 @@ class Inbox < ApplicationRecord
 
   def whatsapp?
     channel_type == 'Channel::Whatsapp'
+  end
+
+  def web_attendance_available?
+    web_attendance_enabled? && whatsapp? && %w[unoapi whatsapp_cloud].include?(channel.provider)
+  end
+
+  def web_attendance_content_limit
+    whatsapp? && channel.provider == 'whatsapp_cloud' ? 1024 : 4096
+  end
+
+  def web_attendance_button_limit
+    web_attendance_enabled? && whatsapp? && channel.provider == 'whatsapp_cloud' ? 20 : 60
+  end
+
+  def normalize_cloud_web_attendance_button
+    return unless web_attendance_enabled? && whatsapp? && channel.provider == 'whatsapp_cloud'
+
+    self.web_attendance_button_text = 'Abrir atendimento' if web_attendance_button_text == 'Continuar atendimento'
+  end
+
+  def validate_web_attendance_provider
+    return unless web_attendance_enabled?
+    return if whatsapp? && %w[unoapi whatsapp_cloud].include?(channel.provider)
+
+    errors.add(:web_attendance_enabled, 'requires UnoProvider or WhatsApp Cloud')
+  end
+
+  def revoke_disabled_web_attendance
+    return unless saved_change_to_web_attendance_enabled? && !web_attendance_enabled?
+
+    WebAttendanceInvitation.where(conversation_id: conversations.select(:id), revoked_at: nil).find_each do |invite|
+      invite.update!(revoked_at: Time.current)
+    end
   end
 
   def notifica_me?

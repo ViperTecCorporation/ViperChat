@@ -14,6 +14,7 @@ export const buildCreatePayload = ({
   toEmails = '',
   templateParams,
   isVoiceMessage = false,
+  deliveryDestination,
 }) => {
   let payload;
   if (files && files.length !== 0) {
@@ -54,6 +55,13 @@ export const buildCreatePayload = ({
       template_params: templateParams,
     };
   }
+  if (deliveryDestination) {
+    if (payload instanceof FormData) {
+      payload.append('delivery_destination', deliveryDestination);
+    } else {
+      payload.delivery_destination = deliveryDestination;
+    }
+  }
   return payload;
 };
 
@@ -78,6 +86,7 @@ class MessageApi extends ApiClient {
     toEmails = '',
     templateParams,
     isVoiceMessage = false,
+    delivery_destination: deliveryDestination,
   }) {
     const normalizedContentAttributes =
       contentAttributes || contentAttributesSnake;
@@ -98,6 +107,7 @@ class MessageApi extends ApiClient {
         toEmails,
         templateParams,
         isVoiceMessage,
+        deliveryDestination,
       }),
     });
   }

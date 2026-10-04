@@ -702,7 +702,74 @@ describe('#addMentions', () => {
     ]);
   });
 
+  it.each(['unoapi', 'whatsapp_cloud'])(
+    'does not mark both destinations read when reconnecting %s',
+    async provider => {
+      axios.get.mockResolvedValue({
+        data: { payload: [{ id: 2, created_at: 2 }], meta: {} },
+      });
+      const dispatchRead = vi.fn();
+      await actions.syncActiveConversationMessages(
+        {
+          commit: vi.fn(),
+          dispatch: dispatchRead,
+          rootGetters: {
+            'inboxes/getInbox': () => ({
+              channel_type: 'Channel::Whatsapp',
+              provider,
+              web_attendance_enabled: true,
+            }),
+          },
+          state: {
+            allConversations: [
+              { id: 1, inbox_id: 1, messages: [{ id: 1, created_at: 1 }] },
+            ],
+            syncConversationsMessages: { 1: 1 },
+          },
+        },
+        { conversationId: 1 }
+      );
+      expect(dispatchRead).not.toHaveBeenCalledWith(
+        'markMessagesRead',
+        expect.anything(),
+        expect.anything()
+      );
+    }
+  );
+
   describe('#fetchAllAttachments', () => {
+    it.each(['cloud', 'default'])(
+      'keeps generic read synchronization for unsupported provider %s',
+      async provider => {
+        axios.get.mockResolvedValue({ data: { payload: [], meta: {} } });
+        const dispatchRead = vi.fn();
+        await actions.syncActiveConversationMessages(
+          {
+            commit: vi.fn(),
+            dispatch: dispatchRead,
+            rootGetters: {
+              'inboxes/getInbox': () => ({
+                channel_type: 'Channel::Whatsapp',
+                provider,
+                web_attendance_enabled: true,
+              }),
+            },
+            state: {
+              allConversations: [
+                { id: 1, inbox_id: 1, messages: [{ id: 1, created_at: 1 }] },
+              ],
+              syncConversationsMessages: { 1: 1 },
+            },
+          },
+          { conversationId: 1 }
+        );
+        expect(dispatchRead).toHaveBeenCalledWith(
+          'markMessagesRead',
+          { id: 1 },
+          { root: true }
+        );
+      }
+    );
     it('fetches all attachments', async () => {
       axios.get.mockResolvedValue({
         data: {

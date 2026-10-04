@@ -55,6 +55,7 @@ export default {
           this.mediaEditorSession = {
             conversationId: this.currentChat.id,
             accountId: this.accountId,
+            deliveryDestination: this.deliveryDestination || 'channel',
             caption: this.message,
             reply: { ...this.inReplyTo },
             consumed: false,
@@ -145,6 +146,7 @@ export default {
       if (!valid()) return { ok: false, dispatched: false };
       const payload = {
         conversationId: session.conversationId,
+        delivery_destination: session.deliveryDestination || 'channel',
         files: [attachment],
         message: caption,
         private: false,

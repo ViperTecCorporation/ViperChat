@@ -37,7 +37,7 @@ class AutomationRuleListener < BaseListener
   private
 
   def process_conversation_event(event, event_name)
-    return if performed_by_automation?(event)
+    return if ignore_conversation_event?(event)
 
     auto_reply_skip_events = %w[conversation_created conversation_opened]
     return if auto_reply_skip_events.include?(event_name) && ignore_auto_reply_event?(event)
@@ -62,6 +62,10 @@ class AutomationRuleListener < BaseListener
     current_account_rules(event_name, account).any?
   end
 
+  def ignore_conversation_event?(event)
+    event.data[:web_attendance] || performed_by_automation?(event)
+  end
+
   def current_account_rules(event_name, account)
     AutomationRule.where(
       event_name: event_name,
@@ -81,7 +85,7 @@ class AutomationRuleListener < BaseListener
 
   def ignore_message_created_event?(event)
     message = event.data[:message]
-    performed_by_automation?(event) || message.activity? || message.auto_reply_email? || unoapi_external_echo?(message)
+    ignore_conversation_event?(event) || message.web_attendance? || message.activity? || message.auto_reply_email? || unoapi_external_echo?(message)
   end
 
   def unoapi_external_echo?(message)

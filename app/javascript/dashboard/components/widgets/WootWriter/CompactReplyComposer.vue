@@ -35,6 +35,7 @@ export default {
   },
   mixins: [inboxMixin],
   props: {
+    deliveryDestination: { type: String, default: 'channel' },
     allowAudioViewOnce: { type: Boolean, default: false },
     audioViewOnce: { type: Boolean, default: false },
     mode: {
@@ -262,13 +263,18 @@ export default {
       );
     },
     showScheduleButton() {
-      return !this.isNote && this.inbox.channel_type === 'Channel::Whatsapp';
+      return (
+        this.deliveryDestination !== 'web' &&
+        !this.isNote &&
+        this.inbox.channel_type === 'Channel::Whatsapp'
+      );
     },
     showMessageSignatureButton() {
       return !this.isNote && !this.isEditorDisabled && !this.isAUnoapiChannel;
     },
     showVideoCallButton() {
       return (
+        this.deliveryDestination !== 'web' &&
         (this.isAWebWidgetInbox || this.isAPIInbox) &&
         !this.isNote &&
         !this.isEditorDisabled
@@ -719,6 +725,7 @@ export default {
       v-if="showLocationPicker && canShareLocation"
       :key="conversationId"
       :conversation-id="conversationId"
+      :delivery-destination="deliveryDestination"
       @close="showLocationPicker = false"
     />
     <transition name="modal-fade">

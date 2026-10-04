@@ -67,6 +67,13 @@ const mountComponent = props =>
   });
 
 describe('CompactReplyComposer', () => {
+  it('keeps attachments, location and stickers but hides scheduling and calls in Web', () => {
+    const wrapper = mountComponent({ deliveryDestination: 'web' });
+    expect(wrapper.vm.showScheduleButton).toBe(false);
+    expect(wrapper.vm.showVideoCallButton).toBe(false);
+    expect(wrapper.vm.canShareLocation).toBe(true);
+    expect(wrapper.vm.showStickerButton).toBe(true);
+  });
   it.each([
     { mode: 'NOTE' },
     { isEditorDisabled: true },
