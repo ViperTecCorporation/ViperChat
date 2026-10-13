@@ -120,6 +120,89 @@ describe('media editor batch', () => {
     URL.createObjectURL = vi.fn(() => 'blob:test');
     URL.revokeObjectURL = vi.fn();
   });
+  it('appends pasted images without losing the first image edits or duplicating the composer paste', async () => {
+    const wrapper = mountEditor();
+    const edited = image();
+    const scene = { base: wrapper.props('files')[0], nodes: [] };
+    wrapper.vm.changedImage(edited, scene);
+    await wrapper.get('textarea').setValue('Edited caption');
+    const onDocumentPaste = vi.fn();
+    document.addEventListener('paste', onDocumentPaste);
+    const second = new File(['second'], 'second.png', { type: 'image/png' });
+    const third = image();
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', {
+      value: { files: [second, third] },
+    });
+    wrapper.get('textarea').element.dispatchEvent(event);
+    await flushPromises();
+    expect(event.defaultPrevented).toBe(true);
+    expect(onDocumentPaste).not.toHaveBeenCalled();
+    expect(
+      wrapper.findAll('[aria-label^="MEDIA_EDITOR.ATTACHMENT "]')
+    ).toHaveLength(3);
+    expect(wrapper.vm.current.file).toBe(edited);
+    expect(wrapper.vm.current.scene).toEqual(scene);
+    expect(wrapper.vm.current.history).toHaveLength(1);
+    expect(wrapper.get('textarea').element.value).toBe('Edited caption');
+    await wrapper.get('[aria-label="MEDIA_EDITOR.SEND"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.props('submitFile').mock.calls.map(call => call[0])).toEqual(
+      [edited, second, third]
+    );
+    expect(wrapper.props('submitFile').mock.calls.map(call => call[1])).toEqual(
+      ['Edited caption', '', '']
+    );
+    document.removeEventListener('paste', onDocumentPaste);
+    wrapper.unmount();
+  });
+  it('leaves text paste alone and ignores empty clipboard files', async () => {
+    const wrapper = mountEditor();
+    const event = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', {
+      value: { files: [new File([], 'empty.png', { type: 'image/png' })] },
+    });
+    wrapper.get('textarea').element.dispatchEvent(event);
+    await flushPromises();
+    expect(event.defaultPrevented).toBe(false);
+    expect(
+      wrapper.findAll('[aria-label^="MEDIA_EDITOR.ATTACHMENT "]')
+    ).toHaveLength(1);
+    wrapper.unmount();
+  });
+  it('applies the existing queue limit to pasted images', async () => {
+    const wrapper = mountEditor({ files: Array.from({ length: 20 }, image) });
+    await wrapper.get('[role="dialog"]').trigger('paste', {
+      clipboardData: { files: [image()] },
+    });
+    expect(
+      wrapper.findAll('[aria-label^="MEDIA_EDITOR.ATTACHMENT "]')
+    ).toHaveLength(20);
+    expect(wrapper.text()).toContain('MEDIA_EDITOR.QUEUE_LIMIT');
+    wrapper.unmount();
+  });
+  it('does not append clipboard images while uploading', async () => {
+    let finish;
+    const wrapper = mountEditor({
+      submitFile: vi.fn(
+        () =>
+          new Promise(resolve => {
+            finish = resolve;
+          })
+      ),
+    });
+    await wrapper.get('[aria-label="MEDIA_EDITOR.SEND"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('[role="dialog"]').trigger('paste', {
+      clipboardData: { files: [image()] },
+    });
+    expect(
+      wrapper.findAll('[aria-label^="MEDIA_EDITOR.ATTACHMENT "]')
+    ).toHaveLength(1);
+    finish({ ok: true, dispatched: true });
+    await flushPromises();
+    wrapper.unmount();
+  });
   it('does not upload on open, gives caption only to first item, keeps individual captions', async () => {
     const wrapper = mountEditor({ files: [image(), image()] });
     expect(wrapper.props('submitFile')).not.toHaveBeenCalled();

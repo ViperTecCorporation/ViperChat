@@ -11,6 +11,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import SwitchControl from 'dashboard/components-next/switch/Switch.vue';
 import UnoapiContactSync from './UnoapiContactSync.vue';
 import UnoapiSettingLabel from './UnoapiSettingLabel.vue';
+import UnoapiClientProfile from './UnoapiClientProfile.vue';
 
 const optional = () => true;
 
@@ -20,6 +21,7 @@ export default {
     SwitchControl,
     UnoapiContactSync,
     UnoapiSettingLabel,
+    UnoapiClientProfile,
   },
   mixins: [inboxMixin],
   props: {
@@ -36,6 +38,7 @@ export default {
       apiKey: '',
       url: 'https://unoapi.cloud',
       connectionType: 'qrcode',
+      zapoWebClientProfile: '',
       pixMerchantName: '',
       pixKey: '',
       pixKeyType: '',
@@ -137,6 +140,8 @@ export default {
           ? 'pairing_code'
           : 'qrcode';
       this.pixMerchantName = this.inbox.provider_config.pix_merchant_name || '';
+      this.zapoWebClientProfile =
+        this.inbox.provider_config.zapo_web_client_profile || '';
       this.pixKey = this.inbox.provider_config.pix_key || '';
       this.pixKeyType = this.inbox.provider_config.pix_key_type || '';
       this.ignoreGroupMessages =
@@ -274,6 +279,10 @@ export default {
               ...providerConfig,
               api_key: this.apiKey || null,
               connection_type: this.connectionType,
+              zapo_web_client_profile:
+                this.connectionType === 'qrcode'
+                  ? this.zapoWebClientProfile || null
+                  : null,
               pix_merchant_name: this.pixMerchantName || null,
               pix_key: this.pixKey || null,
               pix_key_type: this.pixKeyType || null,
@@ -357,7 +366,7 @@ export default {
         </label>
       </div>
 
-      <div class="w-1/4 pb-4">
+      <div class="grid w-full max-w-3xl grid-cols-1 gap-4 pb-4 md:grid-cols-2">
         <label
           class="flex flex-col gap-1 text-sm text-n-slate-11"
           :class="{ error: v$.connectionType.$error }"
@@ -379,6 +388,10 @@ export default {
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.CONNECTION_TYPE.ERROR') }}
           </span>
         </label>
+        <UnoapiClientProfile
+          v-if="connectionType === 'qrcode'"
+          v-model="zapoWebClientProfile"
+        />
       </div>
 
       <div

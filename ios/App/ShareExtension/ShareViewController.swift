@@ -81,6 +81,18 @@ final class ShareViewController: UIViewController {
         search.placeholder = "Pesquisar conversa ou contato"
         search.autocapitalizationType = .none
         search.delegate = self
+        let keyboardToolbar = UIToolbar()
+        keyboardToolbar.sizeToFit()
+        keyboardToolbar.items = [
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            UIBarButtonItem(
+                title: "Ocultar teclado",
+                style: .done,
+                target: self,
+                action: #selector(dismissKeyboard)
+            )
+        ]
+        search.searchTextField.inputAccessoryView = keyboardToolbar
         return search
     }()
 
@@ -163,7 +175,7 @@ final class ShareViewController: UIViewController {
 
             sendButton.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 20),
             sendButton.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -20),
-            sendButton.bottomAnchor.constraint(equalTo: guide.bottomAnchor, constant: -14),
+            sendButton.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor, constant: -14),
             sendButton.heightAnchor.constraint(equalToConstant: 48),
 
             statusLabel.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 28),
@@ -307,6 +319,10 @@ final class ShareViewController: UIViewController {
             subtitle: subtitle,
             avatarURL: resolveURL(avatarValue)
         )
+    }
+
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
     }
 
     @objc private func sendShare() {
@@ -705,6 +721,7 @@ extension ShareViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         selectedConversation = conversations[indexPath.row]
+        view.endEditing(true)
         tableView.reloadData()
         updateSendButton()
     }

@@ -191,6 +191,7 @@ const selectedModel = computed({
 
       <div class="flex-shrink-0 w-[4.375rem] text-end">
         <TimeAgo
+          :show-created-at="!inbox.lock_to_single_conversation"
           :conversation-id="chat.id"
           :last-activity-timestamp="chat.timestamp"
           :created-at-timestamp="chat.created_at"

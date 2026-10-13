@@ -201,6 +201,14 @@ function chooseFiles(event) {
   addFiles(Array.from(event.target.files));
   event.target.value = '';
 }
+function onPaste(event) {
+  const files = Array.from(event.clipboardData?.files || []).filter(
+    file => file.size > 0
+  );
+  if (!files.length) return;
+  event.preventDefault();
+  addFiles(files);
+}
 function changedImage(file, scene) {
   const entry = current.value;
   if (!entry || !active) return;
@@ -456,7 +464,7 @@ const toolbar = computed(() => [
     <div
       class="fixed inset-0 z-[10000] bg-[#000000cc] sm:p-4 flex items-center justify-center"
       @keydown.stop="trapFocus"
-      @paste.stop
+      @paste.stop="onPaste"
     >
       <section
         ref="dialog"

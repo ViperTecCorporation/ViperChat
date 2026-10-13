@@ -159,3 +159,9 @@ COPY --from=pre-builder /app/.git_sha /app/.git_sha
 WORKDIR /app
 
 EXPOSE 3000
+
+# This default also protects stacks that invoke Rails directly instead of
+# explicitly selecting docker/entrypoints/rails.sh.
+RUN sed -i 's/\r$//' /app/docker/entrypoints/container.sh \
+  && chmod +x /app/docker/entrypoints/container.sh
+ENTRYPOINT ["/app/docker/entrypoints/container.sh"]

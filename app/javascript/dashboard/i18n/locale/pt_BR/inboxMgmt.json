@@ -466,6 +466,13 @@
         "WHATSAPP_UPDATE_AND_CONNECT": {
           "LABEL": "Atualizar e Conectar"
         },
+        "CLIENT_PROFILE": {
+          "LABEL": "Perfil do WhatsApp",
+          "DEFAULT": "Default (padrão atual)",
+          "PERSONAL": "WA Pessoal (Android)",
+          "BUSINESS": "WA Business (Android)",
+          "HELP": "Default mantém o cliente Web atual. Os perfis Android permitem receber mídias de visualização única nas versões compatíveis do ViperConnect. Escolha o perfil correspondente ao aplicativo do aparelho: WA Pessoal para WhatsApp comum ou WA Business para WhatsApp Business. A seleção é aplicada ao atualizar e conectar a sessão."
+        },
         "CONNECTION_TYPE": {
           "LABEL": "Tipo de conexão",
           "QRCODE": "QR Code",

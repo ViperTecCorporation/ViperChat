@@ -104,7 +104,7 @@ class Whatsapp::UnoapiWebhookSetupService
       timeoutMs: 360_000
     }
 
-    {
+    payload = {
       autoConnect: true,
       connectionType: connection_type,
       useRedis: true,
@@ -137,6 +137,9 @@ class Whatsapp::UnoapiWebhookSetupService
       sendProfilePicture: provider_config['send_profile_picture'],
       authToken: whatsapp_channel.unoapi_auth_token,
     }
+    profile = provider_config['zapo_web_client_profile']
+    payload[:zapoWebClientProfile] = profile if connection_type == 'qrcode' && %w[wa_personal wa_business].include?(profile)
+    payload
   end
   # rubocop:enable Metrics/MethodLength
 

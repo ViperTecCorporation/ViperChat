@@ -173,9 +173,16 @@ const loadMore = () => {
   fetchMembers(currentPage.value + 1);
 };
 
-const ensureContact = member => {
+const ensureContact = async member => {
   const contactId = memberContact(member).id;
-  if (contactId) store.dispatch('contacts/show', { id: contactId });
+  if (!contactId) return;
+
+  try {
+    await store.dispatch('contacts/show', { id: contactId });
+    await store.dispatch('contacts/fetchContactableInbox', contactId);
+  } catch (error) {
+    useAlert(error.message || t('COMPOSE_NEW_CONVERSATION.FORM.ERROR_MESSAGE'));
+  }
 };
 
 const openContactPage = member => {

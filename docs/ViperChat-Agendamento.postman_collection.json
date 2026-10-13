@@ -1,0 +1,1009 @@
+{
+  "info": {
+    "name": "ViperChat — Agendamento via HTTP",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Guia: agendamento-api-guia-cliente.md. Contrato conferido no código em 09/10/2026; não comprova deploy. Configure variáveis antes de enviar. TOKEN DE USUÁRIO, não bot. Apenas caixas WhatsApp. Não execute a coleção inteira pelo Runner: existem operações alternativas e destrutivas. Agendamento exige referência de conversa e etiqueta. Remetente será atribuído ao destino na execução. Não há parâmetro para executar sem responsável nem template_params no contrato. Guarde IDs para evitar POST duplicado. Exemplos não foram enviados a servidor real."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://SEU_DOMINIO",
+      "type": "string"
+    },
+    {
+      "key": "api_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "account_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "inbox_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "contact_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conversation_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sender_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "team_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "label_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "label_title",
+      "value": "retorno-agendado",
+      "type": "string"
+    },
+    {
+      "key": "scheduled_message_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "phone_number",
+      "value": "+5566996269251",
+      "type": "string"
+    },
+    {
+      "key": "phone_search",
+      "value": "5566996269251",
+      "type": "string"
+    },
+    {
+      "key": "contact_name",
+      "value": "Cliente de exemplo",
+      "type": "string"
+    },
+    {
+      "key": "scheduled_at",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "date",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "start_at",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "end_at",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reason",
+      "value": "Retorno solicitado pelo cliente",
+      "type": "string"
+    },
+    {
+      "key": "message_text",
+      "value": "Olá! Estou retornando conforme combinamos.",
+      "type": "string"
+    },
+    {
+      "key": "attachment_signed_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "upload_filename",
+      "value": "documento.pdf",
+      "type": "string"
+    },
+    {
+      "key": "upload_byte_size",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "upload_checksum_base64",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "upload_content_type",
+      "value": "application/pdf",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.variables.get('scheduled_at')) {",
+          "  const future = new Date(Date.now() + 60 * 60 * 1000);",
+          "  const day = future.toISOString().slice(0, 10);",
+          "  pm.collectionVariables.set('scheduled_at', future.toISOString());",
+          "  pm.collectionVariables.set('date', day);",
+          "  pm.collectionVariables.set('start_at', day + 'T00:00:00Z');",
+          "  pm.collectionVariables.set('end_at', new Date(Date.parse(day + 'T00:00:00Z') + 86400000).toISOString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Consultas iniciais",
+      "item": [
+        {
+          "name": "Listar caixas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/inboxes",
+            "description": "Execute somente quando necessário. IDs e credenciais devem corresponder à instalação."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar agentes da conta",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/agents",
+            "description": "Execute somente quando necessário. IDs e credenciais devem corresponder à instalação."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar agentes atribuíveis à caixa",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/inboxes/{{inbox_id}}/assignable_agents",
+            "description": "Execute somente quando necessário. IDs e credenciais devem corresponder à instalação."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar equipes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/teams",
+            "description": "Execute somente quando necessário. IDs e credenciais devem corresponder à instalação."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar etiquetas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/labels",
+            "description": "Retorna payload com id e title. Selecione uma etiqueta e preencha label_id e label_title; não há seleção automática."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Contato e vínculo",
+      "item": [
+        {
+          "name": "Buscar contato por telefone",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/contacts/search?q={{phone_search}}&page=1",
+            "description": "Busca parcial. Confira payload[].phone_number e preencha contact_id manualmente. phone_search deve conter somente os dígitos, sem +."
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar contato",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/contacts/{{contact_id}}",
+            "description": "Execute somente quando necessário. IDs e credenciais devem corresponder à instalação."
+          },
+          "response": []
+        },
+        {
+          "name": "Criar contato e vínculo com caixa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/contacts",
+            "description": "ALTERA DADOS. Buscar antes para evitar duplicidade. Salva payload.contact.id em contact_id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{contact_name}}\",\n  \"phone_number\": \"{{phone_number}}\",\n  \"inbox_id\": {{inbox_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  const value = data.payload && data.payload.contact && data.payload.contact.id;",
+                  "  if (value !== undefined && value !== null) pm.collectionVariables.set(\"contact_id\", String(value));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vincular contato existente à caixa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/contacts/{{contact_id}}/contact_inboxes",
+            "description": "ALTERA DADOS. Alternativa para contato existente; source_id de WhatsApp é gerado a partir do telefone.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inbox_id\": {{inbox_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Conversa de referência",
+      "item": [
+        {
+          "name": "Listar conversas do contato",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/contacts/{{contact_id}}/conversations",
+            "description": "Até 20 conversas visíveis, ordenadas por atividade. Escolha uma da caixa desejada e preencha conversation_id com seu id público."
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar conversa",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations/{{conversation_id}}",
+            "description": "Execute somente quando necessário. IDs e credenciais devem corresponder à instalação."
+          },
+          "response": []
+        },
+        {
+          "name": "Criar referência resolvida sem enviar mensagem",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations",
+            "description": "ALTERA DADOS. Somente se não existe referência. Conversa única pode retornar existente; bot pode alterar status para pending. Salva id em conversation_id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contact_id\": {{contact_id}},\n  \"inbox_id\": {{inbox_id}},\n  \"status\": \"resolved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  const value = data.id;",
+                  "  if (value !== undefined && value !== null) pm.collectionVariables.set(\"conversation_id\", String(value));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolver conversa (opcional)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations/{{conversation_id}}/toggle_status",
+            "description": "ALTERA O ATENDIMENTO REAL. Não resolve conversa ativa apenas para agendar. Não é necessário resolver ou abrir a referência para criar o agendamento.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"resolved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Atribuição atual (alternativas)",
+      "description": "Não execute todas. Ajusta conversa agora, não sender_id do agendamento. Equipe primeiro, depois agente. Na execução do agendamento o responsável será o remetente.",
+      "item": [
+        {
+          "name": "Atribuir equipe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations/{{conversation_id}}/assignments",
+            "description": "ALTERA DADOS. Equipe pode acionar distribuição automática.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"team_id\": {{team_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atribuir agente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations/{{conversation_id}}/assignments",
+            "description": "ALTERA DADOS. Usa sender_id como exemplo de operador atual; isso não atualiza agendamentos existentes.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignee_id\": {{sender_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remover agente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations/{{conversation_id}}/assignments",
+            "description": "ALTERA DADOS. O agendamento atribuirá seu remetente quando executar.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignee_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remover equipe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations/{{conversation_id}}/assignments",
+            "description": "ALTERA DADOS. Independente de remover agente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"team_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - Etiquetas",
+      "item": [
+        {
+          "name": "Criar etiqueta na conta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/labels",
+            "description": "ALTERA DADOS. Execute somente se etiqueta não existe. Salva id em label_id. Depende de permissões e recurso habilitado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": {\n    \"title\": \"{{label_title}}\",\n    \"description\": \"Retornos programados\",\n    \"color\": \"#0891B2\",\n    \"show_on_sidebar\": true\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  const value = data.id;",
+                  "  if (value !== undefined && value !== null) pm.collectionVariables.set(\"label_id\", String(value));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar etiquetas da conversa",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations/{{conversation_id}}/labels",
+            "description": "Execute somente quando necessário. IDs e credenciais devem corresponder à instalação."
+          },
+          "response": []
+        },
+        {
+          "name": "Substituir etiquetas da conversa (opcional)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations/{{conversation_id}}/labels",
+            "description": "ALTERA DADOS E SUBSTITUI A LISTA COMPLETA. Acrescente os títulos existentes ao array para preservá-los. No agendamento use label_id; a etiqueta será adicionada ao destino final após conclusão.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"labels\": [\n    \"{{label_title}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - Upload e mídia (opcional)",
+      "item": [
+        {
+          "name": "Preparar upload direto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/conversations/{{conversation_id}}/direct_uploads",
+            "description": "Preencha tamanho real e MD5 dos bytes em Base64. O retorno contém signed_id e direct_upload.url/headers. Faça PUT dos bytes nessa URL com os headers retornados, sem token do ViperChat. Após sucesso, preencha attachment_signed_id. Esta coleção não envia bytes automaticamente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blob\": {\n    \"filename\": \"{{upload_filename}}\",\n    \"byte_size\": {{upload_byte_size}},\n    \"checksum\": \"{{upload_checksum_base64}}\",\n    \"content_type\": \"{{upload_content_type}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar agendamento com anexo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/scheduled_messages",
+            "description": "ALTERA DADOS. Alternativa à criação de texto, não etapa adicional. Upload deve estar concluído. Para áudio de voz altere voice_message para true e use blob de áudio compatível.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversation_id\": {{conversation_id}},\n  \"scheduled_message\": {\n    \"scheduled_at\": \"{{scheduled_at}}\",\n    \"sender_id\": {{sender_id}},\n    \"label_id\": {{label_id}},\n    \"reason\": \"{{reason}}\",\n    \"messages\": [\n      {\n        \"content\": \"{{message_text}}\",\n        \"content_type\": \"text\",\n        \"attachment_blob_ids\": [\n          \"{{attachment_signed_id}}\"\n        ],\n        \"voice_message\": false\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  const value = data.id;",
+                  "  if (value !== undefined && value !== null) pm.collectionVariables.set(\"scheduled_message_id\", String(value));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 - Agendamento",
+      "item": [
+        {
+          "name": "Criar agendamento de texto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/scheduled_messages",
+            "description": "ALTERA DADOS. Retorna 201. Guarda id em scheduled_message_id. Uma mensagem; acrescente até 5 no array. Não há idempotency key. Omitir sender_id usa usuário do token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversation_id\": {{conversation_id}},\n  \"scheduled_message\": {\n    \"scheduled_at\": \"{{scheduled_at}}\",\n    \"sender_id\": {{sender_id}},\n    \"label_id\": {{label_id}},\n    \"reason\": \"{{reason}}\",\n    \"messages\": [\n      {\n        \"content\": \"{{message_text}}\",\n        \"content_type\": \"text\"\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const data = pm.response.json();",
+                  "  const value = data.id;",
+                  "  if (value !== undefined && value !== null) pm.collectionVariables.set(\"scheduled_message_id\", String(value));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar por dia",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/scheduled_messages?date={{date}}",
+            "description": "Execute somente quando necessário. IDs e credenciais devem corresponder à instalação."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar por intervalo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/scheduled_messages?start_at={{start_at}}&end_at={{end_at}}",
+            "description": "Início incluído, fim exclusivo. Ambos devem ser ISO 8601. Codifique + se usar fuso positivo; defaults são UTC."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar pendentes com filtros",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/scheduled_messages?date={{date}}&status=scheduled&inbox_id={{inbox_id}}&sender_id={{sender_id}}&label_id={{label_id}}",
+            "description": "Execute somente quando necessário. IDs e credenciais devem corresponder à instalação."
+          },
+          "response": []
+        },
+        {
+          "name": "Alterar somente horário",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/scheduled_messages/{{scheduled_message_id}}",
+            "description": "ALTERA DADOS. Somente criador/admin; status scheduled ou failed. Em failed verifica envios parciais antes de reagendar.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduled_message\": {\n    \"scheduled_at\": \"{{scheduled_at}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Substituir sequência e parâmetros",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/scheduled_messages/{{scheduled_message_id}}",
+            "description": "ALTERA DADOS. Substitui todos os itens. Não altera contato ou caixa. Revise mensagens já enviadas antes de substituir sequência falhada.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduled_message\": {\n    \"scheduled_at\": \"{{scheduled_at}}\",\n    \"sender_id\": {{sender_id}},\n    \"label_id\": {{label_id}},\n    \"reason\": \"{{reason}}\",\n    \"messages\": [\n      {\n        \"content\": \"{{message_text}}\",\n        \"content_type\": \"text\"\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancelar agendamento",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "api_access_token",
+                "value": "{{api_access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/accounts/{{account_id}}/scheduled_messages/{{scheduled_message_id}}",
+            "description": "ALTERA DADOS. Sem body. Retorna 204 e marca cancelled. Somente scheduled/failed; não apaga mensagens enviadas nem cancela sending."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
