@@ -1,11 +1,15 @@
 class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::Conversations::BaseController
   before_action :ensure_api_inbox, only: :update
+  before_action :reject_web_reaction, only: :reaction
 
   def index
     @messages = message_finder.perform
+    WebAttendance::DeliveryReceiptService.new(conversation: @conversation, messages: @messages, message_type: 'incoming').perform
   end
 
   def edit
+    return render json: { error: 'Use a new Web reply' }, status: :unprocessable_entity if message.web_attendance?
+
     edited_content = permitted_params[:content].to_s
     edit_sent = Whatsapp::EditMessageService.new(message: message, content: edited_content).perform
     return render json: { error: 'Could not edit message' }, status: :unprocessable_entity unless edit_sent
@@ -16,7 +20,11 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   def create
     user = Current.user || @resource
     mb = Messages::MessageBuilder.new(user, @conversation, params)
-    @message = mb.perform
+    if params[:delivery_destination] == 'web'
+      @conversation.with_lock { @message = mb.perform }
+    else
+      @message = mb.perform
+    end
   rescue StandardError => e
     render_could_not_create_error(e.message)
   end
@@ -37,6 +45,11 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   def retry
     return if message.blank?
+
+    if message.content_attributes['web_absence_request_key'].present?
+      return render json: { error: 'Automatic Web reminders cannot be retried; send a manual invitation instead' },
+                    status: :unprocessable_entity
+    end
 
     service = Messages::StatusUpdateService.new(message, 'sent')
     service.perform
@@ -87,6 +100,12 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   private
 
+  def reject_web_reaction
+    return unless message.web_attendance?
+
+    render json: { error: 'WhatsApp reactions are unavailable for Web messages' }, status: :unprocessable_entity
+  end
+
   def message
     @message ||= @conversation.messages.find(permitted_params[:id])
   end
@@ -104,6 +123,8 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def retry_content_attributes
+    return message.content_attributes if message.content_attributes['web_attendance_invitation_id'].present?
+
     return {} unless message.content_attributes&.dig('whatsapp_interactive', 'type') == 'payment_request'
 
     { 'whatsapp_interactive' => { 'type' => 'payment_request' } }

@@ -67,6 +67,13 @@ const mountComponent = props =>
   });
 
 describe('CompactReplyComposer', () => {
+  it('keeps attachments, location and stickers but hides scheduling and calls in Web', () => {
+    const wrapper = mountComponent({ deliveryDestination: 'web' });
+    expect(wrapper.vm.showScheduleButton).toBe(false);
+    expect(wrapper.vm.showVideoCallButton).toBe(false);
+    expect(wrapper.vm.canShareLocation).toBe(true);
+    expect(wrapper.vm.showStickerButton).toBe(true);
+  });
   it.each([
     { mode: 'NOTE' },
     { isEditorDisabled: true },
@@ -154,5 +161,20 @@ describe('CompactReplyComposer', () => {
       'i-lucide-send',
     ]);
     expect(wrapper.text()).toContain('00:03');
+  });
+  it('offers view once after recording and emits the selected value', async () => {
+    const wrapper = mountComponent({
+      isRecordingAudio: true,
+      recordingAudioState: 'stopped',
+      hasRecordedAudio: true,
+      allowAudioViewOnce: true,
+    });
+    await wrapper
+      .get('[aria-label="CONVERSATION.VIEW_ONCE_ENABLE"]')
+      .trigger('click');
+    expect(wrapper.emitted('update:audioViewOnce')).toEqual([[true]]);
+    await wrapper.setProps({ hasRecordedAudio: false });
+    expect(wrapper.find('[aria-pressed]').exists()).toBe(false);
+    wrapper.unmount();
   });
 });

@@ -11,12 +11,15 @@ import VideoCallButton from '../VideoCallButton.vue';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { mapGetters } from 'vuex';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import ViewOnceToggle from 'dashboard/components-next/Conversation/ViewOnceToggle.vue';
 
 export default {
   name: 'ReplyBottomPanel',
-  components: { NextButton, FileUpload, VideoCallButton },
+  components: { NextButton, FileUpload, VideoCallButton, ViewOnceToggle },
   mixins: [inboxMixin],
   props: {
+    allowAudioViewOnce: { type: Boolean, default: false },
+    audioViewOnce: { type: Boolean, default: false },
     isNote: {
       type: Boolean,
       default: false,
@@ -139,6 +142,7 @@ export default {
     },
   },
   emits: [
+    'update:audioViewOnce',
     'toggleInsertArticle',
     'toggleStickerPicker',
     'openContactPicker',
@@ -458,6 +462,12 @@ export default {
       />
     </div>
     <div class="right-wrap">
+      <ViewOnceToggle
+        v-if="allowAudioViewOnce && !isNote"
+        :model-value="audioViewOnce"
+        :disabled="isSendDisabled"
+        @update:model-value="$emit('update:audioViewOnce', $event)"
+      />
       <NextButton
         v-if="!isNote && inbox.channel_type === 'Channel::Whatsapp'"
         icon="i-lucide-calendar-clock"

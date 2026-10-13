@@ -1,4 +1,8 @@
-import { clearSession, updateSessionHeaders } from './authenticationService';
+import {
+  clearSession,
+  updateSessionHeaders,
+  resolveAccountId,
+} from './authenticationService';
 import { disableNativePush } from './nativePushService';
 import {
   openNativeSuperAdmin,
@@ -21,10 +25,7 @@ const absoluteAssetUrl = (baseUrl, value, fallback) => {
   }
 };
 
-export const resolveNativeAccountId = user => {
-  const accountId = Number(user?.account_id || user?.accounts?.[0]?.id);
-  return Number.isInteger(accountId) && accountId > 0 ? accountId : null;
-};
+export const resolveNativeAccountId = resolveAccountId;
 
 export const configureNativeEnvironment = ({ installation, session }) => {
   const websocketURL = installation.baseUrl.replace(/^http/, 'ws');

@@ -6,6 +6,7 @@ class ConversationReplyMailer < ApplicationMailer
   include ConversationReplyMailerHelper
   include ReferencesHeaderBuilder
   include EmailAddressParseable
+  add_delivery_method :gmail_api, Google::GmailDelivery
   default from: ENV.fetch('MAILER_SENDER_EMAIL', 'ViperChat <accounts@viperchat.com>')
   layout :choose_layout
 

@@ -88,7 +88,9 @@ const scrollToMessage = () => {
 const shouldShowMeta = computed(
   () =>
     !props.hideMeta &&
-    !shouldGroupWithNext.value &&
+    (!shouldGroupWithNext.value ||
+      contentAttributes.value?.viewOnce ||
+      contentAttributes.value?.view_once) &&
     variant.value !== MESSAGE_VARIANTS.ACTIVITY
 );
 

@@ -11,6 +11,8 @@ class Base::SendOnChannelService
   pattr_initialize [:message!]
 
   def perform
+    return if message.web_attendance?
+
     validate_target_channel
     return unless outgoing_message?
     return if invalid_message?

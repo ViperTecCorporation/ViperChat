@@ -2,6 +2,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   GROUP_CONTACT_MENTION_PATTERN = %r{\[@([^\]]+)\]\(mention://group[_-]contact/(\d+)/[^)]+\)|mention://group[_-]contact/(\d+)/([^\s)]+)}
 
   def send_message(phone_number, message)
+    return send_web_attendance_invitation(phone_number, message) if message.content_attributes['web_attendance_invitation_id'].present?
+
     @message = message
 
     if message.content_type == 'sticker'
@@ -17,6 +19,39 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     else
       send_text_message(phone_number, message)
     end
+  end
+
+  def send_web_attendance_invitation(phone_number, message)
+    invitation = message.conversation.web_attendance_invitations.find(message.content_attributes['web_attendance_invitation_id'])
+    return unless invitation.available?
+
+    unless message.conversation.can_reply?
+      message.update!(status: :failed, external_error: 'The WhatsApp reply window is closed; an approved template is required')
+      return
+    end
+    payload = web_invitation_payload(phone_number, message, invitation)
+    response = HTTParty.post(web_invitation_messages_path, headers: api_headers, body: outgoing_message_payload(payload, message).to_json)
+    return response.parsed_response.dig('messages', 0, 'id') if response.success? && response.parsed_response['error'].blank?
+
+    message.update!(status: :failed, external_error: 'Web invitation was not accepted by the WhatsApp provider')
+    nil
+  end
+
+  def web_invitation_payload(phone_number, message, invitation)
+    if message.content_attributes['web_attendance_text_fallback']
+      return { messaging_product: 'whatsapp', to: phone_number, type: 'text',
+               text: { body: "#{message.outgoing_content}\n#{invitation.link}" } }
+    end
+
+    { messaging_product: 'whatsapp', to: phone_number, type: 'interactive',
+      interactive: { type: 'cta_url', body: { text: message.outgoing_content },
+                     action: { name: 'cta_url', parameters: {
+                       display_text: message.content_attributes.dig('web_attendance_cta', 'title'), url: invitation.link
+                     } } } }
+  end
+
+  def web_invitation_messages_path
+    "#{phone_id_path('v24.0')}/messages"
   end
 
   def send_template(phone_number, template_info, message)

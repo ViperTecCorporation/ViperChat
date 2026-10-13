@@ -11,6 +11,7 @@ import {
   isOnFoldersView,
 } from './helpers/actionHelpers';
 import messageReadActions from './actions/messageReadActions';
+import { supportsWebAttendance } from 'dashboard/helper/webAttendance';
 import { sortMessagesChronologically } from './helpers';
 import messageTranslateActions from './actions/messageTranslateActions';
 import * as Sentry from '@sentry/vue';
@@ -270,7 +271,7 @@ const actions = {
   },
 
   syncActiveConversationMessages: async (
-    { commit, state, dispatch },
+    { commit, state, dispatch, rootGetters = {} },
     { conversationId, refresh = false }
   ) => {
     const { allConversations, syncConversationsMessages } = state;
@@ -356,7 +357,14 @@ const actions = {
         conversationId,
         messageId: null,
       });
-      dispatch('markMessagesRead', { id: conversationId }, { root: true });
+      const inbox = rootGetters['inboxes/getInbox']?.(selectedChat.inbox_id);
+      if (
+        !supportsWebAttendance(inbox) ||
+        !inbox.web_attendance_enabled ||
+        selectedChat.group
+      ) {
+        dispatch('markMessagesRead', { id: conversationId }, { root: true });
+      }
     } catch (error) {
       if (refresh) throw error;
     }
@@ -499,7 +507,10 @@ const actions = {
         : await MessageApi.create(pendingMessage);
       commit(types.ADD_MESSAGE, {
         ...response.data,
-        status: MESSAGE_STATUS.SENT,
+        status:
+          response.data.delivery_destination === 'web'
+            ? response.data.status || MESSAGE_STATUS.SENT
+            : MESSAGE_STATUS.SENT,
       });
       commit(types.ADD_CONVERSATION_ATTACHMENTS, {
         ...response.data,

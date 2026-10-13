@@ -14,6 +14,7 @@ export default {
   computed: {
     ...mapGetters({
       accountId: 'getCurrentAccountId',
+      globalConfig: 'globalConfig/get',
     }),
     installationLimit() {
       return resolveMaximumFileUploadSize(

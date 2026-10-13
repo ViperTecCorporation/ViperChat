@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import { mountWebApp, onDocumentReady } from 'shared/helpers/mountWebApp';
 import { createI18n } from 'vue-i18n';
 
 import axios from 'axios';
@@ -113,10 +114,12 @@ initalizeRouter();
 export const mountDashboard = async () => {
   if (window.chatwootConfig?.isNativeApp) {
     await router.isReady();
+    app.mount('#app');
+    return;
   }
-  app.mount('#app');
+  await mountWebApp(app, router);
 };
 
 if (!window.chatwootConfig?.isNativeApp) {
-  window.onload = mountDashboard;
+  onDocumentReady(mountDashboard);
 }

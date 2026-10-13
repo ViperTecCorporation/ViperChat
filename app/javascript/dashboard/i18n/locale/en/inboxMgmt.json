@@ -404,6 +404,13 @@
         "WHATSAPP_UPDATE_AND_CONNECT": {
           "LABEL": "Update and Connect"
         },
+        "CLIENT_PROFILE": {
+          "LABEL": "WhatsApp profile",
+          "DEFAULT": "Default (current behavior)",
+          "PERSONAL": "WA Personal (Android)",
+          "BUSINESS": "WA Business (Android)",
+          "HELP": "Default keeps the current Web client. Android profiles support receiving view-once media on compatible ViperConnect versions. Match the profile to the phone app: WA Personal for regular WhatsApp or WA Business for WhatsApp Business. The selection is applied when updating and connecting the session."
+        },
         "CONNECTION_TYPE": {
           "LABEL": "Connection type",
           "QRCODE": "QR Code",

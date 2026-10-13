@@ -3,6 +3,12 @@ import { ref, provide, useTemplateRef } from 'vue';
 import { useElementSize } from '@vueuse/core';
 
 import MessageApi from '../../../api/inbox/message';
+import { useWebAttendance } from 'dashboard/composables/useWebAttendance';
+import { useMapGetter } from 'dashboard/composables/store';
+import {
+  filterMessagesByDestination,
+  supportsWebAttendance,
+} from 'dashboard/helper/webAttendance';
 
 // composable
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
@@ -58,6 +64,13 @@ export default {
   },
   mixins: [inboxMixin],
   setup() {
+    const selectedChat = useMapGetter('getSelectedChat');
+    const accountId = useMapGetter('getCurrentAccountId');
+    const {
+      attendance,
+      refresh: refreshAttendance,
+      seen: markAttendanceSeen,
+    } = useWebAttendance(accountId, () => selectedChat.value.id);
     const isPopOutReplyBox = ref(false);
     const conversationPanelRef = ref(null);
     const resizableEditorWrapperRef = ref(null);
@@ -85,6 +98,9 @@ export default {
     provide('contextMenuElementTarget', conversationPanelRef);
 
     return {
+      attendance,
+      refreshAttendance,
+      markAttendanceSeen,
       isPopOutReplyBox,
       captainTasksEnabled,
       getLabelSuggestions,
@@ -112,6 +128,10 @@ export default {
       },
       showForwardModal: false,
       highlightedMessageTimer: null,
+      deliveryDestination: 'channel',
+      attendanceNoteMode: false,
+      attendanceError: false,
+      attendanceTimer: null,
     };
   },
 
@@ -126,6 +146,26 @@ export default {
     }),
     isOpen() {
       return this.currentChat?.status === wootConstants.STATUS_TYPE.OPEN;
+    },
+    hasWebAttendance() {
+      return (
+        supportsWebAttendance(this.inbox) &&
+        this.inbox.web_attendance_enabled &&
+        !this.currentChat.group
+      );
+    },
+    composerDestinations() {
+      return this.hasWebAttendance ? ['channel', 'web', 'note'] : ['channel'];
+    },
+    activeComposer() {
+      return this.hasWebAttendance && this.attendanceNoteMode
+        ? 'note'
+        : this.deliveryDestination;
+    },
+    attendanceMessageRevision() {
+      const messages = this.currentChat.messages || [];
+      const last = messages[messages.length - 1];
+      return `${this.currentChat.id}:${messages.length}:${last?.id}:${last?.status}`;
     },
     shouldShowLabelSuggestions() {
       return (
@@ -162,10 +202,13 @@ export default {
     },
     getMessages() {
       const messages = this.currentChat.messages || [];
+      const selectedMessages = this.hasWebAttendance
+        ? filterMessagesByDestination(messages, this.deliveryDestination)
+        : messages;
       if (this.isAWhatsAppChannel) {
-        return filterDuplicateSourceMessages(messages);
+        return filterDuplicateSourceMessages(selectedMessages);
       }
-      return messages;
+      return selectedMessages;
     },
     readMessages() {
       return getReadMessages(
@@ -174,6 +217,17 @@ export default {
       );
     },
     unReadMessages() {
+      if (this.hasWebAttendance) {
+        if (!this.unreadMessageCount) return [];
+        return this.getMessages
+          .filter(
+            message =>
+              !message.private &&
+              (message.message_type === 0 ||
+                message.message_type === 'incoming')
+          )
+          .slice(-this.unreadMessageCount);
+      }
       return getUnreadMessages(
         this.getMessages,
         this.currentChat.agent_last_seen_at
@@ -261,6 +315,9 @@ export default {
       return '';
     },
     unreadMessageCount() {
+      if (this.hasWebAttendance) {
+        return this.attendance?.unread?.[this.deliveryDestination] || 0;
+      }
       return this.currentChat.unread_count || 0;
     },
     unreadMessageLabel() {
@@ -301,6 +358,16 @@ export default {
   },
 
   watch: {
+    hasWebAttendance(enabled) {
+      if (!enabled) {
+        this.deliveryDestination = 'channel';
+        this.attendanceNoteMode = false;
+      }
+      this.loadAttendance();
+    },
+    attendanceMessageRevision() {
+      this.loadAttendance();
+    },
     currentChat(newChat, oldChat) {
       if (newChat.id === oldChat.id) {
         return;
@@ -308,6 +375,9 @@ export default {
       this.fetchAllAttachmentsFromCurrentChat();
       this.fetchSuggestions();
       this.messageSentSinceOpened = false;
+      this.deliveryDestination = 'channel';
+      this.attendanceNoteMode = false;
+      this.loadAttendance();
     },
   },
 
@@ -325,9 +395,12 @@ export default {
     this.addScrollListener();
     this.fetchAllAttachmentsFromCurrentChat();
     this.fetchSuggestions();
+    this.loadAttendance();
+    this.attendanceTimer = setInterval(() => this.loadAttendance(), 5000);
   },
 
   unmounted() {
+    clearInterval(this.attendanceTimer);
     this.removeBusListeners();
     this.removeScrollListener();
     if (this.highlightedMessageTimer) {
@@ -336,6 +409,37 @@ export default {
   },
 
   methods: {
+    async loadAttendance() {
+      if (!this.hasWebAttendance) return;
+      const id = this.currentChat.id;
+      try {
+        const data = await this.refreshAttendance();
+        if (id !== this.currentChat.id) return;
+        this.attendanceError = false;
+        const panel = this.conversationPanel;
+        const atBottom =
+          !panel ||
+          panel.scrollHeight - panel.scrollTop - panel.clientHeight < 80;
+        if (
+          document.visibilityState !== 'hidden' &&
+          atBottom &&
+          data?.unread?.[this.deliveryDestination]
+        ) {
+          this.makeMessagesRead();
+        }
+      } catch {
+        if (id === this.currentChat.id) this.attendanceError = true;
+      }
+    },
+    async selectDestination(destination) {
+      this.deliveryDestination = destination;
+      this.cancelForwardSelection();
+      this.isPopOutReplyBox = false;
+      this.$nextTick(() => {
+        this.scrollToBottom();
+        this.makeMessagesRead();
+      });
+    },
     async fetchSuggestions() {
       // start empty, this ensures that the label suggestions are not shown
       this.labelSuggestions = [];
@@ -568,6 +672,12 @@ export default {
     },
 
     makeMessagesRead() {
+      if (this.hasWebAttendance) {
+        this.markAttendanceSeen(this.deliveryDestination).catch(() => {
+          this.attendanceError = true;
+        });
+        return;
+      }
       this.$store.dispatch('markMessagesRead', { id: this.currentChat.id });
     },
     async handleMessageRetry(message) {
@@ -615,6 +725,62 @@ export default {
     class="flex flex-col justify-between flex-grow h-full min-w-0 m-0"
   >
     <div ref="topBannerRef">
+      <div
+        v-if="hasWebAttendance"
+        class="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-n-weak"
+        role="tablist"
+      >
+        <button
+          v-for="destination in ['channel', 'web']"
+          :key="destination"
+          type="button"
+          role="tab"
+          :aria-selected="deliveryDestination === destination"
+          class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm min-w-0"
+          :class="
+            deliveryDestination === destination
+              ? 'bg-n-alpha-2 text-n-brand'
+              : 'text-n-slate-11'
+          "
+          @click="selectDestination(destination)"
+        >
+          {{
+            destination === 'web'
+              ? $t('WEB_ATTENDANCE.WEB_TAB')
+              : $t('WEB_ATTENDANCE.CHANNEL_TAB')
+          }}
+          <span
+            v-if="attendance?.unread?.[destination]"
+            class="rounded-full bg-n-brand px-2 text-white text-xs"
+          >
+            {{ attendance.unread[destination] }}
+          </span>
+        </button>
+      </div>
+      <div
+        v-if="hasWebAttendance && attendanceError"
+        class="px-3 py-2 text-sm text-n-amber-11"
+        role="status"
+      >
+        {{ $t('WEB_ATTENDANCE.LOAD_ERROR') }}
+        <button
+          type="button"
+          class="text-n-brand underline"
+          @click="loadAttendance"
+        >
+          {{ $t('WEB_ATTENDANCE.RETRY') }}
+        </button>
+      </div>
+      <Banner
+        v-if="
+          hasWebAttendance &&
+          deliveryDestination === 'web' &&
+          !attendance?.active
+        "
+        color-scheme="warning"
+        class="mx-2 mt-2 rounded-lg"
+        :banner-message="$t('WEB_ATTENDANCE.INACTIVE')"
+      />
       <Banner
         v-if="isInstagramRestrictionBannerVisible"
         color-scheme="warning"
@@ -624,7 +790,7 @@ export default {
         :href-link-text="$t('CONVERSATION.INSTAGRAM_RESTRICTION_STATUS_LINK')"
       />
       <Banner
-        v-else-if="!currentChat.can_reply"
+        v-else-if="!currentChat.can_reply && deliveryDestination !== 'web'"
         color-scheme="alert"
         class="mx-2 mt-2 overflow-hidden rounded-lg"
         :banner-message="replyWindowBannerMessage"
@@ -745,11 +911,26 @@ export default {
         ref="resizableEditorWrapperRef"
         :container-height="Math.max(0, containerHeight - topBannerHeight)"
       >
-        <ReplyBox
-          :pop-out-reply-box="isPopOutReplyBox"
-          @toggle-editor-size="toggleReplyEditorSize"
-          @update:pop-out-reply-box="isPopOutReplyBox = $event"
-        />
+        <div
+          v-for="destination in composerDestinations"
+          v-show="activeComposer === destination"
+          :key="destination"
+          class="min-w-0"
+        >
+          <ReplyBox
+            :delivery-destination="destination === 'web' ? 'web' : 'channel'"
+            :is-composer-active="activeComposer === destination"
+            :managed-destinations="hasWebAttendance"
+            :initial-reply-mode="destination === 'note' ? 'NOTE' : 'REPLY'"
+            :web-attendance-active="
+              !attendanceError && Boolean(attendance?.active)
+            "
+            :pop-out-reply-box="isPopOutReplyBox"
+            @set-reply-mode="attendanceNoteMode = $event === 'NOTE'"
+            @toggle-editor-size="toggleReplyEditorSize"
+            @update:pop-out-reply-box="isPopOutReplyBox = $event"
+          />
+        </div>
       </ResizableEditorWrapper>
     </div>
   </div>

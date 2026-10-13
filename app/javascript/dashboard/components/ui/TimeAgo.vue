@@ -8,10 +8,16 @@ import {
   dateFormat,
   shortTimestamp,
 } from 'shared/helpers/timeHelper';
+import { formatDistanceToNow, fromUnixTime } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default {
   name: 'TimeAgo',
   props: {
+    showCreatedAt: {
+      type: Boolean,
+      default: true,
+    },
     isAutoRefreshEnabled: {
       type: Boolean,
       default: true,
@@ -37,20 +43,24 @@ export default {
     };
   },
   computed: {
+    isPortuguese() {
+      return this.$i18n.locale.replace('_', '-').startsWith('pt');
+    },
     lastActivityTime() {
-      return shortTimestamp(this.lastActivityAtTimeAgo);
+      return this.compactTime(this.lastActivityAtTimeAgo);
     },
     createdAtTime() {
-      return shortTimestamp(this.createdAtTimeAgo);
+      return this.compactTime(this.createdAtTimeAgo);
     },
     createdAt() {
       const createdTimeDiff = Date.now() - this.createdAtTimestamp * 1000;
       const isBeforeAMonth = createdTimeDiff > DAY_IN_MILLI_SECONDS * 30;
       return !isBeforeAMonth
-        ? `${this.$t('CHAT_LIST.CHAT_TIME_STAMP.CREATED.LATEST')} ${
-            this.createdAtTimeAgo
-          }`
-        : `${this.$t('CHAT_LIST.CHAT_TIME_STAMP.CREATED.OLDEST')} ${dateFormat(
+        ? `${this.$t('CHAT_LIST.CHAT_TIME_STAMP.CREATED.LATEST')} ${this.relativeTime(
+            this.createdAtTimeAgo,
+            this.createdAtTimestamp
+          )}`
+        : `${this.$t('CHAT_LIST.CHAT_TIME_STAMP.CREATED.OLDEST')} ${this.absoluteDate(
             this.createdAtTimestamp
           )}`;
     },
@@ -59,16 +69,18 @@ export default {
         Date.now() - this.lastActivityTimestamp * 1000;
       const isNotActive = lastActivityTimeDiff > DAY_IN_MILLI_SECONDS * 30;
       return !isNotActive
-        ? `${this.$t('CHAT_LIST.CHAT_TIME_STAMP.LAST_ACTIVITY.ACTIVE')} ${
-            this.lastActivityAtTimeAgo
-          }`
+        ? `${this.$t('CHAT_LIST.CHAT_TIME_STAMP.LAST_ACTIVITY.ACTIVE')} ${this.relativeTime(
+            this.lastActivityAtTimeAgo,
+            this.lastActivityTimestamp
+          )}`
         : `${this.$t(
             'CHAT_LIST.CHAT_TIME_STAMP.LAST_ACTIVITY.NOT_ACTIVE'
-          )} ${dateFormat(this.lastActivityTimestamp)}`;
+          )} ${this.absoluteDate(this.lastActivityTimestamp)}`;
     },
     tooltipText() {
-      return `${this.createdAt}
-              ${this.lastActivity}`;
+      return this.showCreatedAt
+        ? `${this.createdAt} • ${this.lastActivity}`
+        : this.lastActivity;
     },
   },
   watch: {
@@ -97,6 +109,35 @@ export default {
     clearTimeout(this.timer);
   },
   methods: {
+    compactTime(time) {
+      const compact = shortTimestamp(
+        this.isPortuguese ? time.replace(/^(about|over|almost)\s+/, '') : time
+      ).trim();
+      if (!this.isPortuguese) return compact;
+      return compact
+        .replace(/^now$/, 'agora')
+        .replace(/y$/, 'a')
+        .replace(
+          /(\d+)mo$/,
+          (_, months) => `${months}${Number(months) === 1 ? 'mês' : 'meses'}`
+        );
+    },
+    relativeTime(time, timestamp) {
+      if (!this.isPortuguese) return time;
+      if (shortTimestamp(time) === 'now') return 'agora';
+      return formatDistanceToNow(fromUnixTime(Number(timestamp)), {
+        addSuffix: true,
+        locale: ptBR,
+      });
+    },
+    absoluteDate(timestamp) {
+      if (!this.isPortuguese) return dateFormat(timestamp);
+      return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(fromUnixTime(Number(timestamp)));
+    },
     createTimer() {
       this.timer = setTimeout(() => {
         this.lastActivityAtTimeAgo = dynamicTime(this.lastActivityTimestamp);
@@ -127,6 +168,10 @@ export default {
     }"
     class="ml-auto leading-4 text-xxs text-n-slate-10 hover:text-n-slate-11"
   >
-    <span>{{ `${createdAtTime} • ${lastActivityTime}` }}</span>
+    <span>{{
+      showCreatedAt
+        ? `${createdAtTime} • ${lastActivityTime}`
+        : lastActivityTime
+    }}</span>
   </div>
 </template>

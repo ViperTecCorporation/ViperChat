@@ -41,6 +41,40 @@ const makeVm = () => {
   };
 };
 describe('editor upload and message integration', () => {
+  it('keeps the session web destination through an edited-media upload', async () => {
+    const vm = makeVm();
+    vm.mediaEditorSession.deliveryDestination = 'web';
+    vm.isAUnoapiChannel = true;
+    await mixin.methods.submitEditedMedia.call(vm, file, 'Web image', {
+      viewOnce: true,
+    });
+    expect(vm.$store.dispatch.mock.calls[0][1]).toMatchObject({
+      delivery_destination: 'web',
+      contentAttributes: { view_once: true },
+    });
+  });
+  it.each([true, false])(
+    'preserves the view-once choice %s in the pending message',
+    async viewOnce => {
+      const vm = makeVm();
+      vm.isAUnoapiChannel = true;
+      await mixin.methods.submitEditedMedia.call(vm, file, '', { viewOnce });
+      expect(vm.$store.dispatch.mock.calls[0][1].contentAttributes).toEqual({
+        in_reply_to: 123,
+        ...(viewOnce ? { view_once: true } : {}),
+      });
+    }
+  );
+  it('does not enable view once for a different provider', async () => {
+    const vm = makeVm();
+    vm.isAUnoapiChannel = false;
+    await mixin.methods.submitEditedMedia.call(vm, file, '', {
+      viewOnce: true,
+    });
+    expect(
+      vm.$store.dispatch.mock.calls[0][1].contentAttributes
+    ).not.toHaveProperty('view_once');
+  });
   it('forwards multipart and direct XHR progress to the editor', async () => {
     const vm = makeVm();
     const onProgress = vi.fn();

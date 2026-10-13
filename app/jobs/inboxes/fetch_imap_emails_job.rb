@@ -28,7 +28,8 @@ class Inboxes::FetchImapEmailsJob < MutexApplicationJob
   def process_google_history(channel)
     return unless channel.google? && !channel.reauthorization_required?
 
-    Imap::GoogleHistoryService.new(channel: channel).perform
+    service = channel.gmail_api? ? Google::GmailHistoryService : Imap::GoogleHistoryService
+    service.new(channel: channel).perform
   end
 
   def should_fetch_email?(channel)
@@ -36,6 +37,8 @@ class Inboxes::FetchImapEmailsJob < MutexApplicationJob
   end
 
   def process_email_for_channel(channel, interval)
+    return Google::GmailSyncService.new(channel: channel, interval: interval).perform if channel.gmail_api?
+
     inbound_emails = if channel.microsoft?
                        Imap::MicrosoftFetchEmailService.new(channel: channel, interval: interval).perform
                      elsif channel.google?

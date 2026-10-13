@@ -299,6 +299,10 @@
     }
   },
   "CONTACTS_LAYOUT": {
+    "MOBILE_PANEL": {
+      "OPEN": "History and details",
+      "BACK": "Back"
+    },
     "HEADER": {
       "TITLE": "Contacts",
       "SEARCH_TITLE": "Search contacts",

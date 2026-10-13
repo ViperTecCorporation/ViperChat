@@ -5,6 +5,10 @@ json.name resource.name
 json.channel_type resource.channel_type
 json.greeting_enabled resource.greeting_enabled
 json.greeting_message resource.greeting_message
+json.web_attendance_enabled resource.web_attendance_enabled
+json.web_attendance_greeting_enabled resource.web_attendance_greeting_enabled
+json.web_attendance_button_text resource.web_attendance_button_text
+json.web_attendance_invitation_message resource.web_attendance_invitation_message
 json.working_hours_enabled resource.working_hours_enabled
 json.enable_email_collect resource.enable_email_collect
 json.csat_survey_enabled resource.csat_survey_enabled

@@ -2,6 +2,24 @@ import { mutations } from '../index';
 import types from '../../../mutation-types';
 
 describe('#mutations', () => {
+  it('does not downgrade a Web receipt when a stale send response arrives', () => {
+    const message = {
+      id: 20,
+      conversation_id: 1,
+      delivery_destination: 'web',
+      status: 'read',
+    };
+    const state = {
+      allConversations: [{ id: 1, messages: [message] }],
+      selectedChatId: 1,
+    };
+    mutations[types.ADD_MESSAGE](state, { ...message, status: 'sent' });
+    expect(state.allConversations[0].messages).toHaveLength(1);
+    expect(state.allConversations[0].messages[0].status).toBe('read');
+    mutations[types.ADD_MESSAGE](state, { ...message, status: 'failed' });
+    expect(state.allConversations[0].messages[0].status).toBe('failed');
+  });
+
   describe('#UPDATE_CONVERSATION_CALL_STATUS', () => {
     it('does nothing if conversation is not found', () => {
       const state = { allConversations: [] };

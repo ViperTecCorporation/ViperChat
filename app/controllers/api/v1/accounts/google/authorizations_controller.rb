@@ -27,10 +27,11 @@ class Api::V1::Accounts::Google::AuthorizationsController < Api::V1::Accounts::O
   private
 
   def state
-    return super unless params.key?(:history_period)
+    return super unless params.key?(:history_period) || gmail_api_default?
 
     Rails.application.message_verifier('gmail-history').generate(
-      { 'account_state' => super, 'period' => params[:history_period], 'return_to' => params[:return_to] }, expires_in: 15.minutes
+      { 'account_state' => super, 'period' => params[:history_period], 'return_to' => params[:return_to],
+        'gmail_transport' => gmail_api_default? ? 'api' : 'imap' }, expires_in: 15.minutes
     )
   end
 end

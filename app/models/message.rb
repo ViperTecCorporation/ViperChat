@@ -140,6 +140,13 @@ class Message < ApplicationRecord
       AND NOT EXISTS (SELECT 1 FROM attachments WHERE attachments.message_id = messages.id)
     SQL
   }
+  scope :with_content_attribute, lambda { |key, value|
+    attributes = <<~SQL.squish
+      (CASE WHEN json_typeof(messages.content_attributes) = 'string'
+       THEN (messages.content_attributes #>> '{}')::json ELSE messages.content_attributes END)
+    SQL
+    value.nil? ? where("#{attributes} ->> ? IS NULL", key) : where("#{attributes} ->> ? = ?", key, value.to_s)
+  }
   scope :today, -> { where("date_trunc('day', created_at) = ?", Date.current) }
   scope :voice_calls, -> { where(content_type: :voice_call) }
 
@@ -158,6 +165,7 @@ class Message < ApplicationRecord
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
 
   after_create_commit :execute_after_create_commit_callbacks
+  after_create_commit :schedule_web_absence_reminder
 
   after_update_commit :dispatch_update_event
   after_commit -> { Conversations::LinksService.expire(self) }, on: [:create, :update, :destroy]
@@ -177,6 +185,32 @@ class Message < ApplicationRecord
     data[:echo_id] = echo_id if echo_id.present?
     data[:attachments] = attachments.map(&:push_event_data) if attachments.present?
     merge_sender_attributes(data)
+  end
+
+  def web_attendance?
+    delivery_destination == 'web'
+  end
+
+  def schedule_web_absence_reminder
+    return unless web_attendance? && outgoing? && !private? && sender.is_a?(User)
+
+    WebAttendance::AbsenceReminderService.new(conversation).schedule!(self)
+  end
+
+  validates :delivery_destination, inclusion: { in: %w[channel web] }
+  validate :validate_web_attendance_message, on: :create
+
+  def validate_web_attendance_message
+    return unless web_attendance?
+
+    allowed_sender = private? || sender.is_a?(User) || sender.is_a?(Contact)
+    return if allowed_sender && web_attendance_conversation_available?
+
+    errors.add(:delivery_destination, 'Web attendance is unavailable')
+  end
+
+  def web_attendance_conversation_available?
+    conversation.inbox.web_attendance_available? && !conversation.resolved? && !conversation.group?
   end
 
   def conversation_push_event_data
@@ -356,11 +390,20 @@ class Message < ApplicationRecord
     reopen_conversation
     mark_pending_conversation_as_open_for_human_response
     set_conversation_activity
+    mark_replying_agent_notifications_read
     dispatch_create_events
     send_reply
     execute_message_template_hooks
     update_contact_activity
     enqueue_link_preview
+  end
+
+  def mark_replying_agent_notifications_read
+    return unless human_response? && sender.is_a?(User) && !private? && !failed? && !voice_call?
+
+    read_at = Time.current
+    conversation.notifications.where(account_id: account_id, user_id: sender_id, read_at: nil)
+                .where('created_at <= ?', created_at).find_each { |notification| notification.update!(read_at: read_at) }
   end
 
   def enqueue_link_preview
@@ -373,7 +416,10 @@ class Message < ApplicationRecord
   end
 
   def update_contact_activity
-    sender.update(last_activity_at: DateTime.now) if sender.is_a?(Contact)
+    return unless sender.is_a?(Contact)
+    return Current.with_web_attendance(conversation) { sender.update(last_activity_at: DateTime.now) } if web_attendance?
+
+    sender.update(last_activity_at: DateTime.now)
   end
 
   def update_waiting_since
@@ -416,6 +462,12 @@ class Message < ApplicationRecord
   end
 
   def dispatch_create_events
+    return Current.with_web_attendance(conversation) { dispatch_message_creation_events } if web_attendance?
+
+    dispatch_message_creation_events
+  end
+
+  def dispatch_message_creation_events
     Rails.configuration.dispatcher.dispatch(MESSAGE_CREATED, Time.zone.now, message: self, performed_by: Current.executed_by)
 
     if valid_first_reply?
@@ -443,12 +495,16 @@ class Message < ApplicationRecord
   end
 
   def send_reply
+    return if web_attendance?
+    return WebAttendance::ReminderDeliveryJob.perform_later(id) if content_attributes['web_absence_request_key'].present?
+
     # FIXME: Giving it few seconds for the attachment to be uploaded to the service
     # active storage attaches the file only after commit
     attachments.blank? ? ::SendReplyJob.perform_later(id) : ::SendReplyJob.set(wait: 2.seconds).perform_later(id)
   end
 
   def reopen_conversation
+    return if web_attendance?
     return if conversation.muted?
     return unless incoming?
 
@@ -458,6 +514,8 @@ class Message < ApplicationRecord
   end
 
   def mark_pending_conversation_as_open_for_human_response
+    return if web_attendance?
+
     return unless captain_pending_conversation?
     return unless human_response?
     return if private?
@@ -470,6 +528,8 @@ class Message < ApplicationRecord
   end
 
   def reopen_resolved_conversation
+    conversation.web_attendance_start_message_id = id if incoming? && !web_attendance?
+
     # mark resolved bot conversation as pending to be reopened by bot processor service
     if conversation.inbox.active_bot?
       conversation.pending!
@@ -486,6 +546,8 @@ class Message < ApplicationRecord
   end
 
   def execute_message_template_hooks
+    return if web_attendance?
+
     ::MessageTemplates::HookExecutionService.new(message: self).perform
   end
 

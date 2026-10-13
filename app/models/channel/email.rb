@@ -69,6 +69,10 @@ class Channel::Email < ApplicationRecord
     provider == 'google'
   end
 
+  def gmail_api?
+    google? && provider_config['gmail_transport'] == 'api'
+  end
+
   def legacy_google?
     imap_enabled && imap_address == 'imap.gmail.com'
   end

@@ -11,6 +11,10 @@ import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsTo
 import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFieldSection.vue';
 import SettingsAccordion from 'dashboard/components-next/Settings/SettingsAccordion.vue';
 import inboxMixin from 'shared/mixins/inboxMixin';
+import {
+  supportsWebAttendance,
+  webAttendanceLimits,
+} from 'dashboard/helper/webAttendance';
 import FacebookReauthorize from './facebook/Reauthorize.vue';
 import InstagramReauthorize from './channels/instagram/Reauthorize.vue';
 import TiktokReauthorize from './channels/tiktok/Reauthorize.vue';
@@ -98,6 +102,10 @@ export default {
       avatarUrl: '',
       greetingEnabled: true,
       greetingMessage: '',
+      webAttendanceEnabled: false,
+      webAttendanceGreetingEnabled: false,
+      webAttendanceButtonText: '',
+      webAttendanceInvitationMessage: '',
       emailCollectEnabled: false,
       senderNameType: 'friendly',
       businessName: '',
@@ -125,6 +133,23 @@ export default {
     };
   },
   computed: {
+    supportsWebAttendance() {
+      return supportsWebAttendance(this.inbox);
+    },
+    webAttendanceLimits() {
+      return webAttendanceLimits(this.inbox.provider);
+    },
+    webAttendanceGreetingTooLong() {
+      return (
+        this.inbox.provider === 'whatsapp_cloud' &&
+        this.supportsWebAttendance &&
+        this.webAttendanceEnabled &&
+        this.greetingEnabled &&
+        this.webAttendanceGreetingEnabled &&
+        Array.from(this.greetingMessage || '').length >
+          this.webAttendanceLimits.invitation
+      );
+    },
     ...mapGetters({
       accountId: 'getCurrentAccountId',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
@@ -542,6 +567,17 @@ export default {
       this.webhookUrl = this.inbox.webhook_url;
       this.greetingEnabled = this.inbox.greeting_enabled || false;
       this.greetingMessage = this.inbox.greeting_message || '';
+      this.webAttendanceEnabled = this.inbox.web_attendance_enabled || false;
+      this.webAttendanceInvitationMessage =
+        this.inbox.web_attendance_invitation_message || '';
+      this.webAttendanceGreetingEnabled =
+        this.inbox.web_attendance_greeting_enabled || false;
+      const configuredButton = this.inbox.web_attendance_button_text;
+      this.webAttendanceButtonText =
+        this.isAWhatsAppCloudChannel &&
+        (!configuredButton || configuredButton === 'Continuar atendimento')
+          ? this.$t('WEB_ATTENDANCE.DEFAULT_BUTTON_CLOUD')
+          : configuredButton || this.$t('WEB_ATTENDANCE.DEFAULT_BUTTON');
       this.emailCollectEnabled = this.inbox.enable_email_collect;
       this.senderNameType = this.inbox.sender_name_type;
       this.businessName = this.inbox.business_name;
@@ -655,6 +691,25 @@ export default {
       LocalStorage.set(this.widgetBuilderStorageKey, bubbleSettings);
 
       try {
+        if (this.webAttendanceGreetingTooLong) {
+          throw new Error(
+            this.$t('WEB_ATTENDANCE.GREETING_LIMIT_ERROR', {
+              max: this.webAttendanceLimits.invitation,
+            })
+          );
+        }
+        if (
+          this.supportsWebAttendance &&
+          this.webAttendanceEnabled &&
+          (this.webAttendanceButtonText.trim().length >
+            this.webAttendanceLimits.button ||
+            this.webAttendanceInvitationMessage.trim().length >
+              this.webAttendanceLimits.invitation)
+        ) {
+          throw new Error(
+            this.$t('WEB_ATTENDANCE.LIMIT_ERROR', this.webAttendanceLimits)
+          );
+        }
         const payload = {
           id: this.currentInboxId,
           name: this.selectedInboxName?.trim(),
@@ -682,6 +737,16 @@ export default {
               this.isInboundEmailEnabled && this.continuityViaEmail,
           },
         };
+        if (this.supportsWebAttendance) {
+          Object.assign(payload, {
+            web_attendance_enabled: this.webAttendanceEnabled,
+            web_attendance_greeting_enabled:
+              this.webAttendanceEnabled && this.webAttendanceGreetingEnabled,
+            web_attendance_button_text: this.webAttendanceButtonText.trim(),
+            web_attendance_invitation_message:
+              this.webAttendanceInvitationMessage.trim(),
+          });
+        }
         if (this.avatarFile) {
           payload.avatar = this.avatarFile;
         }
@@ -1265,6 +1330,65 @@ export default {
               class="mt-6"
             >
               <SettingsToggleSection
+                v-if="supportsWebAttendance"
+                v-model="webAttendanceEnabled"
+                :header="$t('WEB_ATTENDANCE.TITLE')"
+                :description="$t('WEB_ATTENDANCE.SETTINGS_HELP')"
+              >
+                <template v-if="webAttendanceEnabled" #editor>
+                  <div class="flex flex-col gap-3 min-w-0">
+                    <p
+                      v-if="isAWhatsAppCloudChannel"
+                      class="m-0 text-sm text-n-slate-11"
+                    >
+                      {{ $t('WEB_ATTENDANCE.CLOUD_HELP') }}
+                    </p>
+                    <label class="flex items-center gap-2 text-n-slate-12">
+                      <input
+                        v-model="webAttendanceGreetingEnabled"
+                        type="checkbox"
+                        :disabled="!greetingEnabled"
+                      />
+                      {{ $t('WEB_ATTENDANCE.INCLUDE_GREETING') }}
+                    </label>
+                    <p class="m-0 text-sm text-n-slate-11">
+                      {{ $t('WEB_ATTENDANCE.GREETING_HELP') }}
+                    </p>
+                    <label class="text-sm text-n-slate-12">
+                      {{
+                        $t('WEB_ATTENDANCE.BUTTON_LABEL', {
+                          max: webAttendanceLimits.button,
+                        })
+                      }}
+                      <input
+                        v-model="webAttendanceButtonText"
+                        type="text"
+                        :maxlength="webAttendanceLimits.button"
+                        :placeholder="
+                          isAWhatsAppCloudChannel
+                            ? $t('WEB_ATTENDANCE.DEFAULT_BUTTON_CLOUD')
+                            : $t('WEB_ATTENDANCE.DEFAULT_BUTTON')
+                        "
+                        class="mt-1 w-full min-w-0"
+                      />
+                    </label>
+                    <label class="text-sm text-n-slate-12">
+                      {{ $t('WEB_ATTENDANCE.DEFAULT_CONTENT_LABEL') }}
+                      <textarea
+                        v-model="webAttendanceInvitationMessage"
+                        rows="3"
+                        :maxlength="webAttendanceLimits.invitation"
+                        :placeholder="$t('WEB_ATTENDANCE.DEFAULT_CONTENT')"
+                        class="mt-1 w-full min-w-0"
+                      />
+                      <span class="block mt-1 text-xs text-n-slate-11">
+                        {{ $t('WEB_ATTENDANCE.DEFAULT_CONTENT_HELP') }}
+                      </span>
+                    </label>
+                  </div>
+                </template>
+              </SettingsToggleSection>
+              <SettingsToggleSection
                 v-model="greetingEnabled"
                 :header="
                   $t(
@@ -1292,6 +1416,17 @@ export default {
                     "
                     :richtext="!textAreaChannels"
                   />
+                  <p
+                    v-if="webAttendanceGreetingTooLong"
+                    role="alert"
+                    class="mt-2 text-sm text-n-amber-11"
+                  >
+                    {{
+                      $t('WEB_ATTENDANCE.GREETING_LIMIT_ERROR', {
+                        max: webAttendanceLimits.invitation,
+                      })
+                    }}
+                  </p>
                 </template>
               </SettingsToggleSection>
 

@@ -13,6 +13,7 @@ class Dispatcher
   end
 
   def dispatch(event_name, timestamp, data, _async = false)
+    data = data.merge(web_attendance: true) if web_attendance_event?(data)
     @sync_dispatcher.dispatch(event_name, timestamp, data)
     @async_dispatcher.dispatch(event_name, timestamp, data)
   end
@@ -20,5 +21,15 @@ class Dispatcher
   def load_listeners
     @sync_dispatcher.load_listeners
     @async_dispatcher.load_listeners
+  end
+
+  private
+
+  def web_attendance_event?(data)
+    message = data[:message]
+    conversation = data[:conversation] || message&.conversation
+    contact = data[:contact]
+    message&.web_attendance? || (conversation && Current.web_attendance_conversation_id == conversation.id) ||
+      (contact && Current.web_attendance_contact_id == contact.id)
   end
 end

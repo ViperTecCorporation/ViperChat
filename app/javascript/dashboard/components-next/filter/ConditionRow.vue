@@ -180,9 +180,10 @@ defineExpose({ validate, resetValidation });
 </script>
 
 <template>
-  <li class="list-none">
+  <li class="min-w-0 list-none">
     <div
-      class="flex items-center gap-2 rounded-md"
+      data-testid="filter-condition-row"
+      class="grid min-w-0 grid-cols-1 gap-2 rounded-md lg:flex lg:items-center max-lg:[&>div]:min-w-0 max-lg:[&>div>button]:w-full max-lg:[&>div>button]:min-w-0 max-lg:[&>div>button]:min-h-11 max-lg:[&>div>button>div]:min-w-0 max-lg:[&>div>button>div:last-child]:shrink-0 max-lg:[&>div>div.absolute]:!static max-lg:[&>div>div.absolute>div]:!static max-lg:[&>div>div.absolute>div]:!min-w-0 max-lg:[&>div>div.absolute>div]:w-full max-lg:[&>div>input]:min-h-11"
       :class="{
         'animate-wiggle': showErrors && validationError,
       }"
@@ -248,7 +249,7 @@ defineExpose({ validate, resetValidation });
         solid
         slate
         icon="i-lucide-trash"
-        class="flex-shrink-0"
+        class="flex-shrink-0 max-lg:justify-self-end max-lg:!size-11"
         @click.stop="emit('remove')"
       />
     </div>

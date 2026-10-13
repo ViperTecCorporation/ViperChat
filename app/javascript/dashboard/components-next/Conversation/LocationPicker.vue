@@ -10,7 +10,10 @@ import {
   locationMessagePayload,
 } from 'dashboard/helper/locationSharing';
 
-const props = defineProps({ conversationId: { type: Number, required: true } });
+const props = defineProps({
+  conversationId: { type: Number, required: true },
+  deliveryDestination: { type: String, default: 'channel' },
+});
 const emit = defineEmits(['close']);
 const { t } = useI18n();
 const store = useStore();
@@ -138,13 +141,14 @@ const search = () => {
 const send = async () => {
   if (!canSend.value) return;
   sending.value = true;
-  const pending = createPendingMessage(
-    locationMessagePayload(props.conversationId, {
+  const pending = createPendingMessage({
+    ...locationMessagePayload(props.conversationId, {
       ...point.value,
       name: name.value.trim(),
       address: address.value.trim(),
-    })
-  );
+    }),
+    delivery_destination: props.deliveryDestination,
+  });
   try {
     await store.dispatch('sendMessageWithData', pending);
   } catch {

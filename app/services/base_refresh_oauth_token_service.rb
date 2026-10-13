@@ -6,7 +6,7 @@ class BaseRefreshOauthTokenService
     return provider_config[:access_token] unless access_token_expired?
 
     refreshed_tokens = refresh_tokens
-    refreshed_tokens[:access_token]
+    refreshed_tokens.with_indifferent_access[:access_token]
   end
 
   def access_token_expired?
@@ -37,10 +37,10 @@ class BaseRefreshOauthTokenService
   def update_channel_provider_config(new_tokens)
     tokens = {
       access_token: new_tokens[:access_token],
-      refresh_token: new_tokens[:refresh_token],
       expires_on: Time.at(new_tokens[:expires_at]).utc.to_s
     }
     channel.with_lock do
+      tokens[:refresh_token] = new_tokens[:refresh_token] if new_tokens[:refresh_token].present?
       channel.update!(provider_config: channel.provider_config.to_h.merge(tokens.stringify_keys))
     end
   end

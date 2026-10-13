@@ -891,6 +891,7 @@ const menuItems = computed(() => {
           v-if="!isEffectivelyCollapsed"
           :to="{ name: 'search' }"
           class="flex min-w-0 flex-1 gap-2 items-center px-2 py-1 h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
+          @click="closeMobileSidebar"
         >
           <span class="flex-shrink-0 i-lucide-search size-4 text-n-slate-10" />
           <span class="flex-grow text-start text-n-slate-10">
@@ -908,6 +909,7 @@ const menuItems = computed(() => {
           :to="{ name: 'search' }"
           class="flex items-center justify-center size-8 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out hover:bg-n-alpha-2 dark:hover:bg-n-slate-9/30"
           :title="t('COMBOBOX.SEARCH_PLACEHOLDER')"
+          @click="closeMobileSidebar"
         >
           <span class="i-lucide-search size-4 text-n-slate-11" />
         </RouterLink>

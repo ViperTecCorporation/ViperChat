@@ -15,6 +15,7 @@ import NextButton from 'next/button/Button.vue';
 import EmojiPicker from 'shared/components/emoji/EmojiPicker.vue';
 import MediaImageCanvas from './MediaImageCanvas.vue';
 import MediaPreviewZoom from './MediaPreviewZoom.vue';
+import ViewOnceToggle from './ViewOnceToggle.vue';
 import { prepareImage, prepareVideo } from 'dashboard/helper/mediaPreparation';
 import {
   isEditableMedia,
@@ -25,6 +26,7 @@ import {
 import { MEDIA_FONTS } from 'dashboard/helper/mediaTextStyle';
 
 const props = defineProps({
+  allowViewOnce: { type: Boolean, default: false },
   files: { type: Array, required: true },
   caption: { type: String, default: '' },
   recipient: { type: String, default: '' },
@@ -171,6 +173,7 @@ function addFiles(files) {
       url: URL.createObjectURL(file),
       caption: captionAssigned ? '' : props.caption,
       quality: 'hd',
+      viewOnce: false,
       history: [],
       scene: null,
       duration: 0,
@@ -197,6 +200,14 @@ watch(selected, () => {
 function chooseFiles(event) {
   addFiles(Array.from(event.target.files));
   event.target.value = '';
+}
+function onPaste(event) {
+  const files = Array.from(event.clipboardData?.files || []).filter(
+    file => file.size > 0
+  );
+  if (!files.length) return;
+  event.preventDefault();
+  addFiles(files);
 }
 function changedImage(file, scene) {
   const entry = current.value;
@@ -333,6 +344,7 @@ async function send() {
       uploadLastUpdate = Date.now();
       uploadQuietSeconds.value = 0;
       const result = await props.submitFile(output, entry.caption, {
+        ...(props.allowViewOnce && entry.viewOnce ? { viewOnce: true } : {}),
         // eslint-disable-next-line no-loop-func -- Sequential upload; callback stops updating after unmount.
         onProgress: status => {
           if (active) {
@@ -368,6 +380,7 @@ async function send() {
     emit('close');
   } catch (exception) {
     exportIssues.value = exception.issues || [];
+    const fallbackError = sending.value ? 'UPLOAD_FAILED' : 'IMAGE_ERROR';
     if (exception.name !== 'AbortError')
       error.value = label(
         [
@@ -378,7 +391,7 @@ async function send() {
           'VIDEO_UNSUPPORTED',
         ].includes(exception.message)
           ? exception.message
-          : 'IMAGE_ERROR'
+          : fallbackError
       );
   } finally {
     busy.value = false;
@@ -451,7 +464,7 @@ const toolbar = computed(() => [
     <div
       class="fixed inset-0 z-[10000] bg-[#000000cc] sm:p-4 flex items-center justify-center"
       @keydown.stop="trapFocus"
-      @paste.stop
+      @paste.stop="onPaste"
     >
       <section
         ref="dialog"
@@ -807,6 +820,13 @@ const toolbar = computed(() => [
               >
                 <Icon icon="i-lucide-video" class="size-6" />
               </span>
+              <span
+                v-if="entry.viewOnce"
+                class="absolute bottom-0 right-0 rounded-full bg-n-brand px-1 text-xs font-bold text-white"
+                aria-hidden="true"
+              >
+                {{ 1 }}
+              </span>
             </button>
             <button
               type="button"
@@ -838,16 +858,23 @@ const toolbar = computed(() => [
             class="hidden"
             @change="chooseFiles"
           />
-          <textarea
-            v-if="current"
-            v-model="current.caption"
-            :maxlength="maxCaption"
-            :aria-label="label('CAPTION')"
-            :placeholder="label('CAPTION')"
-            :disabled="busy"
-            rows="2"
-            class="!m-0 !w-full !rounded-2xl !bg-[#262626] !border-white/20 !text-white !text-base resize-none"
-          />
+          <div class="flex items-center gap-2">
+            <textarea
+              v-if="current"
+              v-model="current.caption"
+              :maxlength="maxCaption"
+              :aria-label="label('CAPTION')"
+              :placeholder="label('CAPTION')"
+              :disabled="busy"
+              rows="2"
+              class="!m-0 !w-full min-w-0 flex-1 !rounded-2xl !bg-[#262626] !border-white/20 !text-white !text-base resize-none"
+            />
+            <ViewOnceToggle
+              v-if="current && allowViewOnce"
+              v-model="current.viewOnce"
+              :disabled="busy"
+            />
+          </div>
           <div class="flex items-center justify-between gap-3">
             <span class="truncate text-sm bg-white/10 rounded-lg px-3 py-2">{{
               recipient

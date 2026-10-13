@@ -69,6 +69,7 @@ describe Whatsapp::UnoapiWebhookSetupService do
     expect(register_url).to eq('https://uno.example.com/v15.0/5566996222471/register')
     expect(payload['autoConnect']).to be(true)
     expect(payload['connectionType']).to eq('qrcode')
+    expect(payload).not_to have_key('zapoWebClientProfile')
     expect(payload['markOnlineOnConnect']).to be(false)
     expect(payload['readOnReply']).to be(true)
     expect(payload['historyMaxAgeDays']).to eq(15)
@@ -138,6 +139,7 @@ describe Whatsapp::UnoapiWebhookSetupService do
 
   it 'sends pairing_code when selected in the provider configuration' do
     channel.provider_config['connection_type'] = 'pairing_code'
+    channel.provider_config['zapo_web_client_profile'] = 'wa_business'
     calls = []
     allow(HTTParty).to receive(:post) do |url, options|
       calls << [url, options]
@@ -150,6 +152,26 @@ describe Whatsapp::UnoapiWebhookSetupService do
 
     payload = JSON.parse(calls.first.last[:body])
     expect(payload['connectionType']).to eq('pairing_code')
+    expect(payload).not_to have_key('zapoWebClientProfile')
+  end
+
+  %w[wa_personal wa_business].each do |profile|
+    it "sends the #{profile} Android profile for QR code registration" do
+      channel.provider_config['zapo_web_client_profile'] = profile
+      payload = service.send(:params, channel, channel.provider_config['business_account_id'])
+
+      expect(payload[:connectionType]).to eq('qrcode')
+      expect(payload[:zapoWebClientProfile]).to eq(profile)
+    end
+  end
+
+  [nil, '', 'default', 'unknown'].each do |profile|
+    it "omits an unset or unsupported client profile (#{profile.inspect})" do
+      channel.provider_config['zapo_web_client_profile'] = profile
+      payload = service.send(:params, channel, channel.provider_config['business_account_id'])
+
+      expect(payload).not_to have_key(:zapoWebClientProfile)
+    end
   end
 
   it 'preserves additional webhooks already configured in UnoAPI' do

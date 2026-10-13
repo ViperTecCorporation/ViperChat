@@ -47,6 +47,51 @@ const DropdownBodyStub = {
 };
 
 describe('SidebarAccountSwitcher', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([false, true])(
+    'switches account with a fresh page (native: %s)',
+    async native => {
+      const location = { href: '/', reload: vi.fn() };
+      const history = { replaceState: vi.fn() };
+      vi.stubGlobal('window', {
+        MouseEvent: window.MouseEvent,
+        Event: window.Event,
+        chatwootConfig: { isNativeApp: native },
+        location,
+        history,
+      });
+      const wrapper = mount(SidebarAccountSwitcher, {
+        global: {
+          stubs: {
+            DropdownContainer: DropdownContainerStub,
+            DropdownBody: DropdownBodyStub,
+            DropdownSection: { template: '<div><slot /></div>' },
+            DropdownItem: {
+              template: '<button><slot name="label" /></button>',
+            },
+            Logo: true,
+            Icon: true,
+            ButtonNext: true,
+          },
+        },
+      });
+      await wrapper.get('#account-2').trigger('click');
+      if (native) {
+        expect(history.replaceState).toHaveBeenCalledWith(
+          null,
+          '',
+          '/#/app/accounts/2/dashboard'
+        );
+        expect(location.reload).toHaveBeenCalledOnce();
+        expect(location.href).toBe('/');
+      } else {
+        expect(location.href).toBe('/app/accounts/2/dashboard');
+        expect(history.replaceState).not.toHaveBeenCalled();
+        expect(location.reload).not.toHaveBeenCalled();
+      }
+    }
+  );
   it('makes the logo part of the expanded account switch trigger', () => {
     const wrapper = mount(SidebarAccountSwitcher, {
       global: {

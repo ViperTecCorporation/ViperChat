@@ -18,6 +18,8 @@ class SendReplyJob < ApplicationJob
 
   def perform(message_id)
     message = Message.find(message_id)
+    return if handle_web_reply(message)
+
     channel_name = message.conversation.inbox.channel.class.to_s
     return send_on_facebook_page(message) if channel_name == 'Channel::FacebookPage'
 
@@ -25,6 +27,7 @@ class SendReplyJob < ApplicationJob
     return unless service_class
 
     service_class.new(message: message).perform
+    activate_web_invitation(message)
     ScheduledMessages::DeliveryStatusJob.perform_later(message.id) if ScheduledMessageItem.exists?(message_id: message.id)
   rescue StandardError => e
     ScheduledMessages::DeliveryStatusService.new(message).failed(e) if message
@@ -32,6 +35,21 @@ class SendReplyJob < ApplicationJob
   end
 
   private
+
+  def handle_web_reply(message)
+    return true if message.web_attendance?
+    return false if message.content_attributes['web_absence_request_key'].blank?
+
+    WebAttendance::ReminderDeliveryJob.perform_later(message.id)
+    true
+  end
+
+  def activate_web_invitation(message)
+    invitation_id = message.content_attributes['web_attendance_invitation_id']
+    return if message.source_id.blank? || invitation_id.blank?
+
+    message.conversation.web_attendance_invitations.find(invitation_id).activate!
+  end
 
   def send_on_facebook_page(message)
     if message.conversation.additional_attributes['type'] == 'instagram_direct_message'

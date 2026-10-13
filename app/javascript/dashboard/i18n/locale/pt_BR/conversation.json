@@ -74,6 +74,10 @@
     "VIEW_TRANSLATED": "Ver traduzido",
     "EDITED": "editada",
     "MESSAGE_EDITED": "Mensagem editada",
+    "VIEW_ONCE": "Mensagem de visualização única",
+    "VIEW_ONCE_OPEN": "Abrir mídia",
+    "VIEW_ONCE_ENABLE": "Ativar visualização única",
+    "VIEW_ONCE_DISABLE": "Desativar visualização única",
     "UNOAPI": {
       "ORDER": "Pedido {id}",
       "ORDER_RECEIVED": "Pedido recebido",
@@ -208,6 +212,17 @@
     "DOWNLOAD": "Baixar",
     "UNKNOWN_FILE_TYPE": "Arquivo desconhecido",
     "SAVE_CONTACT": "Salvar contato",
+    "CONTACT_BUNDLE": {
+      "TITLE": "Contatos",
+      "SUMMARY": "{name} e {count} outro contato | {name} e {count} outros contatos",
+      "VIEW_ALL": "Ver todos",
+      "SEARCH": "Pesquisar contatos",
+      "CLOSE": "Fechar",
+      "EMPTY": "Nenhum contato encontrado",
+      "OPEN_CONTACT": "Abrir ou adicionar contato",
+      "MISSING_DETAILS": "Contato sem telefone ou e-mail",
+      "INVALID": "O contato “{name}” precisa de nome e pelo menos um telefone ou e-mail. Corrija o cadastro ou remova o contato antes de enviar."
+    },
     "NO_CONTENT": "Nenhum conteúdo a ser exibido",
     "SHARED_ATTACHMENT": {
       "CONTACT": "{sender} compartilhou um contato",

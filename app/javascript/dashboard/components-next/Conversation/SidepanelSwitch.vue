@@ -2,11 +2,13 @@
 import Button from 'dashboard/components-next/button/Button.vue';
 import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import WebAttendanceInvitation from './WebAttendanceInvitation.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useConversationSidepanel } from 'dashboard/composables/useConversationSidepanel';
+import { supportsWebAttendance } from 'dashboard/helper/webAttendance';
 
 const { uiSettings, updateUISettings } = useUISettings();
 const {
@@ -17,6 +19,17 @@ const {
 } = useConversationSidepanel();
 
 const currentAccountId = useMapGetter('getCurrentAccountId');
+const currentChat = useMapGetter('getSelectedChat');
+const getInbox = useMapGetter('inboxes/getInbox');
+const showWebInvitation = ref(false);
+const canInviteToWeb = computed(() => {
+  const inbox = getInbox.value(currentChat.value?.inbox_id);
+  return (
+    supportsWebAttendance(inbox) &&
+    inbox.web_attendance_enabled &&
+    !currentChat.value?.group
+  );
+});
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
@@ -75,6 +88,17 @@ useKeyboardEvents(keyboardEvents);
       @click="handleConversationSidebarToggle"
     />
     <Button
+      v-if="canInviteToWeb"
+      v-tooltip.left="$t('WEB_ATTENDANCE.INVITE')"
+      :aria-label="$t('WEB_ATTENDANCE.INVITE')"
+      ghost
+      slate
+      sm
+      class="!rounded-full shrink-0"
+      icon="i-ph-browser"
+      @click="showWebInvitation = true"
+    />
+    <Button
       v-if="showCopilotTab"
       v-tooltip.bottom="$t('CONVERSATION.SIDEBAR.COPILOT')"
       ghost
@@ -89,4 +113,8 @@ useKeyboardEvents(keyboardEvents);
       @click="handleCopilotSidebarToggle"
     />
   </ButtonGroup>
+  <WebAttendanceInvitation
+    v-if="canInviteToWeb"
+    v-model:show="showWebInvitation"
+  />
 </template>

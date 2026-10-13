@@ -813,6 +813,52 @@ RSpec.describe Conversation do
     end
   end
 
+  describe 'notification reading on resolution' do
+    let(:conversation) { create(:conversation, status: :open) }
+    let(:account) { conversation.account }
+
+    it 'marks pending notifications for every recipient as read and broadcasts updates' do
+      first = create(:notification, account: account, primary_actor: conversation)
+      second = create(:notification, account: account, primary_actor: conversation)
+      allow(Rails.configuration.dispatcher).to receive(:dispatch)
+
+      conversation.update!(status: :resolved)
+
+      expect(first.reload.read_at).to be_present
+      expect(second.reload.read_at).to be_within(1.second).of(first.read_at)
+      [first, second].each do |notification|
+        expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+          'notification.updated', kind_of(Time), notification: notification
+        )
+      end
+    end
+
+    it 'preserves read timestamps and notifications from other conversations or accounts' do
+      already_read = create(:notification, :read, account: account, primary_actor: conversation)
+      original_read_at = already_read.reload.read_at
+      unrelated = create(:notification, account: account)
+      foreign = create(:notification, primary_actor: conversation)
+
+      conversation.update!(status: :resolved)
+
+      expect(already_read.reload.read_at).to eq(original_read_at)
+      expect(unrelated.reload.read_at).to be_nil
+      expect(foreign.reload.read_at).to be_nil
+    end
+
+    it 'does not mark notifications read when snoozing, reopening or updating an already resolved conversation' do
+      pending = create(:notification, account: account, primary_actor: conversation)
+      conversation.update!(status: :snoozed)
+      expect(pending.reload.read_at).to be_nil
+      conversation.update!(status: :resolved)
+      pending.reload.update!(read_at: nil)
+      conversation.update!(additional_attributes: { 'test' => true })
+      expect(pending.reload.read_at).to be_nil
+      conversation.update!(status: :open)
+      expect(pending.reload.read_at).to be_nil
+    end
+  end
+
   describe '#delete conversation' do
     include ActiveJob::TestHelper
 

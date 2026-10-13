@@ -1,5 +1,7 @@
 class AgentBotListener < BaseListener
   def conversation_created(event)
+    return if event.data[:web_attendance]
+
     conversation = extract_conversation_and_account(event)[0]
     inbox = conversation.inbox
     event_name = __method__.to_s
@@ -8,6 +10,8 @@ class AgentBotListener < BaseListener
   end
 
   def conversation_resolved(event)
+    return if event.data[:web_attendance]
+
     conversation = extract_conversation_and_account(event)[0]
     inbox = conversation.inbox
     event_name = __method__.to_s
@@ -16,6 +20,8 @@ class AgentBotListener < BaseListener
   end
 
   def conversation_opened(event)
+    return if event.data[:web_attendance]
+
     conversation = extract_conversation_and_account(event)[0]
     inbox = conversation.inbox
     event_name = __method__.to_s
@@ -26,6 +32,7 @@ class AgentBotListener < BaseListener
   def message_created(event)
     message = extract_message_and_account(event)[0]
     inbox = message.inbox
+    return if event.data[:web_attendance] || message.web_attendance?
     return unless message.webhook_sendable?
 
     method_name = __method__.to_s
@@ -35,6 +42,7 @@ class AgentBotListener < BaseListener
   def message_updated(event)
     message = extract_message_and_account(event)[0]
     inbox = message.inbox
+    return if event.data[:web_attendance] || message.web_attendance?
     return unless message.webhook_sendable?
 
     method_name = __method__.to_s

@@ -32,6 +32,7 @@ const {
   isPrivate,
   createdAt,
   sourceId,
+  deliveryDestination,
   messageType,
   contentAttributes,
 } = useMessageContext();
@@ -41,6 +42,10 @@ const readableTime = computed(() =>
 );
 
 const isEdited = computed(() => !!contentAttributes.value?.edited);
+const isViewOnce = computed(
+  () =>
+    !!(contentAttributes.value?.viewOnce || contentAttributes.value?.view_once)
+);
 
 const showStatusIndicator = computed(() => {
   if (isPrivate.value) return false;
@@ -134,6 +139,8 @@ const isRead = computed(() => {
 });
 
 const statusToShow = computed(() => {
+  if (deliveryDestination?.value === 'web') return status.value;
+
   if (isRead.value) return MESSAGE_STATUS.READ;
   if (isDelivered.value) return MESSAGE_STATUS.DELIVERED;
   if (isSent.value) return MESSAGE_STATUS.SENT;
@@ -143,7 +150,7 @@ const statusToShow = computed(() => {
 </script>
 
 <template>
-  <div class="text-xs flex items-center gap-1.5">
+  <div class="text-xs flex flex-wrap items-center gap-1.5">
     <FavoriteIndicator :message-id="id" :conversation-id="conversationId" />
     <div class="inline">
       <time class="inline">{{ readableTime }}</time>
@@ -154,6 +161,9 @@ const statusToShow = computed(() => {
       class="text-[11px] leading-none opacity-70"
     >
       {{ $t('CONVERSATION.EDITED') }}
+    </span>
+    <span v-if="isViewOnce" class="text-[11px] leading-tight opacity-70">
+      {{ $t('CONVERSATION.VIEW_ONCE') }}
     </span>
     <Icon v-if="isPrivate" icon="i-lucide-lock-keyhole" class="size-3" />
     <MessageStatus v-if="showStatusIndicator" :status="statusToShow" />

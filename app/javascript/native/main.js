@@ -1,4 +1,5 @@
-import { createApp } from 'vue';
+import { createApp, h, ref } from 'vue';
+import NativeStartup from './components/NativeStartup.vue';
 import 'dashboard/assets/scss/app.scss';
 import './native.scss';
 import { refreshActiveInstallation } from './platform/installationService';
@@ -42,4 +43,23 @@ const start = async () => {
   await mountDashboard();
 };
 
-start();
+const failed = ref(false);
+const startupRoot = document.createElement('div');
+document.body.append(startupRoot);
+const startupApp = createApp({
+  render: () =>
+    h(NativeStartup, {
+      failed: failed.value,
+      // Explicit user retry only; never reload automatically after a network error.
+      onRetry: () => window.location.reload(),
+    }),
+});
+startupApp.mount(startupRoot);
+start()
+  .then(() => {
+    startupApp.unmount();
+    startupRoot.remove();
+  })
+  .catch(() => {
+    failed.value = true;
+  });

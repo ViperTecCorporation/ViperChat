@@ -121,6 +121,7 @@ class Conversation < ApplicationRecord
 
   has_many :mentions, dependent: :destroy_async
   has_many :messages, dependent: :destroy_async, autosave: true
+  has_many :web_attendance_invitations, dependent: :destroy
   has_one :csat_survey_response, dependent: :destroy_async
   has_many :conversation_participants, dependent: :destroy_async
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
@@ -132,7 +133,9 @@ class Conversation < ApplicationRecord
   before_save :ensure_snooze_until_reset
   before_create :determine_conversation_status
   before_create :ensure_waiting_since
+  before_create :initialize_web_attendance_cycle
   before_update :reset_inactivity_after_reopening
+  before_update :update_web_attendance_cycle
 
   after_update_commit :execute_after_update_commit_callbacks
   after_create_commit :notify_conversation_creation
@@ -183,7 +186,17 @@ class Conversation < ApplicationRecord
   end
 
   def unread_messages
+    if web_agent_last_seen_at.present? || channel_agent_last_seen_at.present?
+      return unread_for_destination('web').or(unread_for_destination('channel'))
+    end
+
     agent_last_seen_at.present? ? messages.created_since(agent_last_seen_at) : messages
+  end
+
+  def unread_for_destination(destination)
+    seen_at = destination == 'web' ? web_agent_last_seen_at : (channel_agent_last_seen_at || agent_last_seen_at)
+    scope = messages.where(delivery_destination: destination)
+    seen_at ? scope.created_since(seen_at) : scope
   end
 
   def assignee_unread_messages
@@ -272,10 +285,23 @@ class Conversation < ApplicationRecord
     messages[:conversation_id].eq(conversations[:id])
                               .and(messages[:account_id].eq(conversations[:account_id]))
                               .and(messages[:message_type].eq(Message.message_types[:incoming]))
-                              .and(
-                                conversations[:agent_last_seen_at].eq(nil)
-                                  .or(messages[:created_at].gt(conversations[:agent_last_seen_at]))
-                              )
+                              .and(unread_last_seen_condition(messages, conversations))
+  end
+
+  def self.unread_last_seen_condition(messages, conversations)
+    original_seen = last_seen_condition(messages, conversations[:agent_last_seen_at])
+    separate_seen = conversations[:web_agent_last_seen_at].not_eq(nil).or(conversations[:channel_agent_last_seen_at].not_eq(nil))
+    separate_seen.and(destination_last_seen_condition(messages, conversations)).or(separate_seen.not.and(original_seen))
+  end
+
+  def self.destination_last_seen_condition(messages, conversations)
+    channel_seen = Arel::Nodes::NamedFunction.new('COALESCE', [conversations[:channel_agent_last_seen_at], conversations[:agent_last_seen_at]])
+    messages[:delivery_destination].eq('web').and(last_seen_condition(messages, conversations[:web_agent_last_seen_at]))
+                                   .or(messages[:delivery_destination].eq('channel').and(last_seen_condition(messages, channel_seen)))
+  end
+
+  def self.last_seen_condition(messages, timestamp)
+    timestamp.eq(nil).or(messages[:created_at].gt(timestamp))
   end
 
   def recent_messages
@@ -292,6 +318,23 @@ class Conversation < ApplicationRecord
 
   private
 
+  def initialize_web_attendance_cycle
+    self.web_attendance_started_at = Time.current.change(usec: 0)
+  end
+
+  def update_web_attendance_cycle
+    return unless will_save_change_to_status?
+
+    if resolved?
+      web_attendance_invitations.where(revoked_at: nil).find_each { |invite| invite.update!(revoked_at: Time.current) }
+    elsif status_in_database == 'resolved'
+      self.web_attendance_cycle += 1
+      self.web_attendance_started_at = Time.current.change(usec: 0)
+      self.web_attendance_start_message_id = messages.maximum(:id).to_i + 1 unless will_save_change_to_web_attendance_start_message_id?
+      self.web_attendance_greeting_sent_at = nil
+    end
+  end
+
   def execute_after_update_commit_callbacks
     handle_resolved_status_change
     notify_status_change
@@ -307,6 +350,9 @@ class Conversation < ApplicationRecord
     # rubocop:disable Rails/SkipsModelValidations
     update_column(:waiting_since, nil)
     # rubocop:enable Rails/SkipsModelValidations
+
+    read_at = Time.current
+    notifications.where(account_id: account_id, read_at: nil).find_each { |notification| notification.update!(read_at: read_at) }
   end
 
   def reset_inactivity_after_reopening

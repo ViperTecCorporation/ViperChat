@@ -74,6 +74,10 @@
     "VIEW_TRANSLATED": "View translated",
     "EDITED": "edited",
     "MESSAGE_EDITED": "Edited message",
+    "VIEW_ONCE": "View-once message",
+    "VIEW_ONCE_OPEN": "Open media",
+    "VIEW_ONCE_ENABLE": "Enable view once",
+    "VIEW_ONCE_DISABLE": "Disable view once",
     "UNOAPI": {
       "ORDER": "Order {id}",
       "ORDER_RECEIVED": "Order received",
@@ -214,6 +218,17 @@
     "DOWNLOAD": "Download",
     "UNKNOWN_FILE_TYPE": "Unknown File",
     "SAVE_CONTACT": "Save Contact",
+    "CONTACT_BUNDLE": {
+      "TITLE": "Contacts",
+      "SUMMARY": "{name} and {count} other contact | {name} and {count} other contacts",
+      "VIEW_ALL": "View all",
+      "SEARCH": "Search contacts",
+      "CLOSE": "Close",
+      "EMPTY": "No contacts found",
+      "OPEN_CONTACT": "Open or add contact",
+      "MISSING_DETAILS": "Contact has no phone number or email",
+      "INVALID": "Contact “{name}” needs a name and at least a phone number or email. Update or remove the contact before sending."
+    },
     "NO_CONTENT": "No content to display",
     "SHARED_ATTACHMENT": {
       "CONTACT": "{sender} has shared a contact",

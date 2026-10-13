@@ -15,6 +15,14 @@ module GoogleConcern
   private
 
   def scope
+    return "email profile #{Google::GmailClient::SCOPES.join(' ')}" if gmail_api_default?
+
     'email profile https://mail.google.com/'
+  end
+
+  def gmail_api_default?
+    return @gmail_api_default unless @gmail_api_default.nil?
+
+    @gmail_api_default = ActiveModel::Type::Boolean.new.cast(GlobalConfigService.load('GOOGLE_GMAIL_API_ENABLED', false))
   end
 end

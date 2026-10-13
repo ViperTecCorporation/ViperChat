@@ -96,6 +96,36 @@ describe('GroupMembersModal', () => {
     ).toBe(false);
   });
 
+  it('loads the contact and its authorized inboxes when messaging a member', async () => {
+    const wrapper = await mountModal();
+    await wrapper
+      .find('[aria-label="CONVERSATION.GROUP.MESSAGE_MEMBER"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(mocks.dispatch).toHaveBeenNthCalledWith(1, 'contacts/show', {
+      id: 9,
+    });
+    expect(mocks.dispatch).toHaveBeenNthCalledWith(
+      2,
+      'contacts/fetchContactableInbox',
+      9
+    );
+  });
+
+  it('reports a failure to load contactable inboxes', async () => {
+    mocks.dispatch
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error('Unavailable'));
+    const wrapper = await mountModal();
+    await wrapper
+      .find('[aria-label="CONVERSATION.GROUP.MESSAGE_MEMBER"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(mocks.useAlert).toHaveBeenCalledWith('Unavailable');
+  });
+
   it('promotes using user_id and wa_id before refreshing the member list', async () => {
     mocks.updateGroupContactRoles.mockResolvedValue({
       data: { promoted: ['123456789012345@lid'], failed: [] },

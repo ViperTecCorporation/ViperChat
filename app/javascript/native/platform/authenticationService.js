@@ -1,4 +1,5 @@
 import { SecureStorage } from './secureStorageService';
+import { startupFetch } from './startupFetch';
 
 const AUTH_HEADER_NAMES = [
   'access-token',
@@ -13,7 +14,13 @@ let sessionWriteQueue = Promise.resolve();
 
 const sessionKey = installationId => `viper:${installationId}:auth`;
 
-const resolveAccountId = user => {
+export const resolveAccountId = (user, routeHash = window.location.hash) => {
+  const routeAccountId = Number(
+    routeHash.match(/^#\/app\/accounts\/(\d+)(?:\/|$)/)?.[1]
+  );
+  if (user?.accounts?.some(account => Number(account.id) === routeAccountId)) {
+    return routeAccountId;
+  }
   const accountId = Number(user?.account_id || user?.accounts?.[0]?.id);
   return Number.isInteger(accountId) && accountId > 0 ? accountId : null;
 };
@@ -162,12 +169,15 @@ export const validateSession = async installation => {
   const session = await loadSession(installation.installationId);
   if (!session?.headers) return null;
 
-  const response = await fetch(`${installation.baseUrl}/auth/validate_token`, {
-    headers: {
-      Accept: 'application/json',
-      ...session.headers,
-    },
-  });
+  const response = await startupFetch(
+    `${installation.baseUrl}/auth/validate_token`,
+    {
+      headers: {
+        Accept: 'application/json',
+        ...session.headers,
+      },
+    }
+  );
   const body = await readResponseBody(response);
 
   if (!response.ok) {

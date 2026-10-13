@@ -31,6 +31,16 @@ const mountComponent = (chat, currentContact = {}) =>
   });
 
 describe('ConversationCard', () => {
+  it('hides creation time only for single-conversation inboxes', async () => {
+    const wrapper = mountComponent({});
+    const timeAgo = wrapper.findComponent({ name: 'TimeAgo' });
+    expect(timeAgo.props('showCreatedAt')).toBe(true);
+    await wrapper.setProps({
+      inbox: { id: 1, lock_to_single_conversation: true },
+    });
+    expect(timeAgo.props('showCreatedAt')).toBe(false);
+  });
+
   it('does not display a participant photo for a group without its own picture', () => {
     const wrapper = mountComponent(
       { group: true, group_title: 'Support' },

@@ -276,7 +276,6 @@ export default {
         }
         this.avatarFile = null;
         this.avatarUrl = '';
-        this.activeDialCode = '';
       } catch (error) {
         useAlert(
           error.message

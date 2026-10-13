@@ -9,7 +9,7 @@ const syncThemeColor = meta => {
 };
 
 export const startNativeSystemBarSync = () => {
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+  if (!Capacitor.isNativePlatform()) {
     return null;
   }
 

@@ -105,7 +105,8 @@ const outsideClickHandler = [
 <template>
   <div
     v-on-click-outside="outsideClickHandler"
-    class="fixed inset-x-2 z-40 w-auto max-w-3xl overflow-visible border border-n-weak bg-n-alpha-3 backdrop-blur-[100px] shadow-lg rounded-xl p-6 grid gap-6 sm:static sm:inset-x-auto sm:w-full lg:w-[750px]"
+    data-testid="conversation-filter-panel"
+    class="fixed inset-x-2 z-40 w-auto min-w-0 max-w-3xl max-h-[calc(100dvh-10rem)] overflow-y-auto border border-n-weak bg-n-alpha-3 backdrop-blur-[100px] shadow-lg rounded-xl p-3 grid gap-4 lg:static lg:inset-x-auto lg:max-h-none lg:overflow-visible lg:p-6 lg:gap-6 lg:w-[750px]"
   >
     <h3 class="text-base font-medium leading-6 text-n-slate-12">
       {{ filterModalHeaderTitle }}
@@ -119,7 +120,7 @@ const outsideClickHandler = [
         />
       </div>
     </div>
-    <ul class="grid gap-4 list-none">
+    <ul class="grid min-w-0 gap-4 list-none">
       <template v-for="(filter, index) in filters" :key="filter.id">
         <ConditionRow
           v-if="index === 0"
@@ -146,11 +147,13 @@ const outsideClickHandler = [
         />
       </template>
     </ul>
-    <div class="flex gap-2 justify-between">
-      <Button sm ghost blue @click="addFilter">
+    <div class="flex min-w-0 flex-col gap-2 lg:flex-row lg:justify-between">
+      <Button sm ghost blue class="max-lg:min-h-11" @click="addFilter">
         {{ $t('FILTER.ADD_NEW_FILTER') }}
       </Button>
-      <div class="flex gap-2">
+      <div
+        class="grid min-w-0 grid-cols-2 gap-2 lg:flex max-lg:[&>button]:h-auto max-lg:[&>button]:min-h-11 max-lg:[&>button]:min-w-0 max-lg:[&>button]:whitespace-normal max-lg:[&>button]:py-2"
+      >
         <Button sm faded slate @click="resetFilter">
           {{ t('FILTER.CLEAR_BUTTON_LABEL') }}
         </Button>

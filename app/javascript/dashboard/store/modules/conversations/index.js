@@ -306,6 +306,17 @@ export const mutations = {
 
     const pendingMessageIndex = findPendingMessageIndex(chat, message);
     if (pendingMessageIndex !== -1) {
+      const existing = chat.messages[pendingMessageIndex];
+      const receiptOrder = ['progress', 'sent', 'delivered', 'read'];
+      if (
+        message.delivery_destination === 'web' &&
+        existing.id === message.id &&
+        receiptOrder.includes(message.status) &&
+        receiptOrder.indexOf(existing.status) >
+          receiptOrder.indexOf(message.status)
+      ) {
+        message = { ...message, status: existing.status };
+      }
       chat.messages[pendingMessageIndex] = message;
     } else {
       chat.messages.push(message);

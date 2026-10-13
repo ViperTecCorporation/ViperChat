@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_09_21_010000) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_03_010005) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -871,6 +871,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_21_010000) do
     t.datetime "group_created_at_external"
     t.datetime "group_contacts_synced_at"
     t.boolean "group_session_admin", default: false, null: false
+    t.integer "web_attendance_cycle", default: 1, null: false
+    t.boolean "web_presence_online", default: false, null: false
+    t.datetime "web_absent_since"
+    t.bigint "web_absence_epoch", default: 0, null: false
+    t.bigint "web_reminded_epoch"
+    t.bigint "web_reminder_pending_message_id"
+    t.datetime "web_attendance_started_at"
+    t.datetime "web_attendance_greeting_sent_at"
+    t.datetime "web_agent_last_seen_at"
+    t.datetime "channel_agent_last_seen_at"
+    t.bigint "web_attendance_start_message_id"
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
     t.index ["account_id", "inbox_id", "status", "assignee_id"], name: "conv_acid_inbid_stat_asgnid_idx"
@@ -1156,6 +1167,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_21_010000) do
     t.integer "sender_name_type", default: 0, null: false
     t.string "business_name"
     t.jsonb "csat_config", default: {}, null: false
+    t.boolean "web_attendance_enabled", default: false, null: false
+    t.boolean "web_attendance_greeting_enabled", default: false, null: false
+    t.string "web_attendance_button_text", default: "Continuar atendimento", null: false
+    t.text "web_attendance_invitation_message", default: "", null: false
     t.index ["account_id"], name: "index_inboxes_on_account_id"
     t.index ["channel_id", "channel_type"], name: "index_inboxes_on_channel_id_and_channel_type"
     t.index ["portal_id"], name: "index_inboxes_on_portal_id"
@@ -1271,6 +1286,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_21_010000) do
     t.jsonb "additional_attributes", default: {}
     t.text "processed_message_content"
     t.jsonb "sentiment", default: {}
+    t.string "delivery_destination", default: "channel", null: false
+    t.string "web_absence_request_key"
+    t.datetime "web_reminder_attempted_at"
     t.index "((additional_attributes -> 'campaign_id'::text))", name: "index_messages_on_additional_attributes_campaign_id", using: :gin
     t.index ["account_id", "content_type", "created_at"], name: "idx_messages_account_content_created"
     t.index ["account_id", "created_at", "message_type"], name: "index_messages_on_account_created_type"
@@ -1279,12 +1297,14 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_21_010000) do
     t.index ["content"], name: "index_messages_on_content", opclass: :gin_trgm_ops, using: :gin
     t.index ["conversation_id", "account_id", "created_at"], name: "idx_messages_conversation_account_created", order: { created_at: :desc }
     t.index ["conversation_id", "account_id", "message_type", "created_at"], name: "index_messages_on_conversation_account_type_created"
+    t.index ["conversation_id", "delivery_destination", "created_at"], name: "index_messages_on_destination_and_conversation"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["created_at"], name: "index_messages_on_created_at"
     t.index ["inbox_id"], name: "index_messages_on_inbox_id"
     t.index ["sender_type", "sender_id", "created_at"], name: "index_messages_on_sender_and_created"
     t.index ["source_id"], name: "index_messages_on_source_id"
     t.index ["status"], name: "idx_messages_status"
+    t.index ["web_absence_request_key"], name: "index_messages_on_web_absence_request_key", unique: true, where: "(web_absence_request_key IS NOT NULL)"
   end
 
   create_table "notes", force: :cascade do |t|
@@ -1645,6 +1665,40 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_21_010000) do
     t.index ["uid", "provider"], name: "index_users_on_uid_and_provider", unique: true
   end
 
+  create_table "web_attendance_invitations", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.bigint "message_id"
+    t.string "token_digest", null: false
+    t.text "encrypted_token", null: false
+    t.integer "cycle", null: false
+    t.datetime "activated_at"
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "account_id"
+    t.bigint "inbox_id"
+    t.bigint "contact_id"
+    t.index ["account_id"], name: "index_web_attendance_invitations_on_account_id"
+    t.index ["contact_id"], name: "index_web_attendance_invitations_on_contact_id"
+    t.index ["conversation_id"], name: "index_web_attendance_invitations_on_conversation_id"
+    t.index ["inbox_id"], name: "index_web_attendance_invitations_on_inbox_id"
+    t.index ["message_id"], name: "index_web_attendance_invitations_on_message_id"
+    t.index ["token_digest"], name: "index_web_attendance_invitations_on_token_digest", unique: true
+  end
+
+  create_table "web_attendance_sessions", force: :cascade do |t|
+    t.datetime "presence_seen_at"
+    t.boolean "visible", default: false, null: false
+    t.jsonb "presence_entries", default: {}, null: false
+    t.bigint "web_attendance_invitation_id", null: false
+    t.string "token_digest", null: false
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token_digest"], name: "index_web_attendance_sessions_on_token_digest", unique: true
+    t.index ["web_attendance_invitation_id"], name: "index_web_sessions_on_invitation"
+  end
+
   create_table "webhooks", force: :cascade do |t|
     t.integer "account_id"
     t.integer "inbox_id"
@@ -1709,6 +1763,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_21_010000) do
   add_foreign_key "scheduled_messages", "users", column: "created_by_id"
   add_foreign_key "scheduled_messages", "users", column: "sender_id"
   add_foreign_key "user_sessions", "users"
+  add_foreign_key "web_attendance_invitations", "accounts"
+  add_foreign_key "web_attendance_invitations", "contacts"
+  add_foreign_key "web_attendance_invitations", "conversations"
+  add_foreign_key "web_attendance_invitations", "inboxes"
+  add_foreign_key "web_attendance_invitations", "messages"
+  add_foreign_key "web_attendance_sessions", "web_attendance_invitations"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").
       after(:insert).

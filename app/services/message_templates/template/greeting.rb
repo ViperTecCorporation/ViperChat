@@ -2,6 +2,12 @@ class MessageTemplates::Template::Greeting
   pattr_initialize [:conversation!]
 
   def perform
+    if @conversation.inbox.web_attendance_available? && @conversation.inbox.web_attendance_greeting_enabled?
+      return WebAttendance::InvitationService.new(conversation: @conversation).create!(
+        content: @conversation.inbox.greeting_message, request_id: "greeting-#{@conversation.web_attendance_cycle}", greeting: true
+      )
+    end
+
     ActiveRecord::Base.transaction do
       conversation.messages.create!(greeting_message_params)
     end

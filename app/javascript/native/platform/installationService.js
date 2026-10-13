@@ -1,4 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
+import { startupFetch } from './startupFetch';
 
 const ACTIVE_INSTALLATION_ID_KEY = 'viper:native:active-installation-id';
 const INSTALLATIONS_KEY = 'viper:native:installations';
@@ -62,7 +63,7 @@ export const loadActiveInstallation = async () => {
 };
 
 const fetchDiscovery = async baseUrl => {
-  const response = await fetch(`${baseUrl}/.well-known/viper-chat`, {
+  const response = await startupFetch(`${baseUrl}/.well-known/viper-chat`, {
     headers: { Accept: 'application/json' },
   });
 

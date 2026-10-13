@@ -10,6 +10,9 @@ import {
 export default {
   validityCheck() {
     const urlData = endPoints('validityCheck');
+    if (window.chatwootConfig?.isNativeApp) {
+      return axios.get(urlData.url, { timeout: 8000 });
+    }
     return axios.get(urlData.url);
   },
   async logout() {

@@ -7,6 +7,12 @@ import { useRoute, useRouter } from 'vue-router';
 import { useMessageContext } from '../provider.js';
 import BaseAttachmentBubble from './BaseAttachment.vue';
 
+const props = defineProps({
+  contactAttachment: { type: Object, default: null },
+  listItem: { type: Boolean, default: false },
+});
+const emit = defineEmits(['opened']);
+
 import {
   DuplicateContactException,
   ExceptionWithMessage,
@@ -20,12 +26,13 @@ const route = useRoute();
 const router = useRouter();
 
 const attachment = computed(() => {
-  return attachments.value[0];
+  return props.contactAttachment || attachments.value[0];
 });
 
 const phoneNumber = computed(() => {
-  return attachment.value.fallbackTitle;
+  return attachment.value?.fallbackTitle || '';
 });
+const email = computed(() => attachment.value?.meta?.email || '');
 
 const contactName = computed(() => {
   const { meta } = attachment.value ?? {};
@@ -49,14 +56,17 @@ const rawPhoneNumber = computed(() => {
 function getContactObject() {
   const contactItem = {
     name: contactName.value,
-    phone_number: `+${rawPhoneNumber.value}`,
+    ...(rawPhoneNumber.value
+      ? { phone_number: `+${rawPhoneNumber.value}` }
+      : {}),
+    ...(email.value ? { email: email.value } : {}),
   };
   return contactItem;
 }
 
 async function filterContactByNumber(searchCandidate) {
   const query = {
-    attribute_key: 'phone_number',
+    attribute_key: rawPhoneNumber.value ? 'phone_number' : 'email',
     filter_operator: 'equal_to',
     values: [searchCandidate],
     attribute_model: 'standard',
@@ -83,7 +93,9 @@ function openContact(contactId) {
 
 async function addContact() {
   try {
-    let contact = await filterContactByNumber(rawPhoneNumber.value);
+    let contact = await filterContactByNumber(
+      rawPhoneNumber.value || email.value
+    );
     if (contact) {
       useAlert(t('CONTACT_FORM.FORM.PHONE_NUMBER.DUPLICATE'));
     } else {
@@ -91,6 +103,7 @@ async function addContact() {
       useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
     }
     await openContact(contact.id);
+    emit('opened');
   } catch (error) {
     if (error instanceof DuplicateContactException) {
       if (error.contactErrorAttributes.includes('phone_number')) {
@@ -113,12 +126,38 @@ const action = computed(() => ({
 </script>
 
 <template>
+  <div
+    v-if="listItem"
+    class="flex min-w-0 items-center gap-3 rounded-lg bg-n-solid-2 p-3"
+  >
+    <span
+      class="i-teenyicons-user-circle-solid size-8 shrink-0 text-n-slate-10"
+    />
+    <div class="min-w-0 flex-1">
+      <p class="m-0 break-words text-n-slate-12">{{ contactName }}</p>
+      <p class="m-0 break-all text-sm text-n-slate-11">
+        {{ phoneNumber || email }}
+      </p>
+      <p v-if="!phoneNumber && !email" class="m-0 text-sm text-n-ruby-11">
+        {{ t('CONVERSATION.CONTACT_BUNDLE.MISSING_DETAILS') }}
+      </p>
+      <button
+        v-else
+        type="button"
+        class="mt-2 text-sm text-n-blue-text"
+        @click="addContact"
+      >
+        {{ t('CONVERSATION.CONTACT_BUNDLE.OPEN_CONTACT') }}
+      </button>
+    </div>
+  </div>
   <BaseAttachmentBubble
+    v-else
     icon="i-teenyicons-user-circle-solid"
     icon-bg-color="bg-[#D6409F]"
     sender-translation-key="CONVERSATION.SHARED_ATTACHMENT.CONTACT"
     :title="contactName"
-    :content="phoneNumber"
-    :action="formattedPhoneNumber ? action : null"
+    :content="phoneNumber || email"
+    :action="formattedPhoneNumber || email ? action : null"
   />
 </template>

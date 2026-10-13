@@ -7,7 +7,7 @@ class Messages::MessageBuilder
 
   def initialize(user, conversation, params)
     @params = params
-    @private = params[:private] || false
+    @private = ActiveModel::Type::Boolean.new.cast(params[:private]) || false
     @conversation = conversation
     @user = user
     @account = conversation.account
@@ -49,7 +49,8 @@ class Messages::MessageBuilder
     location = content_attributes.with_indifferent_access[:location]
     return if location.nil?
 
-    supported = @conversation.inbox.whatsapp? && %w[unoapi whatsapp_cloud].include?(@conversation.inbox.channel.provider)
+    supported = @params[:delivery_destination] == 'web' ||
+                (@conversation.inbox.whatsapp? && %w[unoapi whatsapp_cloud].include?(@conversation.inbox.channel.provider))
     raise ArgumentError, 'Location requires an outgoing WhatsApp message' unless supported && @message.outgoing? && !@message.private?
     raise ArgumentError, 'Location must be sent separately' if @attachments.present? || contact_attachments.present?
     raise ArgumentError, 'Invalid location' unless location.is_a?(Hash)
@@ -270,6 +271,7 @@ class Messages::MessageBuilder
       items: @items,
       in_reply_to: @in_reply_to,
       echo_id: @params[:echo_id],
+      delivery_destination: @private ? 'channel' : (@params[:delivery_destination].presence || 'channel'),
     }.merge(external_created_at)
       .merge(automation_rule_id)
       .merge(campaign_id)
@@ -279,6 +281,8 @@ class Messages::MessageBuilder
   end
 
   def params_status_progress?
+    return false if @params[:delivery_destination] == 'web'
+
     @params[:status].blank? && @message_type == 'outgoing' && !@private && @params[:action] == 'create' && (@conversation.inbox&.whatsapp? || @conversation.inbox&.notifica_me?)
   end
 
@@ -338,7 +342,8 @@ class Messages::MessageBuilder
 
   def contact_attachments
     contacts = content_attributes[:contacts] || content_attributes['contacts']
-    return [] unless contacts.is_a?(Array)
+    return [] if contacts.nil?
+    raise ArgumentError, 'Contacts must be an array' unless contacts.is_a?(Array)
 
     contacts.filter_map do |contact|
       normalized_contact_attachment(contact)
@@ -346,6 +351,8 @@ class Messages::MessageBuilder
   end
 
   def normalized_contact_attachment(contact)
+    raise ArgumentError, 'Invalid contact' unless contact.is_a?(Hash)
+
     contact = contact.with_indifferent_access
     formatted_name = contact[:formatted_name].presence ||
                      contact[:formattedName].presence ||
@@ -366,7 +373,9 @@ class Messages::MessageBuilder
     phone_number = contact[:phone_number].presence
     phone_number ||= contact[:phoneNumber].presence
     email = contact[:email].presence
-    return if formatted_name.blank? || (phone_number.blank? && email.blank?)
+    if formatted_name.blank? || (phone_number.blank? && email.blank?)
+      raise ArgumentError, "Invalid contact '#{formatted_name}': name and a phone number or email are required"
+    end
 
     {
       formatted_name: formatted_name,
@@ -402,4 +411,3 @@ class Messages::MessageBuilder
 end
 
 Messages::MessageBuilder.prepend_mod_with('Messages::MessageBuilder')
-
