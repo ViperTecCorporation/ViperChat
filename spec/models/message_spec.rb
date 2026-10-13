@@ -172,6 +172,7 @@ RSpec.describe Message do
         content: message.content,
         conversation_id: message.conversation.display_id,
         created_at: message.created_at.to_i,
+        delivery_destination: message.delivery_destination,
         external_source_ids: message.external_source_ids,
         id: message.id,
         inbox_id: message.inbox_id,
@@ -183,6 +184,8 @@ RSpec.describe Message do
         source_id: message.source_id,
         status: message.status,
         updated_at: message.updated_at,
+        web_absence_request_key: message.web_absence_request_key,
+        web_reminder_attempted_at: message.web_reminder_attempted_at,
         conversation: {
           assignee_id: message.conversation.assignee_id,
           contact_inbox: {

@@ -1,4 +1,10 @@
 RSpec.shared_context 'with Uno web attendance' do
+  around do |example|
+    with_modified_env FRONTEND_URL: 'http://www.example.com' do
+      example.run
+    end
+  end
+
   let(:account) { create(:account) }
   let(:channel) do
     create(:channel_whatsapp, account: account, provider: 'unoapi', sync_templates: false, validate_provider_config: false,
