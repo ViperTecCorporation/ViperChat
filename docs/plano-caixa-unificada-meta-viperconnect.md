@@ -19,11 +19,12 @@ Objetivo: apresentar um único atendimento para um número WhatsApp conectado si
 | Instalação atual | Candidata a manter ViperConnect como principal devido ao histórico; não é regra fixa do produto. |
 | Histórico e operação | A principal organiza conversas, responsável, equipe, status, etiquetas, SLA e automações. |
 | Transporte padrão | Configuração independente da escolha da principal. |
-| Envio | Uma mensagem é enviada por um transporte escolhido, nunca automaticamente pelos dois. |
+| Envio | Uma mensagem é enviada por um único transporte efetivo. A seleção do editor é a preferência; recurso incompatível pode ser roteado previamente ao parceiro compatível, sem alterar essa seleção. |
+| Ações sobre mensagens | Resolver o transporte pela capacidade da operação e pelo vínculo da mensagem, independentemente da seleção do editor para novos envios. |
 | IDs existentes | UUID da ViperConnect, `wamid` da Meta e ID interno do ViperChat continuam preservados. |
 | ID original | Novo metadado de correlação; não substitui IDs públicos nem IDs de citação. |
 | Deduplicação | Associação determinística; nunca apenas por conteúdo, nome de arquivo ou horário. |
-| Falha de envio | Não mudar de transporte silenciosamente nem reenviar automaticamente pelo parceiro. |
+| Falha de envio | Roteamento prévio por incompatibilidade comprovada não é retry: erro, timeout ou resultado incerto não autorizam reenviar automaticamente pelo parceiro. |
 | Histórico anterior | Preservado; sem fusão retroativa automática e sem exclusão em massa. |
 | Custos | Estimativa separada da fatura, com regras versionadas e tarifas verificáveis. |
 
@@ -326,19 +327,65 @@ O piloto deve comprovar:
 | Correlacionar eventos entre caixas | ID original reconhecido, no escopo correto |
 | Enviar uma citação pela ViperConnect | UUID público da mensagem naquele transporte |
 | Enviar uma citação pela Meta | `wamid` completo da mensagem naquele transporte |
-| Reação/edição/exclusão | ID de operação exigido pelo transporte escolhido e sua capacidade |
+| Reação/edição/exclusão | ID de operação exigido pelo transporte efetivamente resolvido por capacidade, independentemente da seleção do editor |
 
 **Não enviar `provider_message_id` no lugar do UUID da ViperConnect.** Ele serve à correlação. O frontend informa a mensagem interna e o transporte; o backend resolve o alias certo. Na ausência desse alias, avisar e permitir retirar a citação explicitamente, nunca substituir silenciosamente ou inventar ID.
 
-Persistir a escolha de transporte antes de enfileirar. O job deve usar credenciais, identidade do contato, regras de janela e templates do transporte escolhido, não apenas `conversation.inbox.channel`. LID e BSUID não são intercambiáveis. Não trocar de canal silenciosamente em retry; envio com resultado desconhecido exige cuidado antes de uma tentativa alternativa.
+Resolver e persistir o transporte efetivo antes de enfileirar, preservando separadamente a preferência selecionada no editor e o motivo de eventual roteamento por capacidade. O job deve usar credenciais, identidade do contato, regras de janela e templates do transporte efetivo, não apenas `conversation.inbox.channel`. LID e BSUID não são intercambiáveis. Não trocar de canal silenciosamente em retry; envio com resultado desconhecido exige cuidado antes de uma tentativa alternativa.
 
 Reações, edição e exclusão dependem de capacidade e autoria. Remover a mensagem localmente não garante que o outro canal possa revogá-la no WhatsApp.
+
+### 9.1. Levantamento obrigatório de capacidades antes da implementação
+
+Antes de implementar cada recurso da unificação, levantar o suporte real da Meta e da ViperConnect na versão instalada, considerando a documentação do provider, o código de envio/recepção, a edição do ViperChat e as restrições verificadas em testes. Não assumir que a existência de uma opção no frontend comprova suporte do transporte.
+
+Manter uma matriz versionada por recurso, com suporte a envio, recebimento e ações separados. Para cada item registrar: suportado, não suportado ou ainda não validado; limites; autoria/prazo; ID exigido; pré-condições; evidência e versão/data da validação; transporte alternativo compatível; e eventual diferença de custo/semântica. Estado desconhecido não autoriza roteamento automático por suposição.
+
+O levantamento deve incluir, no mínimo: texto, imagem, áudio, vídeo, documento, contato, localização, resposta citada, reação, edição, exclusão para todos, visualização única, formatos interativos, listas/botões, templates, grupos e chamadas. Cada recurso pode ter restrições próprias de formato, tamanho, destinatário e contexto; a matriz não pode ser apenas um booleano global por canal.
+
+O exemplo “excluir via ViperConnect quando Meta não suportar” é uma regra de resolução, não uma afirmação de que toda mensagem ou autoria permita exclusão pela ViperConnect. A capacidade precisa ser comprovada para aquele alvo e contexto antes de executar.
+
+### 9.2. Roteamento automático por capacidade, sem mudar a seleção do editor
+
+Requisito solicitado pelo usuário: se o recurso não for suportado pelo transporte marcado no editor, mas for suportado pelo parceiro vinculado, autorizado e apto para aquele contexto, a operação deve ser enviada automaticamente pelo provedor compatível. A preferência do editor para os próximos envios permanece intacta. Aplicar nos dois sentidos quando a matriz comprovar suporte alternativo.
+
+Ordem de resolução:
+
+1. Identificar recurso, contexto e, para ações, mensagem alvo. A seleção do editor controla a preferência dos novos envios, não obriga ações sobre mensagens a usar o mesmo canal.
+2. Para novo envio, usar a preferência quando compatível; se houver incompatibilidade conhecida, resolver o parceiro compatível antes de qualquer tentativa externa.
+3. Para ação sobre mensagem existente, priorizar o transporte apto à ação naquele alvo, com autoria e alias corretos; a seleção do editor não deve impedir a operação disponível no parceiro.
+4. Se ambos puderem executar uma ação, preferir a origem de envio/alias válido da mensagem segundo uma regra determinística documentada para o recurso, sem executar nos dois.
+5. Validar permissões, vínculo ativo, identificador do destinatário/alvo, capacidade contextual e condições de envio no transporte efetivo.
+6. Exibir o transporte efetivo e o motivo do roteamento na prévia/confirmação, quando houver, e nos detalhes da operação. Roteamento é automático, mas não oculto.
+7. Persistir preferência solicitada, transporte efetivo, motivo, alias utilizado e chave de idempotência antes de enfileirar. O worker revalida a operação; mudanças de configuração não autorizam reencaminhar silenciosamente jobs pendentes.
+8. Se nenhum transporte estiver apto, informar o impedimento e não enviar, degradar o conteúdo ou descartar a ação silenciosamente.
+
+Exemplos de comportamento esperado:
+
+| Situação | Transporte efetivo | Seleção do editor depois |
+| --- | --- | --- |
+| Meta selecionada; excluir para todos só é válido via ViperConnect para o alvo | ViperConnect, usando UUID e confirmação de exclusão | Continua Meta |
+| Meta selecionada; recurso de novo envio só é suportado pela ViperConnect no contexto | ViperConnect, identificado na prévia/ação de envio | Continua Meta |
+| ViperConnect selecionada; recurso só é suportado pela Meta no contexto | Meta, após validar suas condições | Continua ViperConnect |
+| Ambos suportam o novo envio | Transporte selecionado no editor | Sem alteração |
+| Parceiro sem permissão, alias necessário ou suporte validado | Nenhum envio/ação; informar motivo | Sem alteração |
+
+### 9.3. Segurança, confirmação e diferença para fallback após erro
+
+- Incompatibilidade de recurso é distinta de indisponibilidade, falta de permissão, autenticação inválida, restrição de segurança, janela fechada, template inválido, erro de rede ou resposta incerta. Estes casos não devem ser convertidos genericamente em “não suporta” para tentar outro canal.
+- A seleção automática não pode contornar políticas do WhatsApp, autorizações do usuário, bloqueio de contato, limitações de autoria ou exigências do transporte efetivo.
+- Não converter um template oficial em texto livre nem alterar categoria, destinatário ou conteúdo apenas para caber no parceiro. Roteamento só é automático quando preserva a função e as condições aplicáveis; diferenças de semântica devem ser expostas e aprovadas.
+- Exclusão para todos continua com confirmação explícita, identificando o transporte efetivo, por exemplo “Excluir para todos via ViperConnect”. Remoção apenas local é outra operação, não substituto silencioso para revogação remota.
+- Se já houve tentativa externa com resultado desconhecido ou possivelmente entregue, não iniciar outra pelo parceiro. Preservar a idempotência e oferecer diagnóstico/repetição controlada.
+- Se o recurso previsto como suportado retornar erro, registrar e corrigir a matriz quando confirmado. Não usar o primeiro envio real como teste seguido de envio automático alternativo.
+- Rascunho, citação e anexos pertencem à operação: roteá-los não deve mover a seleção de preferência, apagar outro rascunho ou duplicar upload. Cobrança estimada e identificadores precisam refletir o transporte efetivo, não o selecionado originalmente.
 
 ## 10. Frontend, Web e aplicativos
 
 - Um atendimento, uma timeline e uma bolha por mensagem correlacionada.
 - Seletor visível “Enviar por: ViperConnect / Meta” tanto no editor compacto quanto no editor completo, permitindo ao agente escolher explicitamente o transporte de saída em ambos, independentemente da caixa principal.
 - Manter o canal selecionado ao alternar entre editor compacto e completo, nos dois sentidos. Ambos compartilham a mesma seleção por conversa; a troca de editor não restaura o padrão administrativo nem altera o transporte silenciosamente. Atividade recebida também não muda a seleção.
+- Nos dois editores, distinguir canal preferido e transporte efetivo do recurso. Quando a matriz exigir o parceiro, indicar “Será enviado via ...: recurso indisponível no canal selecionado”, sem trocar a seleção. Menus de ação, como excluir, mostram o canal executor e não dependem do seletor de novos envios.
 - Rascunhos independentes por transporte, preservando texto, anexos e citação. Ao trocar, revalidar capacidades sem perder o rascunho.
 - Indicação discreta do transporte de envio, detalhes dos aliases e erros acessíveis.
 - Status por transporte preservado; status agregado monotônico e baseado na mesma mensagem. Não converter falha em sucesso por evento não correlacionado.
@@ -352,7 +399,7 @@ Testar desktop e mobile 320, 360, 390, 412/430 px, teclado, orientação pertine
 
 ## 11. Integrações adjacentes
 
-- Agendamento persiste o transporte escolhido e revalida disponibilidade/janela ao executar; não herda silenciosamente um novo padrão administrativo.
+- Agendamento persiste preferência e transporte efetivo resolvido, com motivo de roteamento por capacidade quando aplicável, e revalida disponibilidade/janela ao executar; não herda silenciosamente um novo padrão administrativo nem passa ao parceiro após falha.
 - Campanhas usam transporte explícito e não são automaticamente roteadas como uma resposta manual.
 - Permissões consideram principal e parceira; o vínculo não amplia acesso indevidamente a credenciais ou histórico.
 - Relatórios contam um atendimento e uma mensagem lógica, permitindo decompor os envios reais por transporte.
@@ -423,7 +470,7 @@ Templates faturáveis não consomem automaticamente a franquia de serviço neste
 - Separar “faturamento observado”, “estimativa calculada” e “cenário simulado”. Webhook pode classificar cobrança sem informar o valor monetário exato; conciliar com rate card/fatura.
 - Compartilhar contador entre as caixas vinculadas do mesmo número e sinalizar consumo externo não observado.
 - Aguardar confirmação de entrega para consolidar consumo observado. Estimativa antes do envio é provisória; envios concorrentes e externos impedem garantia de franquia restante.
-- Primeira versão não troca automaticamente o transporte para aproveitar franquia. Decisão continua explícita; roteamento financeiro automático seria outro escopo.
+- Primeira versão não troca automaticamente o transporte para aproveitar franquia. Roteamento automático por capacidade segue a seção 9 e contabiliza o transporte efetivo; roteamento financeiro automático seria outro escopo.
 
 ## 13. Etapas e critérios de avanço
 
@@ -453,6 +500,9 @@ Não saltar da primeira alteração do webhook para a fusão de históricos. O s
 - Citação nos dois sentidos: UUID enviado à ViperConnect, `wamid` à Meta; alias ausente com aviso explícito.
 - Seletor presente e funcional no editor compacto e no completo: selecionar Meta e ViperConnect em cada editor, alternar entre eles nos dois sentidos e comprovar que a seleção, o rascunho e o transporte efetivamente persistido/enviado permanecem corretos. Executar com principal Meta e principal ViperConnect, em desktop e mobile.
 - Edição, reação e exclusão, com verificação de autoria/capacidade e sem reenvio acidental.
+- Matriz de capacidades validada por recurso antes da implementação; testar recurso não suportado na Meta roteado à ViperConnect e o inverso, quando aplicável, preservando o seletor e informando o transporte efetivo nos dois editores.
+- Exclusão para todos via canal compatível, com alias, autoria e confirmação corretos, mesmo quando o editor aponta ao outro canal; remoção local é independente. Testar ambos compatíveis, nenhum compatível, capacidade desconhecida e parceiro sem autorização/alias.
+- Falha/timeout depois de uma tentativa não dispara envio automático pelo parceiro. Verificar chave de idempotência, uma única chamada externa, mídia reaproveitada e custo atribuído ao transporte efetivo.
 - Uma saudação/bot/notificação/webhook externo por evento lógico; notas privadas permanecem internas.
 - Janela oficial aberta/fechada, template aprovado, canal desconectado e envio com resultado incerto.
 - Atendimento Web, convites, lembretes, rascunhos, agendamento e relatórios existentes.
@@ -471,6 +521,7 @@ Migrações futuras devem ser compatíveis com rollback da aplicação; não rem
 
 1. Ler este documento e as instruções do projeto ViperConnect; reconferir branch, alterações de outros contextos e versão de runtime.
 2. Inventariar exatamente os caminhos de montagem dos webhooks e referências no código atual.
+   Antes de implementar cada recurso da unificação nas etapas posteriores, completar e validar sua matriz de capacidades Meta/ViperConnect, incluindo IDs, restrições e regra de roteamento automático ao parceiro compatível, sem mudar a seleção do editor.
 3. Fechar o contrato aditivo e os exemplos de `provider_message_id`, preservando todos os IDs atuais.
 4. Implementar somente P1, com testes focados e revisão de compatibilidade; não iniciar a unificação ainda.
 5. Apresentar o resultado de dev e obter aceite antes de preparar/aplicar o hostpath na VPS.
