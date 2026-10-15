@@ -337,7 +337,8 @@ Reações, edição e exclusão dependem de capacidade e autoria. Remover a mens
 ## 10. Frontend, Web e aplicativos
 
 - Um atendimento, uma timeline e uma bolha por mensagem correlacionada.
-- Seletor visível “Enviar por: ViperConnect / Meta”, com padrão configurável e sem troca automática por atividade recebida.
+- Seletor visível “Enviar por: ViperConnect / Meta” tanto no editor compacto quanto no editor completo, permitindo ao agente escolher explicitamente o transporte de saída em ambos, independentemente da caixa principal.
+- Manter o canal selecionado ao alternar entre editor compacto e completo, nos dois sentidos. Ambos compartilham a mesma seleção por conversa; a troca de editor não restaura o padrão administrativo nem altera o transporte silenciosamente. Atividade recebida também não muda a seleção.
 - Rascunhos independentes por transporte, preservando texto, anexos e citação. Ao trocar, revalidar capacidades sem perder o rascunho.
 - Indicação discreta do transporte de envio, detalhes dos aliases e erros acessíveis.
 - Status por transporte preservado; status agregado monotônico e baseado na mesma mensagem. Não converter falha em sucesso por evento não correlacionado.
@@ -450,6 +451,7 @@ Não saltar da primeira alteração do webhook para a fusão de históricos. O s
 - Mídia equivalente simultânea pelos dois canais: conferir anexo canônico, blob, objeto S3 e número de uploads/downloads. Repetir com arquivo enviado pelo agente, retry, crash, álbum, transcodificação e origem indisponível.
 - Envio por ambos os transportes, echo antes/depois da resposta, status atrasado e duplicado, retry e reinício de worker.
 - Citação nos dois sentidos: UUID enviado à ViperConnect, `wamid` à Meta; alias ausente com aviso explícito.
+- Seletor presente e funcional no editor compacto e no completo: selecionar Meta e ViperConnect em cada editor, alternar entre eles nos dois sentidos e comprovar que a seleção, o rascunho e o transporte efetivamente persistido/enviado permanecem corretos. Executar com principal Meta e principal ViperConnect, em desktop e mobile.
 - Edição, reação e exclusão, com verificação de autoria/capacidade e sem reenvio acidental.
 - Uma saudação/bot/notificação/webhook externo por evento lógico; notas privadas permanecem internas.
 - Janela oficial aberta/fechada, template aprovado, canal desconectado e envio com resultado incerto.
