@@ -68,6 +68,52 @@ ID original WhatsApp:          A5E5870B16922B5CA6CA6B6A71721286
 
 Isso comprova a correlação nessa amostra, não um contrato universal de decodificação de `wamid`. Não presumir cobertura de todos os dispositivos, tipos de mídia, referências ou futuras versões da Meta.
 
+### 3.1. Nova evidência: contato duplicado por BSUID Meta
+
+Na revisão somente leitura de 15/10/2026, o BSUID `BR.2339818310092335` estava associado ao contato `107078`, criado na caixa Meta `65` em 15/10/2026 às 12:20:16 UTC, sem telefone e com o próprio identificador como nome. Já existia o contato `94129`, criado em agosto, com telefone e LID na ViperConnect `1`. Posteriormente o contato Meta recebeu um alias telefônico sem o nono dígito, mas permaneceu separado e sem telefone no cadastro consultado.
+
+Comprovação de equivalência de mensagem, sem depender de nome/texto/horário:
+
+| Meta | ViperConnect | ID original confirmado |
+| --- | --- | --- |
+| Mensagem `2481329`, contato `107078`, conversa `41348` | Mensagem `2481328`, contato `94129`, conversa `37692` | `3EB05ABCC1AAB1AEEC52E5` |
+
+O original foi obtido do mapa Redis da ViperConnect e conferido na representação decodificada do `wamid` Meta. O conteúdo armazenado diferia entre as duas mensagens. Esta é evidência de que a associação de mensagens deve funcionar mesmo quando os contatos internos já tenham sido criados separadamente.
+
+Na mesma consulta havia 26 contatos da caixa Meta com BSUID `BR.*` e sem telefone; isso não comprova 26 duplicações. Contatos legitimamente sem telefone não devem ser mesclados nem tratados como erro apenas por essa condição.
+
+O payload e eventual warning de lookup do evento inicial não foram encontrados nos intervalos de logs consultados. Não está comprovado se a Meta deixou de fornecer telefone, se a consulta falhou ou se houve outra condição naquele instante. O runtime consultado usa busca de aliases na própria caixa, lookup opcional no echo e criação por atributos disponíveis; a limitação de resolução de identidade deve ser investigada e testada, não atribuída a uma resposta específica da Meta sem evidência.
+
+### 3.2. Recuperação pontual autorizada e executada em 15/10/2026
+
+Após prévia dos candidatos e autorização explícita do usuário para fazer backup e preservar os antigos, foram mesclados somente os dez pares abaixo, usando a ação de merge do ViperChat, com verificações dentro de uma transação e conferência independente posterior:
+
+```text
+Duplicado Meta -> contato antigo preservado
+107069 -> 89
+107075 -> 3427
+107078 -> 94129
+107081 -> 3431
+107083 -> 17449
+107087 -> 70322
+107098 -> 72
+107109 -> 75
+107114 -> 283
+107121 -> 107120
+```
+
+Nos dez pares foi confirmada a equivalência de pelo menos uma mensagem por ID original WhatsApp, além do candidato telefônico com/sem nono dígito. O lote não incluiu os outros contatos sem prova de duplicação.
+
+Backup restrito na VPS: `/root/viperchat-contact-merge-20261015-oGEE3FHj/`, com diretório privado e arquivos acessíveis apenas ao proprietário. Contém `before-merge.json.gz` (snapshot dos registros envolvidos), `schema.sql.gz` (schema do banco) e `verification.json` (resultado pós-operação). O snapshot é específico do lote, não um backup integral da base nem uma cópia dos arquivos binários S3. Gzip, leitura do JSON e hash foram conferidos; uma restauração completa não foi executada. Dados privados do backup não foram copiados para este repositório.
+
+SHA-256 do snapshot: `e3085cfa5c7dbf3d1903ddaad750eaf70ea9897bea135f999f0776ec5136217b`.
+
+Resultado verificado: os dez IDs antigos, nomes, telefones, LIDs/BSUIDs legados e datas de criação foram preservados; os dez cadastros duplicados foram removidos. Os aliases Meta, inclusive `BR.2339818310092335`, agora apontam para os contatos antigos. Permaneceram os 73 vínculos de caixa, 31 conversas e 106 mensagens examinados, além dos 18 anexos e 73 associações/blobs Active Storage conferidos. A etiqueta, o agendamento e as duas avaliações existentes no conjunto também permaneceram. Não foi executado download/upload, purge de mídia ou envio de mensagem; a cópia intermediária do snapshot no container foi removida após a validação, mantendo o backup privado no host.
+
+Rollback, se necessário, exige revisão e restauração seletiva dos registros originais, preservando eventos que chegaram depois da mesclagem. Não restaurar toda a base nem reaplicar o snapshot por cima de atividade posterior indiscriminadamente. A operação não uniu caixas, não fundiu conversas e não eliminou mensagens equivalentes dos dois transportes.
+
+Esta correção de dados **não implementou a prevenção no código**. As seções 6.2 e 6.3 continuam obrigatórias para tratar novos eventos e evitar recorrência.
+
 ## 4. Primeira entrega — ViperConnect: ID original no webhook
 
 ### 4.1. Contrato aditivo
@@ -212,6 +258,54 @@ Isolar a interpretação do `wamid` em adaptador testado com os exemplos reais e
 
 O piloto deve provar a correspondência para os tipos/dispositivos suportados. Se o formato não permitir correlação confiável, a unificação fica bloqueada para aquele caso até existir alternativa validada. Não recorrer a texto + horário como chave substituta.
 
+### 6.2. Identidade de contato: dependência obrigatória da unificação
+
+`provider_message_id` resolve a identidade da mensagem, não substitui a resolução da pessoa. Implementar um resolvedor de identidade compartilhado pelos fluxos de entrada e echo antes de criar contato e conversa definitivos na caixa unificada.
+
+Requisitos:
+
+1. Manter aliases de identidade com origem e escopo: conta, vínculo de caixas, canal/provedor e escopo empresarial/aplicativo aplicável. Não interpretar BSUID `BR.*`, LID `@lid` e telefone como o mesmo namespace.
+2. Não depender de um único `contacts.bsuid` global para representar simultaneamente LID ViperConnect e BSUID Meta. Preservar o atributo legado por compatibilidade, armazenando os vínculos específicos sem sobrescrever um pelo outro.
+3. Reutilizar alias verificado já associado ao contato, tanto para mensagem nova quanto para echo. Não limitar a descoberta apenas aos aliases da caixa que recebeu o evento quando houver um vínculo de caixas explicitamente configurado.
+4. Se a mensagem tiver ID original reconhecido e corresponder exatamente a um evento da caixa parceira, usar essa evidência para propor/estabelecer o vínculo do alias ao contato canônico, validando conta, número empresarial, direção, papel do participante e conflitos. Não exigir previamente `contact_id` igual: isso impediria justamente resolver o caso duplicado confirmado.
+5. Um ID citado, reação, evento de grupo ou encaminhamento não comprova por si a identidade do remetente atual. Usar o ID da mesma mensagem/evento e identificar corretamente os participantes; rejeitar associações ambíguas.
+6. Quando houver telefone confiável no próprio evento ou lookup permitido, procurar o contato existente e seus aliases antes de criar outro. Variação brasileira do nono dígito gera candidato contextual, não fusão automática. Exigir evidência adicional e ausência de candidatos conflitantes quando necessário.
+7. Alias existente sem telefone/nome deve poder ser enriquecido posteriormente, sem ignorar os novos atributos só porque o vínculo já foi encontrado. Preservar nome humano, dados manuais, histórico, etiquetas, responsáveis e atributos existentes; o identificador técnico não deve substituir nome conhecido.
+8. Lookup externo é auxiliar: sem garantia de retorno do telefone, com limite/timeout observável e sem bloquear ou descartar mensagens. Falha de lookup não autoriza inventar telefone a partir do BSUID nem fazer tentativas ilimitadas.
+9. Se não houver evidência suficiente, registrar identidade pendente de forma persistente e auditável. A mensagem deve continuar acessível ao atendimento, com indicação de identificação incompleta, sem associação por aproximação. O desenho deve suportar associação posterior, sem uma segunda automação/conversa definitiva quando a identidade for resolvida.
+10. Contato realmente novo e identidade ainda desconhecida são situações distintas. Criação provisória, quando necessária ao modelo atual, deve ser marcada e reconciliável; não prometer ausência absoluta de registros temporários sem ID comum disponível.
+11. Impedir que workers simultâneos criem dois aliases/contatos definitivos para a mesma identidade confirmada. Usar restrições únicas no escopo correto, transações e recuperação de conflitos, considerando evento Meta antes/depois do ViperConnect.
+
+Separar dois trabalhos:
+
+- Correção preventiva para entradas/echo novos: faz parte da entrega da unificação e do modo observação de identidade.
+- Recuperação dos contatos/conversas já duplicados: relatório de candidatos com evidências, dry-run e aprovação própria. O lote de dez pares, incluindo `107078 -> 94129`, foi posteriormente autorizado e executado conforme seção 3.2; isso não autoriza outros lotes nem reapontamento indiscriminado por SQL.
+
+Para recuperação, tratar notas privadas, permissões, mídias, agenda, etiquetas e responsável antes de consolidar registros. Não apagar aliases válidos. A correlação de mensagens pode produzir a evidência para o relatório, mas não deve disparar uma fusão destrutiva de cadastros antigos silenciosamente.
+
+Observabilidade: origem do evento, campo de identidade recebido, resultado do lookup (sem segredos), candidatos encontrados, evidência utilizada, conflito, identidade provisória e vínculo final. Medir quantos casos são identificados por alias, telefone comprovado e mensagem original equivalente.
+
+### 6.3. Preservar o contato antigo, tratar o nono dígito e reconciliar dados posteriores
+
+Regra explícita do usuário: o contato antigo do ViperChat é preservado como cadastro base quando um novo registro técnico da Meta for comprovadamente a mesma pessoa. Manter seu ID interno, nome humano, histórico, vínculos, etiquetas e dados manuais. No caso já confirmado, `94129` permanece; `107078` é o duplicado a incorporar, nunca o contrário. A escolha não depende de Meta ou ViperConnect ser a caixa principal: preservar o cadastro estabelecido adequado, não privilegiar um provedor.
+
+**Prevenção antes da criação:** normalizar o telefone recebido da Meta para comparação e procurar aliases existentes na conta/escopo autorizado, incluindo a representação brasileira com e sem o nono dígito quando aplicável a celular. Não acrescentar `9` a qualquer telefone brasileiro, a fixos, números internacionais, LIDs ou BSUIDs. Validar estrutura e regra de numeração aplicável; preservar o valor bruto como alias de origem e não sobrescrever o telefone canônico conhecido apenas porque a Meta enviou outra representação. Centralizar o comportamento para entrada comum, echo e eventos posteriores de identidade/status quando contiverem identificadores confiáveis.
+
+**Dados posteriores:** se primeiro chegou apenas BSUID e já existe um contato provisório, a chegada de telefone, alias validado, lookup conclusivo ou mensagem equivalente com ID original deve acionar novamente o resolvedor. Encontrar o alias provisório não encerra a resolução: confrontar os novos dados com os contatos estabelecidos antes de apenas acrescentar o telefone ao cadastro técnico.
+
+Quando houver correspondência inequívoca com um único contato estabelecido e nenhum conflito:
+
+1. Reutilizar o contato antigo como base; não criar um terceiro registro para o telefone recém-chegado.
+2. Se ainda não houver cadastro provisório, vincular diretamente o novo alias ao antigo.
+3. Se houver provisório criado pelo fluxo, reconciliá-lo automaticamente ao antigo em operação transacional, idempotente e auditada, preservando conversas, remetentes, notas, etiquetas, referências de agendamento, atributos, mídias e aliases válidos. Não presumir que a ação de merge existente já cobre todas essas dependências; inventariar e corrigir o que faltar antes de usá-la.
+4. Manter LID ViperConnect e BSUID Meta em seus vínculos próprios; evitar que um `contacts.bsuid` já preenchido impeça a associação do outro namespace.
+5. Reprocessar apenas a resolução dos eventos pendentes, sem reenviar mensagens, baixar mídias novamente, criar novas conversas indevidas ou disparar novamente bots/saudações/notificações.
+6. Registrar o redirecionamento do ID provisório para o sobrevivente para que eventos, jobs ou referências atrasadas não recriem o contato removido. Resolver novamente concorrência sob lock/restrições apropriadas antes da consolidação.
+
+Sem evidência suficiente, com mais de um candidato ou com dois cadastros estabelecidos conflitantes, não mesclar automaticamente. Manter o caso pendente para revisão; identidade ainda desconhecida não justifica fundir pessoas por nome, texto ou horário. A consolidação automática preventiva dos provisórios futuros não autoriza a limpeza indiscriminada dos duplicados históricos já existentes na VPS, que segue o procedimento separado da seção 6.2.
+
+Aceite adicional: simular BSUID primeiro, telefone sem nono dígito depois e contato antigo com telefone completo; a pessoa deve terminar com um único cadastro canônico, conservando o ID antigo. Repetir os eventos e inverter sua ordem, inclusive simultaneamente: não podem surgir segundo/terceiro cadastros definitivos, perder vínculos ou reaparecer o provisório.
+
 ## 7. Modelo de vínculo e atendimento único
 
 ### 7.1. Configuração administrativa
@@ -241,7 +335,7 @@ Não fundir automaticamente histórico antigo, notas privadas, responsáveis ou 
 
 ## 8. Correlação, concorrência e efeitos únicos
 
-Identidade de correlação deve ser limitada à conta, vínculo das caixas, número empresarial e participantes/direção compatíveis, além do ID original reconhecido. Identidade externa também deve incluir o canal/namespace; IDs iguais em outras contas não são equivalentes.
+Identidade de correlação deve ser limitada à conta, vínculo das caixas, número empresarial e participantes/direção compatíveis, além do ID original reconhecido. Identidade externa também deve incluir o canal/namespace; IDs iguais em outras contas não são equivalentes. Compatibilidade de participantes deve ser resolvida pelos aliases e evidências da seção 6.2: não exigir contatos internos previamente iguais para reconhecer a mesma mensagem entre cadastros duplicados.
 
 Ao receber o segundo evento equivalente, acrescentar seus aliases/statuses à mensagem canônica sem criar outra bolha ou disparar novamente efeitos de domínio. Usar transações, índices únicos e tratamento explícito de concorrência, não apenas Redis.
 
@@ -480,7 +574,7 @@ Templates faturáveis não consomem automaticamente a franquia de serviço neste
 | P1 | `provider_message_id` aditivo na ViperConnect | Código, contrato, testes e build aprovados em dev |
 | P2 | Piloto hostpath da ViperConnect na VPS | Aprovação operacional e comprovação no webhook real, sem regressão |
 | P3 | Release definitiva ViperConnect | Imagem versionada validada; remover overlay temporário |
-| P4 | ViperChat persiste IDs e observa correlações | Evidência real, sem alterar fila/bolhas/envio |
+| P4 | ViperChat persiste IDs, observa correlações e resolução de identidade | Evidência real inclusive com contatos distintos e BSUID-only; sem fusão histórica ou alteração de fila/bolhas/envio |
 | P5 | Vínculo, correlação, ingestão única de mídias e envio por transporte | Testes transacionais, concorrência Active Storage/S3 e segurança nos dois sentidos de principal |
 | P6 | Frontend, Web/Android/iOS e integrações | Interface responsiva, capacidades e referências corretas |
 | P7 | Simulador e reconciliação de custos | Regras comerciais verificadas e cálculo sem duplicidade |
@@ -493,6 +587,9 @@ Não saltar da primeira alteração do webhook para a fusão de históricos. O s
 
 - Principal Meta e principal ViperConnect, com padrão de envio igual e diferente da principal.
 - Contato existente nos dois canais, apenas em um, sem telefone e com múltiplos aliases; conflito entre contas nunca pode unir dados.
+- Reproduzir o caso `BR.2339818310092335` com fixtures anonimizadas: contato antigo por telefone/LID, echo Meta só com BSUID, chegada posterior do telefone sem nono dígito e mensagem equivalente com o mesmo original mas `contact_id` diferente. Testar entrada comum e echo, nas duas ordens de chegada e com ambos os tipos de principal.
+- Lookup Meta ausente/falho, alias já encontrado sem enriquecimento, dois candidatos telefônicos e concorrência na criação. Nenhum desses casos autoriza adivinhar identidade, perder mensagem ou sobrescrever nome humano.
+- Correlacionar mensagem exata entre contatos distintos sem fusão destrutiva automática; gerar diagnóstico e proposta de reconciliação histórica separados.
 - Conversa única ligada/desligada, duas conversas abertas legadas, resolução e evento atrasado.
 - Texto, áudio, vídeo, imagem, documento, contato, localização e formatos não suportados.
 - Mídia equivalente simultânea pelos dois canais: conferir anexo canônico, blob, objeto S3 e número de uploads/downloads. Repetir com arquivo enviado pelo agente, retry, crash, álbum, transcodificação e origem indisponível.
