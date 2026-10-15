@@ -27,6 +27,8 @@ Objetivo: apresentar um único atendimento para um número WhatsApp conectado si
 | Falha de envio | Roteamento prévio por incompatibilidade comprovada não é retry: erro, timeout ou resultado incerto não autorizam reenviar automaticamente pelo parceiro. |
 | Histórico anterior | Preservado; sem fusão retroativa automática e sem exclusão em massa. |
 | Custos | Estimativa separada da fatura, com regras versionadas e tarifas verificáveis. |
+| Arquitetura atual | Manter os canais Meta direto e ViperConnect, vinculados no ViperChat; não migrar agora a integração oficial para a ViperConnect. |
+| Gateway futuro | Preparar fronteiras e contratos reutilizáveis, sem implementar gateway completo nem transferir o Embedded Signup nesta entrega. |
 
 ### 2.1. Caixa principal nos dois sentidos
 
@@ -36,6 +38,39 @@ Os dois cenários são obrigatórios:
 2. Meta principal + ViperConnect parceira.
 
 O código não pode inferir a principal pelo provedor, pela ordem dos IDs ou por qual webhook chegou primeiro. Uma caixa parceira não pode integrar dois vínculos simultâneos. Trocar a principal depois da ativação exige procedimento próprio, prévia do impacto e reconciliação das conversas; não será um simples toggle na primeira versão.
+
+### 2.2. Separação de responsabilidades para uma evolução futura
+
+Decisão confirmada pelo usuário: seguir o plano de duas caixas técnicas vinculadas no ViperChat, aproveitando a integração Meta que já existe. Não transportar agora toda a lógica oficial, templates, Embedded Signup ou gestão de credenciais para a ViperConnect. O gateway unificado é uma possibilidade futura, não requisito para entregar o atendimento único.
+
+Preparar três fronteiras explícitas na implementação, reutilizando serviços existentes e extraindo interfaces somente nos pontos necessários:
+
+| Camada | Responsabilidade nesta entrega | O que deve permanecer independente |
+| --- | --- | --- |
+| Atendimento ViperChat | Contato canônico, histórico, conversas, equipe, responsável, permissões, editor, preferência do agente, efeitos únicos e anexo canônico | Não depender de a Meta ser acessada diretamente ou por um gateway futuro |
+| Adaptadores de transporte | Envio, recebimento, templates, ações, capacidades e IDs operacionais específicos da Meta/ViperConnect; integração oficial permanece no adaptador Meta atual | Não decidir propriedade do histórico nem recriar regras de fila/contato por provedor |
+| Contrato de eventos e operações | Identidade interna e externa, correlação, origem, preferência versus transporte efetivo, status, referências, erros, metadados de cobrança e idempotência | Não usar URL, token, caixa principal ou formato de ID de um único provedor como contrato universal |
+
+Requisitos de preparação:
+
+1. O frontend solicita uma operação com mensagem/contato internos, preferência de transporte e contexto. Não conhece credenciais nem resolve UUID/`wamid` ou endpoints de provider.
+2. O resolvedor de capacidades decide o transporte efetivo conforme a seção 9; o adaptador correspondente traduz a operação e resolve seus aliases. Não espalhar condicionais de provider por editores, bolhas e regras de atendimento.
+3. Eventos preservam canal de origem, transporte real e identificadores completos. Um gateway futuro não deve apagar a distinção entre envio oficial Meta e envio ViperConnect, necessária para ações, auditoria e custos.
+4. Manter `id` público atual, `provider_message_id` aditivo e aliases por transporte como conceitos separados. O endereço do futuro gateway não pode exigir mudança dos IDs internos, públicos ou de citação já persistidos.
+5. Normalizar apenas o envelope necessário e preservar metadados específicos úteis, com versão/origem do contrato e extensões definidas. Não perder status, categoria de cobrança, erros, conteúdo de templates ou referências por reduzir tudo a texto genérico.
+6. Manter resolução de contatos, deduplicação de mensagem/mídia e contabilização de eventos como componentes com fronteiras claras. Nesta entrega o ViperChat continua responsável pela consolidação; uma mudança futura de proprietário dessas funções exigirá desenho específico para não processá-las duas vezes.
+7. Contratos de teste devem validar a operação de domínio e a tradução de cada adaptador separadamente. Fixtures de Meta e ViperConnect passam pelo mesmo núcleo de atendimento sem depender de registro Coex real em dev.
+8. Não criar um framework genérico de providers, uma segunda implementação Meta nem um sistema novo de credenciais apenas para antecipar o gateway. Implementar a separação mínima usada pelos fluxos reais deste plano.
+
+### 2.3. O que fica fora do escopo atual e como avaliar o gateway depois
+
+Uma futura ViperConnect como gateway Meta + WhatsApp/Zapo exigirá aprovação de outro plano, incluindo: Embedded Signup e reautorização; armazenamento seguro/isolado de credenciais; assinatura e roteamento de callbacks; templates e suas atualizações; eventos de status/cobrança; capacidades; disponibilidade, filas e recuperação; proteção contra logs de segredos; e migração de instalações com Meta direto.
+
+Não reutilizar sem revisão o fluxo atual de coexistência da ViperConnect: seleção implícita por janela, renovação local de janela por envio e fallback para Web após falha Meta devem ser confrontados com as regras explícitas deste documento. Nenhum resultado incerto pode produzir envio pelo segundo transporte automaticamente.
+
+Para eventual migração futura, exigir prova de equivalência do contrato, reaproveitamento de IDs/aliases e histórico existentes, corte de callbacks sem dupla ingestão/envio, piloto e rollback próprios. A caixa Meta direta deve continuar sendo opção para instalações que não precisem do gateway; não forçar migração de todas as instalações nem reabrir registro Coex como pré-requisito.
+
+O primeiro passo permanece igual nas duas arquiteturas: `provider_message_id` no webhook da ViperConnect, sem alterar IDs atuais. A preparação descrita aqui não muda os gates dev -> aceite -> hostpath na VPS -> release e não autoriza implementar ou publicar o gateway.
 
 ## 3. Evidências levantadas e limites
 
@@ -621,6 +656,7 @@ Migrações futuras devem ser compatíveis com rollback da aplicação; não rem
    Antes de implementar cada recurso da unificação nas etapas posteriores, completar e validar sua matriz de capacidades Meta/ViperConnect, incluindo IDs, restrições e regra de roteamento automático ao parceiro compatível, sem mudar a seleção do editor.
 3. Fechar o contrato aditivo e os exemplos de `provider_message_id`, preservando todos os IDs atuais.
 4. Implementar somente P1, com testes focados e revisão de compatibilidade; não iniciar a unificação ainda.
+   Nas etapas seguintes, respeitar as fronteiras da seção 2.2; manter Meta direto e não incluir migração para gateway no escopo atual.
 5. Apresentar o resultado de dev e obter aceite antes de preparar/aplicar o hostpath na VPS.
 6. Executar P2 apenas no escopo autorizado e com rollback pronto; registrar a comprovação de recebimento real.
 
