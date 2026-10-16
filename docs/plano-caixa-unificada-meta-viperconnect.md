@@ -5,7 +5,7 @@
 - Documento de planejamento: 15/10/2026, fuso America/Cuiaba.
 - Atualização em 15/10/2026: P1 implementada e validada em dev; P2 aplicada via hostpath na VPS após autorização explícita do usuário. Evidências e limites estão na seção 5.4.
 - ViperConnect: commit `b1668845` (`feat(webhooks): expose original provider message identity`), branch `mobile-primary`. IDs públicos atuais e referências operacionais preservados; Typebot não recebe o novo campo.
-- Primeiro incremento P4 validado em dev e aplicado como piloto via hostpath na VPS, com backup prévio e validação de eventos reais (seções 6.0 e 6.0.1): persistência aditiva da identidade do transporte e seus vínculos. Correlação automática Meta, resolução de pessoas e unificação continuam pendentes.
+- Primeiro incremento P4 validado em dev e aplicado como piloto via hostpath na VPS, com backup prévio e validação de eventos reais (seções 6.0 e 6.0.1): persistência aditiva da identidade do transporte e seus vínculos. Incremento seguinte implementado em dev: adaptador automático Meta e consulta de correlação em modo observação (seção 6.1.1). Resolução de pessoas, ativação de vínculo entre caixas e unificação continuam pendentes.
 - P3 continua pendente: nenhuma nova imagem/release foi publicada. O hostpath é um piloto temporário, não uma atualização definitiva da imagem.
 - A data prevista originalmente não cria execução automática ou agendamento. Novos deploys, migrações em produção, reprocessamentos e envios de teste pelo agente exigem autorização correspondente.
 
@@ -339,7 +339,7 @@ Primeiro operar em modo observação: armazenar IDs novos, calcular correspondê
 - Echo e atualização de status reaproveitam o vínculo por escopo e ID público, sem criar mensagens. A direção acompanha o resolvedor existente também nos echoes que usam `messages[]`, além de `message_echoes[]`.
 - Repetições usam restrições únicas e locks da identidade. Um original conflitante não substitui o valor conhecido: é registrado em `observations.conflicting_provider_message_ids` para revisão. Falta do campo em eventos Uno antigos não inventa um ID; pode completar um vínculo pendente já conhecido.
 - Contexto/reação preservam o ID do alvo separadamente do ID do evento. Edição não renderizada fica como observação com contexto; não cadastrar seu ID de evento como alias operacional da mensagem editada.
-- Meta guarda seu `wamid` completo como `external_id`, ainda sem derivar `provider_message_id` da representação binária. O adaptador da seção 6.1 é pendência explícita; nenhuma busca por texto/horário/substrings foi introduzida.
+- Nesse primeiro incremento, Meta guarda seu `wamid` completo como `external_id`, sem derivar `provider_message_id` da representação binária. A evolução do adaptador, posterior ao piloto na VPS, está na seção 6.1.1; nenhuma busca por texto/horário/substrings foi introduzida.
 - `messages.source_id`, `external_source_ids`, mídias, APIs públicas, notificações, bots e regras de envio não foram substituídos. Não há nova tela, seletor, endpoint ou alteração nos bundles Web/Android/iOS neste incremento backend.
 
 **Validação dev:** base isolada `viperchat_provider_identity_test`, distinta da réplica de desenvolvimento `chatwoot_db`. O ambiente do container contém `DATABASE_URL`; confirmar o nome efetivo na conexão, pois somente mudar `POSTGRES_DATABASE` não garante isolamento. A migração aditiva foi aplicada na réplica dev antes do piloto na VPS descrito abaixo.
@@ -350,9 +350,9 @@ Primeiro operar em modo observação: armazenar IDs novos, calcular correspondê
 
 **Ordem de implantação:** executar a migração `20261016000000_create_whatsapp_message_identities` antes de carregar os novos callbacks nos processos web/worker. Para rollback de código, manter as tabelas/observações; não executar `down` em produção sem decidir como preservar os metadados coletados. A reversão da migração elimina somente as tabelas novas e seus vínculos, não mensagens legadas, mas perde as observações.
 
-**Próximas pendências P4:** adaptador Meta isolado/testado, consulta de candidatos/correspondências com escopo autorizado e diagnóstico de ambiguidades entre contatos distintos/BSUID-only. Nenhuma associação entre pessoas/caixas está ativa neste incremento.
+**Pendências após esse primeiro incremento P4:** adaptador Meta isolado/testado, consulta de candidatos/correspondências com escopo autorizado e diagnóstico de ambiguidades entre contatos distintos/BSUID-only. A entrega dev posterior do adaptador/consulta está na seção 6.1.1. Nenhuma associação entre pessoas/caixas está ativa neste incremento.
 
-**Integração Git acordada:** persistência e plano ficam na branch `feat/whatsapp-provider-message-identity`. Prosseguir com a correlação automática Meta nesta mesma branch, validar em dev e então integrar à branch principal de trabalho `4.16.0`, evitando branches adicionais para cada subetapa. A integração Git não ativa a unificação das caixas nem autoriza novo deploy em produção. Remover a branch temporária somente depois de confirmar a integração e o push, preservando os commits.
+**Integração Git autorizada em 15/10/2026:** após a validação dev da seção 6.1.1, commitar e publicar persistência, correlação diagnóstica e plano na branch `feat/whatsapp-provider-message-identity`, integrando em seguida à `4.16.0`, com preservação dos commits. Remover a branch temporária somente depois de confirmar a integração e o push. A integração Git não altera IDs operacionais, não ativa a unificação das caixas nem autoriza novo deploy em produção.
 
 ### 6.0.1. Piloto de persistência na VPS — 15/10/2026
 
@@ -383,6 +383,30 @@ O web e os dois workers permaneceram em execução, com hashes dos arquivos conf
 Isolar a interpretação do `wamid` em adaptador testado com os exemplos reais e casos inválidos. Não usar busca de substring como algoritmo de produção nem afirmar que o formato interno é contrato documentado da Meta. Se não houver extração inequívoca, não correlacionar automaticamente.
 
 O piloto deve provar a correspondência para os tipos/dispositivos suportados. Se o formato não permitir correlação confiável, a unificação fica bloqueada para aquele caso até existir alternativa validada. Não recorrer a texto + horário como chave substituta.
+
+### 6.1.1. Adaptador e consulta de correlação implementados em dev
+
+Incremento desenvolvido e validado na mesma branch `feat/whatsapp-provider-message-identity`; integração posterior à `4.16.0` autorizada conforme seção 6.0. Não houve novo deploy na VPS, backfill ou ativação de unificação. A VPS continua com o incremento anterior da seção 6.0.1.
+
+**Extração automática na ingestão:** `Whatsapp::MetaMessageIdAdapter`, versão `coexistence-envelope-v1`. Reconhece somente o envelope inteiro observado: marcadores fixos, comprimento explícito do participante, participante numérico, marcador de direção conhecido, comprimento explícito do original hexadecimal e terminador exato. Base64 estrito e canônico, com ou sem padding correto; tamanho limitado. Não procura substrings e não trata o formato interno como contrato público da Meta. Casos desconhecidos mantêm o `wamid` e seguem a ingestão normal, com diagnóstico `unrecognized`, sem inventar original.
+
+O observador preenche `provider_message_id` somente quando esse adaptador reconhece o ID Meta. Registra versão, resultado, participante e direção do envelope em `observations.meta_id_adapter`; não confia em um campo original arbitrário enviado no payload Meta. UUID UnoAPI, `wamid`, `source_id`, referências operacionais e canais de envio continuam intactos. ID de citação/reação não se torna ID da mensagem atual.
+
+**Consulta em modo observação:** `Whatsapp::MessageIdentityCorrelationService.new(identity: identidade, partner_inbox: caixa_parceira).perform`. Requer a caixa parceira explícita; não descobre/ativa parceiros por telefone ou ID coincidente. Revalida fonte e configuração persistidas, conta, canal, provedores distintos e número empresarial observado. Busca por igualdade exata do original, usando índice por conta/caixa/original; não usa texto, horários ou igualdade prévia de IDs internos de contato. A consulta não grava pares, aliases, mensagens ou vínculos entre caixas.
+
+Resultados distinguem `matched`, `no_candidate`, `ambiguous`, `invalid_scope`, `original_id_pending`, `business_identity_pending`, `participant_identity_pending`, `conflicting_original_id`, `conflicting_observations` e `incompatible`. Vários candidatos ficam visíveis, sem escolher arbitrariamente o primeiro. Número empresarial divergente, inclusive com/sem nono dígito, exige comprovação posterior do vínculo; não é normalizado por aproximação nesta etapa. Participantes com variante móvel brasileira do nono dígito ficam como evidência pendente, nunca como autorização para mesclar contatos.
+
+**Contato incompleto e evidência da própria mensagem:** um original exato pode localizar a identidade candidata da outra caixa mesmo quando chegou só BSUID/LID ou faltou telefone/nome. Retornar os IDs candidatos com `participant_identity_pending` permite ao futuro resolvedor usar essa evidência para preservar o contato antigo. Não usar o corpo da mensagem nem o ID de mensagem citada para identificar o remetente atual. Nesta etapa, localizar o candidato não associa aliases nem mescla contatos; direção, papel, conta, vínculo autorizado e conflitos ainda devem ser confrontados pelo resolvedor da seção 6.2.
+
+**Conflitos e eventos posteriores:** não apagar valores conhecidos quando campos chegam vazios. Registrar contradições de participantes, direção, tipo/evento e número empresarial em `conflicting_observations`; manter o número empresarial original da observação. A consulta bloqueia contradições de direção/participante com o envelope, `to` versus `recipient_id` e reconfiguração de canal. Status isolado sem destinatário suficiente não confirma participante. Mudanças de dados por outra instância são relidas antes da comparação. Nada disso altera a direção/status da bolha legada ou dispara automações.
+
+**Migração adicional:** `20261016000001_index_whatsapp_message_identity_originals` adiciona somente índice parcial não único, concorrente, para originais não nulos. Não alterar a migração já aplicada na VPS. Índice aplicado em dev; conferência de 1.000 mensagens da réplica preservou IDs atuais. Uma aplicação futura em produção precisa da aprovação correspondente; não remover hostpaths antigos nem aplicar este incremento implicitamente.
+
+**Validação dev:** 91 verificações no script isolado, com HTTP bloqueado: envelopes reais de entrada/saída, comprimentos e codificações inválidos, formatos desconhecidos, duas ordens de chegada, status antecipado, escopo, ambiguidades, BSUID incompleto, nono dígito pendente, contradições, instância desatualizada e ausência de alterações de domínio/IDs. Migração do índice aplicada/revertida/reaplicada na base de teste. Regressão: 185 exemplos existentes aprovados; executar sobre schema limpo, separado das fixtures persistidas pelo runner. RuboCop dos cinco arquivos Ruby deste incremento aprovado. Sem mudanças no frontend ou nos bundles nativos.
+
+Código sincronizado ao volume de fontes dev, web e worker recarregados; `/api` retornou HTTP 200. Versão do adaptador, fixture de extração, classe de correlação e índice confirmados no runtime dev; hashes dos três serviços conferidos com a branch. A base descartável `viperchat_provider_identity_test` foi removida após os testes (fixtures reproduzíveis pelo runner); a réplica `chatwoot_db` e seus dados foram preservados.
+
+**Limite do aceite:** extração automática e comparação diagnóstica por par explícito, não roteamento unificado em produção. Ainda faltam configuração administrativa do vínculo comprovado (incluindo representação empresarial com/sem nono dígito), resolvedor de aliases/contatos e aplicação transacional da correlação à ingestão/efeitos/mídias. O ensaio de coexistência real desta versão do adaptador permanece pendente; fixtures reais capturadas não equivalem a deploy ou validação ao vivo na VPS.
 
 ### 6.2. Identidade de contato: dependência obrigatória da unificação
 
@@ -700,7 +724,7 @@ Templates faturáveis não consomem automaticamente a franquia de serviço neste
 | P1 | `provider_message_id` aditivo na ViperConnect | Implementado e validado em dev; commit `b1668845`; IDs preservados e Typebot excluído |
 | P2 | Piloto hostpath da ViperConnect na VPS | Executado e validado na amostra real da seção 5.4: seis pares e status read; testes reais restantes explicitados |
 | P3 | Release definitiva ViperConnect | Pendente: imagem versionada validada e remoção explícita do overlay temporário |
-| P4 | ViperChat persiste IDs, observa correlações e resolução de identidade | Parcial: persistência inicial validada em dev e no piloto hostpath da VPS (seções 6.0 e 6.0.1); adaptador Meta, observação entre caixas e resolução de identidade pendentes; sem fusão histórica ou alteração de fila/bolhas/envio |
+| P4 | ViperChat persiste IDs, observa correlações e resolução de identidade | Parcial: persistência inicial validada na VPS; adaptador automático Meta e consulta diagnóstica por par explícito validados em dev (6.1.1); vínculo empresarial/aliases e resolução de pessoas pendentes; sem fusão histórica ou alteração de fila/bolhas/envio |
 | P5 | Vínculo, correlação, ingestão única de mídias e envio por transporte | Testes transacionais, concorrência Active Storage/S3 e segurança nos dois sentidos de principal |
 | P6 | Frontend, Web/Android/iOS e integrações | Interface responsiva, capacidades e referências corretas |
 | P7 | Simulador e reconciliação de custos | Regras comerciais verificadas e cálculo sem duplicidade |

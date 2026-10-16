@@ -36,7 +36,11 @@ class Whatsapp::MessageIdentityObservationService
 
     identity = scope.create_or_find_by!({})
     identity.with_lock do
-      merge_original_id(identity, event[:provider_message_id])
+      if @inbox.channel.provider == 'whatsapp_cloud'
+        observe_meta_id(identity, event[:id])
+      else
+        merge_original_id(identity, event[:provider_message_id])
+      end
       identity.observations = merge_observations(identity.observations, event, kind)
       identity.save! if identity.changed?
       identity.link_matching_messages
@@ -46,6 +50,22 @@ class Whatsapp::MessageIdentityObservationService
   def identity_scope(external_id)
     WhatsappMessageIdentity.where(account_id: @inbox.account_id, inbox_id: @inbox.id, channel_id: @inbox.channel_id,
                                   provider: @inbox.channel.provider, external_id: external_id)
+  end
+
+  def observe_meta_id(identity, external_id)
+    parsed = Whatsapp::MetaMessageIdAdapter.parse(external_id)
+    attributes = identity.observations
+    attributes['meta_id_adapter'] = { 'version' => Whatsapp::MetaMessageIdAdapter::VERSION,
+                                      'status' => parsed ? 'recognized' : 'unrecognized' }
+    identity.observations = attributes
+    return unless parsed
+
+    merge_original_id(identity, parsed['provider_message_id'])
+    attributes = identity.observations
+    attributes['meta_id_adapter']['participant'] = parsed['participant']
+    attributes['meta_id_adapter']['direction'] = parsed['direction']
+    attributes['meta_id_adapter']['status'] = 'conflicting' if identity.provider_message_id != parsed['provider_message_id']
+    identity.observations = attributes
   end
 
   def merge_original_id(identity, original)
@@ -64,8 +84,11 @@ class Whatsapp::MessageIdentityObservationService
     result = previous.deep_dup
     result['origin'] = 'webhook'
     result['contract_version'] = 1
-    result['business_number'] = @inbox.channel.phone_number
-    result['participants'] = result.fetch('participants', {}).merge(event.slice(*PARTICIPANT_KEYS).stringify_keys)
+    track_conflicts(result, result, { 'business_number' => @inbox.channel.phone_number })
+    result['business_number'] ||= @inbox.channel.phone_number
+    participants = event.slice(*PARTICIPANT_KEYS).stringify_keys.compact_blank
+    track_conflicts(result, result.fetch('participants', {}), participants, 'participants.')
+    result['participants'] = result.fetch('participants', {}).merge(participants)
     if kind == :statuses
       result['statuses'] = result.fetch('statuses', {}).merge(event[:status].to_s => event[:timestamp])
     else
@@ -75,14 +98,25 @@ class Whatsapp::MessageIdentityObservationService
   end
 
   def merge_message_observation(result, event, kind)
-    result['direction'] = kind == :message_echoes || @outgoing_echo ? 'outgoing' : 'incoming'
-    result['message_type'] = event[:type]
-    result.merge!(event.slice(:message_type, :edit_timestamp).stringify_keys.transform_keys('message_type' => 'event_type'))
+    current = { 'direction' => kind == :message_echoes || @outgoing_echo ? 'outgoing' : 'incoming', 'message_type' => event[:type] }
+    current.merge!(event.slice(:message_type, :edit_timestamp).stringify_keys.transform_keys('message_type' => 'event_type'))
+    track_conflicts(result, result, current.slice('direction', 'message_type', 'event_type'))
+    result.merge!(current.compact_blank)
     result['timestamp'] = event[:timestamp] if event.key?(:timestamp)
     %w[context reaction revoke].each do |reference|
       next unless event[reference].is_a?(Hash)
 
       result[reference] = result.fetch(reference, {}).merge(event[reference].slice(*REFERENCE_KEYS).stringify_keys)
+    end
+  end
+
+  def track_conflicts(result, previous, current, prefix = '')
+    current.each do |key, value|
+      next if previous[key].blank? || value.blank? || previous[key] == value
+
+      conflicts = result['conflicting_observations'] ||= {}
+      field = "#{prefix}#{key}"
+      conflicts[field] = (Array(conflicts[field]) + [previous[key], value]).uniq
     end
   end
 end

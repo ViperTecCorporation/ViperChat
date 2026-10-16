@@ -116,11 +116,13 @@ end
 threads.each(&:value)
 assert.call(WhatsappMessageIdentity.where(inbox: inbox, external_id: 'uno-concurrent').count == 1, 'concurrent observation has one identity')
 
-meta = FactoryBot.create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+meta = FactoryBot.create(:channel_whatsapp, account: inbox.account, phone_number: channel.phone_number.delete_prefix('+'),
+                                            provider: 'whatsapp_cloud', sync_templates: false,
+                                            validate_provider_config: false)
 wamid = 'wamid.HBgMNTU2Njk2MjY5MjUxFQIAEhgUM0E4NkEzQUM3QzFDN0JDRTM4ODEA'
 observer.new(inbox: meta.inbox, value: { statuses: [{ id: wamid, status: 'read', timestamp: '1792110003' }] }).perform
 meta_identity = WhatsappMessageIdentity.find_by!(inbox: meta.inbox, external_id: wamid)
-assert.call(meta_identity.provider_message_id.nil?, 'Meta raw ID retained without speculative decoding')
+assert.call(meta_identity.provider_message_id == '3A86A3AC7C1C7BCE3881', 'recognized Meta envelope yields original ID')
 assert.call(meta_identity.external_id == wamid, 'full wamid unchanged')
 
 observer.new(inbox: inbox,
@@ -148,6 +150,136 @@ assert.call(reaction.observations.dig('reaction', 'provider_message_id') == 'Pro
 assert.call(!WhatsappMessageIdentity.new.valid?, 'incomplete identity returns validation errors instead of exception')
 assert.call(!WhatsappMessageIdentityLink.new.valid?, 'incomplete link returns validation errors instead of exception')
 
+adapter = Whatsapp::MetaMessageIdAdapter
+real_outgoing = 'wamid.HBgMNTU2Njk2MjY5MjUxFQIAERgUQ0VGMEM2MDE2RjBGM0NDQTkzNjYA'
+assert.call(adapter.parse(real_outgoing)['provider_message_id'] == 'CEF0C6016F0F3CCA9366', 'real outgoing envelope recognized')
+assert.call(adapter.parse(wamid)['participant'] == '556696269251', 'real incoming envelope participant preserved')
+assert.call(adapter.parse(wamid)['version'] == adapter::VERSION, 'adapter provenance version retained')
+envelope = Base64.strict_decode64(wamid.delete_prefix('wamid.'))
+envelope_id = ->(bytes) { "wamid.#{Base64.strict_encode64(bytes)}" }
+invalid_envelopes = [envelope[0...-1], "#{envelope}\x00", envelope.sub("\x1c\x18", "\x1d\x18"),
+                     envelope.sub("\x15\x02\x00", "\x15\x03\x00"), envelope.sub("\x12\x18", "\x13\x18"),
+                     envelope.sub('3A86', '3a86'), envelope.sub("\x18\x14", "\x18\x13"),
+                     envelope.sub("\x18\x0c", "\x18\x0b"), envelope.sub('556696269251', 'BR.696269251')]
+invalid_envelopes.each_with_index do |bytes, index|
+  assert.call(adapter.parse(envelope_id.call(bytes)).nil?, "malformed full envelope rejected #{index}")
+end
+[nil, '', 'wamid.', 'wamid.%%%', 'wamid.A', 'wamid.ID', "#{wamid}\n", "#{wamid}=", "wamid.#{'A' * 513}"].each_with_index do |invalid_id, index|
+  assert.call(adapter.parse(invalid_id).nil?, "invalid encoding rejected #{index}")
+end
+%w[ABCDEF1234567890 3EB0E87394970CF0F0B535 A5D5052B5ACDD7E57BE697FE979E894C].each do |original|
+  bytes = "\x1c\x18\x0c556696269251\x15\x02\x00\x12\x18#{original.bytesize.chr}#{original}\x00".b
+  encoded = envelope_id.call(bytes)
+  assert.call(adapter.parse(encoded)['provider_message_id'] == original, "known original length #{original.size} accepted")
+  assert.call(adapter.parse(encoded.delete_suffix('==').delete_suffix('='))['provider_message_id'] == original,
+              "unpadded encoding length #{original.size} accepted")
+end
+
+pair_id = '3A86A3AC7C1C7BCE3881'
+pair_value = { messages: [{ id: 'uno-pair', provider_message_id: pair_id, from: '556696269251', type: 'text' }] }
+meta_value = { messages: [{ id: wamid, from: '556696269251', type: 'text' }] }
+observer.new(inbox: inbox, value: pair_value).perform
+pair = WhatsappMessageIdentity.find_by!(inbox: inbox, external_id: 'uno-pair')
+correlator = Whatsapp::MessageIdentityCorrelationService
+assert.call(correlator.new(identity: pair, partner_inbox: meta.inbox).perform[:status] == 'participant_identity_pending',
+            'status-only Meta identity remains pending without participant')
+observer.new(inbox: meta.inbox, value: meta_value).perform
+assert.call(correlator.new(identity: pair, partner_inbox: meta.inbox).perform[:status] == 'matched', 'Uno first then Meta correlates')
+assert.call(correlator.new(identity: meta_identity.reload, partner_inbox: inbox).perform[:status] == 'matched',
+            'correlation is symmetric without cross-inbox message links')
+assert.call(correlator.new(identity: pair, partner_inbox: other.inbox).perform[:status] == 'invalid_scope', 'other account rejected')
+assert.call(correlator.new(identity: pair, partner_inbox: inbox).perform[:status] == 'invalid_scope', 'same inbox rejected')
+
+unknown_id = 'wamid.unrecognized'
+observer.new(inbox: meta.inbox, value: { statuses: [{ id: unknown_id, provider_message_id: pair_id, status: 'sent' }] }).perform
+unknown = WhatsappMessageIdentity.find_by!(inbox: meta.inbox, external_id: unknown_id)
+assert.call(unknown.provider_message_id.nil? && unknown.observations.dig('meta_id_adapter', 'status') == 'unrecognized',
+            'unknown Meta envelope never trusts unsolicited original ID')
+assert.call(correlator.new(identity: unknown, partner_inbox: inbox).perform[:status] == 'original_id_pending', 'unknown ID stays pending')
+
+meta.update!(phone_number: '+5511888888888')
+assert.call(correlator.new(identity: pair, partner_inbox: meta.inbox).perform[:status] == 'business_identity_pending',
+            'different business number cannot correlate')
+meta.update!(phone_number: channel.phone_number.delete_prefix('+'))
+meta.inbox.reload # A subsequent webhook request loads the updated channel configuration.
+observer.new(inbox: inbox, value: { messages: [{ id: 'uno-pair-bsuid', provider_message_id: 'ABCDEF1234567890',
+                                                 from_user_id: 'BR.123456789', type: 'text' }] }).perform
+incomplete = WhatsappMessageIdentity.find_by!(inbox: inbox, external_id: 'uno-pair-bsuid')
+incomplete_wamid = envelope_id.call("\x1c\x18\x0c556696269251\x15\x02\x00\x12\x18\x10ABCDEF1234567890\x00".b)
+observer.new(inbox: meta.inbox, value: { messages: [{ id: incomplete_wamid, from: '556696269251', type: 'text' }] }).perform
+diagnostic = correlator.new(identity: incomplete, partner_inbox: meta.inbox).perform
+assert.call(diagnostic[:status] == 'participant_identity_pending' && diagnostic[:candidate_identity_ids].one?,
+            'own message original locates candidate for incomplete contact without merging')
+ninth_wamid = envelope_id.call("\x1c\x18\x0c556696269251\x15\x02\x00\x12\x18\x10ABCDEF1234567891\x00".b)
+observer.new(inbox: meta.inbox, value: { messages: [{ id: ninth_wamid, from: '556696269251', type: 'text' }] }).perform
+observer.new(inbox: inbox, value: { messages: [{ id: 'uno-ninth', provider_message_id: 'ABCDEF1234567891',
+                                                 from: '5566996269251', type: 'text' }] }).perform
+ninth = WhatsappMessageIdentity.find_by!(inbox: inbox, external_id: 'uno-ninth')
+assert.call(correlator.new(identity: ninth, partner_inbox: meta.inbox).perform[:status] == 'participant_identity_pending',
+            'Brazil ninth-digit variant remains candidate evidence, never automatic contact merge')
+
+reverse_value = { message_echoes: [{ id: real_outgoing, to: '556696269251', type: 'text' }] }
+observer.new(inbox: meta.inbox, value: reverse_value).perform
+reverse_meta = WhatsappMessageIdentity.find_by!(inbox: meta.inbox, external_id: real_outgoing)
+assert.call(correlator.new(identity: reverse_meta, partner_inbox: inbox).perform[:status] == 'no_candidate', 'Meta first remains observable')
+outgoing_value = { message_echoes: [{ id: 'uno-reverse', provider_message_id: 'CEF0C6016F0F3CCA9366', to: '556696269251', type: 'text' }] }
+observer.new(inbox: inbox, value: outgoing_value).perform
+assert.call(correlator.new(identity: reverse_meta, partner_inbox: inbox).perform[:status] == 'matched', 'Meta first then Uno correlates')
+assert.call(reverse_meta.observations.dig('meta_id_adapter', 'direction') == 'outgoing', 'envelope direction retained as evidence')
+
+counts_before = [Message.count, Conversation.count, Contact.count, Attachment.count, WhatsappMessageIdentityLink.count]
+snapshot_before = Message.order(:id).pluck(:id, :source_id)
+3.times { correlator.new(identity: reverse_meta, partner_inbox: inbox).perform }
+assert.call(counts_before == [Message.count, Conversation.count, Contact.count, Attachment.count, WhatsappMessageIdentityLink.count],
+            'repeated correlation has no domain writes or media side effects')
+assert.call(snapshot_before == Message.order(:id).pluck(:id, :source_id), 'all operational message IDs untouched by correlation')
+
+observer.new(inbox: inbox, value: { statuses: [{ id: 'uno-reverse', provider_message_id: 'CEF0C6016F0F3CCA9366',
+                                                 recipient_id: '5511888888888', status: 'read' }] }).perform
+assert.call(correlator.new(identity: reverse_meta, partner_inbox: inbox).perform[:status] == 'conflicting_observations',
+            'echo to and status recipient mismatch blocks correlation')
+stale_meta = WhatsappMessageIdentity.find(reverse_meta.id)
+observer.new(inbox: meta.inbox, value: { message_echoes: [{ id: real_outgoing, to: '5511888888888', type: 'text' }] }).perform
+assert.call(correlator.new(identity: stale_meta, partner_inbox: inbox).perform[:status] == 'conflicting_observations',
+            'query refreshes stale source before considering persisted conflicts')
+
+observer.new(inbox: inbox, value: { message_echoes: [{ id: 'uno-reverse', provider_message_id: 'CEF0C6016F0F3CCA9366',
+                                                       to: nil, type: nil }] }).perform
+reverse_uno = WhatsappMessageIdentity.find_by!(inbox: inbox, external_id: 'uno-reverse')
+assert.call(reverse_uno.observations.dig('participants', 'to') == '556696269251' && reverse_uno.observations['message_type'] == 'text',
+            'blank updates never erase known participant/type')
+observer.new(inbox: inbox, value: { message_echoes: [{ id: 'uno-reverse', provider_message_id: 'CEF0C6016F0F3CCA9366',
+                                                       to: '5511888888888', type: 'text' }] }).perform
+assert.call(correlator.new(identity: reverse_meta, partner_inbox: inbox).perform[:status] == 'conflicting_observations',
+            'blank intermediate event cannot hide later contradiction')
+
+incomplete_meta = WhatsappMessageIdentity.find_by!(inbox: meta.inbox, external_id: incomplete_wamid)
+observer.new(inbox: inbox, value: { message_echoes: [{ id: 'uno-pair-bsuid', provider_message_id: 'ABCDEF1234567890',
+                                                       from_user_id: 'BR.123456789', type: 'text' }] }).perform
+assert.call(correlator.new(identity: incomplete_meta, partner_inbox: inbox).perform[:status] == 'conflicting_observations',
+            'incomplete contact does not hide contradictory directions')
+
+channel.update!(phone_number: '+123456788881')
+inbox.reload
+observer.new(inbox: inbox, value: pair_value).perform
+assert.call(pair.reload.observations['business_number'] != channel.phone_number &&
+            pair.observations.dig('conflicting_observations', 'business_number').present?,
+            'business observation remains immutable with conflict audit')
+assert.call(correlator.new(identity: pair, partner_inbox: meta.inbox).perform[:status] == 'business_identity_pending',
+            'channel reconfiguration cannot re-scope old identities')
+channel.update!(phone_number: "+#{meta.phone_number}")
+
+observer.new(inbox: inbox, value: { messages: [{ id: 'uno-pair-second', provider_message_id: pair_id,
+                                                 from: '556696269251', type: 'text' }] }).perform
+assert.call(correlator.new(identity: meta_identity, partner_inbox: inbox).perform[:status] == 'ambiguous', 'reused original not picked arbitrarily')
+observer.new(inbox: inbox, value: { messages: [{ id: 'uno-pair', provider_message_id: pair_id, from: '5511888888888', type: 'text' }] }).perform
+pair.reload
+assert.call(pair.observations.dig('conflicting_observations', 'participants.from').size == 2, 'contradictory participant retained')
+assert.call(correlator.new(identity: pair, partner_inbox: meta.inbox).perform[:status] == 'conflicting_observations',
+            'latest participant cannot erase conflicting evidence')
+assert.call(WhatsappMessageIdentityLink.joins(:whatsapp_message_identity, :message)
+            .where('whatsapp_message_identities.inbox_id <> messages.inbox_id').none?, 'correlation creates no cross-inbox links')
+
 message_count = Message.count
 load Rails.root.join('db/migrate/20261016000000_create_whatsapp_message_identities.rb')
 ActiveRecord::Migration.suppress_messages { CreateWhatsappMessageIdentities.new.migrate(:down) }
@@ -156,6 +288,14 @@ assert.call(!ActiveRecord::Base.connection.data_source_exists?(:whatsapp_message
 assert.call(Message.count == message_count, 'migration rollback does not remove legacy messages')
 ActiveRecord::Migration.suppress_messages { CreateWhatsappMessageIdentities.new.migrate(:up) }
 assert.call(ActiveRecord::Base.connection.data_source_exists?(:whatsapp_message_identity_links), 'isolated migration can be reapplied')
+load Rails.root.join('db/migrate/20261016000001_index_whatsapp_message_identity_originals.rb')
+ActiveRecord::Migration.suppress_messages { IndexWhatsappMessageIdentityOriginals.new.migrate(:up) }
+assert.call(ActiveRecord::Base.connection.indexes(:whatsapp_message_identities).any? { |index| index.name == 'idx_wa_identity_original' },
+            'scoped original-ID lookup index can be applied')
+ActiveRecord::Migration.suppress_messages { IndexWhatsappMessageIdentityOriginals.new.migrate(:down) }
+assert.call(ActiveRecord::Base.connection.indexes(:whatsapp_message_identities).none? { |index| index.name == 'idx_wa_identity_original' },
+            'lookup index rollback leaves message identities intact')
+ActiveRecord::Migration.suppress_messages { IndexWhatsappMessageIdentityOriginals.new.migrate(:up) }
 
 # Machine-readable CLI report, not an application log.
 puts({ result: 'PASS', database: ActiveRecord::Base.connection_db_config.database, checks: checks.size, scenarios: checks }.to_json) # rubocop:disable Rails/Output
