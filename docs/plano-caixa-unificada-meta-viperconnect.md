@@ -3,10 +3,11 @@
 ## 1. Situação, objetivo e autorização
 
 - Documento de planejamento: 15/10/2026, fuso America/Cuiaba.
-- Próxima etapa prevista: 16/10/2026, começar pelo projeto ViperConnect para acrescentar `provider_message_id` ao webhook.
-- Hoje: somente documentação. Não implementar, publicar, alterar a VPS, configurar mounts, reprocessar eventos ou enviar mensagens.
-- A data prevista não cria execução automática ou agendamento. A implementação será retomada mediante solicitação do usuário.
-- Aplicação e testes reais na VPS serão etapas posteriores, com escopo aprovado, depois da aprovação do código e dos testes em dev.
+- Atualização em 15/10/2026: P1 implementada e validada em dev; P2 aplicada via hostpath na VPS após autorização explícita do usuário. Evidências e limites estão na seção 5.4.
+- ViperConnect: commit `b1668845` (`feat(webhooks): expose original provider message identity`), branch `mobile-primary`. IDs públicos atuais e referências operacionais preservados; Typebot não recebe o novo campo.
+- Próxima etapa de desenvolvimento: persistir `provider_message_id` no ViperChat em modo observação (seção 6/P4), sem unificar caixas, mesclar contatos/históricos, ocultar bolhas ou alterar envios.
+- P3 continua pendente: nenhuma nova imagem/release foi publicada. O hostpath é um piloto temporário, não uma atualização definitiva da imagem.
+- A data prevista originalmente não cria execução automática ou agendamento. Novos deploys, migrações em produção, reprocessamentos e envios de teste pelo agente exigem autorização correspondente.
 
 Objetivo: apresentar um único atendimento para um número WhatsApp conectado simultaneamente pela Meta oficial e pela ViperConnect. Preservar histórico e vínculos existentes, escolher explicitamente o transporte de envio e correlacionar mensagens equivalentes sem duplicar bolhas, automações, notificações ou cobranças estimadas.
 
@@ -224,16 +225,18 @@ Não alterar IDs armazenados no Redis, seus TTLs ou a semântica de endpoints ex
 
 ### 4.4. Aceite da primeira entrega
 
-- [ ] Mesmo evento conserva o `id` atual e acrescenta apenas metadados previstos.
-- [ ] Texto, imagem, áudio, vídeo, documento e contato preservam o ID original quando disponível.
-- [ ] Mensagem enviada por API, recebida, echo e status têm cobertura própria.
-- [ ] Citação e eventos sobre outra mensagem preservam seus IDs de referência atuais.
-- [ ] Filas antigas sem o campo continuam funcionando.
-- [ ] Repetição e concorrência não mudam o ID original nem geram novo envio.
-- [ ] Falta do mapeamento não interrompe a entrega atual.
-- [ ] Webhook antigo continua aceito pelo ViperChat ainda não atualizado.
-- [ ] Build, lint e testes focados aprovados em dev.
-- [ ] Usuário aprova o código/evidências em dev antes do piloto na VPS.
+- [x] Mesmo evento conserva o `id` atual e acrescenta apenas metadados previstos.
+- [x] Texto, imagem, áudio, vídeo, documento e contato preservam o ID original quando disponível (testes dev; subconjunto real na seção 5.4).
+- [x] Mensagem enviada por API, recebida, echo e status têm cobertura própria.
+- [x] Citação e eventos sobre outra mensagem preservam seus IDs de referência atuais nos testes dev.
+- [x] Payloads sem o campo continuam compatíveis; ausência de identidade não inventa valor.
+- [x] Repetições são cobertas pela deduplicação existente, sem novo envio por falha na consulta opcional da referência.
+- [ ] Ampliar a comprovação real de concorrência, reinício durante envio e eventos fora de ordem; não considerar a amostra da seção 5.4 prova de todos esses cenários.
+- [x] Falta do mapeamento não interrompe a entrega atual.
+- [x] ViperChat atual recebe o payload com o campo adicional e mantém seus IDs legados; ainda não o persiste como identidade própria.
+- [x] Build, lint dos arquivos de produção alterados e testes focados aprovados em dev. Suíte completa: 3.253 passaram, 12 ignorados. O arquivo de teste `__tests__/services/outgoing_cloud_api.ts` mantém cinco erros de lint preexistentes, conferidos também no HEAD anterior; não declarar lint global limpo.
+- [x] Campo removido apenas da cópia destinada a webhook marcado Typebot, inclusive contexto, reação e status; demais destinatários mantêm o campo.
+- [x] Usuário aprovou código/evidências em dev e autorizou o piloto na VPS.
 
 ## 5. Validação real via hostpath na VPS
 
@@ -272,7 +275,45 @@ Critério de parada: duplicidade de envio, perda de eventos, falha de sessão, a
 
 Após aprovação: produzir release por imagem versionada, substituir o hostpath e confirmar o runtime definitivo. Remover os intermediários descartáveis após verificar que não são a única cópia necessária de rollback; preservar apenas entregáveis/evidências necessários.
 
+### 5.4. Piloto executado e validação real — 15/10/2026
+
+**Escopo executado:** somente o contrato aditivo P1 na ViperConnect. Aplicação autorizada após validação em dev; testes de mensagens enviados pelo usuário. O agente não disparou mensagens nem reprocessou eventos e não executou escritas manuais no banco.
+
+- Imagem preservada: `ghcr.io/viperteccorporation/viperconnect:4.0.37`; Node da VPS `24.21.0`, Zapo `1.10.0`.
+- Serviços recriados: `unoapi`, `unoapi-broker`, `unoapi-video-worker` e `unoapi-worker-zapo`. Nenhuma chamada ativa na verificação imediatamente anterior à aplicação.
+- Antes do piloto, os quatro serviços estavam sem mounts e os arquivos originais conferiam com o backup. O módulo existente `message_id_map.js` tinha o mesmo hash do dev. A comparação dos compilados confirmou somente o delta P1 esperado, sem trocar dependências.
+- Quatro arquivos montados por serviço, todos read-only: `dist/src/jobs/incoming.js`, `dist/src/services/listener_zapo.js`, `dist/src/services/outgoing_cloud_api.js` e o novo `dist/src/services/messages/provider_message_identity.js`, sob `/home/u/app/`.
+- Hashes verificados nos quatro serviços, mesma imagem/digest anterior, processos ativos, sem reinícios inesperados no intervalo inspecionado, sem erros de carregamento de módulo/sintaxe e `/ping` respondendo HTTP 200.
+- Sessões e credenciais existentes preservadas. Não houve mudança de callbacks, novo registro de coexistência, limpeza de Redis/filas ou migração de banco.
+
+**Comprovação:** o campo foi lido dos parâmetros HTTP efetivamente recebidos pelo ViperChat. Os UUIDs persistidos na caixa ViperConnect `1` foram comparados com os `source_id` completos da caixa Meta `65`, por consultas PostgreSQL somente leitura. O ID original recebido no webhook coincidiu com o identificador encontrado na representação decodificada do `wamid` correspondente. Não foi deduzido do Redis, de texto ou de horário.
+
+| Caso real | Mensagem ViperConnect no ViperChat | Mensagem Meta no ViperChat | `provider_message_id` recebido e correspondente |
+| --- | --- | --- | --- |
+| Texto recebido | `2484296` | `2484295` | `3AB89628240F57AC2494` |
+| Echo de texto enviado pela API | `2484297` | `2484300` | `3EB050A9FF01A65604D6AE` |
+| Imagem recebida | `2484303` | `2484301` | `3A2297B3132107520D5C` |
+| Áudio recebido | `2484310` | `2484305` | `3A773877A9B421BAEB41` |
+| Texto recebido | `2484311` | `2484304` | `3AC70D0FFABFDEC758B3` |
+| Figurinha recebida | `2484307` | `2484308` | `3A86A3AC7C1C7BCE3881` |
+
+Os seis pares coincidiram. Houve também um sétimo registro, `statuses[].status = read`, com o mesmo UUID e ID original do envio `2484297`. Exemplo: a figurinha manteve o UUID público `14a1a6b1-c8ff-11f1-8b89-01afaf97c044`; o campo adicional trouxe `3A86A3AC7C1C7BCE3881`, sem substituir seu `source_id`, o `wamid` ou o ID de mídia.
+
+**Limites do aceite:** vídeo, documento, contato, citações, reações, edição e exclusão têm testes dev conforme o contrato, mas não foram todos exercitados nesse teste real de coexistência. Typebot teve regressão automatizada e validação do compilado dev; não foi enviada mensagem real a bot para testar. A extração interna do `wamid` continua sendo evidência desta amostra, não contrato público da Meta: o adaptador da seção 6.1 ainda exige validação própria e rejeição de casos ambíguos. Não houve unificação nem deduplicação de mídia nesta etapa.
+
+**Recuperação preservada na VPS:**
+
+- Diretório: `/var/snap/docker/common/viperconnect-hotpatch/provider-message-id-20261015-p1/`.
+- `private/base.yml`: configuração anterior, com acesso restrito; não copiar segredos para este plano/repositório.
+- `private/override.yml`, `private/manifest.json` e `private/original/`: mounts, hashes e compilados originais.
+- `private/validation.json`, `private/package.tgz` e `private/pilot.py`: evidências resumidas e pacote do piloto.
+- Rollback: executar `rollback.sh` desse diretório em uma janela autorizada; restaura os serviços pela configuração anterior, sem mounts, sem apagar dados ou desfazer mensagens.
+
+O hostpath permanece aplicado. Um redeploy pelo compose original/Portainer pode removê-lo; inversamente, manter o overlay ao atualizar a imagem pode sombrear código novo. Na P3, reconciliar explicitamente os mounts e verificar o runtime definitivo. As cópias locais temporárias de transferência foram removidas; backup e entregáveis necessários de recuperação permanecem na VPS.
+
 ## 6. Segunda entrega — ViperChat persiste IDs sem unificar ainda
+
+**Próxima etapa acordada após registrar P1/P2:** começar em dev pela persistência aditiva do ID recebido, sua origem/escopo e vínculo à mensagem existente. Manter o modo observação; não aproveitar este aceite para ativar fusão, mudar roteamento ou migrar o histórico em produção. Publicação definitiva da ViperConnect (P3) e deploy/migração do ViperChat permanecem etapas separadas e autorizadas.
 
 Criar estrutura de identidades de transporte relacionada à mensagem interna. Nomes finais de tabelas/classes serão definidos na implementação; os conceitos e garantias são obrigatórios:
 
@@ -605,11 +646,11 @@ Templates faturáveis não consomem automaticamente a franquia de serviço neste
 
 | Etapa | Entrega | Gate |
 | --- | --- | --- |
-| P0 | Este plano | Revisão pelo usuário; nenhuma implementação hoje |
-| P1 | `provider_message_id` aditivo na ViperConnect | Código, contrato, testes e build aprovados em dev |
-| P2 | Piloto hostpath da ViperConnect na VPS | Aprovação operacional e comprovação no webhook real, sem regressão |
-| P3 | Release definitiva ViperConnect | Imagem versionada validada; remover overlay temporário |
-| P4 | ViperChat persiste IDs, observa correlações e resolução de identidade | Evidência real inclusive com contatos distintos e BSUID-only; sem fusão histórica ou alteração de fila/bolhas/envio |
+| P0 | Este plano | Revisado e atualizado com o resultado P1/P2; decisões preservadas |
+| P1 | `provider_message_id` aditivo na ViperConnect | Implementado e validado em dev; commit `b1668845`; IDs preservados e Typebot excluído |
+| P2 | Piloto hostpath da ViperConnect na VPS | Executado e validado na amostra real da seção 5.4: seis pares e status read; testes reais restantes explicitados |
+| P3 | Release definitiva ViperConnect | Pendente: imagem versionada validada e remoção explícita do overlay temporário |
+| P4 | ViperChat persiste IDs, observa correlações e resolução de identidade | Próximo desenvolvimento em dev; evidência real inclusive com contatos distintos e BSUID-only; sem fusão histórica ou alteração de fila/bolhas/envio |
 | P5 | Vínculo, correlação, ingestão única de mídias e envio por transporte | Testes transacionais, concorrência Active Storage/S3 e segurança nos dois sentidos de principal |
 | P6 | Frontend, Web/Android/iOS e integrações | Interface responsiva, capacidades e referências corretas |
 | P7 | Simulador e reconciliação de custos | Regras comerciais verificadas e cálculo sem duplicidade |
@@ -649,15 +690,13 @@ Vínculo desligado não deve apagar aliases nem mensagens. Definir corte de desl
 
 Migrações futuras devem ser compatíveis com rollback da aplicação; não remover campos ou dados usados pela versão anterior durante o piloto. Conferir backups recuperáveis antes de qualquer operação de migração/conciliação em produção.
 
-## 16. Checklist de retomada em 16/10/2026
+## 16. Checklist de retomada após P1/P2
 
-1. Ler este documento e as instruções do projeto ViperConnect; reconferir branch, alterações de outros contextos e versão de runtime.
-2. Inventariar exatamente os caminhos de montagem dos webhooks e referências no código atual.
-   Antes de implementar cada recurso da unificação nas etapas posteriores, completar e validar sua matriz de capacidades Meta/ViperConnect, incluindo IDs, restrições e regra de roteamento automático ao parceiro compatível, sem mudar a seleção do editor.
-3. Fechar o contrato aditivo e os exemplos de `provider_message_id`, preservando todos os IDs atuais.
-4. Implementar somente P1, com testes focados e revisão de compatibilidade; não iniciar a unificação ainda.
-   Nas etapas seguintes, respeitar as fronteiras da seção 2.2; manter Meta direto e não incluir migração para gateway no escopo atual.
-5. Apresentar o resultado de dev e obter aceite antes de preparar/aplicar o hostpath na VPS.
-6. Executar P2 apenas no escopo autorizado e com rollback pronto; registrar a comprovação de recebimento real.
+1. Ler o estado atualizado das seções 1, 4.4 e 5.4; reconferir branches, alterações de outros contextos e o commit ViperConnect `b1668845`. Não refazer P1 nem reprocessar os testes reais já comprovados sem necessidade/autorização.
+2. No ViperChat, inventariar a ingestão comum, echoes, status, referências e overlays Enterprise antes de definir a persistência aditiva. Preservar `source_id`, IDs internos, mídias e APIs legadas.
+3. Implementar a seção 6 primeiro em dev: campo opcional, identidade/origem/escopo, idempotência, eventos antigos sem o campo e recebimento fora de ordem; registrar conflitos sem fundir ou esconder mensagens. Criar adaptador Meta isolado/testado, sem assumir que qualquer `wamid` é decodificável.
+4. Validar isolamento entre contas/caixas, ausência de novos envios/automação duplicada e preservação de UUID/`wamid`. Contatos distintos e BSUID-only continuam requisitos de observação/resolução, não autorização de mescla histórica automática.
+5. Apresentar evidências dev antes de qualquer migração/deploy ViperChat na VPS. P3 segue pendente e exige sua própria publicação/deploy e retirada do hostpath.
+6. Antes de cada recurso posterior da unificação, completar sua matriz Meta/ViperConnect: IDs, restrições, seleção persistente nos dois editores e roteamento por capacidade sem fallback após falha/timeout. Respeitar a seção 2.2, mantendo Meta direto e sem incluir gateway nesta entrega.
 
 Nenhuma senha, token ou segredo operacional deve ser acrescentado a este documento, scripts, commits ou evidências.
