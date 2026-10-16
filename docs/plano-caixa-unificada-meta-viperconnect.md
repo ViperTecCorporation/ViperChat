@@ -5,7 +5,7 @@
 - Documento de planejamento: 15/10/2026, fuso America/Cuiaba.
 - Atualização em 15/10/2026: P1 implementada e validada em dev; P2 aplicada via hostpath na VPS após autorização explícita do usuário. Evidências e limites estão na seção 5.4.
 - ViperConnect: commit `b1668845` (`feat(webhooks): expose original provider message identity`), branch `mobile-primary`. IDs públicos atuais e referências operacionais preservados; Typebot não recebe o novo campo.
-- Próxima etapa de desenvolvimento: persistir `provider_message_id` no ViperChat em modo observação (seção 6/P4), sem unificar caixas, mesclar contatos/históricos, ocultar bolhas ou alterar envios.
+- Primeiro incremento P4 validado em dev e aplicado como piloto via hostpath na VPS, com backup prévio e validação de eventos reais (seções 6.0 e 6.0.1): persistência aditiva da identidade do transporte e seus vínculos. Correlação automática Meta, resolução de pessoas e unificação continuam pendentes.
 - P3 continua pendente: nenhuma nova imagem/release foi publicada. O hostpath é um piloto temporário, não uma atualização definitiva da imagem.
 - A data prevista originalmente não cria execução automática ou agendamento. Novos deploys, migrações em produção, reprocessamentos e envios de teste pelo agente exigem autorização correspondente.
 
@@ -327,6 +327,56 @@ Criar estrutura de identidades de transporte relacionada à mensagem interna. No
 Preservar `source_id` e as APIs legadas. Uma mensagem unificada pode possuir vários IDs externos; um campo único não representa todos eles.
 
 Primeiro operar em modo observação: armazenar IDs novos, calcular correspondências e registrar conflitos, sem unir conversas, esconder bolhas ou mudar o envio.
+
+### 6.0. Persistência inicial e validação em dev
+
+**Escopo entregue neste incremento:** guardar os IDs efetivamente recebidos e vinculá-los às mensagens existentes. Não calcular correspondências entre caixas ainda; não confundir esta entrega com todo o gate P4.
+
+- `whatsapp_message_identities`: conta, caixa, canal, provedor, `external_id` público completo, `provider_message_id` opcional e observações JSONB. Índice único por caixa/provedor/ID externo; IDs permanecem strings opacas, sem normalização arbitrária.
+- `whatsapp_message_identity_links`: vínculo com uma ou mais mensagens internas. Isso preserva os envios legados de múltiplos contatos que geram várias bolhas com o mesmo `source_id`, sem reduzir suas associações a uma única mensagem.
+- Observações restritas a origem `webhook`, versão do contrato, número empresarial, identificadores dos participantes, direção, tipo/evento, horários de origem, status e IDs de contexto/reação/revogação. Não armazenar corpo de mensagem, arquivo, URL de mídia, token ou payload integral nesse registro.
+- Entrada UnoAPI e Meta oficial passam pelo observador antes da ingestão existente. Status antecipado pode ficar persistido sem bolha; criação posterior da mensagem ou atribuição de `source_id` após envio pela API vincula o registro pendente. Não reproduzir status, enviar mensagens ou reabrir atendimentos a partir da observação.
+- Echo e atualização de status reaproveitam o vínculo por escopo e ID público, sem criar mensagens. A direção acompanha o resolvedor existente também nos echoes que usam `messages[]`, além de `message_echoes[]`.
+- Repetições usam restrições únicas e locks da identidade. Um original conflitante não substitui o valor conhecido: é registrado em `observations.conflicting_provider_message_ids` para revisão. Falta do campo em eventos Uno antigos não inventa um ID; pode completar um vínculo pendente já conhecido.
+- Contexto/reação preservam o ID do alvo separadamente do ID do evento. Edição não renderizada fica como observação com contexto; não cadastrar seu ID de evento como alias operacional da mensagem editada.
+- Meta guarda seu `wamid` completo como `external_id`, ainda sem derivar `provider_message_id` da representação binária. O adaptador da seção 6.1 é pendência explícita; nenhuma busca por texto/horário/substrings foi introduzida.
+- `messages.source_id`, `external_source_ids`, mídias, APIs públicas, notificações, bots e regras de envio não foram substituídos. Não há nova tela, seletor, endpoint ou alteração nos bundles Web/Android/iOS neste incremento backend.
+
+**Validação dev:** base isolada `viperchat_provider_identity_test`, distinta da réplica de desenvolvimento `chatwoot_db`. O ambiente do container contém `DATABASE_URL`; confirmar o nome efetivo na conexão, pois somente mudar `POSTGRES_DATABASE` não garante isolamento. A migração aditiva foi aplicada na réplica dev antes do piloto na VPS descrito abaixo.
+
+- Script reproduzível: `script/validation/whatsapp_provider_identity.rb`; exige `RAILS_ENV=test` e o nome exato da base isolada, bloqueia HTTP real e utiliza factories/test adapter. Executar somente com a base de teste limpa e configurada: cria fixtures e testa reversão/reaplicação das duas tabelas novas nessa base, nunca na réplica em uso ou em produção.
+- 36 verificações aprovadas: entrada/repetição, payload legado, status antecipado, `source_id` tardio, echo em ambos os formatos, referências, conflito, múltiplas bolhas por identidade, isolamento, concorrência, `wamid` intacto e migração reversível sem remover mensagens legadas.
+- Regressão: 185 exemplos existentes aprovados, cobrindo `Message`, UnoAPI, warnings, visualização única e entrada Meta. RuboCop dos arquivos alterados aprovado. Avisos de depreciação existentes não foram tratados como parte desta mudança.
+
+**Ordem de implantação:** executar a migração `20261016000000_create_whatsapp_message_identities` antes de carregar os novos callbacks nos processos web/worker. Para rollback de código, manter as tabelas/observações; não executar `down` em produção sem decidir como preservar os metadados coletados. A reversão da migração elimina somente as tabelas novas e seus vínculos, não mensagens legadas, mas perde as observações.
+
+**Próximas pendências P4:** adaptador Meta isolado/testado, consulta de candidatos/correspondências com escopo autorizado e diagnóstico de ambiguidades entre contatos distintos/BSUID-only. Nenhuma associação entre pessoas/caixas está ativa neste incremento.
+
+**Integração Git acordada:** persistência e plano ficam na branch `feat/whatsapp-provider-message-identity`. Prosseguir com a correlação automática Meta nesta mesma branch, validar em dev e então integrar à branch principal de trabalho `4.16.0`, evitando branches adicionais para cada subetapa. A integração Git não ativa a unificação das caixas nem autoriza novo deploy em produção. Remover a branch temporária somente depois de confirmar a integração e o push, preservando os commits.
+
+### 6.0.1. Piloto de persistência na VPS — 15/10/2026
+
+Aplicação autorizada pelo usuário, depois da validação dev, sem alterar IDs atuais nem unificar as caixas. Migração `20261016000000` aplicada antes da recriação do web e dos dois workers. Mantida a imagem `ghcr.io/viperteccorporation/chatwoot:v4.16.12-viper.31-ce`, com seis arquivos Ruby montados como somente leitura em cada processo. O hostpath da ViperConnect e o serviço de push existentes foram preservados. Não houve release de imagem, replay de webhooks ou backfill histórico.
+
+**Backup e rollback:** diretório `/var/snap/docker/common/viperchat-hotpatch/provider-message-id-20261015-persistence/`. O arquivo protegido `private/database-before.dump` contém o backup lógico completo anterior à migração: 245.667.919 bytes, SHA-256 `08e61cd7c0f83eedd293f915323015b5b7db696a11413242b2315bace4093e29`. Checksum e catálogo `pg_restore --list` conferidos; restauração integral não foi ensaiada. Configuração, fontes anteriores, manifesto e evidências estão em `private/`. O `rollback.sh` restaura somente o código/configuração anterior, mantendo tabelas e observações novas; não executar `down` como rollback rotineiro.
+
+**Preservação conferida após o piloto:** 1.000 mensagens antigas mantiveram `id`, `account_id`, `inbox_id`, `conversation_id` e `source_id`; as caixas 1 (UnoAPI) e 65 (Meta) mantiveram seus vínculos de canal. Nenhuma fusão de contatos, conversas ou mídias. A consulta dos vínculos novos encontrou zero divergências de conta, caixa ou ID externo.
+
+**Eventos reais:** após o usuário enviar mensagens de teste e responder pelo ViperChat, foram encontrados sete pares persistidos nas duas caixas durante a janela de validação, incluindo texto de entrada/saída, figurinha, imagem e vídeo. Amostra reproduzível por IDs internos, sem guardar conteúdo:
+
+| Mensagem UnoAPI | Mensagem Meta | `provider_message_id` recebido pela UnoAPI |
+| --- | --- | --- |
+| 2484365 | 2484367 | `3AAE262499CFA29A56A8` |
+| 2484370 | 2484369 | `3AB68FDE53F3F972C59E` |
+| 2484374 | 2484372 | `3A3883554A687C9AF8F6` |
+| 2484376 | 2484375 | `CEF0C6016F0F3CCA9366` |
+| 2484378 | 2484380 | `3EB0E87394970CF0F0B535` |
+| 2484383 | 2484382 | `A5D5052B5ACDD7E57BE697FE979E894C` |
+| 2484384 | 2484385 | `3EB05699E8130DBDF423EE` |
+
+Os UUIDs da UnoAPI e os `wamid` da Meta continuam intactos como `messages.source_id` e `external_id`. A igualdade acima foi conferida por diagnóstico somente leitura da representação do `wamid`; não é um adaptador automático nem uma nova regra de roteamento. Na persistência Meta, `provider_message_id` continua nulo por projeto, até a etapa 6.1. Status antecipados também foram vinculados à mensagem existente; horários ausentes no webhook Uno permanecem nulos, sem inventar timestamps.
+
+O web e os dois workers permaneceram em execução, com hashes dos arquivos conferidos, HTTP `/api` respondendo 200 e sem os erros de carregamento/FK pesquisados nos logs após a aplicação. Evidência operacional detalhada: `private/validation.json`. Isso valida a persistência inicial, não aprova automaticamente os recursos restantes de P4 ou a unificação.
 
 ### 6.1. Adaptador Meta
 
@@ -650,7 +700,7 @@ Templates faturáveis não consomem automaticamente a franquia de serviço neste
 | P1 | `provider_message_id` aditivo na ViperConnect | Implementado e validado em dev; commit `b1668845`; IDs preservados e Typebot excluído |
 | P2 | Piloto hostpath da ViperConnect na VPS | Executado e validado na amostra real da seção 5.4: seis pares e status read; testes reais restantes explicitados |
 | P3 | Release definitiva ViperConnect | Pendente: imagem versionada validada e remoção explícita do overlay temporário |
-| P4 | ViperChat persiste IDs, observa correlações e resolução de identidade | Próximo desenvolvimento em dev; evidência real inclusive com contatos distintos e BSUID-only; sem fusão histórica ou alteração de fila/bolhas/envio |
+| P4 | ViperChat persiste IDs, observa correlações e resolução de identidade | Parcial: persistência inicial validada em dev e no piloto hostpath da VPS (seções 6.0 e 6.0.1); adaptador Meta, observação entre caixas e resolução de identidade pendentes; sem fusão histórica ou alteração de fila/bolhas/envio |
 | P5 | Vínculo, correlação, ingestão única de mídias e envio por transporte | Testes transacionais, concorrência Active Storage/S3 e segurança nos dois sentidos de principal |
 | P6 | Frontend, Web/Android/iOS e integrações | Interface responsiva, capacidades e referências corretas |
 | P7 | Simulador e reconciliação de custos | Regras comerciais verificadas e cálculo sem duplicidade |

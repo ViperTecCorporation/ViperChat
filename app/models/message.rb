@@ -161,6 +161,8 @@ class Message < ApplicationRecord
   belongs_to :sender, polymorphic: true, optional: true
 
   has_many :attachments, dependent: :destroy, autosave: true, before_add: :validate_attachments_limit
+  has_many :whatsapp_message_identity_links, dependent: :delete_all
+  has_many :whatsapp_message_identities, through: :whatsapp_message_identity_links
   has_one :csat_survey_response, dependent: :destroy_async
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
 
@@ -168,11 +170,16 @@ class Message < ApplicationRecord
   after_create_commit :schedule_web_absence_reminder
 
   after_update_commit :dispatch_update_event
+  after_save :link_whatsapp_message_identities, if: -> { saved_change_to_source_id? && source_id.present? && inbox.whatsapp? }
   after_commit -> { Conversations::LinksService.expire(self) }, on: [:create, :update, :destroy]
   after_commit :reindex_for_search, if: :should_index?, on: [:create, :update]
 
   def channel_token
     @token ||= inbox.channel.try(:page_access_token)
+  end
+
+  def link_whatsapp_message_identities
+    Whatsapp::MessageIdentityObservationService.link_message(self)
   end
 
   def push_event_data

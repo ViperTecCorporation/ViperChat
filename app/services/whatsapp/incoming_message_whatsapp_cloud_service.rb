@@ -7,6 +7,9 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   def perform
     return process_group_settings_update if group_settings_update_event?
 
+    Whatsapp::MessageIdentityObservationService.new(
+      inbox: inbox, value: processed_params, outgoing_echo: outgoing_echo || (messages_data.present? && outgoing_message_type?)
+    ).perform
     super
   end
 

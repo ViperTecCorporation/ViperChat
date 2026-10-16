@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_03_010005) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_16_000000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1712,6 +1712,31 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_03_010005) do
     t.index ["account_id", "url"], name: "index_webhooks_on_account_id_and_url", unique: true
   end
 
+  create_table "whatsapp_message_identities", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "channel_id", null: false
+    t.string "provider", null: false
+    t.text "external_id", null: false
+    t.text "provider_message_id"
+    t.jsonb "observations", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_whatsapp_message_identities_on_account_id"
+    t.index ["channel_id"], name: "index_whatsapp_message_identities_on_channel_id"
+    t.index ["inbox_id", "provider", "external_id"], name: "idx_wa_identity_external", unique: true
+    t.index ["inbox_id"], name: "index_whatsapp_message_identities_on_inbox_id"
+  end
+
+  create_table "whatsapp_message_identity_links", force: :cascade do |t|
+    t.bigint "whatsapp_message_identity_id", null: false
+    t.bigint "message_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_whatsapp_message_identity_links_on_message_id"
+    t.index ["whatsapp_message_identity_id", "message_id"], name: "idx_wa_identity_message", unique: true
+  end
+
   create_table "whatsapp_stickers", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false
@@ -1769,6 +1794,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_03_010005) do
   add_foreign_key "web_attendance_invitations", "inboxes"
   add_foreign_key "web_attendance_invitations", "messages"
   add_foreign_key "web_attendance_sessions", "web_attendance_invitations"
+  add_foreign_key "whatsapp_message_identities", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_message_identities", "channel_whatsapp", column: "channel_id", on_delete: :cascade
+  add_foreign_key "whatsapp_message_identities", "inboxes", on_delete: :cascade
+  add_foreign_key "whatsapp_message_identity_links", "messages", on_delete: :cascade
+  add_foreign_key "whatsapp_message_identity_links", "whatsapp_message_identities", on_delete: :cascade
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").
       after(:insert).
