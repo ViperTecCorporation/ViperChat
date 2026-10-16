@@ -5,7 +5,7 @@
 - Documento de planejamento: 15/10/2026, fuso America/Cuiaba.
 - Atualização em 15/10/2026: P1 implementada e validada em dev; P2 aplicada via hostpath na VPS após autorização explícita do usuário. Evidências e limites estão na seção 5.4.
 - ViperConnect: commit `b1668845` (`feat(webhooks): expose original provider message identity`), branch `mobile-primary`. IDs públicos atuais e referências operacionais preservados; Typebot não recebe o novo campo.
-- Primeiro incremento P4 validado em dev e aplicado como piloto via hostpath na VPS, com backup prévio e validação de eventos reais (seções 6.0 e 6.0.1): persistência aditiva da identidade do transporte e seus vínculos. Incremento seguinte implementado em dev: adaptador automático Meta e consulta de correlação em modo observação (seção 6.1.1). Resolução de pessoas, ativação de vínculo entre caixas e unificação continuam pendentes.
+- Primeiro incremento P4 validado em dev e aplicado como piloto via hostpath na VPS, com backup prévio e validação de eventos reais (seções 6.0 e 6.0.1): persistência aditiva da identidade do transporte e seus vínculos. Incremento seguinte validado em dev e aplicado na VPS: adaptador automático Meta e consulta de correlação em modo observação (seções 6.1.1 e 6.1.2); aceite com eventos reais/horário de pico ainda pendente. Resolução de pessoas, ativação de vínculo entre caixas e unificação continuam pendentes.
 - P3 continua pendente: nenhuma nova imagem/release foi publicada. O hostpath é um piloto temporário, não uma atualização definitiva da imagem.
 - A data prevista originalmente não cria execução automática ou agendamento. Novos deploys, migrações em produção, reprocessamentos e envios de teste pelo agente exigem autorização correspondente.
 
@@ -386,7 +386,7 @@ O piloto deve provar a correspondência para os tipos/dispositivos suportados. S
 
 ### 6.1.1. Adaptador e consulta de correlação implementados em dev
 
-Incremento desenvolvido e validado na mesma branch `feat/whatsapp-provider-message-identity`; integração posterior à `4.16.0` autorizada conforme seção 6.0. Não houve novo deploy na VPS, backfill ou ativação de unificação. A VPS continua com o incremento anterior da seção 6.0.1.
+Incremento desenvolvido e validado na mesma branch `feat/whatsapp-provider-message-identity`, depois integrado à `4.16.0` no commit `a97a695af`. A branch temporária local/remota e o worktree limpo foram removidos após confirmar o push e a preservação dos três commits na `4.16.0`. Durante a validação dev, a VPS ainda usava a seção 6.0.1; a aplicação posterior autorizada está registrada na seção 6.1.2. Não houve backfill ou ativação de unificação.
 
 **Extração automática na ingestão:** `Whatsapp::MetaMessageIdAdapter`, versão `coexistence-envelope-v1`. Reconhece somente o envelope inteiro observado: marcadores fixos, comprimento explícito do participante, participante numérico, marcador de direção conhecido, comprimento explícito do original hexadecimal e terminador exato. Base64 estrito e canônico, com ou sem padding correto; tamanho limitado. Não procura substrings e não trata o formato interno como contrato público da Meta. Casos desconhecidos mantêm o `wamid` e seguem a ingestão normal, com diagnóstico `unrecognized`, sem inventar original.
 
@@ -406,7 +406,21 @@ Resultados distinguem `matched`, `no_candidate`, `ambiguous`, `invalid_scope`, `
 
 Código sincronizado ao volume de fontes dev, web e worker recarregados; `/api` retornou HTTP 200. Versão do adaptador, fixture de extração, classe de correlação e índice confirmados no runtime dev; hashes dos três serviços conferidos com a branch. A base descartável `viperchat_provider_identity_test` foi removida após os testes (fixtures reproduzíveis pelo runner); a réplica `chatwoot_db` e seus dados foram preservados.
 
-**Limite do aceite:** extração automática e comparação diagnóstica por par explícito, não roteamento unificado em produção. Ainda faltam configuração administrativa do vínculo comprovado (incluindo representação empresarial com/sem nono dígito), resolvedor de aliases/contatos e aplicação transacional da correlação à ingestão/efeitos/mídias. O ensaio de coexistência real desta versão do adaptador permanece pendente; fixtures reais capturadas não equivalem a deploy ou validação ao vivo na VPS.
+**Limite do aceite:** extração automática e comparação diagnóstica por par explícito, não roteamento unificado em produção. Ainda faltam configuração administrativa do vínculo comprovado (incluindo representação empresarial com/sem nono dígito), resolvedor de aliases/contatos e aplicação transacional da correlação à ingestão/efeitos/mídias. O ensaio de coexistência real desta versão do adaptador permanece pendente; fixtures reais capturadas e implantação técnica não equivalem a validar o comportamento em tráfego real/pico.
+
+### 6.1.2. Piloto do adaptador Meta aplicado na VPS — 15/10/2026
+
+Aplicação autorizada pelo usuário para testes na manhã seguinte. Commit `a97a695af6aed8f18b7e12cf2ce324ed89844e0d`, branch `4.16.0`; aplicado às 23:30 (America/Cuiaba), via hostpath, sem nova imagem/release. Mantida `v4.16.12-viper.31-ce`; nove arquivos Ruby somente leitura em cada processo web e nos dois workers. Fontes do piloto anterior, hostpath ViperConnect, configuração de push e compose original do Portainer preservados.
+
+**Pacote e recuperação:** `/var/snap/docker/common/viperchat-hotpatch/provider-message-id-20261015-meta-correlation/`. Backup lógico completo novo em `private/database-before.dump`: 245.710.543 bytes, SHA-256 `bfe689102f5540da80637c1af3cbfa84355d0f1d27ae43ad1b1765014cd130efe`. Checksum e catálogo do arquivo conferidos; restauração completa não ensaiada. `private/` protegido, com manifesto, pacote, driver, compose e evidências. `rollback.sh` retorna ao piloto anterior de persistência (seção 6.0.1), mantendo tabelas, índice e observações coletadas; não executa `down`, não retorna à imagem sem persistência e não elimina dados.
+
+**Alteração no banco:** somente a migração `20261016000001`, índice parcial concorrente e válido; a primeira migração não foi reexecutada. Não houve backfill, replay, mensagens de teste enviadas pelo agente, reatribuição de contatos ou fusão de caixas. Conferência pós-aplicação: os IDs de 1.000 mensagens antigas e os vínculos de canal das duas caixas permaneceram iguais.
+
+**Verificação técnica:** nove hashes conferidos em cada container; web e dois workers em execução, sem reinícios adicionais nem os erros de carregamento, validação, FK e deadlock pesquisados nos logs desde o startup. Dois `wamid` reais previamente capturados foram reconhecidos pelo adaptador no runtime, em transação somente leitura. API interna HTTP 200 e API pública HTTP 200 pela estação local. A requisição pública originada da VPS recebeu 403 do Cloudflare; nenhuma regra de segurança foi alterada. Evidência completa em `private/validation.json`.
+
+**Aceite de tráfego ainda pendente:** na janela da conferência, nenhum evento Meta novo com a versão do adaptador havia sido observado (`awaiting_live_events`). O teste de amanhã deve observar entrada, echo e status reais e a carga de pico, incluindo formatos desconhecidos, participantes incompletos e casos com nono dígito. As caixas 1 e 65 possuem representações empresariais diferentes: `business_identity_pending` continua esperado na comparação diagnóstica até a comprovação do vínculo empresarial. Não interpretar esse resultado como autorização para unificar contatos/caixas nem como falha do parser. O observador registra automaticamente a extração; a consulta de pares continua diagnóstica, com parceira explícita, sem aplicação à ingestão.
+
+As duas cópias locais temporárias de transferência foram removidas; pacote, fontes e backups necessários ao piloto/rollback permanecem na VPS. A implantação não cria monitoramento agendado nem execução automática na manhã seguinte.
 
 ### 6.2. Identidade de contato: dependência obrigatória da unificação
 
@@ -434,6 +448,21 @@ Separar dois trabalhos:
 Para recuperação, tratar notas privadas, permissões, mídias, agenda, etiquetas e responsável antes de consolidar registros. Não apagar aliases válidos. A correlação de mensagens pode produzir a evidência para o relatório, mas não deve disparar uma fusão destrutiva de cadastros antigos silenciosamente.
 
 Observabilidade: origem do evento, campo de identidade recebido, resultado do lookup (sem segredos), candidatos encontrados, evidência utilizada, conflito, identidade provisória e vínculo final. Medir quantos casos são identificados por alias, telefone comprovado e mensagem original equivalente.
+
+### 6.2.1. Identificação pendente e chegada fora de ordem
+
+Fluxo planejado, ainda não entregue como reconciliação automática: a Meta pode chegar antes da ViperConnect, somente com BSUID e sem telefone. Não exigir que a contraparte já exista nem considerar a criação de um cadastro técnico como identificação definitiva.
+
+1. Persistir o evento e a identidade recebida, preservando `source_id`, `wamid`, UUID e valores brutos. Registrar conta, vínculo autorizado, namespace, direção, ID original quando reconhecido, motivo da pendência e referências às mensagens já criadas. Sem vínculo autorizado, não buscar contatos indiscriminadamente em outras caixas.
+2. Classificar a resolução como pendente, resolvida ou em conflito. Falta de original/contraparte/evidência mantém pendência; vários candidatos, papéis incompatíveis ou aliases de pessoas estabelecidas diferentes geram conflito explícito. Não identificar por corpo, nome, horário ou mensagem citada.
+3. Manter a mensagem acessível ao agente com identificação incompleta. Se for necessário um contato provisório, marcá-lo como técnico e rastreável; não sobrescrever dados do contato antigo nem criar repetidamente novos cadastros para o mesmo alias.
+4. A chegada da contraparte com original exato, telefone comprovado ou alias confiável agenda nova resolução restrita ao mesmo escopo. Usar trabalho persistido e idempotente, restrições únicas e locks; registrar tentativas, próxima execução e resultado. Recuperar trabalhos interrompidos, limitar retries e encaminhar pendências sem evidência para revisão, sem descartá-las silenciosamente.
+5. Com um único contato antigo comprovado, reutilizá-lo e vincular o alias recebido. Quando já houver provisório, sua consolidação preventiva depende do inventário transacional de dependências da seção 6.3. Dois contatos estabelecidos ou alias conflitante nunca são mesclados automaticamente. Duplicados históricos, incluindo o contato `107150`, exigem prévia, backup e autorização própria.
+6. Reprocessar somente a resolução e os vínculos necessários: não reenviar mensagens, repetir bots/saudações/notificações, reabrir atendimentos encerrados ou baixar mídia de novo. Eventos atrasados devem seguir o redirecionamento auditado do provisório para o sobrevivente.
+
+O suporte BSUID e o resolvedor preventivo validados em dev não equivalem a essa fila de reconciliação: o fluxo diferido, inclusive Meta primeiro e alias já criado, ainda precisa ser implementado e testado. Sua aplicação na VPS permanece adiada; esta atualização é somente documental.
+
+Aceite: testar as duas ordens de chegada, contraparte muito atrasada, eventos repetidos/simultâneos, queda do worker, falta permanente de original e conflito de alias. Preservar o ID/dados manuais do contato antigo, sem segundo/terceiro cadastro definitivo, perda de histórico ou efeitos de atendimento duplicados. Medir pendências por motivo/idade, resoluções e conflitos sem registrar segredos.
 
 ### 6.3. Preservar o contato antigo, tratar o nono dígito e reconciliar dados posteriores
 
@@ -507,7 +536,7 @@ Fluxo proposto:
 2. Resolver cada item de mídia e sua versão. Um álbum pode representar várias mensagens e uma mensagem pode possuir mais de um anexo; não usar apenas um bloqueio por contato nem presumir um único item.
 3. Reservar a ingestão daquele item de forma atômica no PostgreSQL, com restrição única e estado persistido. Redis pode auxiliar, mas não é a única garantia.
 4. Se o item já estiver pronto, associar os aliases/referências do segundo transporte ao anexo existente e encerrar sem download, novo blob ou upload.
-5. Se estiver em processamento, registrar a referência alternativa e aguardar/reagendar a consulta ao resultado; não iniciar outro upload em paralelo.
+5. Se estiver em processamento, registrar a referência alternativa e aguardar/reagendar a consulta ao resultado; não iniciar outro upload em paralelo. Se a correlação atrasada ainda assim encontrar duas cópias persistidas, aplicar a reconciliação da seção 8.4.1.
 6. Somente o responsável pela ingestão baixa o arquivo, valida tamanho/tipo e calcula hash forte do conteúdo, por exemplo SHA-256. Salvar o blob uma vez e concluir o vínculo ao anexo.
 7. Se a primeira origem falhar, permitir recuperar o arquivo pela outra referência da mesma mensagem, sem reenviar mensagem ao WhatsApp e sem criar um segundo anexo lógico.
 
@@ -541,6 +570,19 @@ Vincular a mensagem otimista e seus anexos à operação de envio antes do proce
 - Só limpar órfãos comprovadamente criados pelo fluxo, após período de segurança e inventário/dry-run. Nunca fazer limpeza global de Active Storage/S3 ou apagar arquivos legados nesta entrega.
 - Autorização de downloads, revogação, notas privadas e visualização única continuam valendo independentemente de quantos transportes apontem para a mídia.
 
+### 8.4.1. Duplicidade já persistida: prioridade da mídia do canal principal
+
+Regra explícita: se a mesma mensagem/item de mídia tiver sido persistida por ambos os transportes antes da correlação, manter como canônica a mídia do **canal principal configurado** e retirar a cópia secundária. Vale tanto para Meta quanto para ViperConnect como principal; ordem dos webhooks e transporte selecionado no editor não alteram essa prioridade. A prevenção antes do download continua sendo a primeira barreira, e esta reconciliação cobre duplicidades que escaparem dela.
+
+1. Confirmar mensagem, item e versão equivalentes por IDs no escopo conta/vínculo. Nome, horário, legenda ou tamanho semelhantes não bastam. Diferenças reais de representação/conteúdo seguem a seção 8.2 e não autorizam descarte por aproximação.
+2. Manter a mídia secundária disponível até a principal estar disponível, íntegra e autorizada. Se a origem principal falhar ou expirar, registrar pendência e preservar a secundária; não deixar a conversa sem mídia para cumprir a preferência. Não baixar novamente uma mídia já íntegra apenas para confirmar a duplicidade.
+3. Sob controle transacional da mensagem/item, revalidar vínculo, principal vigente e referências; apontar o anexo lógico canônico e referências internas para a mídia principal antes de retirar a associação secundária. Preservar permissões, citações, metadados por origem e histórico, sem reenviar a mensagem nem repetir seus efeitos de domínio.
+4. Se ambos já apontarem para o mesmo blob, remover somente a associação redundante. Nunca apagar o arquivo compartilhado por essa razão. Se forem blobs diferentes, só agendar a exclusão do secundário após a troca confirmada e a verificação de todas as referências e retenções aplicáveis; referências legítimas de outras mensagens não devem ser removidas para liberar o blob.
+5. Executar a limpeza em segundo plano, de forma idempotente, com estados persistidos, auditoria e nova verificação antes do purge. Proteger a disputa entre reconciliação, novos vínculos e exclusão; falhas entre PostgreSQL e S3 devem permitir retomada sem apagar a mídia principal ou um objeto ainda referenciado. Respeitar o período de segurança e a prévia de órfãos da seção 8.4.
+6. Aplicar também quando o webhook principal chegar muito depois do secundário, ou quando uma pendência de identidade for resolvida posteriormente. Mudança administrativa da caixa principal exige política/corte explícitos; não inicia limpeza retroativa de todo o histórico automaticamente.
+
+Aceite: principal antes/depois do secundário, correlação tardia após dois uploads, ambas as escolhas de principal, principal indisponível, blob compartilhado, secundário com outra referência, reinício do worker e repetição do job. Ao concluir, um original canônico vivo por item; nenhuma mídia acessível perdida, nenhuma exclusão entre contas e nenhuma segunda bolha/automação criada pela reconciliação. A limpeza dos duplicados históricos permanece fora da ativação inicial, conforme seção 8.6.
+
 ### 8.5. Limite: storage do ViperChat versus cache da ViperConnect
 
 A deduplicação acima elimina a segunda ingestão no Active Storage e no bucket/prefixo do **ViperChat**. A ViperConnect pode manter sua própria cópia/cache para entrega e reenvio de mídias. Esse armazenamento pertence a outro ciclo de vida e não desaparece por unificar caixas.
@@ -556,6 +598,8 @@ O piloto deve comprovar:
 - [ ] Mesmo texto com mídia não é critério de identidade; IDs correlacionados governam a ingestão.
 - [ ] Dois webhooks equivalentes simultâneos resultam em um anexo lógico, um blob original e um objeto original vivo no storage ViperChat.
 - [ ] O segundo evento, após conclusão, não baixa nem envia novamente o arquivo.
+- [ ] Se ambos já persistiram a mídia antes da correlação, a cópia principal íntegra prevalece; retirar a secundária somente após atualizar referências e comprovar que seu blob pode ser removido com segurança.
+- [ ] Principal atrasada/indisponível mantém a secundária acessível; jobs repetidos, blob compartilhado e falhas de limpeza não causam perda de mídia.
 - [ ] Upload do agente mais echo Meta/ViperConnect reaproveita o blob local.
 - [ ] Falha da primeira origem permite recuperação pela segunda, sem dois anexos ou perda do arquivo.
 - [ ] Crash depois do upload, antes do vínculo e durante a análise tem retomada segura e órfãos identificáveis.
@@ -724,7 +768,7 @@ Templates faturáveis não consomem automaticamente a franquia de serviço neste
 | P1 | `provider_message_id` aditivo na ViperConnect | Implementado e validado em dev; commit `b1668845`; IDs preservados e Typebot excluído |
 | P2 | Piloto hostpath da ViperConnect na VPS | Executado e validado na amostra real da seção 5.4: seis pares e status read; testes reais restantes explicitados |
 | P3 | Release definitiva ViperConnect | Pendente: imagem versionada validada e remoção explícita do overlay temporário |
-| P4 | ViperChat persiste IDs, observa correlações e resolução de identidade | Parcial: persistência inicial validada na VPS; adaptador automático Meta e consulta diagnóstica por par explícito validados em dev (6.1.1); vínculo empresarial/aliases e resolução de pessoas pendentes; sem fusão histórica ou alteração de fila/bolhas/envio |
+| P4 | ViperChat persiste IDs, observa correlações e resolução de identidade | Parcial: persistência inicial validada na VPS; adaptador Meta e consulta diagnóstica validados em dev e aplicados via hostpath (6.1.2), aceite real/pico pendente; vínculo empresarial/aliases e resolução de pessoas pendentes; sem fusão histórica ou alteração de fila/bolhas/envio |
 | P5 | Vínculo, correlação, ingestão única de mídias e envio por transporte | Testes transacionais, concorrência Active Storage/S3 e segurança nos dois sentidos de principal |
 | P6 | Frontend, Web/Android/iOS e integrações | Interface responsiva, capacidades e referências corretas |
 | P7 | Simulador e reconciliação de custos | Regras comerciais verificadas e cálculo sem duplicidade |
