@@ -3,6 +3,7 @@
 ## 1. Situação, objetivo e autorização
 
 - Documento de planejamento: 15/10/2026, fuso America/Cuiaba.
+- Atualização em 16/10/2026: vínculo, ingestão única, BSUID-first, reconciliação de mídias e revisão administrativa implementados e validados em dev (seções 17–19). Interface disponível para aceite manual; não confundir esse avanço com release publicada, aceite nativo completo ou implantação na VPS. Aplicação dessas alterações na VPS continua adiada.
 - Atualização em 15/10/2026: P1 implementada e validada em dev; P2 aplicada via hostpath na VPS após autorização explícita do usuário. Evidências e limites estão na seção 5.4.
 - ViperConnect: commit `b1668845` (`feat(webhooks): expose original provider message identity`), branch `mobile-primary`. IDs públicos atuais e referências operacionais preservados; Typebot não recebe o novo campo.
 - Primeiro incremento P4 validado em dev e aplicado como piloto via hostpath na VPS, com backup prévio e validação de eventos reais (seções 6.0 e 6.0.1): persistência aditiva da identidade do transporte e seus vínculos. Incremento seguinte validado em dev e aplicado na VPS: adaptador automático Meta e consulta de correlação em modo observação (seções 6.1.1 e 6.1.2); aceite com eventos reais/horário de pico ainda pendente. Resolução de pessoas, ativação de vínculo entre caixas e unificação continuam pendentes.
@@ -422,6 +423,47 @@ Aplicação autorizada pelo usuário para testes na manhã seguinte. Commit `a97
 
 As duas cópias locais temporárias de transferência foram removidas; pacote, fontes e backups necessários ao piloto/rollback permanecem na VPS. A implantação não cria monitoramento agendado nem execução automática na manhã seguinte.
 
+### 6.1.3. BSUID no wamid e reutilização preventiva do contato — dev em 16/10/2026
+
+Incremento desenvolvido na mesma branch de trabalho `fix/whatsapp-correlation-br-mobile`, sobre a normalização somente de comparação. Sem deploy desta versão na VPS, migração, backfill ou mesclagem do contato `107150`. Não confundir identificação compartilhada de pessoa com unificação de atendimento.
+
+- `coexistence-envelope-v2`: preserva o envelope telefônico existente e reconhece o envelope inteiro com participante BSUID, comprimento explícito e marcadores observados `15 14 00`, distinguindo namespace e direção. Não transforma BSUID em telefone. Envelopes desconhecidos ou inconsistentes continuam sem original inferido. O `wamid` completo permanece operacional e intacto.
+- `Whatsapp::MessageIdentityContactResolver`: executa antes da criação legada do contato no fluxo Cloud, para entrada e echo. Exige BSUID do envelope igual ao identificador do participante no papel correto, original da própria mensagem, direção consistente e um único candidato na caixa parceira. Citações, reações, grupos, eventos não suportados e conflitos não servem como prova de pessoa.
+- Ativação administrativa técnica, desligada por padrão: `provider_config.identity_resolution_partner_inbox_id` no canal Meta aponta explicitamente para a caixa ViperConnect da mesma conta. Não descobrir parceiros automaticamente nem configurar números/IDs de uma instalação no código. A comparação verifica os números empresariais normalizados, os provedores e os escopos observados. O campo não ativa caixa principal, roteamento, seletor de transporte ou unificação. Ainda não há uma tela administrativa específica para essa configuração.
+- O candidato precisa estar vinculado a mensagens públicas, não de grupo, com escopo e direção coerentes, e apontar para um único contato cujo telefone corrobore o participante ViperConnect. O vínculo novo é um `ContactInbox` para o BSUID na caixa Meta, com proveniência em `additional_attributes.message_identity_resolution`. O ID do contato antigo, nome, telefone, LID/`contacts.bsuid`, dados manuais, UUIDs e `source_id` antigos não são substituídos.
+- Concorrência: transação/lock da caixa e índice único existente de caixa/source protegem a criação do alias. Repetições reaproveitam o mesmo vínculo; um alias já pertencente a outro contato resulta em `alias_conflict`, sem reatribuição, exclusão ou merge. O resultado mais recente fica em `observations.contact_resolution`; isso não envia mensagens nem produz uma segunda automação por conta própria.
+- Cada caixa continua recebendo sua própria mensagem e usando sua própria conversa, com as regras de status e atendimento existentes. O caminho de contato resolvido não chama a fusão automática de conversas históricas, mesmo em modo de conversa única. Não há deduplicação de bolhas ou mídias entre provedores nesta entrega.
+- Se Meta chegar antes de existir a contrapartida comprovada, registrar pendência e manter o fluxo legado. Uma nova execução pode resolver quando a prova surgir e não houver alias conflitante; não foi adicionado replay/job de mesclagem tardia. Duplicados já criados exigem recuperação separada e autorização própria; o `107150` na VPS permanece intocado.
+
+Validação reproduzível na base isolada `viperchat_provider_identity_test`, com HTTP bloqueado: `script/validation/whatsapp_bsuid_contact_identity.rb` cobre envelope real do caso relatado, rejeições de formato, opt-in, direção e namespace, ingestão de entrada/echo, aliases idempotentes/concorrentes, conflito com duplicado existente, escopo entre contas, citação não usada como identidade e preservação dos dados antigos. Executar com schema limpo, separado do runner de persistência e do RSpec. Nenhuma alteração de frontend/bundles nativos neste incremento.
+
+Resultado dev: 35 verificações BSUID, 118 verificações do runner de persistência/correlação e 185 exemplos RSpec aprovados, com sete arquivos Ruby sem infrações RuboCop. Versão v2 e classe do resolvedor conferidas no runtime, API dev HTTP 200. Nenhuma caixa real da réplica foi ativada: opt-in apenas nas fixtures isoladas. Base temporária removida após a validação, preservando a réplica `chatwoot_db` e os fontes/testes para repetição.
+
+### 6.1.4. Identificação pendente persistida — incremento somente dev em 16/10/2026
+
+Continuação autorizada em dev, sem VPS, unificação de caixas ou recuperação histórica. Substitui a limitação de chegada fora de ordem descrita no incremento anterior somente para os eventos BSUID reconhecidos e com opt-in técnico válido. O canal permanece desligado por padrão; nenhuma caixa real da réplica foi ativada por esta etapa.
+
+- Migração aditiva `20261016000002` cria `whatsapp_identity_resolutions`: uma pendência por identidade, parceira explícita, estado, motivo, tentativas, próxima execução, contato técnico de origem e contato sobrevivente. Não altera `messages.source_id`, UUID, `wamid`, ID de conversa ou de contato estabelecido. A referência ao provisório permanece como auditoria/redirecionamento após sua consolidação.
+- Estados: `pending`, `resolved`, `conflict`, `review`, `disabled`. Até 12 tentativas automáticas por ciclo de evidência, com intervalo crescente de 60 segundos até uma hora. Esgotamento vai para revisão; nova observação da contraparte ou vínculo da mensagem por original exato pode reativar a pendência. Conflitos não são reativados automaticamente por simples repetição.
+- `Whatsapp::ResolvePendingIdentityJob`, fila `low`, processa por ID; varredura a cada minuto recupera até 100 registros vencidos por passagem, inclusive quando o enqueue original se perdeu. Estado e vencimento no PostgreSQL, não a presença na fila, determinam se um job repetido pode trabalhar. Configuração removida/trocada desabilita a pendência sem mover contatos para outra parceira.
+- Quando a Meta chega primeiro, o fluxo habilitado cria ou reutiliza um único alias e um cadastro estritamente técnico rastreado, deixando a mensagem acessível na sua própria conversa. Não captura corpo de mensagem, mídia ou credenciais na pendência. Status antes da mensagem ViperConnect aguarda a associação real a um contato, sem adivinhar a pessoa.
+- A prova segue sendo o original da própria mensagem, com escopo empresarial/conta/caixas, papel, direção e telefone do candidato corroborados. Um único contato antigo comprovado prevalece com todos os seus campos, inclusive LID e dados manuais, intactos. Não procurar por conteúdo, nome, horário ou mensagem citada.
+- Somente o provisório criado por este fluxo, com snapshot ainda intacto, um alias próprio e conversas no mesmo escopo pode ser consolidado automaticamente. Reparação transacional atualiza o contato das conversas existentes e o remetente das mensagens, conserva seus IDs e anexos, mantém a proveniência e remove apenas esse cadastro técnico. Não junta conversas, não move bolhas entre caixas, não reabre resolvidas e não executa callbacks de merge/entrega novamente.
+- Nome/atributos alterados manualmente, nota vinculada diretamente ao contato, agendamento, CSAT, grupo, avatar/etiquetas ou outras dependências diretas/polimórficas não tratadas bloqueiam a remoção e deixam o caso para revisão. Não presume que o merge genérico cubra essas dependências. Contatos históricos ou aliases sem a marca de propriedade do fluxo, como o `107150` na VPS, nunca são consolidados por esta etapa.
+- Locks de caixa, pendência, alias e contatos serializam concorrência. A ingestão relê o proprietário do alias sob lock antes de escolher a conversa, evitando recriar o provisório depois de uma reparação. Falha intermediária reverte a reparação inteira, registra tentativa/erro por classe, sem payload nos logs, e permite retomada limitada.
+
+Validação: runner `script/validation/whatsapp_pending_identity.rb`, base descartável `viperchat_provider_identity_test` e HTTP bloqueado. Cobre Meta primeiro nos dois sentidos, eventos/jobs repetidos, concorrência, status antes da mensagem, dois eventos pendentes no mesmo alias, falha transacional/retomada, recuperação por varredura, limite de tentativas e configuração desligada; também comprova preservação de mídia, nota privada, agendamento, conversa encerrada e contato antigo. Não confundir fixtures com aceite de tráfego de produção.
+
+Resultado: 151 verificações do fluxo pendente, 120 de persistência/correlação (incluindo rollback/reaplicação das migrações na ordem correta) e 35 de BSUID aprovadas. Regressão de mensagens Uno/Cloud, visualização única, avisos e agendamento: 186 exemplos, zero falhas. Quinze arquivos Ruby aprovados no RuboCop. A entrada cron usa `active_job: true` explicitamente; o teste de duplicidade do YAML foi repetido com finais de linha LF no container. Migração aplicada somente na réplica dev, web/worker locais recarregados, API HTTP 200, zero caixas reais habilitadas. Sem alteração de frontend ou bundles nativos.
+
+Runtime: varredura enfileirada pelo cron e executada com sucesso pelo worker Sidekiq, sem pendências reais. Após a validação, removidos a base descartável e quatro jobs falhos da própria varredura inicial, anteriores ao ajuste ActiveJob; filas alheias, base `chatwoot_db`, uploads e serviços ativos preservados. Observado separadamente erro `jid=` no cron já existente `ScheduledMessages::DeliveryJob`; esse fluxo não foi alterado nesta entrega.
+
+Atualização posterior autorizada, ainda em 16/10: corrigida também em dev a entrada `scheduled_messages_delivery_job` com `active_job: true`, sem alterar regra de entrega, horários ou dados agendados. Oito exemplos focados (configuração, entrega, sequência e status) aprovados; execução real pelo Sidekiq concluída, API HTTP 200 e digest dos registros dev preservado. Removidas dez varreduras inválidas antigas de dev, com classe/args vazios e erro `jid=` exatos; não são mensagens agendadas do banco. Base isolada dessa validação removida. Correção e regressão isoladas na branch `fix/scheduled-delivery-active-job`, sem commit/push.
+
+Produção inspecionada somente para leitura: em 16/10, cerca de 11:58 America/Cuiaba, ambos os workers apresentavam execuções recentes do DeliveryJob bem-sucedidas. Sem esse erro nas tentativas/tarefas mortas pesquisadas; 145 registros enviados, oito futuros, quatro cancelados e zero falhos ou vencidos. Não confundir `cancelled: 4` com `failed: 3`. A versão instalada do sidekiq-cron detecta ActiveJob pela classe mesmo sem flag explícita. Nenhum hostpath, migração, reprocessamento, limpeza de fila ou alteração em produção nesta conferência. BSUID/resolvedor e identificação pendente continuam não aplicados na VPS.
+
+Limites: este incremento não implementa a interface de revisão/indicação de pendência no frontend, nem resolvedor genérico para envelopes desconhecidos/sem original ou todas as formas de enriquecimento por telefone/alias. Esses casos continuam conservadores e não autorizam inferir uma identidade. Mídias duplicadas e envio unificado permanecem somente planejados. Não houve commit/push, release ou aplicação na VPS nesta etapa.
+
 ### 6.2. Identidade de contato: dependência obrigatória da unificação
 
 `provider_message_id` resolve a identidade da mensagem, não substitui a resolução da pessoa. Implementar um resolvedor de identidade compartilhado pelos fluxos de entrada e echo antes de criar contato e conversa definitivos na caixa unificada.
@@ -451,7 +493,7 @@ Observabilidade: origem do evento, campo de identidade recebido, resultado do lo
 
 ### 6.2.1. Identificação pendente e chegada fora de ordem
 
-Fluxo planejado, ainda não entregue como reconciliação automática: a Meta pode chegar antes da ViperConnect, somente com BSUID e sem telefone. Não exigir que a contraparte já exista nem considerar a criação de um cadastro técnico como identificação definitiva.
+Fluxo-alvo: a Meta pode chegar antes da ViperConnect, somente com BSUID e sem telefone. O subconjunto BSUID reconhecido já possui reconciliação automática somente em dev, conforme 6.1.4; o restante continua como requisito. Não exigir que a contraparte já exista nem considerar a criação de um cadastro técnico como identificação definitiva.
 
 1. Persistir o evento e a identidade recebida, preservando `source_id`, `wamid`, UUID e valores brutos. Registrar conta, vínculo autorizado, namespace, direção, ID original quando reconhecido, motivo da pendência e referências às mensagens já criadas. Sem vínculo autorizado, não buscar contatos indiscriminadamente em outras caixas.
 2. Classificar a resolução como pendente, resolvida ou em conflito. Falta de original/contraparte/evidência mantém pendência; vários candidatos, papéis incompatíveis ou aliases de pessoas estabelecidas diferentes geram conflito explícito. Não identificar por corpo, nome, horário ou mensagem citada.
@@ -460,7 +502,7 @@ Fluxo planejado, ainda não entregue como reconciliação automática: a Meta po
 5. Com um único contato antigo comprovado, reutilizá-lo e vincular o alias recebido. Quando já houver provisório, sua consolidação preventiva depende do inventário transacional de dependências da seção 6.3. Dois contatos estabelecidos ou alias conflitante nunca são mesclados automaticamente. Duplicados históricos, incluindo o contato `107150`, exigem prévia, backup e autorização própria.
 6. Reprocessar somente a resolução e os vínculos necessários: não reenviar mensagens, repetir bots/saudações/notificações, reabrir atendimentos encerrados ou baixar mídia de novo. Eventos atrasados devem seguir o redirecionamento auditado do provisório para o sobrevivente.
 
-O suporte BSUID e o resolvedor preventivo validados em dev não equivalem a essa fila de reconciliação: o fluxo diferido, inclusive Meta primeiro e alias já criado, ainda precisa ser implementado e testado. Sua aplicação na VPS permanece adiada; esta atualização é somente documental.
+O fluxo diferido da seção 6.1.4 cobre o provisório novo e controlado, não a mesclagem de aliases históricos conflitantes nem o fluxo-alvo inteiro desta seção. A aplicação na VPS permanece adiada; desenvolvimento em dev e atualização do plano não autorizam deploy ou recuperação de dados em produção.
 
 Aceite: testar as duas ordens de chegada, contraparte muito atrasada, eventos repetidos/simultâneos, queda do worker, falta permanente de original e conflito de alias. Preservar o ID/dados manuais do contato antigo, sem segundo/terceiro cadastro definitivo, perda de histórico ou efeitos de atendimento duplicados. Medir pendências por motivo/idade, resoluções e conflitos sem registrar segredos.
 
@@ -511,6 +553,29 @@ Para conversas ativas já presentes nas duas caixas, produzir prévia e selecion
 ### 7.3. Histórico
 
 Não fundir automaticamente histórico antigo, notas privadas, responsáveis ou anexos. A caixa principal conserva seus registros; o histórico antigo da parceira permanece consultável e identificado. Migração retroativa será outra operação, com dry-run, autorização e critérios determinísticos.
+
+### 7.4. Desunificação administrativa: reversível para o futuro, sem separar o histórico
+
+A unificação deve poder ser desligada pelo administrador nas configurações de qualquer caixa do par, com autorização nas duas caixas e auditoria. **Reversível significa desativar o vínculo para os próximos atendimentos/envios; não significa desfazer o histórico.** Não há operação de “separação histórica” ou restauração automática de duas cópias das mensagens já unificadas.
+
+Contrato da desativação:
+
+- Desativar (`enabled: false`), sem apagar o vínculo, mensagens, conversas, contatos, aliases, identidades ou anexos/blobs. IDs internos, `source_id`, URLs, notas privadas, responsáveis e histórico permanecem nos registros em que já estavam; a mensagem canônica continua na antiga principal. Repetir a desativação deve ser seguro.
+- Novas mensagens compostas depois da desativação usam apenas o canal da própria caixa, sem seletor unificado ou roteamento para a antiga parceira. A antiga conversa canônica continua na sua caixa; não deve ser transferida de volta. Eventos realmente novos e independentes seguem o fluxo legado de cada transporte.
+- Envios pendentes com metadados do vínculo antigo devem ser rejeitados para revisão explícita; nunca remover os metadados nem reenviar silenciosamente pela caixa principal/parceira. Reativar o mesmo registro de vínculo não autoriza enviar uma mensagem preparada no ciclo anterior.
+- Uma reserva/evento do período unificado ainda sem mensagem canônica exige revisão persistente/quarentena, sem materialização automática pelo caminho legado. Não é evento independente só porque o administrador desligou o vínculo enquanto ele estava na fila. A revisão persistente está implementada no backend; sua exposição ao administrador não é comprovada por estes specs.
+- Status e echoes de mensagens já materializadas continuam resolvendo para a canônica existente, mesmo com o vínculo desligado. Aliases conhecidos são preservados; uma contraparte tardia ainda não observada também não pode criar segunda bolha, atendimento ou cópia de mídia. Correlação exige evidência exata do original, participante, direção e escopo autorizado do par histórico; não usar texto/horário nem a ausência de vínculo ativo como autorização para duplicar.
+- Reativação passa novamente pela prévia/confirmação aplicável e estabelece nova data de corte. O corte permite unificar eventos novos desse ciclo, mas não autoriza replay, fusão retroativa ou retomada de envios/reservas do ciclo anterior. Reconciliação de status/aliases com uma canônica existente é preservação de identidade, não replay histórico.
+
+**Implementado e validado em dev em 16/10/2026:** o `destroy` administrativo chama `update!(enabled: false)` sob lock da conta e não remove dados; `WhatsappInboxLink.for_inbox` passa a ignorar o par. O envio com `whatsapp_transport` persistido consulta novamente o vínculo ativo e rejeita o envio enquanto ele está desligado. A busca de mensagem por alias em `find_message_by_source_id` não depende de vínculo ativo, permitindo reconciliar status e repetir echoes cujos aliases já existem. O spec de desunificação passou com 32 exemplos, incluindo as duas escolhas de principal.
+
+As lacunas anteriores receberam as seguintes proteções de backend, exercitadas nos testes de desenvolvimento:
+
+1. Os metadados de envio agora incluem `activation_cutoff`, além de `link_id`, provedor e caixa. A validação compara o corte persistido com a ativação atual, impedindo que reativar o mesmo vínculo autorize um envio preparado no ciclo anterior, sem trocar seu transporte.
+2. `UnifiedHistoricalEventService` procura a reserva pelo original exato, direção e escopo histórico do par, com validação de participante/tipo, antes de liberar o evento ao caminho legado. A contraparte tardia de mensagem já materializada recebe alias para a canônica existente, sem iniciar nova ingestão. Reservas históricas ainda sem `message_id` são retidas em `review`, sem criar bolha independente.
+3. A fila persistente `WhatsappUnifiedEvent`/`UnifiedEventService` compara vínculo/corte e passa eventos invalidados para `review`, com motivo `link_changed` e sem próxima tentativa automática. Um coordenador de ingestão inicializado antes da desativação guarda o corte original e revalida o vínculo em `defer_changed_link?`, retendo o evento em revisão antes de chamar o fluxo legado, inclusive se o mesmo vínculo já foi reativado com outro corte. `ensure_owned!` também confere o vínculo vivo (`enabled` e corte), além da posse da reserva, antes de concluir a transação de materialização.
+
+Regressões com persistência real estão em `spec/services/whatsapp/unified_unlink_spec.rb`: **32 exemplos aprovados em dev**, incluindo preservação de notas/anexos/IDs, envio independente, seleção obsoleta, reativação, status, echoes, contraparte BSUID tardia e coordenador inicializado antes de desligar. A matriz de mídias passou com 37 exemplos na mesma rodada focada. São testes reais, sem exemplos `pending`/xfail; não equivalem ao aceite de carga/piloto na VPS. Ver evidências e limites na seção 18.
 
 ## 8. Correlação, concorrência e efeitos únicos
 
@@ -818,3 +883,153 @@ Migrações futuras devem ser compatíveis com rollback da aplicação; não rem
 6. Antes de cada recurso posterior da unificação, completar sua matriz Meta/ViperConnect: IDs, restrições, seleção persistente nos dois editores e roteamento por capacidade sem fallback após falha/timeout. Respeitar a seção 2.2, mantendo Meta direto e sem incluir gateway nesta entrega.
 
 Nenhuma senha, token ou segredo operacional deve ser acrescentado a este documento, scripts, commits ou evidências.
+
+## 17. Incremento de implementação em dev — 16/10/2026
+
+Trabalho em `feat/whatsapp-unified-inbox-dev`, separado da `4.16.0`. Esta seção descreve código e testes locais, **não uma release aprovada nem um deploy na VPS**. Os vínculos das caixas existentes no dev permanecem desligados; nenhum histórico foi mesclado.
+
+### Implementado neste incremento
+
+- Vínculo administrativo explícito, desligado por padrão, com principal Meta ou ViperConnect, transporte padrão independente, corte de ativação, prévia de conflitos e confirmação assinada. Endpoints sob a autorização de gestão de caixas da conta; a permissão na parceira não concede acesso ao histórico da principal.
+- Reserva durável PostgreSQL antes da ingestão/download dos eventos elegíveis, aliases por transporte, lease com token de propriedade e recuperação de bolha já persistida. O `provider_message_id` correlaciona; os IDs públicos/operacionais não são substituídos.
+- Ingestão única de texto, imagem, áudio e PDF exercitada com fixtures sanitizadas derivadas dos formatos reais coletados. Matriz: ambas as principais, ambas as ordens de chegada, repetições, echoes, status antecipado, oitavo/nono dígito, conflitos e isolamento de conta. Não há chamada externa real nos testes.
+- Seletor compartilhado antes da bifurcação compacto/completo, preferência e rascunhos por transporte, destino Web e notas privadas independentes. Seleção enviada explicitamente ao backend e revalidada antes do envio.
+- Envio por transporte efetivo e referências com seu alias operacional; roteamento por capacidade antes da tentativa, sem troca automática após erro/timeout. Janela Meta calculada pela evidência de recebimento Meta, não pelo fato de a mensagem ocupar uma caixa principal Meta.
+- Configuração de vínculo nas preferências da caixa. Conferência do componente real com APIs simuladas em 320, 360, 390, 412, 430, 844 (paisagem) e 1280 px: sem overflow horizontal dos controles. Isso não substitui a aceitação do editor completo autenticado com teclado/aparelho.
+
+### Evidências e limites do aceite
+
+- Regressão Ruby do incremento inicial: 685 exemplos, zero falhas. A rodada posterior de BSUID-first, mídias e desunificação é descrita na seção 18, com seu próprio resultado; não somar contagens de rodadas sobrepostas.
+- Frontend do incremento inicial: 140 testes aprovados em nove arquivos (incluindo PIX e os dois editores), sem tratar teste unitário como envio real. Este segundo incremento é de backend, sem mudança adicional de layout ou bundle nativo.
+- Bundles Android/iOS regenerados e Android Debug compilado. Não havia dispositivo ADB conectado; Mac de desenvolvimento indisponível. Não afirmar teste nativo em aparelho, Archive iOS, assinatura de release ou publicação.
+
+### Bloqueios para promover a release/piloto
+
+1. O novo fluxo BSUID-first aguarda em banco sem criar contato/bolha especulativos, resolve o alias pelo original comprovado e preserva o cadastro antigo. A interface administrativa foi concluída em dev na seção 19; falta o aceite manual do administrador. A nova regra não autoriza mescla histórica ou reparo indiscriminado de duplicados antigos.
+2. Reconciliação excepcional de mídias já persistidas implementada em dev, com prioridade à principal, referências preservadas e limpeza pós-commit com nova verificação no job de exclusão. Validar no storage e no piloto autorizados; os testes de objetos usam DiskService sintético, não exclusões no S3 real.
+3. Echo antecipado e resultado incerto possuem espera/claim persistidos. A concorrência com duas conexões PostgreSQL foi exercitada, mas não substitui teste de carga com processos Sidekiq separados, reinícios e serviços externos reais no piloto.
+4. Completar a matriz das demais capacidades/eventos (inclusive contatos múltiplos), aceitação integrada dos dois editores e automações/notificações. Exclusão remota não é anunciada: o endpoint atual é remoção local. O bloqueio inicial do agendamento vinculado foi substituído pela persistência e revalidação descritas na seção 20.
+5. Validar a UI autenticada, teclado/áreas seguras, Android/iOS e custos conforme a seção 12 antes de apresentar uma release funcional de produção. Nenhuma economia é prometida a partir dos testes sintéticos.
+
+O avanço continua seguindo este plano; não reduzir silenciosamente os critérios acima para declarar a unificação concluída. Deploy/hostpath na VPS, ativação em conta real, conciliação de contatos e limpeza de mídia persistente exigem a etapa de aprovação correspondente.
+
+## 18. BSUID-first, mídias tardias e echo antecipado — segundo incremento dev
+
+### Comportamento implementado
+
+- `WhatsappUnifiedEvent` guarda o evento ainda não identificável, separado da fila de conversas. Primeiro retry após 15 segundos; novas identidades/aliases compatíveis podem antecipar a tentativa. Sem nova evidência, há backoff e limite de 12 tentativas, depois revisão persistente. Repetição não cria outro contato, bolha, download ou novo job inicial. Payload não é registrado em logs e é limpo da pendência concluída.
+- BSUID sem alias/telefone aguarda sem contato provisório. A chegada da contraparte com original exato, empresa, direção e participante compatíveis permite reutilizar o contato antigo e acrescentar o alias BSUID, preservando telefone, nome, LID, IDs internos e IDs públicos anteriores. Conflitos ficam em revisão; nome, conteúdo ou proximidade temporal não identificam uma pessoa.
+- Echo durante envio ainda sem resposta aguarda em vez de criar outra bolha. O UUID/`wamid` retornado pela API e seu alias são persistidos na mesma transação. O replay adota a bolha otimista somente pela identidade exata, mesmo com rascunhos/mensagens semelhantes pendentes.
+- Claim de envio persistido antes da chamada externa impede que concorrência/retry repita automaticamente um envio de resultado incerto. Preferência e executor permanecem registrados; timeout não autoriza outro transporte. O resultado incerto exige conferência/revisão, não confirmação fictícia de entrega.
+- Duas cópias de mídia comprovadas e posteriores ao corte são reconciliadas para o arquivo da principal: imagem, áudio, vídeo, figurinha e documento. Preservam-se `Message.id`, `Attachment.id`, associação AS e IDs públicos; o blob secundário redundante pode ser substituído. Rotas por mensagem/anexo permanecem utilizáveis; URLs temporárias do blob antigo podem precisar de atualização, como em sua expiração normal.
+- Exclusão é agendada somente após commit. Referências AS, variantes, figurinhas e anexos de agendamento (inclusive IDs assinados em JSON) são verificadas na reconciliação **e novamente na execução da exclusão**. Blob compartilhado não é apagado. Rollback não agenda purge; retry de purge é idempotente. A bolha existente recebe atualização de mídia, sem novo evento de criação ou reenvio da mensagem.
+- Arquivo principal temporariamente indisponível não provoca remoção da secundária; o job tem cinco retentativas adicionais, espaçadas em 30 segundos. Combinação ambígua ou escopo inválido não autoriza limpeza.
+- Desunificação segue a seção 7.4: histórico permanece na antiga principal; novos envios seguem cada caixa; status/contrapartes tardias continuam identificando as mensagens antigas; pendências invalidadas ficam em revisão. Reativar não ressuscita envios preparados antes do novo corte.
+
+### Validação executada
+
+- Regressão ampla: **838 exemplos Ruby, zero falhas**. Depois dos últimos ajustes, rodada focada: **69 exemplos, zero falhas** (32 desunificação e 37 mídias). As rodadas se sobrepõem: não somar esses números como testes distintos.
+- RuboCop: 46 arquivos da alteração, sem infrações.
+- `script/validation/whatsapp_unified_concurrency.rb`: quatro cenários com duas conexões PostgreSQL independentes, principal Meta/ViperConnect e entrada/echo simultâneos. Cada cenário manteve uma mensagem, um contato e dois aliases. Execução protegida por ambiente e nome exato do banco sintético.
+- Scripts anteriores de identidade/correlação, BSUID e pendência reexecutados com sucesso em banco isolado, incluindo rollback/reaplicação das tabelas aditivas na ordem das dependências.
+- Arquivos utilizados nos testes de reconciliação/exclusão são sintéticos em DiskService temporário; não foram excluídos uploads reais nem objetos do S3. Os cenários de erro de download, referência compartilhada criada depois do enqueue, rollback e retry foram exercitados.
+
+### Limites para release
+
+O código está no dev e permanece opt-in, com as caixas existentes desligadas para este recurso. Ainda faltam a experiência administrativa de revisão/resultado incerto, a matriz restante de capacidades e agendamento vinculado, aceite integrado dos editores/aparelhos e carga/piloto autorizado com serviços reais. Não há novo APK/Archive ou validação nativa neste incremento de backend. Nenhuma alteração foi aplicada à VPS, nenhum contato antigo foi mesclado e nenhuma publicação foi realizada.
+
+## 19. Revisão administrativa e aceite integrado — terceiro incremento dev
+
+### Entrega disponível para testar
+
+Em **Configurações → Caixas de entrada → caixa vinculada → Caixa unificada / Coexistência → Revisão administrativa**, o administrador pode filtrar os casos por identificação/eventos, entrega incerta, mídias e reservas retidas sem mensagem canônica. Há paginação e filtros de aguardando revisão, revisados e todos. O painel existe para vínculos persistidos, inclusive desativados; antes de salvar um vínculo não há casos desse vínculo para revisar.
+
+- **Reavaliar evidências:** agenda apenas o processamento seguro do evento ou a verificação da mídia. Não chama o provedor para reenviar, não inventa um alias e não associa contatos manualmente. Ausência de evidência ou conflito pode manter a pendência. Exige vínculo/corte vigente; reservas sem payload e envios incertos não oferecem essa ação.
+- **Marcar revisado:** registra a conferência administrativa, sem concluir a quarentena, liberar o caminho legado ou confirmar entrega. O mesmo envio incerto continua incerto. Evidência alterada depois da conferência faz o caso voltar ao filtro de aguardando revisão.
+- A confirmação da ação inclui uma revisão otimista do registro e da ativação. Uma confirmação obsoleta recebe HTTP 409 e a interface atualiza a lista. Duplo clique/repetição da mesma versão não cria outra decisão válida.
+- Auditoria persistida separadamente em `WhatsappUnifiedReviewAction`: vínculo, tipo/ID do objeto, versão temporal, ação e autor. Não persistir conteúdo do webhook nessa auditoria.
+- A listagem expõe apenas diagnóstico técnico: motivo, estado, IDs, datas, tentativas e referências à conversa. Payload bruto, credenciais e configuração do provedor não são devolvidos. Havendo conversa canônica, o atalho usa o número público da conversa; as políticas normais continuam valendo.
+- Restrições na conta, autorização administrativa e permissão de atualizar **ambas** as caixas são verificadas em todos os endpoints. Permissão em apenas um transporte não dá acesso à revisão do par.
+- O resultado da verificação de mídias agora fica persistido no ledger para aparecer na revisão. A preferência pela mídia principal e as verificações anteriores de segurança/exclusão permanecem obrigatórias.
+
+Endpoints autenticados, relativos a `/api/v1/accounts/:account_id/inboxes/:inbox_id/whatsapp_link`:
+
+| Método / rota | Uso |
+| --- | --- |
+| `GET reviews` | Filtros `kind=event/delivery/media/reservation`, `status=open/acknowledged/all`, `page`. Retorna `items` e `meta`. |
+| `POST reviews/:id/recheck` | Corpo `{ "version": "valor recebido na listagem" }`. Somente ações permitidas no registro. |
+| `POST reviews/:id/acknowledge` | Mesmo controle de versão; registra conferência, nunca recibo de entrega. |
+
+Os identificadores de revisão têm namespace (`event-…`, `delivery-…`, `media-…`, `reservation-…`). Eles não substituem IDs internos de mensagens nem UUID/`wamid` de operação.
+
+### Evidências desta rodada
+
+- **498 exemplos Ruby, zero falhas e zero pendências**, cobrindo revisão/API, ingestão, mídia, echoes, desunificação e regressões selecionadas. Rodada focada de revisão: 64 exemplos aprovados, sobrepostos à rodada maior; não somar contagens.
+- **126 testes de frontend, oito arquivos, aprovados**, incluindo revisão, configuração, seletores, rascunhos e editores compacto/completo. RuboCop dos arquivos de produção deste incremento sem infrações; ESLint sem erros. Avisos de dependências/sourcemap e traduções dinâmicas não foram tratados como teste funcional.
+- Migração aditiva `20261016000006`: aplicada no dev; aplicação, rollback e reaplicação exercitados na base descartável, nunca revertida na réplica de trabalho.
+- Aceite **autenticado na página real**, com conta e caixas temporárias sem envios externos: reavaliação solicitada pela interface, execução no worker, auditoria de revisão de entrega incerta e conferência independente no PostgreSQL. Nenhum novo envio nem alteração de `source_id`/recibo a partir da revisão.
+- Atalho abriu a conversa canônica. Seleção Meta permaneceu ao trocar o editor clássico pelo compacto via configuração da conta; o retorno à ViperConnect recuperou seu rascunho. Janela Meta fechada permaneceu bloqueada, sem troca silenciosa para o parceiro. Não foi realizado envio real a um cliente.
+- Página real conferida em **320, 360, 390, 412, 430, 844 (paisagem) e 1280 px**. Corrigido o grid pai das configurações, que alargava a tela mobile apesar de o componente isolado caber. Controles e IDs longos agora ficam dentro do viewport, com rolagem vertical acessível. Emulação não comprova teclado/área segura em aparelho físico.
+- Bundles Android/iOS regenerados e sincronizados com o mesmo `index.html` (SHA-256 `aff9d17a5f51fd85b0df364660ba2d1ac2352f68f69d73c6f5e5053cd1be9306`). **Android Debug compilado**, com hash do índice dentro do APK conferido. Nenhum dispositivo em `adb devices`; sem instalação/teste físico. Mac de desenvolvimento indisponível: **sem compilação/Archive/teste iOS**.
+- Conta, contatos, caixas, mensagens e usuários sintéticos removidos após o teste; base descartável e relatório temporário removidos. Fontes, specs, runner de aceite e capturas pequenas de evidência preservados. Bundles/APK de validação e intermediários nativos anteriores foram preservados; não houve prune de caches/volumes ou remoção de uploads reais. SSD ao final: aproximadamente 56 GiB livres, sem alegar recuperação líquida de espaço nesta rodada.
+
+### Roteiro do aceite manual e limite da release
+
+1. No dev, abra uma caixa Uno/Meta e configure o par desejado, com principal e padrão explícitos. Gere a prévia, revise conflitos e confirme antes de ativar. As caixas reais não foram ativadas pelo agente.
+2. Acesse **Revisão administrativa**. Sem ocorrências, o estado vazio é esperado. O runner `script/validation/whatsapp_unified_admin_dev.rb` documenta fixtures isoladas para repetir o aceite, bloqueando HTTP de provedores durante criação/limpeza; suas contas temporárias não devem virar caixas operacionais.
+3. Em uma ocorrência sintética, confira tipo/motivo/IDs, confirme a reavaliação e atualize a lista. Marque revisado, alterne para o filtro Revisados e confirme que isso não muda entrega nem libera uma identidade conflitante.
+4. Confira os dois editores, o transporte selecionado e a manutenção dos rascunhos. Não usar envios reais como teste de capacidade seguido de fallback.
+
+A **interface administrativa está pronta para aceite em dev**. Isso não encerra silenciosamente os gates restantes das seções 17–18: matriz completa de capacidades/eventos, envios reais, storage/pico, custos e validação física/nativa ainda têm seus aceites próprios. O agendamento vinculado foi completado posteriormente em dev na seção 20. Não houve commit/push, publicação de imagem/release, mudança na VPS, fusão histórica de contatos ou ativação de caixas reais nesta etapa.
+
+## 20. Agendamento vinculado e compatibilidade nativa — 17/10/2026, somente dev
+
+### Intenção persistida e entrega
+
+- Migração aditiva `20261016000007`: JSONB `whatsapp_transport` no agendamento e em cada item. Não altera IDs, contatos, horários ou caixas existentes. Registros anteriores permanecem com objeto vazio até edição ou processamento; listar não escreve no banco.
+- O modal do editor e a agenda exibem o transporte escolhido, independentemente do seletor de novos envios. Abrir o modal copia a escolha do editor; alterar o agendamento não muda o editor. A agenda mostra o solicitado, o executor por item e a origem legada quando aplicável.
+- A intenção contém vínculo, geração/corte de ativação, provedor solicitado, caixa e origem da seleção. Cada item captura também seu executor efetivo e capacidade antes do despacho. Mudanças posteriores no padrão da caixa não redirecionam o agendamento.
+- Recursos incompatíveis seguem a matriz de capacidades **antes da tentativa**, com executor registrado. Mudança posterior de geração, executor ou autorização interrompe o fluxo para revisão. A janela da Meta é conferida no envio real; agendar não garante que ela estará aberta e não transforma texto em template.
+- A conversa de destino pertence à caixa principal, preservando contato e aliases; respeita conversa única e atribui o operador escolhido. Caixas sem vínculo e sem seleção explícita mantêm seu fluxo anterior.
+- Captura de registros antigos já vencidos grava somente os metadados internos de transporte antes de alterar estado/abrir conversa, sem esbarrar na validação de data futura da criação. O estado editável é revalidado dentro do lock.
+- Evidência de despacho impede substituir itens ou reiniciar parcialmente a sequência. Timeout, resposta sem identificador ou entrega incerta interrompem a sequência, sem reenvio/fallback automático. Falha tardia não rebaixa item já confirmado ou agendamento concluído/cancelado. Os dez segundos entre itens confirmados permanecem.
+- Anexos do agendamento são reutilizados pelo MessageBuilder: os testes verificam o mesmo blob, sem segunda gravação do arquivo. A reconciliação de contraparte continua regida pela seção de mídias.
+
+### Apps antigos e API
+
+Clientes novos enviam, dentro de `scheduled_message`, apenas a seleção pública opcional:
+
+```json
+{
+  "scheduled_message": {
+    "whatsapp_transport": "whatsapp_cloud"
+  }
+}
+```
+
+Esse fragmento complementa os demais campos obrigatórios normais. Valores aceitos: `unoapi` e `whatsapp_cloud`. Hashes internos, valor desconhecido, vazio ou nulo explícito recebem 422; não se aceita injetar metadados de vínculo pelo cliente. A resposta expõe o objeto persistido e as opções disponíveis, portanto o formato de resposta não é o formato de escrita.
+
+Apps antigos que omitem o campo continuam agendando. Em caixa vinculada, o backend fixa **o provedor da caixa original** (`legacy_inbox`), não o padrão mutável do vínculo. O mesmo vale para agendamentos anteriores ainda sem captura. Uma edição antiga sem o campo preserva uma seleção já persistida. Essa política é específica do agendamento e não redefine o seletor de mensagens imediatas. Sem vínculo, o campo permanece vazio e o comportamento anterior continua.
+
+Desativar/reativar ou trocar o vínculo invalida snapshots anteriores para revisão; não ressuscita o transporte antigo. Um agendamento ainda não despachado pode ser editado e confirmado explicitamente; parcial ou incerto não pode ser convertido em um novo envio por essa edição.
+
+### Evidências e limites
+
+- Backend: 363 exemplos, zero falhas/pendências; rodada final sobreposta de 72 exemplos após endurecer captura vencida/lock, também aprovada. Frontend: 40 testes focados em quatro arquivos aprovados; a rodada anterior ampliada do frontend teve 63 aprovados. Não somar rodadas sobrepostas.
+- Matriz sintética com principal Meta e ViperConnect, ambos os transportes, cliente antigo, agendamento anterior, alteração do padrão, desativação/reativação, permissão revogada, sequência/timeout/recibo incerto, janela Meta fechada e arquivos imagem/áudio/PDF em storage temporário. Sem chamadas externas aos provedores.
+- Aceite autenticado em conta descartável: registro legado exibido na agenda e editado para Meta; um novo agendamento futuro foi criado pelo modal do editor com Meta explícita. Banco conferido nos dois casos, inclusive transporte do item. O editor permaneceu em ViperConnect. Agenda e modal sem overflow horizontal em 320/360/390/412/430/844/1280 px. Teclado e áreas seguras ainda exigem aparelho físico. Avisos locais de WebSocket e rota Enterprise de limites 404 não foram tratados como aceite de tempo real.
+- Migração revertida/reaplicada somente na base isolada de teste; base dev recebeu apenas aplicação aditiva. Fixtures e base isolada são removidas ao concluir; a caixa Meta de teste solicitada na conta 1 é preservada.
+- Bundles Android/iOS regenerados e sincronizados. APK debug Android compilado com sucesso; `index.html` do APK e dos dois projetos tem SHA-256 `07ba22b35171f2a243ef34835991d4988baeb04838ab9057ca338764a6809c70`. Sem Android conectado nesta rodada; Mac indisponível para compilar Archive iOS.
+- Para distribuir o seletor e a nova UI aos usuários, serão necessárias novas builds Android/iOS, incremento de versão/build, assinatura e publicação separadas. O APK desta rodada é debug, não release/AAB; o bundle iOS sincronizado não equivale a Archive/TestFlight. Backend compatível com apps antigos não exige bloqueá-los.
+
+Worker dev recarregado após a migração e sincronização do código; API HTTP 200. Fixtures administrativas temporárias removidas, caixa Meta de teste 192 preservada. Nenhuma aplicação na VPS, commit/push, publicação de imagem, loja ou ativação de caixa real foi executada nesta etapa. Persistência local não substitui piloto autorizado em produção nem os demais gates do plano.
+
+### Caixa Meta simulada disponibilizada por solicitação posterior
+
+Na conta **1**, foi criada e preservada para o teste manual a caixa **192 — Meta teste DEV — Viper Tec (sem conexão)**, parceira compatível da **1 — Viper Tec**. Ela representa o mesmo número empresarial `5566996222471`, sem token de API, ID de telefone Meta ou WABA e sem configuração externa de webhook. A criação bloqueou HTTP de provedores e manteve os jobs de callbacks no adaptador de teste, sem despachá-los ao worker. O vínculo não foi ativado. A caixa ViperConnect original não foi editada.
+
+O campo telefônico global é único pela grafia bruta; a caixa simulada usa os mesmos dígitos sem o `+`, já aceitos pelo comparador, enquanto a original conserva seu valor completo. Não houve mudança de índice ou relaxamento da validação do produto. O runner idempotente e restrito ao dev está em `script/validation/create_meta_partner_dev.rb`. Não executar na VPS. Essa caixa permite testar configuração/seleção, **não envios reais pela Meta**.
+
+Quando não há parceira elegível, o dropdown agora mostra **Nenhuma caixa compatível disponível**, fica desabilitado e explica os requisitos de provedor, conta, número, acesso e vínculo. Foram aprovados 13 testes focados de configuração, incluindo presença/ausência do aviso; o estado vazio do componente foi conferido no navegador em 320–430 px, paisagem e desktop. A consulta real do controller, com contexto administrativo da conta 1, retornou a caixa 192 como candidata.
+
+Regressão conjunta de configuração e revisão: **51 testes aprovados**. Bundles Android/iOS novamente sincronizados; Android Debug recompilado com sucesso e índice dentro do APK conferido (SHA-256 `29db24d25887cdd574e2258aade71e08fcc8b392c5b6d732698ac2bb80e36b0a`). Sem dispositivo ADB e sem Mac acessível, não houve teste físico nem compilação iOS. Logs intermediários descartáveis removidos; caixa 192 e evidências/fontes de validação preservadas por serem a entrega solicitada. Aproximadamente 56 GiB livres no SSD. Sem mudança na VPS, ativação do vínculo, commit ou push.

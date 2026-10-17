@@ -24,6 +24,13 @@ scheduled_messages_delivery_job:
   cron: '*/1 * * * *'
   class: 'ScheduledMessages::DeliveryJob'
   queue: scheduled_jobs
+  active_job: true
+
+whatsapp_pending_identity_resolution_job:
+  cron: '*/1 * * * *'
+  class: 'Whatsapp::ResolvePendingIdentityJob'
+  queue: low
+  active_job: true
 
 unoapi_contact_sync_schedule_job:
   cron: '0 */3 * * *'
@@ -85,3 +92,9 @@ check_uno_premium_features_job:
   cron: '0 2 * * *'
   class: 'Internal::CheckUnoPremiumFeaturesJob'
   queue: scheduled_jobs
+
+whatsapp_unified_events_job:
+  cron: '*/1 * * * *'
+  class: 'Whatsapp::ProcessUnifiedEventJob'
+  active_job: true
+  queue: low

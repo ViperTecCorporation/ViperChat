@@ -15,6 +15,42 @@ class Inboxes extends CacheEnabledApiClient {
     return axios.get(`${this.url}/${inboxId}/campaigns`);
   }
 
+  getWhatsappLink(inboxId) {
+    return axios.get(`${this.url}/${inboxId}/whatsapp_link`);
+  }
+
+  previewWhatsappLink(inboxId, payload) {
+    return axios.post(`${this.url}/${inboxId}/whatsapp_link/preview`, payload);
+  }
+
+  updateWhatsappLink(inboxId, payload) {
+    return axios.put(`${this.url}/${inboxId}/whatsapp_link`, payload);
+  }
+
+  deleteWhatsappLink(inboxId) {
+    return axios.delete(`${this.url}/${inboxId}/whatsapp_link`);
+  }
+
+  getWhatsappLinkReviews(inboxId, params) {
+    return axios.get(`${this.url}/${inboxId}/whatsapp_link/reviews`, {
+      params,
+    });
+  }
+
+  recheckWhatsappLinkReview(inboxId, reviewId, version) {
+    return axios.post(
+      `${this.url}/${inboxId}/whatsapp_link/reviews/${encodeURIComponent(reviewId)}/recheck`,
+      { version }
+    );
+  }
+
+  acknowledgeWhatsappLinkReview(inboxId, reviewId, version) {
+    return axios.post(
+      `${this.url}/${inboxId}/whatsapp_link/reviews/${encodeURIComponent(reviewId)}/acknowledge`,
+      { version }
+    );
+  }
+
   deleteInboxAvatar(inboxId) {
     return axios.delete(`${this.url}/${inboxId}/avatar`);
   }

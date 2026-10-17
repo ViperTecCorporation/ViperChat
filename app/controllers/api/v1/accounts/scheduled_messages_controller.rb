@@ -1,5 +1,8 @@
 class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseController
   before_action :fetch_scheduled_message, only: [:update, :destroy]
+  before_action :validate_requested_transport!, only: [:create, :update]
+
+  rescue_from ArgumentError, with: :render_transport_error
 
   def index
     render json: filtered_messages.order(:scheduled_at).map { |message| serialize(message) }
@@ -18,19 +21,23 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
       build_items(scheduled_message)
       scheduled_message.save!
       attach_item_files!(scheduled_message)
+      ScheduledMessages::TransportService.new(scheduled_message).capture!(requested_provider: params.dig(:scheduled_message, :whatsapp_transport))
     end
     render json: serialize(scheduled_message), status: :created
   end
 
   def update
     authorize_owner_or_admin!
-    return render_uneditable unless editable?
+    ensure_editable!
 
-    sender = permitted_params[:sender_id].present? ? current_account.users.find(permitted_params[:sender_id]) : @scheduled_message.sender
+    sender = current_account.users.find(permitted_params[:sender_id].presence || @scheduled_message.sender_id)
     ensure_sender_allowed!(sender)
-    @scheduled_message.transaction do
+    @scheduled_message.with_lock do
+      ensure_editable!
+      @scheduled_message.ensure_transport_editable!
       @scheduled_message.update!(schedule_update_attributes(sender))
       replace_items! if permitted_messages.present?
+      ScheduledMessages::TransportService.new(@scheduled_message).capture!(requested_provider: params.dig(:scheduled_message, :whatsapp_transport))
     end
     render json: serialize(@scheduled_message)
   end
@@ -48,6 +55,19 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
 
   private
 
+  def validate_requested_transport!
+    return unless params.require(:scheduled_message).key?(:whatsapp_transport)
+
+    provider = params[:scheduled_message][:whatsapp_transport]
+    return if provider.is_a?(String) && WhatsappInboxLink::PROVIDERS.include?(provider)
+
+    raise ArgumentError, 'whatsapp_transport must be unoapi or whatsapp_cloud'
+  end
+
+  def render_transport_error(error)
+    render json: { error: error.message }, status: :unprocessable_entity
+  end
+
   def fetch_scheduled_message
     @scheduled_message = current_account.scheduled_messages.find(params[:id])
   end
@@ -60,7 +80,7 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
   end
 
   def schedule_attributes
-    permitted_params.except(:sender_id, :attachment_blob_ids, :messages).to_h
+    permitted_params.except(:sender_id, :attachment_blob_ids, :messages, :whatsapp_transport).to_h
   end
 
   def permitted_messages
@@ -141,8 +161,8 @@ class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseCo
     @scheduled_message.scheduled? || @scheduled_message.failed?
   end
 
-  def render_uneditable
-    render json: { error: 'Only pending or failed schedules can be edited' }, status: :unprocessable_entity
+  def ensure_editable!
+    raise ArgumentError, 'Only pending or failed schedules can be edited' unless editable?
   end
 
   def schedule_update_attributes(sender)

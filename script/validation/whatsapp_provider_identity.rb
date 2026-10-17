@@ -215,8 +215,8 @@ observer.new(inbox: meta.inbox, value: { messages: [{ id: ninth_wamid, from: '55
 observer.new(inbox: inbox, value: { messages: [{ id: 'uno-ninth', provider_message_id: 'ABCDEF1234567891',
                                                  from: '5566996269251', type: 'text' }] }).perform
 ninth = WhatsappMessageIdentity.find_by!(inbox: inbox, external_id: 'uno-ninth')
-assert.call(correlator.new(identity: ninth, partner_inbox: meta.inbox).perform[:status] == 'participant_identity_pending',
-            'Brazil ninth-digit variant remains candidate evidence, never automatic contact merge')
+assert.call(correlator.new(identity: ninth, partner_inbox: meta.inbox).perform[:status] == 'matched',
+            'Brazil mobile ninth-digit variant compares equally without merging contacts')
 
 reverse_value = { message_echoes: [{ id: real_outgoing, to: '556696269251', type: 'text' }] }
 observer.new(inbox: meta.inbox, value: reverse_value).perform
@@ -280,7 +280,91 @@ assert.call(correlator.new(identity: pair, partner_inbox: meta.inbox).perform[:s
 assert.call(WhatsappMessageIdentityLink.joins(:whatsapp_message_identity, :message)
             .where('whatsapp_message_identities.inbox_id <> messages.inbox_id').none?, 'correlation creates no cross-inbox links')
 
+mobile_uno = FactoryBot.create(:channel_whatsapp, account: inbox.account, phone_number: '+5566996222471', provider: 'unoapi',
+                                                  sync_templates: false, validate_provider_config: false)
+mobile_meta = FactoryBot.create(:channel_whatsapp, account: inbox.account, phone_number: '+556696222471', provider: 'whatsapp_cloud',
+                                                   sync_templates: false, validate_provider_config: false)
+test_wamid = 'wamid.HBgMNTU2Njk2MjY5MjUxFQIAEhgWM0VCMDRBQTFFRDc3ODVENkVEMEYyQQA='
+original = '3EB04AA1ED7785D6ED0F2A'
+observer.new(inbox: mobile_uno.inbox, value: { messages: [{ id: 'uno-comparison-only', provider_message_id: original,
+                                                            from: '5566996269251', type: 'text' }] }).perform
+observer.new(inbox: mobile_meta.inbox, value: { messages: [{ id: test_wamid, from: '556696269251', type: 'text' }] }).perform
+mobile_left = WhatsappMessageIdentity.find_by!(inbox: mobile_uno.inbox, external_id: 'uno-comparison-only')
+mobile_right = WhatsappMessageIdentity.find_by!(inbox: mobile_meta.inbox, external_id: test_wamid)
+mobile_comparison = correlator.new(identity: mobile_right, partner_inbox: mobile_uno.inbox)
+assert.call(mobile_comparison.perform[:status] == 'matched', 'real test 22 business and participant ninth-digit variants match')
+assert.call(correlator.new(identity: mobile_left, partner_inbox: mobile_meta.inbox).perform[:status] == 'matched',
+            'normalized mobile comparison is symmetric')
+observer.new(inbox: mobile_uno.inbox, value: { messages: [{ id: 'uno-other-original', provider_message_id: 'DifferentOriginal',
+                                                            from: '5566996269251', type: 'text' }] }).perform
+different_original = WhatsappMessageIdentity.find_by!(inbox: mobile_uno.inbox, external_id: 'uno-other-original')
+assert.call(correlator.new(identity: different_original, partner_inbox: mobile_meta.inbox).perform[:status] == 'no_candidate',
+            'equal normalized phones cannot replace exact original message ID')
+
+observer.new(inbox: mobile_meta.inbox, value: { message_echoes: [{ id: real_outgoing, to: '556696269251', type: 'text' }] }).perform
+observer.new(inbox: mobile_uno.inbox, value: { message_echoes: [{ id: 'uno-mobile-outgoing', provider_message_id: 'CEF0C6016F0F3CCA9366',
+                                                                  to: '5566996269251', type: 'text' }] }).perform
+observer.new(inbox: mobile_uno.inbox, value: { statuses: [{ id: 'uno-mobile-outgoing', provider_message_id: 'CEF0C6016F0F3CCA9366',
+                                                            recipient_id: '556696269251', status: 'read' }] }).perform
+mobile_outgoing = WhatsappMessageIdentity.find_by!(inbox: mobile_uno.inbox, external_id: 'uno-mobile-outgoing')
+assert.call(correlator.new(identity: mobile_outgoing, partner_inbox: mobile_meta.inbox).perform[:status] == 'matched',
+            'echo and status recipient ninth-digit variants compare equally')
+
+phone_cases = { '+556696222471' => '5566996222471', '5566996222471' => '5566996222471',
+                '556696269251' => '5566996269251', '551133334444' => '551133334444', '551155554444' => '551155554444',
+                '552096222471' => '552096222471', '550096222471' => '550096222471',
+                '541196222471' => '541196222471', '14155552671' => '14155552671',
+                'BR.1055244414183889' => nil, '94047083475061@lid' => nil, '556696269251@s.whatsapp.net' => nil }
+phone_cases.each do |raw, expected_phone|
+  assert.call(mobile_comparison.send(:phone, raw) == expected_phone, "comparison phone key #{raw}")
+end
+
+observer.new(inbox: mobile_meta.inbox, value: { messages: [{ id: test_wamid, from: '5566996269251', type: 'text' }] }).perform
+assert.call(mobile_comparison.perform[:status] == 'matched', 'equivalent historical participant conflict and envelope compare equally')
+assert.call(mobile_right.reload.observations.dig('conflicting_observations', 'participants.from').size == 2,
+            'raw participant evidence retained even when equivalent')
+mobile_meta.update!(phone_number: '5566996222471')
+observer.new(inbox: mobile_meta.inbox.reload, value: { messages: [{ id: test_wamid, from: '556696269251', type: 'text' }] }).perform
+assert.call(mobile_comparison.perform[:status] == 'matched', 'equivalent business representation change is not a real conflict')
+assert.call(mobile_right.reload.observations['business_number'] == '+556696222471', 'observed business number never rewritten')
+
+left_contact = FactoryBot.create(:contact, account: inbox.account, name: 'Existing canonical contact')
+right_contact = FactoryBot.create(:contact, account: inbox.account, name: 'Separate legacy contact')
+left_conversation = FactoryBot.create(:conversation, account: inbox.account, inbox: mobile_uno.inbox, contact: left_contact)
+right_conversation = FactoryBot.create(:conversation, account: inbox.account, inbox: mobile_meta.inbox, contact: right_contact)
+left_message = FactoryBot.create(:message, account: inbox.account, inbox: mobile_uno.inbox, conversation: left_conversation,
+                                           source_id: 'uno-comparison-only', message_type: :incoming)
+right_message = FactoryBot.create(:message, account: inbox.account, inbox: mobile_meta.inbox, conversation: right_conversation,
+                                            source_id: test_wamid, message_type: :incoming)
+immutable_snapshot = [Message.order(:id).pluck(:id, :source_id, :inbox_id, :conversation_id),
+                      Contact.order(:id).pluck(:id, :name, :phone_number),
+                      Channel::Whatsapp.order(:id).pluck(:id, :phone_number),
+                      WhatsappMessageIdentity.order(:id).pluck(:id, :external_id, :provider_message_id, :observations)]
+3.times { assert.call(mobile_comparison.perform[:status] == 'matched', 'comparison does not require equal internal contact IDs') }
+assert.call(immutable_snapshot == [Message.order(:id).pluck(:id, :source_id, :inbox_id, :conversation_id),
+                                   Contact.order(:id).pluck(:id, :name, :phone_number),
+                                   Channel::Whatsapp.order(:id).pluck(:id, :phone_number),
+                                   WhatsappMessageIdentity.order(:id).pluck(:id, :external_id, :provider_message_id, :observations)],
+            'normalized queries preserve all stored phones, source IDs, observations and contacts')
+assert.call(left_message.reload.inbox_id != right_message.reload.inbox_id && left_contact.id != right_contact.id,
+            'both inboxes, conversations and contacts remain separate')
+
+observer.new(inbox: mobile_meta.inbox, value: { messages: [{ id: test_wamid, from: '5511888888888', type: 'text' }] }).perform
+assert.call(mobile_comparison.perform[:status] == 'conflicting_observations', 'real phone conflict is still rejected after normalization')
+mobile_meta.update!(phone_number: '+552096222471')
+assert.call(mobile_comparison.perform[:status] == 'business_identity_pending', 'invalid area code cannot authorize a different business number')
+
 message_count = Message.count
+load Rails.root.join('db/migrate/20261016000005_create_whatsapp_unified_events.rb')
+had_unified_events = ActiveRecord::Base.connection.data_source_exists?(:whatsapp_unified_events)
+ActiveRecord::Migration.suppress_messages { CreateWhatsappUnifiedEvents.new.migrate(:down) } if had_unified_events
+load Rails.root.join('db/migrate/20261016000004_create_whatsapp_unified_messages.rb')
+had_unified_tables = ActiveRecord::Base.connection.data_source_exists?(:whatsapp_unified_messages)
+ActiveRecord::Migration.suppress_messages { CreateWhatsappUnifiedMessages.new.migrate(:down) } if had_unified_tables
+load Rails.root.join('db/migrate/20261016000002_create_whatsapp_identity_resolutions.rb')
+ActiveRecord::Migration.suppress_messages { CreateWhatsappIdentityResolutions.new.migrate(:down) }
+assert.call(!ActiveRecord::Base.connection.data_source_exists?(:whatsapp_identity_resolutions),
+            'pending-resolution migration rolls back in isolation')
 load Rails.root.join('db/migrate/20261016000000_create_whatsapp_message_identities.rb')
 ActiveRecord::Migration.suppress_messages { CreateWhatsappMessageIdentities.new.migrate(:down) }
 assert.call(!ActiveRecord::Base.connection.data_source_exists?(:whatsapp_message_identities),
@@ -296,6 +380,16 @@ ActiveRecord::Migration.suppress_messages { IndexWhatsappMessageIdentityOriginal
 assert.call(ActiveRecord::Base.connection.indexes(:whatsapp_message_identities).none? { |index| index.name == 'idx_wa_identity_original' },
             'lookup index rollback leaves message identities intact')
 ActiveRecord::Migration.suppress_messages { IndexWhatsappMessageIdentityOriginals.new.migrate(:up) }
+
+ActiveRecord::Migration.suppress_messages { CreateWhatsappIdentityResolutions.new.migrate(:up) }
+assert.call(ActiveRecord::Base.connection.data_source_exists?(:whatsapp_identity_resolutions),
+            'pending-resolution migration reapplies after identities')
+if had_unified_tables
+  ActiveRecord::Migration.suppress_messages { CreateWhatsappUnifiedMessages.new.migrate(:up) }
+  assert.call(ActiveRecord::Base.connection.data_source_exists?(:whatsapp_unified_message_aliases),
+              'canonical aliases reapply after identity migration rollback')
+end
+ActiveRecord::Migration.suppress_messages { CreateWhatsappUnifiedEvents.new.migrate(:up) } if had_unified_events
 
 # Machine-readable CLI report, not an application log.
 puts({ result: 'PASS', database: ActiveRecord::Base.connection_db_config.database, checks: checks.size, scenarios: checks }.to_json) # rubocop:disable Rails/Output

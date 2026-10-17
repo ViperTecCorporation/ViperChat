@@ -1,0 +1,39 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "200000000000000",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "5565991234567",
+              "phone_number_id": "100000000000000"
+            },
+            "contacts": [
+              {
+                "user_id": "BR.1234567890123456",
+                "profile": {
+                  "name": "Contato Sintético"
+                }
+              }
+            ],
+            "messages": [
+              {
+                "id": "wamid.HBgTQlIuMTIzNDU2Nzg5MDEyMzQ1NhUUABIYFjNFQjBERUYxMjNFNTM3NTY0MTJCQjkA",
+                "timestamp": "1792152000",
+                "type": "text",
+                "from_user_id": "BR.1234567890123456",
+                "text": {
+                  "body": "Mensagem sintética de coexistência"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

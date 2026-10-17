@@ -1,11 +1,249 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReplyBox from './ReplyBox.vue';
 import { useAlert } from 'dashboard/composables';
+import { ref } from 'vue';
+import { useWhatsappTransport } from 'dashboard/composables/useWhatsappTransport';
+import scheduledMessagesApi from 'dashboard/api/scheduledMessages';
+
+vi.mock('dashboard/api/scheduledMessages', () => ({
+  default: { create: vi.fn() },
+}));
 
 vi.mock('dashboard/composables', async importOriginal => ({
   ...(await importOriginal()),
   useAlert: vi.fn(),
 }));
+
+describe('ReplyBox unified WhatsApp composer', () => {
+  it('allows the scheduling shortcut for a linked inbox despite the current Meta reply restriction', () => {
+    const context = {
+      isComposerActive: true,
+      isWebDestination: false,
+      inbox: { channel_type: 'Channel::Whatsapp' },
+      whatsappTransportOptions: { link_id: 1 },
+      isReplyButtonDisabled: true,
+      isTransportSwitchDisabled: false,
+      openScheduleModal: vi.fn(),
+    };
+    ReplyBox.methods.handleScheduleShortcut.call(context, {
+      ctrlKey: true,
+      key: 's',
+      preventDefault: vi.fn(),
+    });
+    expect(context.openScheduleModal).toHaveBeenCalledOnce();
+    context.whatsappTransportOptions = null;
+    context.openScheduleModal.mockClear();
+    ReplyBox.methods.handleScheduleShortcut.call(context, {
+      ctrlKey: true,
+      key: 's',
+      preventDefault: vi.fn(),
+    });
+    expect(context.openScheduleModal).not.toHaveBeenCalled();
+  });
+  it.each([true, false])(
+    'freezes scheduling independently of compact=%s',
+    compact => {
+      const context = {
+        useCompactMessageComposer: compact,
+        isWebDestination: false,
+        whatsappTransportOptions: { link_id: 1 },
+        selectedWhatsappProvider: 'whatsapp_cloud',
+        currentUser: { id: 3 },
+        message: 'Scheduled draft',
+        attachedFiles: [],
+        toDatetimeLocal: date => date.toISOString(),
+      };
+      ReplyBox.methods.openScheduleModal.call(context);
+      expect(context.showScheduleModal).toBe(true);
+      expect(context.scheduledWhatsappProvider).toBe('whatsapp_cloud');
+      context.selectedWhatsappProvider = 'unoapi';
+      expect(context.scheduledWhatsappProvider).toBe('whatsapp_cloud');
+      context.scheduledWhatsappProvider = 'whatsapp_cloud';
+      expect(context.selectedWhatsappProvider).toBe('unoapi');
+    }
+  );
+
+  it.each([true, false])(
+    'serializes only a provider string when linked=%s',
+    async linked => {
+      scheduledMessagesApi.create.mockResolvedValue({ data: {} });
+      const context = {
+        whatsappTransportOptions: linked ? { link_id: 1 } : null,
+        scheduledWhatsappProvider: 'whatsapp_cloud',
+        scheduledLabelId: 2,
+        scheduledAt: '2030-10-20T12:00',
+        scheduledSenderId: 3,
+        scheduledItems: [{ content: 'Later', attachments: [] }],
+        isScheduleValid: true,
+        currentChat: { id: 4 },
+        clearMessage: vi.fn(),
+      };
+      await ReplyBox.methods.createScheduledMessage.call(context);
+      const payload = scheduledMessagesApi.create.mock.calls[0][0];
+      if (linked)
+        expect(payload.scheduled_message.whatsapp_transport).toBe(
+          'whatsapp_cloud'
+        );
+      else
+        expect(payload.scheduled_message).not.toHaveProperty(
+          'whatsapp_transport'
+        );
+      expect(payload.conversation_id).toBe(4);
+    }
+  );
+
+  it('keeps the scheduling dialog and draft on a 422 transport error', async () => {
+    scheduledMessagesApi.create.mockRejectedValue({
+      response: { status: 422, data: { errors: ['Transport link changed'] } },
+    });
+    const context = {
+      scheduledLabelId: 2,
+      scheduledAt: '2030-10-20T12:00',
+      scheduledItems: [{ content: 'Keep draft', attachments: [] }],
+      isScheduleValid: true,
+      showScheduleModal: true,
+      currentChat: { id: 4 },
+      clearMessage: vi.fn(),
+    };
+    await ReplyBox.methods.createScheduledMessage.call(context);
+    expect(useAlert).toHaveBeenCalledWith('Transport link changed');
+    expect(context.clearMessage).not.toHaveBeenCalled();
+    expect(context.showScheduleModal).toBe(true);
+  });
+
+  it('preserves the unlinked audio recording format and uses the scheduled provider for linked audio', () => {
+    expect(
+      ReplyBox.computed.scheduleAudioRecordFormat.call({
+        audioRecordFormat: 'wav',
+      })
+    ).toBe('wav');
+    expect(
+      ReplyBox.computed.scheduleAudioRecordFormat.call({
+        whatsappTransportOptions: {},
+        scheduledWhatsappProvider: 'whatsapp_cloud',
+      })
+    ).toBe('audio/ogg');
+    expect(
+      ReplyBox.computed.scheduleAudioRecordFormat.call({
+        whatsappTransportOptions: {},
+        scheduledWhatsappProvider: 'unoapi',
+      })
+    ).toBe('audio/mp3');
+  });
+
+  it.each([true, false])(
+    'preserves per-provider text, files and quote when compact=%s and switching layouts',
+    compact => {
+      const chat = ref({
+        id: `draft-${compact}`,
+        account_id: 53,
+        whatsapp_transport_options: {
+          link_id: 11,
+          default_provider: 'unoapi',
+          transports: [
+            { provider: 'unoapi', inbox_id: 1, can_reply: true },
+            { provider: 'whatsapp_cloud', inbox_id: 2, can_reply: true },
+          ],
+        },
+      });
+      const transport = useWhatsappTransport(chat, 42);
+      const saved = {};
+      const context = {
+        useCompactMessageComposer: compact,
+        whatsappTransport: transport,
+        whatsappTransportOptions: chat.value.whatsapp_transport_options,
+        conversationIdByRoute: chat.value.id,
+        replyType: 'REPLY',
+        deliveryDestination: 'channel',
+        isWebDestination: false,
+        isTransportSwitchDisabled: false,
+        message: 'ViperConnect draft',
+        attachedFiles: [
+          {
+            blobSignedId: 'existing-upload',
+            previewObjectUrl: 'blob:existing',
+          },
+        ],
+        attachedContacts: [{ id: 9 }],
+        inReplyTo: { id: 32 },
+        transportDrafts: {},
+        maxLength: 4096,
+        $store: {
+          dispatch: vi.fn((action, { key, message }) => {
+            saved[key] = message;
+          }),
+          getters: { 'draftMessages/get': key => saved[key] },
+        },
+        toggleSignatureForDraft: message => message,
+      };
+      Object.defineProperty(context, 'selectedWhatsappProvider', {
+        get: () => transport.selectedProvider.value,
+      });
+      ['getDraftKey', 'saveDraft', 'getFromDraft'].forEach(method => {
+        context[method] = ReplyBox.methods[method].bind(context);
+      });
+      ReplyBox.methods.selectWhatsappTransport.call(context, 'whatsapp_cloud');
+      expect(context.message).toBe('');
+      expect(context.attachedFiles).toEqual([]);
+      expect(context.inReplyTo).toEqual({});
+      context.message = 'Meta draft';
+      context.attachedFiles = [{ blobSignedId: 'meta-upload' }];
+      context.inReplyTo = { id: 33 };
+      context.useCompactMessageComposer = !compact;
+      expect(context.selectedWhatsappProvider).toBe('whatsapp_cloud');
+      ReplyBox.methods.selectWhatsappTransport.call(context, 'unoapi');
+      expect(context.message).toBe('ViperConnect draft');
+      expect(context.attachedFiles[0].blobSignedId).toBe('existing-upload');
+      expect(context.inReplyTo).toEqual({ id: 32 });
+      ReplyBox.methods.selectWhatsappTransport.call(context, 'whatsapp_cloud');
+      expect(context.message).toBe('Meta draft');
+      expect(context.attachedFiles[0].blobSignedId).toBe('meta-upload');
+      expect(context.inReplyTo).toEqual({ id: 33 });
+      expect(
+        context.$store.dispatch.mock.calls.every(
+          ([action]) => action === 'draftMessages/set'
+        )
+      ).toBe(true);
+    }
+  );
+
+  it('reports backend capability routing without changing selected transport', async () => {
+    const context = {
+      whatsappTransportOptions: {
+        transports: [{ provider: 'unoapi', label: 'ViperConnect' }],
+      },
+      selectedWhatsappProvider: 'whatsapp_cloud',
+      deliveryDestination: 'channel',
+      $store: {
+        dispatch: vi.fn().mockResolvedValue({
+          content_attributes: {
+            whatsapp_transport: {
+              requested_provider: 'whatsapp_cloud',
+              provider: 'unoapi',
+              reason: 'capability_routing',
+            },
+          },
+        }),
+      },
+      $t: (key, params) => `${key}:${params?.provider || ''}`,
+      removeFromDraft: vi.fn(),
+      sendMessageAnalyticsData: vi.fn(),
+    };
+    await ReplyBox.methods.sendMessage.call(context, {
+      conversationId: 1,
+      message: 'Hello',
+      private: false,
+    });
+    expect(context.$store.dispatch).toHaveBeenCalledWith(
+      'createPendingMessageAndSend',
+      expect.objectContaining({ whatsapp_transport: 'whatsapp_cloud' })
+    );
+    expect(useAlert).toHaveBeenCalledWith(
+      'WHATSAPP_UNIFIED.ROUTED:ViperConnect'
+    );
+    expect(context.selectedWhatsappProvider).toBe('whatsapp_cloud');
+  });
+});
 
 describe('ReplyBox contact validation', () => {
   it('warns before sending and preserves the selected contacts', () => {

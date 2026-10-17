@@ -75,6 +75,7 @@ class Whatsapp::IncomingMessageBaseService
     ActiveRecord::Base.transaction do
       set_conversation
       create_messages
+      @unified_ingestion&.ensure_owned!
       @message_dedup_lock.ensure_owned!
     end
   ensure
@@ -527,7 +528,7 @@ class Whatsapp::IncomingMessageBaseService
     @message = @conversation.messages.build(
       content: message_content(message),
       account_id: @inbox.account_id,
-      inbox_id: @inbox.id,
+      inbox_id: @conversation.inbox_id,
       message_type: webhook_outgoing_message? ? :outgoing : @message_type,
       # Set status to :delivered for echo messages to prevent SendReplyJob from trying to send them
       status: webhook_outgoing_message? ? :delivered : :sent,
@@ -546,6 +547,7 @@ class Whatsapp::IncomingMessageBaseService
 
   def message_content_attributes(message)
     content_attrs = webhook_outgoing_message? ? { external_echo: true } : {}
+    content_attrs[:whatsapp_unified_message_id] = @unified_ingestion.record.id if @unified_ingestion
     content_attrs[:in_reply_to_external_id] = @in_reply_to_external_id if @in_reply_to_external_id.present?
     referral_content_attrs = referral_attributes(message)
     content_attrs[:referral] = referral_content_attrs if referral_content_attrs.present?

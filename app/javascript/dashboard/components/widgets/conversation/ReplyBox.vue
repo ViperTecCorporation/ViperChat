@@ -1,8 +1,14 @@
 <script>
-import { defineAsyncComponent, useTemplateRef } from 'vue';
+import { computed, defineAsyncComponent, useTemplateRef } from 'vue';
 import { DirectUpload } from 'dashboard/helper/multipartUpload';
 import { useWindowSize } from '@vueuse/core';
-import { mapGetters } from 'vuex';
+import { mapGetters, useStore } from 'vuex';
+import {
+  useWhatsappTransport,
+  withWhatsappTransport,
+  resolveWhatsappTransport,
+} from 'dashboard/composables/useWhatsappTransport';
+import WhatsappTransportSelector from 'dashboard/components/widgets/WootWriter/WhatsappTransportSelector.vue';
 import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useTrack } from 'dashboard/composables';
@@ -30,6 +36,7 @@ import { REPLY_EDITOR_MODES } from 'dashboard/components/widgets/WootWriter/cons
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import AudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder.vue';
 import ScheduledMessageSequenceEditor from 'dashboard/routes/dashboard/conversation/components/ScheduledMessageSequenceEditor.vue';
+import ScheduledWhatsappTransport from 'dashboard/routes/dashboard/conversation/components/ScheduledWhatsappTransport.vue';
 import {
   getDirectUploadUrl,
   setDirectUploadAuthHeaders,
@@ -121,10 +128,12 @@ export default {
     WootMessageEditor,
     QuotedEmailPreview,
     ScheduledMessageSequenceEditor,
+    ScheduledWhatsappTransport,
     StickerPickerDialog,
     CopilotEditorSection,
     CopilotReplyBottomPanel,
     CompactReplyComposer,
+    WhatsappTransportSelector,
     MediaEditor: defineAsyncComponent(
       () => import('dashboard/components-next/Conversation/MediaEditor.vue')
     ),
@@ -148,6 +157,11 @@ export default {
   },
   emits: ['update:popOutReplyBox', 'toggleEditorSize', 'setReplyMode'],
   setup() {
+    const store = useStore();
+    const whatsappTransport = useWhatsappTransport(
+      computed(() => store.getters.getSelectedChat),
+      computed(() => store.getters.getCurrentUser?.id)
+    );
     const {
       uiSettings,
       isEditorHotKeyEnabled,
@@ -164,6 +178,7 @@ export default {
     const { width: windowWidth } = useWindowSize();
 
     return {
+      whatsappTransport,
       uiSettings,
       isEditorHotKeyEnabled,
       fetchSignatureFlagFromUISettings,
@@ -180,6 +195,8 @@ export default {
   data() {
     return {
       message: '',
+      transportDrafts: {},
+      transportUploadCount: 0,
       inReplyTo: {},
       isFocused: false,
       showEmojiPicker: false,
@@ -204,6 +221,7 @@ export default {
       scheduledLabelId: '',
       scheduledReason: '',
       scheduledSenderId: '',
+      scheduledWhatsappProvider: '',
       showScheduleLabelDropdown: false,
       scheduledItems: [],
       scheduleUploadCount: 0,
@@ -234,6 +252,53 @@ export default {
     };
   },
   computed: {
+    whatsappTransportOptions() {
+      return this.whatsappTransport.options.value;
+    },
+    selectedWhatsappProvider() {
+      return this.whatsappTransport.selectedProvider.value;
+    },
+    selectedWhatsappTransport() {
+      return this.whatsappTransport.selectedTransport.value;
+    },
+    whatsappDraftResolution() {
+      const capabilities = [];
+      if (this.recordedAudioViewOnce) capabilities.push('view_once');
+      if (this.attachedContacts.length) capabilities.push('contacts');
+      this.attachedFiles.forEach(attachment => {
+        const mime =
+          attachment.resource?.file?.type ||
+          attachment.resource?.content_type ||
+          attachment.type ||
+          '';
+        const type = mime.split('/')[0];
+        capabilities.push(
+          ['image', 'audio', 'video'].includes(type) ? type : 'document'
+        );
+      });
+      if (!capabilities.length) capabilities.push('text');
+      if (this.inReplyTo?.id) capabilities.push('quote');
+      return resolveWhatsappTransport(
+        this.whatsappTransportOptions,
+        this.selectedWhatsappProvider,
+        capabilities
+      );
+    },
+    showWhatsappTransportSelector() {
+      return Boolean(
+        this.whatsappTransportOptions &&
+          !this.isWebDestination &&
+          !this.isOnPrivateNote
+      );
+    },
+    isTransportSwitchDisabled() {
+      return Boolean(
+        this.transportUploadCount ||
+          this.isRecordingAudio ||
+          this.mediaEditorSession ||
+          this.isRecordedAudioUploadPending
+      );
+    },
     isWebDestination() {
       return this.deliveryDestination === 'web';
     },
@@ -259,24 +324,54 @@ export default {
       );
       return account?.role === 'administrator';
     },
+    pixPaymentResolution() {
+      return resolveWhatsappTransport(
+        this.whatsappTransportOptions,
+        this.selectedWhatsappProvider,
+        ['pix']
+      );
+    },
+    pixPaymentInbox() {
+      if (!this.whatsappTransportOptions) {
+        return this.isAUnoapiChannel ? this.inbox : undefined;
+      }
+      const { transport, reason } = this.pixPaymentResolution;
+      if (
+        !['selected', 'capability_routing'].includes(reason) ||
+        transport?.provider !== 'unoapi'
+      ) {
+        return undefined;
+      }
+      return this.$store.getters['inboxes/getInbox'](transport.inbox_id);
+    },
     showPixPaymentButton() {
-      const config = this.inbox?.provider_config || {};
-
       return (
         !this.isWebDestination &&
-        this.isAUnoapiChannel &&
         !this.isOnPrivateNote &&
         !this.currentChat?.group &&
-        hasPixPaymentConfiguration(config)
+        hasPixPaymentConfiguration(this.pixPaymentInbox?.provider_config)
       );
     },
     pixPaymentMessageContent() {
-      const config = this.inbox?.provider_config || {};
+      const config = this.pixPaymentInbox?.provider_config || {};
 
       return this.$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.MESSAGE_CONTENT', {
         type: pixPaymentDisplayType(config.pix_key_type),
         key: config.pix_key,
       });
+    },
+    pixPaymentConfirmationDescription() {
+      if (!this.whatsappTransportOptions) {
+        return this.$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_DESCRIPTION');
+      }
+      const { transport, reason } = this.pixPaymentResolution;
+      const description = this.$t('WHATSAPP_UNIFIED.PIX_EXECUTOR_CONFIRM', {
+        provider: transport?.label,
+        inbox: this.pixPaymentInbox?.name,
+      });
+      return reason === 'capability_routing'
+        ? `${this.$t('WHATSAPP_UNIFIED.WILL_ROUTE', { provider: transport.label })} ${description}`
+        : description;
     },
     scheduleAgents() {
       return this.$store.getters['agents/getAgents'] || [];
@@ -291,6 +386,12 @@ export default {
         channelType: this.inbox?.channel_type,
         medium: this.inbox?.medium,
       });
+    },
+    scheduleAudioRecordFormat() {
+      if (!this.whatsappTransportOptions) return this.audioRecordFormat;
+      return this.scheduledWhatsappProvider === 'whatsapp_cloud'
+        ? AUDIO_FORMATS.OGG
+        : AUDIO_FORMATS.MP3;
     },
     isScheduleValid() {
       return (
@@ -323,7 +424,9 @@ export default {
       // We support templates for API channels if someone updates templates manually via API
       // That's why we don't explicitly check for channel type here
       const templates = this.$store.getters['inboxes/getWhatsAppTemplates'](
-        this.inboxId
+        this.showWhatsappTransportSelector
+          ? this.selectedWhatsappTransport?.inbox_id
+          : this.inboxId
       );
       return (
         !this.isWebDestination &&
@@ -375,7 +478,12 @@ export default {
       return this.currentChat.inbox_id;
     },
     inbox() {
-      return this.$store.getters['inboxes/getInbox'](this.inboxId);
+      const transportInboxId = this.showWhatsappTransportSelector
+        ? this.selectedWhatsappTransport?.inbox_id
+        : null;
+      return this.$store.getters['inboxes/getInbox'](
+        transportInboxId || this.inboxId
+      );
     },
     messagePlaceHolder() {
       if (this.isEditorDisabled) {
@@ -448,6 +556,13 @@ export default {
       return this.maxLength - this.message.length;
     },
     isReplyButtonDisabled() {
+      if (
+        this.showWhatsappTransportSelector &&
+        !['selected', 'capability_routing'].includes(
+          this.whatsappDraftResolution.reason
+        )
+      )
+        return true;
       if (this.mediaEditorSession) return true;
       if (this.isEditorDisabled) return true;
       if (this.isATwitterInbox) return true;
@@ -685,6 +800,10 @@ export default {
     },
     isEditorDisabled() {
       if (!this.isComposerActive) return true;
+      if (this.showWhatsappTransportSelector)
+        return !['selected', 'capability_routing'].includes(
+          this.whatsappDraftResolution.reason
+        );
       if (this.isWebDestination && !this.isOnPrivateNote)
         return !this.webAttendanceActive;
       return (
@@ -808,6 +927,9 @@ export default {
   unmounted() {
     this.saveDraft(this.conversationIdByRoute, this.replyType);
     this.revokeAttachmentPreviews();
+    Object.values(this.transportDrafts).forEach(draft =>
+      this.revokeAttachmentPreviews(draft.files)
+    );
     clearTimeout(this.groupMentionFetchTimeout);
     document.removeEventListener('paste', this.onPaste);
     document.removeEventListener('keydown', this.handleKeyEvents);
@@ -868,7 +990,10 @@ export default {
         this.inbox?.channel_type === 'Channel::Whatsapp'
       ) {
         event.preventDefault();
-        if (!this.isReplyButtonDisabled) this.openScheduleModal();
+        const canSchedule = this.whatsappTransportOptions
+          ? !this.isTransportSwitchDisabled
+          : !this.isReplyButtonDisabled;
+        if (canSchedule) this.openScheduleModal();
       }
     },
     groupMentionSearchTerm(message = this.message) {
@@ -978,13 +1103,64 @@ export default {
     },
     getDraftKey(
       conversationId = this.conversationIdByRoute,
-      replyType = this.replyType
+      replyType = this.replyType,
+      provider = this.selectedWhatsappProvider
     ) {
-      return attendanceDraftKey(
+      const key = attendanceDraftKey(
         conversationId,
         replyType,
         this.deliveryDestination
       );
+      return this.whatsappTransportOptions &&
+        replyType === REPLY_EDITOR_MODES.REPLY &&
+        !this.isWebDestination
+        ? `${key}:whatsapp:${provider}`
+        : key;
+    },
+    async onFileUpload(file) {
+      this.transportUploadCount += 1;
+      try {
+        return await fileUploadMixin.methods.onFileUpload.call(this, file);
+      } finally {
+        this.transportUploadCount -= 1;
+      }
+    },
+    selectWhatsappTransport(provider) {
+      if (
+        provider === this.selectedWhatsappProvider ||
+        this.isTransportSwitchDisabled
+      )
+        return;
+      if (
+        !this.whatsappTransportOptions.transports.some(
+          transport => transport.provider === provider
+        )
+      )
+        return;
+      this.saveDraft(this.conversationIdByRoute, this.replyType);
+      this.transportDrafts[this.getDraftKey()] = {
+        files: this.attachedFiles,
+        contacts: this.attachedContacts,
+        quote: this.inReplyTo,
+        hasRecordedAudio: this.hasRecordedAudio,
+        recordedAudioViewOnce: this.recordedAudioViewOnce,
+      };
+      this.whatsappTransport.selectedProvider.value = provider;
+      const draft = this.transportDrafts[this.getDraftKey()];
+      this.attachedFiles = draft?.files || [];
+      this.attachedContacts = draft?.contacts || [];
+      this.inReplyTo = draft?.quote || {};
+      this.hasRecordedAudio = draft?.hasRecordedAudio || false;
+      this.recordedAudioViewOnce = draft?.recordedAudioViewOnce || false;
+      LocalStorage.updateJsonStore(
+        LOCAL_STORAGE_KEYS.MESSAGE_REPLY_TO,
+        this.conversationId,
+        this.inReplyTo.id || null
+      );
+      this.getFromDraft();
+      this.showWhatsAppTemplatesModal = false;
+      this.showStickerPicker = false;
+      this.showContactAttachmentModal = false;
     },
     getCopilotAcceptedMessage(replyType = this.replyType) {
       const key = this.getDraftKey(this.conversationIdByRoute, replyType);
@@ -1260,6 +1436,9 @@ export default {
     },
     openScheduleModal() {
       if (this.isWebDestination) return;
+      this.scheduledWhatsappProvider = this.whatsappTransportOptions
+        ? this.selectedWhatsappProvider
+        : '';
       this.scheduledAt = this.toDatetimeLocal(new Date(Date.now() + 300000));
       this.scheduledLabelId = '';
       this.scheduledReason = '';
@@ -1297,6 +1476,8 @@ export default {
     async createScheduledMessage() {
       if (!this.scheduledLabelId || !this.scheduledAt || !this.isScheduleValid)
         return;
+      if (this.whatsappTransportOptions && !this.scheduledWhatsappProvider)
+        return;
       try {
         await scheduledMessagesApi.create({
           scheduled_message: {
@@ -1304,6 +1485,9 @@ export default {
             label_id: this.scheduledLabelId,
             reason: this.scheduledReason,
             sender_id: this.scheduledSenderId,
+            ...(this.whatsappTransportOptions && {
+              whatsapp_transport: this.scheduledWhatsappProvider,
+            }),
             messages: this.scheduledItems.map(item => ({
               content: item.content,
               content_type: item.content_type || 'text',
@@ -1322,7 +1506,9 @@ export default {
         useAlert('Mensagem agendada');
       } catch (error) {
         useAlert(
-          error?.response?.data?.error || 'Não foi possível agendar a mensagem'
+          error?.response?.data?.error ||
+            error?.response?.data?.errors?.join('; ') ||
+            'Não foi possível agendar a mensagem'
         );
       }
     },
@@ -1536,13 +1722,32 @@ export default {
     async sendPixPayment() {
       if (!this.showPixPaymentButton) return;
 
+      const requestedProvider = this.selectedWhatsappProvider;
+      const executorInboxId = this.pixPaymentInbox?.id;
+      const linkId = this.whatsappTransportOptions?.link_id;
+      const conversationId = this.currentChat.id;
+      const accountId = this.currentChat.account_id;
+      const message = this.pixPaymentMessageContent;
       const confirmed =
         await this.$refs.pixPaymentConfirmDialog.showConfirmation();
       if (!confirmed) return;
+      if (
+        !this.showPixPaymentButton ||
+        this.isComposerActive === false ||
+        requestedProvider !== this.selectedWhatsappProvider ||
+        executorInboxId !== this.pixPaymentInbox?.id ||
+        linkId !== this.whatsappTransportOptions?.link_id ||
+        conversationId !== this.currentChat.id ||
+        accountId !== this.currentChat.account_id ||
+        message !== this.pixPaymentMessageContent
+      ) {
+        useAlert(this.$t('WHATSAPP_UNIFIED.PIX_CONFIRMATION_CHANGED'));
+        return;
+      }
 
       await this.sendMessage({
-        conversationId: this.currentChat.id,
-        message: this.pixPaymentMessageContent,
+        conversationId,
+        message,
         private: false,
         contentType: 'text',
         contentAttributes: {
@@ -1556,12 +1761,32 @@ export default {
       copilotAcceptedMessage = ''
     ) {
       try {
-        await this.$store.dispatch('createPendingMessageAndSend', {
-          ...messagePayload,
-          delivery_destination: messagePayload.private
-            ? 'channel'
-            : this.deliveryDestination || 'channel',
-        });
+        const sentMessage = await this.$store.dispatch(
+          'createPendingMessageAndSend',
+          {
+            ...withWhatsappTransport(
+              messagePayload,
+              this.whatsappTransportOptions
+                ? this.selectedWhatsappProvider
+                : undefined,
+              this.deliveryDestination || 'channel'
+            ),
+          }
+        );
+        const transport = sentMessage?.content_attributes?.whatsapp_transport;
+        if (
+          transport?.reason === 'capability_routing' &&
+          transport.provider !== transport.requested_provider
+        ) {
+          const effective = this.whatsappTransportOptions?.transports.find(
+            item => item.provider === transport.provider
+          );
+          useAlert(
+            this.$t('WHATSAPP_UNIFIED.ROUTED', {
+              provider: effective?.label || transport.provider,
+            })
+          );
+        }
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
         emitter.emit(BUS_EVENTS.MESSAGE_SENT);
         this.removeFromDraft();
@@ -2069,6 +2294,51 @@ export default {
   />
   <ReplyBoxBanner :message="message" :is-on-private-note="isOnPrivateNote" />
   <div ref="replyEditor" class="reply-box" :class="replyBoxClass">
+    <div v-if="showWhatsappTransportSelector" class="w-full min-w-0 px-3 py-2">
+      <WhatsappTransportSelector
+        :model-value="selectedWhatsappProvider"
+        :transports="whatsappTransportOptions.transports"
+        :disabled="isTransportSwitchDisabled"
+        @update:model-value="selectWhatsappTransport"
+      />
+      <NextButton
+        class="mt-2 max-w-full"
+        icon="i-lucide-calendar-clock"
+        size="sm"
+        color="slate"
+        variant="ghost"
+        :label="$t('WHATSAPP_UNIFIED.SCHEDULE.OPEN')"
+        :disabled="!isComposerActive || isTransportSwitchDisabled"
+        @click="openScheduleModal"
+      />
+      <p
+        v-if="!selectedWhatsappTransport?.can_reply"
+        role="status"
+        class="m-0 mt-1 text-xs text-n-amber-11"
+      >
+        {{ $t('WHATSAPP_UNIFIED.REPLY_UNAVAILABLE') }}
+      </p>
+      <p
+        v-else-if="whatsappDraftResolution.reason === 'capability_routing'"
+        role="status"
+        class="m-0 mt-1 text-xs text-n-slate-11"
+      >
+        {{
+          $t('WHATSAPP_UNIFIED.WILL_ROUTE', {
+            provider: whatsappDraftResolution.transport.label,
+          })
+        }}
+      </p>
+      <p
+        v-else-if="
+          ['unknown', 'unsupported'].includes(whatsappDraftResolution.reason)
+        "
+        role="status"
+        class="m-0 mt-1 text-xs text-n-amber-11"
+      >
+        {{ $t('WHATSAPP_UNIFIED.CAPABILITY_UNAVAILABLE') }}
+      </p>
+    </div>
     <ReplyTopPanel
       v-if="!useCompactMessageComposer"
       :mode="replyType"
@@ -2421,9 +2691,13 @@ export default {
         header-content="Escolha quando esta mensagem WhatsApp será enviada."
       />
       <form
-        class="flex flex-col gap-5 p-8 pt-4 max-h-[78vh] overflow-y-auto"
+        class="flex flex-col min-w-0 gap-5 p-4 sm:p-8 pt-4 max-h-[78dvh] overflow-y-auto"
         @submit.prevent="createScheduledMessage"
       >
+        <ScheduledWhatsappTransport
+          v-model="scheduledWhatsappProvider"
+          :options="whatsappTransportOptions"
+        />
         <label
           class="flex flex-col gap-1.5 text-sm font-medium text-n-slate-12"
         >
@@ -2507,7 +2781,7 @@ export default {
         <ScheduledMessageSequenceEditor
           v-model="scheduledItems"
           rich-editor
-          :audio-record-format="audioRecordFormat"
+          :audio-record-format="scheduleAudioRecordFormat"
           :allowed-file-types="scheduleAllowedFileTypes"
           :conversation-id="conversationId"
           :channel-type="channelType"
@@ -2530,7 +2804,12 @@ export default {
             color="blue"
             size="sm"
             label="Agendar mensagem"
-            :disabled="!scheduledAt || !scheduledLabelId || !isScheduleValid"
+            :disabled="
+              !scheduledAt ||
+              !scheduledLabelId ||
+              !isScheduleValid ||
+              (whatsappTransportOptions && !scheduledWhatsappProvider)
+            "
           />
         </div>
       </form>
@@ -2539,7 +2818,7 @@ export default {
     <StickerPickerDialog
       v-if="showStickerPicker"
       :show="showStickerPicker"
-      :inbox-id="inboxId"
+      :inbox-id="inbox.id"
       @close="hideStickerPickerModal"
       @send="sendStickerMessage"
     />
@@ -2567,7 +2846,7 @@ export default {
     <woot-confirm-modal
       ref="pixPaymentConfirmDialog"
       :title="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_TITLE')"
-      :description="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_DESCRIPTION')"
+      :description="pixPaymentConfirmationDescription"
       :confirm-label="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CONFIRM_LABEL')"
       :cancel-label="$t('CONVERSATION.REPLYBOX.PIX_PAYMENT.CANCEL_LABEL')"
       confirm-on-enter

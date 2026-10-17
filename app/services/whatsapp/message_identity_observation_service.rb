@@ -63,6 +63,7 @@ class Whatsapp::MessageIdentityObservationService
     merge_original_id(identity, parsed['provider_message_id'])
     attributes = identity.observations
     attributes['meta_id_adapter']['participant'] = parsed['participant']
+    attributes['meta_id_adapter']['participant_type'] = parsed['participant_type']
     attributes['meta_id_adapter']['direction'] = parsed['direction']
     attributes['meta_id_adapter']['status'] = 'conflicting' if identity.provider_message_id != parsed['provider_message_id']
     identity.observations = attributes

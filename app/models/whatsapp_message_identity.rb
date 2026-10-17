@@ -8,6 +8,8 @@ class WhatsappMessageIdentity < ApplicationRecord
   validates :external_id, :provider, presence: true
   validate :matching_scope
 
+  after_commit :wake_pending_contact_resolution, on: [:create, :update]
+
   def link_matching_messages
     inbox.messages.where(account_id: account_id, source_id: external_id).find_each do |message|
       message_links.create_or_find_by!(message: message)
@@ -15,6 +17,11 @@ class WhatsappMessageIdentity < ApplicationRecord
   end
 
   private
+
+  def wake_pending_contact_resolution
+    Whatsapp::PendingIdentityResolutionService.wake(self)
+    Whatsapp::UnifiedEventService.wake(self)
+  end
 
   def matching_scope
     return unless inbox && channel

@@ -28,6 +28,7 @@ import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
 import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
+import WhatsappUnifiedInbox from './settingsPage/WhatsappUnifiedInbox.vue';
 import VoiceConfigurationPage from './settingsPage/VoiceConfigurationPage.vue';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
@@ -59,6 +60,7 @@ export default {
     BotConfiguration,
     CollaboratorsPage,
     ConfigurationPage,
+    WhatsappUnifiedInbox,
     VoiceConfigurationPage,
     CustomerSatisfactionPage,
     FacebookReauthorize,
@@ -812,9 +814,10 @@ export default {
   </div>
   <div
     v-else
-    class="grid grid-rows-[auto_1fr] h-full flex-grow flex-shrink pr-0 pl-0 w-full min-w-0 settings"
+    class="grid grid-cols-1 grid-rows-[auto_minmax(0,1fr)] h-full flex-grow flex-shrink pr-0 pl-0 w-full min-w-0 settings"
   >
     <SettingIntroBanner
+      class="min-w-0 [&_h2]:break-words"
       :header-image="inbox.avatarUrl"
       :header-title="inboxName"
     >
@@ -834,7 +837,7 @@ export default {
         />
       </woot-tabs>
     </SettingIntroBanner>
-    <section class="w-full overflow-auto py-8">
+    <section class="w-full min-w-0 overflow-auto py-8">
       <div class="max-w-7xl mx-auto w-full">
         <GoogleEmailHistory
           v-if="
@@ -920,10 +923,10 @@ export default {
 
         <div
           v-if="selectedTabKey === 'inbox-settings'"
-          class="flex flex-col md:flex-row items-center lg:items-start justify-between gap-5 lg:gap-10 mx-6"
+          class="flex min-w-0 flex-col md:flex-row items-stretch lg:items-start justify-between gap-5 lg:gap-10 mx-4 sm:mx-6"
         >
           <div
-            class="flex-1 flex flex-col min-w-0"
+            class="w-full flex-1 flex flex-col min-w-0"
             :class="{
               'max-w-2xl': isAWebWidgetInbox,
               'max-w-4xl': !isAWebWidgetInbox,
@@ -1329,6 +1332,10 @@ export default {
               :title="$t('INBOX_MGMT.CHANNEL_PREFERENCES')"
               class="mt-6"
             >
+              <WhatsappUnifiedInbox
+                v-if="isAUnoapiChannel || isAWhatsAppCloudChannel"
+                :inbox="inbox"
+              />
               <SettingsToggleSection
                 v-if="supportsWebAttendance"
                 v-model="webAttendanceEnabled"

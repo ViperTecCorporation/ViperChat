@@ -45,7 +45,7 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
       recipient_type: recipient_type_for(message),
       to: phone_number,
       type: 'message_edit',
-      context: { message_id: message.source_id },
+      context: { message_id: Whatsapp::UnifiedTransportService.new(message: message, operation: 'edit').reference_for(message) },
       text: { body: content.to_s }
     }
 

@@ -485,6 +485,13 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def whatsapp_reply_context(message)
+    if message.content_attributes['whatsapp_transport'].present?
+      reply_id = message.content_attributes['in_reply_to']
+      return nil if reply_id.blank?
+
+      target = message.conversation.messages.where(private: false).find(reply_id)
+      return { message_id: Whatsapp::UnifiedTransportService.new(message: message).reference_for(target) }
+    end
     reply_to = message.content_attributes[:in_reply_to_external_id]
     if reply_to.blank?
       in_reply_to_id = message.content_attributes[:in_reply_to]

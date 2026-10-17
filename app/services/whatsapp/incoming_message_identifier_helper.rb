@@ -92,12 +92,19 @@ module Whatsapp::IncomingMessageIdentifierHelper
   end
 
   def update_whatsapp_identifiers_from_status(status)
+    return if unified_message_identifiers?
+
     contact_inbox = @message&.conversation&.contact_inbox
     return if contact_inbox.blank?
 
     Whatsapp::IdentifierSyncService.new(contact_inbox: contact_inbox, contact: contact_inbox.contact).perform(
       source_ids: status_source_ids(status)
     )
+  end
+
+  def unified_message_identifiers?
+    attributes = @message&.content_attributes.to_h
+    attributes['whatsapp_unified_message_id'].present? || attributes['whatsapp_transport'].present?
   end
 
   def status_source_ids(status)

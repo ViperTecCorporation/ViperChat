@@ -11,12 +11,14 @@ class ScheduledMessages::SequenceItemService
       item = @scheduled_message.items.find_by!(position: @position)
       next unless item.pending?
 
+      transport.validate!
       item.dispatching!
       message = Messages::MessageBuilder.new(
         @scheduled_message.sender,
         @scheduled_message.target_conversation,
         message_params(item)
       ).perform
+      transport.validate_message!(item, message)
       item.update!(message: message, dispatched_at: Time.current)
       @scheduled_message.update!(message: message) if @position.zero?
     end
@@ -27,8 +29,12 @@ class ScheduledMessages::SequenceItemService
 
   private
 
+  def transport
+    @transport ||= ScheduledMessages::TransportService.new(@scheduled_message)
+  end
+
   def message_params(item)
-    {
+    params = {
       content: item.content,
       content_type: item.content_type,
       content_attributes: item.content_attributes,
@@ -37,6 +43,8 @@ class ScheduledMessages::SequenceItemService
       message_type: 'outgoing',
       action: 'create'
     }
+    params[:whatsapp_transport] = transport.requested_provider if @scheduled_message.whatsapp_transport.present?
+    params
   end
 
   def mark_failed(error)

@@ -10,7 +10,11 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     Whatsapp::MessageIdentityObservationService.new(
       inbox: inbox, value: processed_params, outgoing_echo: outgoing_echo || (messages_data.present? && outgoing_message_type?)
     ).perform
-    super
+    Whatsapp::UnifiedMessageIngestionService.new(inbox: inbox, value: processed_params).perform do |ingestion|
+      @unified_ingestion = ingestion
+      super()
+      @message
+    end
   end
 
   private
@@ -70,9 +74,9 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def set_contact
-    return if contact_params.blank? && !outgoing_echo
-
     return set_structured_group_contact if structured_group_message?
+    return if set_contact_from_message_identity
+    return if contact_params.blank? && !outgoing_echo
 
     super
 
@@ -94,6 +98,33 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
 
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
+  end
+
+  def set_contact_from_message_identity
+    return false if group_message?
+
+    if (link = @unified_ingestion&.resolved_contact_link)
+      @contact_inbox = link
+      @contact = link.contact
+      @sender = @message_type == :outgoing ? nil : @contact
+      @contact_from_message_identity = true
+      return true
+    end
+
+    resolver = Whatsapp::MessageIdentityContactResolver.new(inbox: inbox, message: messages_data.first)
+    link = resolver.perform || resolver.pending_contact
+    return false unless link
+
+    @contact_inbox = link
+    @contact = link.contact
+    @sender = @message_type == :outgoing ? nil : @contact
+    @contact_from_message_identity = true
+  end
+
+  def merge_contact_conversation_aliases
+    return if @contact_from_message_identity
+
+    super
   end
 
   def set_contact_from_echo
@@ -213,6 +244,16 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def set_conversation
+    if @unified_ingestion
+      @conversation = @unified_ingestion.conversation(@contact)
+      return
+    end
+    if @contact_from_message_identity
+      # Held until ingestion commits; a late repair cannot revive a placeholder.
+      @contact_inbox.lock!
+      @contact = @contact_inbox.reload.contact
+      @sender = @message_type == :outgoing ? nil : @contact
+    end
     return super unless structured_group_message?
 
     @conversation = Conversation.find_or_initialize_by(

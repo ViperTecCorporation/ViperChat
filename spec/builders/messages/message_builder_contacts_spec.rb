@@ -12,8 +12,9 @@ describe Messages::MessageBuilder do
 
   it 'persists multiple contacts in one message' do
     message = described_class.new(user, conversation, params).perform
-    expect(message.reload.attachments.map(&:file_type)).to eq %w[contact contact]
-    expect(message.attachments.last.meta['email']).to eq 'second@example.com'
+    attachments = message.reload.attachments.order(:id)
+    expect(attachments.map(&:file_type)).to eq %w[contact contact]
+    expect(attachments.last.meta['email']).to eq 'second@example.com'
   end
 
   it 'rejects the whole message when one contact has no address' do
