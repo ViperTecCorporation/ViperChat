@@ -1131,3 +1131,27 @@ Inspeção anterior somente leitura identificou a mensagem Meta `2489761` e o ec
 - **Somente dev, sem acesso/modificação na VPS nesta implementação, sem apagar ou mesclar as bolhas existentes, sem commit/push ou novo hostpath.** Não há migração nem mudança de frontend/API pública; os bundles nativos não foram alterados. Não houve teste físico nesta rodada de backend.
 - Uma futura aplicação precisa levar os três serviços alterados: `MessageIdentityObservationService`, `UnifiedTransportService` e `UnifiedMessageAliasService`. O hostpath atualmente ativo não inclui os dois últimos; atualizar apenas o observador não entrega a correção completa. O tratamento das duplicadas históricas é uma operação separada e exige aprovação.
 - Rodada final focada: 28 cenários positivos/conflitantes aprovados após a conferência do contexto de citação do provider Meta. Banco descartável `viperchat_late_echo_test` (27 MB, sem sessões abertas) e seis relatórios intermediários removidos; storage temporário dos novos testes removido automaticamente. Banco normal, base de teste preexistente e arquivos do usuário preservados. Worker dev reiniciado após verificar zero jobs ocupados; API local HTTP 200. Sem compilação/build adicional, pois os arquivos alterados são exclusivamente backend, testes e esta documentação.
+
+## 26. Correção do echo tardio aplicada via SSH/Docker — 17/10/2026
+
+Após a autorização do usuário para commit/push e hostpath, o commit `a9b8db8722347d8f4c44abdbe5691c58e3dabe71` foi publicado em `origin/feat/whatsapp-unified-inbox-dev`. A aplicação usou diretamente o Docker por SSH, sem alteração da stack armazenada no Portainer.
+
+Diretório privado de aplicação e recuperação: `/var/snap/docker/common/viperchat-hostpaths/late-echo-a9b8db872-20261017`.
+
+- Backup novo `database.dump`, formato custom, índice pg_restore conferido; SHA-256 `aad64f3ea5d39671056636f0cc3f5b667d5e0bd302bcf142ecefa0b981f8adda`. Stack efetiva anterior, inventário, hashes e `ROLLBACK.md` preservados; não houve ensaio de restauração.
+- Prévia comparou a proposta com a configuração efetiva dos containers: imagem `viperchat:unified-b829f34ee`, ambiente, comandos, duas réplicas, frontend e mounts anteriores de correlação/mídias permaneceram iguais. Foi substituído o mount de `MessageIdentityObservationService` e acrescentados os de `UnifiedTransportService` e `UnifiedMessageAliasService`: seis mounts read-only em cada container. Os três arquivos passaram em `ruby -c` no runtime da VPS.
+- Workers pausados com TSTP e zero jobs ocupados antes da recriação. Somente web e dois workers foram atualizados:
+
+```bash
+docker compose -p chatwoot-uno \
+  -f /var/snap/docker/common/viperchat-hostpaths/late-echo-a9b8db872-20261017/stack-after.yml \
+  up -d --no-deps --no-build --pull never chatwoot-web chatwoot-worker
+```
+
+- `validation-after.json` confirmou API HTTP 200, os três containers ativos sem reinícios inesperados, seis mounts read-only e hashes de todos os arquivos corrigidos iguais ao pacote em todos os executores. API pública também HTTP 200. Não houve build nem troca de assets neste incremento exclusivamente backend.
+- Conferência final do Sidekiq: dois workers fora de quiet e zero jobs ocupados na amostra. Backup de 247.432.953 bytes. Cópias locais de transferência (26.477 bytes) e temporários usados no container foram removidos; fontes, hostpaths ativos e recuperação na VPS preservados. SSD local com aproximadamente 46,78 GiB livres.
+- Banco permaneceu em `20261016000007`. Hashes da amostra de IDs históricos, das mídias verificadas e do vínculo permaneceram idênticos. As mensagens duplicadas `2489761` e `2489762` continuam presentes, com os mesmos IDs, caixas, conversa, `source_id` e conteúdo. ViperConnect, banco, Redis e push relay não foram recriados.
+- **Não houve envio de teste, reprocessamento, backfill, mesclagem, purge ou remoção das bolhas duplicadas.** O aceite do novo caminho com respostas reais após a aplicação fica para o usuário; implantação técnica e testes sintéticos não equivalem a esse aceite.
+- O rollback de código usa o `stack-before.yml` deste diretório e retorna ao hostpath anterior com quatro mounts; não restaurar o banco automaticamente. Os dois diretórios de hostpath continuam necessários: o frontend e as correções anteriores de mídia/correlação ainda apontam ao diretório `review-a9eec45e0-20261017`.
+
+Antes de qualquer reimplantação pelo Portainer, reconciliar sua stack com este `stack-after.yml` ou incorporar todas as correções em imagem definitiva. O painel continua com seu arquivo anterior e pode desfazer o piloto se reimplantado sem os mounts.
