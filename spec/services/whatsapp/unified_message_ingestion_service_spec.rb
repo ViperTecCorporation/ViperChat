@@ -1,6 +1,7 @@
 require 'rails_helper'
 require 'base64'
 require 'stringio'
+require 'tmpdir'
 
 # Integration contract: enter through the real provider services, not a mocked
 # UnifiedMessageIngestionService. Run only with an isolated test DB, including
@@ -61,6 +62,8 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
   end
 
   arrival_orders = [%i[meta uno], %i[uno meta]]
+  receipt_orders = [false, true]
+  outbound_conflicts = %w[contact generation private ambiguous]
   pdf_bytes = Base64.decode64(<<~BASE64)
     JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC
     9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAg
@@ -147,7 +150,7 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
                 receipt_value = receipt[:entry].first[:changes].first[:value]
                 incoming = receipt_value.delete(:messages).first
                 receipt_value[:statuses] = [{ id: incoming[:id], provider_message_id: incoming[:provider_message_id],
-                                             recipient_id: '5565987654321', status: 'delivered', timestamp: incoming[:timestamp] }]
+                                              recipient_id: '5565987654321', status: 'delivered', timestamp: incoming[:timestamp] }]
                 ingest(:uno, receipt)
               end
               2.times { arrival_order.each { |provider| ingest(provider, payloads.fetch(provider).deep_dup) } }
@@ -158,7 +161,7 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
                 incoming = change[:value].delete(:messages).first
                 change[:field] = 'smb_message_echoes'
                 change[:value][:message_echoes] = [{ id: incoming[:id], from: uno_channel.phone_number.delete_prefix('+'),
-                                                    to: '', timestamp: (incoming[:timestamp].to_i + 10).to_s }]
+                                                     to: '', timestamp: (incoming[:timestamp].to_i + 10).to_s }]
                 ingest(:uno, sparse_echo)
                 arrival_order.reverse_each { |provider| ingest(provider, payloads.fetch(provider).deep_dup) }
                 identity = WhatsappMessageIdentity.find_by!(inbox: uno_channel.inbox, external_id: incoming[:id])
@@ -183,7 +186,7 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
               allow(ActiveStorage::Blob.service).to receive(:exist?).with(file.blob.key).and_return(true)
               Whatsapp::ReconcileUnifiedMediaJob.perform_now(ledger.id)
               expect(ledger.reload).to have_attributes(media_review_status: 'unchanged', media_review_reason: 'single_copy_retained',
-                                                      media_inbox_id: origin)
+                                                       media_inbox_id: origin)
               expect([canonical.id, canonical.source_id, file.reload.id, file.blob_id]).to eq(preserved)
               expect(ActiveStorage::Blob.count - blob_count).to eq(1)
               expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued
@@ -405,10 +408,153 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
         end
       end
 
+      # Full lifecycle assertions intentionally keep public IDs, files and
+      # dispatch side effects together in each matrix case.
+      # rubocop:disable RSpec/ExampleLength, RSpec/MultipleExpectations
+      context 'with a late partner echo after a Meta API send' do
+        around do |example|
+          Dir.mktmpdir('unified-late-echo-') do |directory|
+            example.metadata[:late_echo_storage] = directory
+            example.run
+          end
+        ensure
+          example.metadata.delete(:late_echo_storage)
+        end
+
+        before do
+          service = ActiveStorage::Service::DiskService.new(root: RSpec.current_example.metadata.fetch(:late_echo_storage))
+          service.name = ActiveStorage::Blob.service.name
+          allow(ActiveStorage::Blob).to receive(:service).and_return(service)
+          allow(ActiveStorage::Blob.services).to receive(:fetch).and_return(service)
+        end
+
+        outbound_conflicts.each do |conflict|
+          it "holds a #{conflict} conflict instead of adopting or creating a second bubble" do
+            ingest(:meta, webhook(:meta, 'phone_incoming'))
+            ingest(:uno, webhook(:uno, 'phone_incoming'))
+            conversation = public_messages.sole.conversation
+            peer = '556587654321'
+            original_id = 'CE550277C18EADC4F0ED'
+            envelope = "\x1c\x18#{peer.bytesize.chr}#{peer}\x15\x02\x00\x11\x18#{original_id.bytesize.chr}#{original_id}\x00"
+            meta_id = "wamid.#{Base64.strict_encode64(envelope)}"
+            agent = create(:user, account: account)
+            outgoing = Messages::MessageBuilder.new(agent, conversation,
+                                                    ActionController::Parameters.new(content: 'opa', whatsapp_transport: 'whatsapp_cloud')).perform
+            expect_any_instance_of(Channel::Whatsapp).to receive(:send_message).once.and_return(meta_id)
+            Whatsapp::SendOnWhatsappService.new(message: outgoing).perform
+            case conflict
+            when 'contact'
+              conversation.update!(contact: create(:contact, account: account, phone_number: '+5511987654321'))
+            when 'generation'
+              attributes = outgoing.reload.content_attributes.deep_dup
+              attributes['whatsapp_transport']['activation_cutoff'] = 1.day.ago.iso8601(6)
+              outgoing.update!(content_attributes: attributes)
+            when 'private'
+              outgoing.update!(private: true)
+            when 'ambiguous'
+              identity = WhatsappMessageIdentity.find_by!(inbox: meta_channel.inbox, external_id: meta_id).dup
+              identity.external_id = 'another-provider-public-id'
+              identity.save!
+            end
+            ids = account.messages.order(:id).pluck(:id, :source_id)
+            payload = webhook(:uno, 'phone_echo')
+            echo = payload.dig(:entry, 0, :changes, 0, :value, :message_echoes, 0)
+            echo[:id] = '20000000-0000-4000-8000-000000000002'
+            echo[:provider_message_id] = original_id
+
+            2.times { ingest(:uno, payload.deep_dup) }
+
+            expect(account.messages.order(:id).pluck(:id, :source_id)).to eq(ids)
+            expect(WhatsappUnifiedMessage.find_by!(original_id: original_id).message_id).to be_nil
+            expect(WhatsappUnifiedEvent.where(whatsapp_inbox_link: inbox_link).sole)
+              .to have_attributes(state: 'review', reason: 'correlation_conflict')
+          end
+        end
+
+        [{ type: 'text', quoted: false }, { type: 'text', quoted: true }, *media_formats].each do |variant|
+          receipt_orders.each do |receipt_first|
+            it "reuses #{variant[:type]} quoted=#{variant[:quoted] != false}, receipt_first=#{receipt_first} without another bubble or file" do
+              ingest(:meta, webhook(:meta, 'phone_incoming'))
+              ingest(:uno, webhook(:uno, 'phone_incoming'))
+              quoted = public_messages.sole
+              original_id = 'CE550277C18EADC4F0ED'
+              peer = '556587654321'
+              envelope = "\x1c\x18#{peer.bytesize.chr}#{peer}\x15\x02\x00\x11\x18#{original_id.bytesize.chr}#{original_id}\x00"
+              meta_id = "wamid.#{Base64.strict_encode64(envelope)}"
+              params = ActionController::Parameters.new(content: 'opa', message_type: 'outgoing', whatsapp_transport: 'whatsapp_cloud')
+              params[:content_attributes] = { in_reply_to: quoted.id } unless variant[:quoted] == false
+              if variant[:bytes]
+                blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(variant[:bytes]), filename: variant[:filename],
+                                                              content_type: variant[:mime_type])
+                params[:attachments] = [blob.signed_id]
+                params[:is_voice_message] = variant[:type] == 'audio'
+              end
+              agent = create(:user, account: account)
+              outgoing = Messages::MessageBuilder.new(agent, quoted.conversation, params).perform
+              expect_any_instance_of(Channel::Whatsapp).to receive(:send_message).once.and_return(meta_id)
+              Whatsapp::SendOnWhatsappService.new(message: outgoing).perform
+              preserved_ids = public_messages.order(:id).pluck(:id, :source_id)
+              attachment_ids = outgoing.attachments.pluck(:id)
+              file_ids = outgoing.attachments.map { |item| [item.file.id, item.file.blob_id] }
+              counts = [Message.count, Attachment.count, ActiveStorage::Blob.count, account.conversations.count, account.contacts.count]
+              allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+              expect(Down).not_to receive(:download)
+              expect(ActiveStorage::Blob.service).not_to receive(:upload)
+
+              payload = webhook(:uno, 'phone_echo')
+              echo = payload[:entry].first[:changes].first[:value][:message_echoes].first
+              echo.merge!(id: '20000000-0000-4000-8000-000000000002', provider_message_id: original_id,
+                          type: variant[:type], timestamp: (Time.current.to_i + 2).to_s)
+              unless variant[:quoted] == false
+                echo[:context] = { id: webhook(:uno, 'phone_incoming').dig(:entry, 0, :changes, 0, :value, :messages, 0, :id) }
+              end
+              if variant[:bytes]
+                echo.delete(:text)
+                echo[variant[:type]] = { id: 'must-not-download', mime_type: variant[:mime_type], caption: '*Rodrigo*: opa' }
+              else
+                echo[:text][:body] = '*Rodrigo*: opa'
+              end
+              status_payload = webhook(:meta, 'phone_echo')
+              value = status_payload[:entry].first[:changes].first[:value]
+              value.delete(:message_echoes)
+              value[:statuses] = [{ id: meta_id, recipient_id: peer, status: 'read', timestamp: Time.current.to_i.to_s }]
+              ingest(:meta, status_payload.deep_dup) if receipt_first
+              3.times { ingest(:uno, payload.deep_dup) }
+              ingest(:meta, status_payload.deep_dup)
+
+              expect(public_messages.order(:id).pluck(:id, :source_id)).to eq(preserved_ids)
+              expect([Message.count, Attachment.count, ActiveStorage::Blob.count, account.conversations.count, account.contacts.count]).to eq(counts)
+              expect(outgoing.reload).to have_attributes(source_id: meta_id, sender_id: agent.id, content: 'opa', status: 'read')
+              unless variant[:quoted] == false
+                expect(outgoing.content_attributes['in_reply_to']).to eq(quoted.id)
+                expect(Whatsapp::UnifiedTransportService.new(message: outgoing).reference_for(quoted))
+                  .to eq(webhook(:meta, 'phone_incoming').dig(:entry, 0, :changes, 0, :value, :messages, 0, :id))
+                expect(meta_channel.provider_service.send(:whatsapp_reply_context, outgoing))
+                  .to eq(message_id: webhook(:meta, 'phone_incoming').dig(:entry, 0, :changes, 0, :value, :messages, 0, :id))
+              end
+              record = WhatsappUnifiedMessage.find_by!(whatsapp_inbox_link: inbox_link, original_id: original_id, direction: 'outgoing')
+              expect(record).to have_attributes(message_id: outgoing.id, state: 'ready')
+              expect(record.identities.order(:provider).pluck(:external_id)).to eq([echo[:id], meta_id])
+              if variant[:bytes]
+                Whatsapp::ReconcileUnifiedMediaJob.perform_now(record.id)
+                expect(record.reload).to have_attributes(media_review_status: 'unchanged', media_review_reason: 'single_copy_retained',
+                                                         media_inbox_id: meta_channel.inbox.id)
+              end
+              expect(outgoing.attachments.pluck(:id)).to eq(attachment_ids)
+              expect(outgoing.attachments.map { |item| [item.file.id, item.file.blob_id] }).to eq(file_ids)
+              expect(outgoing.attachments.sole.file.download).to eq(variant[:bytes]) if variant[:bytes]
+              expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued
+              expect(Rails.configuration.dispatcher).not_to have_received(:dispatch).with(Events::Types::MESSAGE_CREATED, anything, anything)
+            end
+          end
+        end
+      end
+
+      # rubocop:enable RSpec/ExampleLength, RSpec/MultipleExpectations
       %i[meta uno].each do |sending_provider|
         it "adopts only the exact #{sending_provider} API response after an early echo, never a similar pending bubble" do
           conversation = create(:conversation, account: account, inbox: inbox_link.primary_inbox, contact: known_contact,
-                                                contact_inbox: principal == :meta ? meta_alias : uno_alias)
+                                               contact_inbox: principal == :meta ? meta_alias : uno_alias)
           # Open the real Meta reply window; this message is not an outbound candidate.
           create(:message, account: account, inbox: meta_channel.inbox, conversation: conversation,
                            sender: known_contact, message_type: :incoming)
@@ -466,7 +612,7 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
 
       it 'blocks an outgoing message prepared before unlink/reactivate instead of sending it under the new activation' do
         conversation = create(:conversation, account: account, inbox: inbox_link.primary_inbox, contact: known_contact,
-                                              contact_inbox: principal == :meta ? meta_alias : uno_alias)
+                                             contact_inbox: principal == :meta ? meta_alias : uno_alias)
         agent = create(:user, account: account)
         params = ActionController::Parameters.new(content: 'Envio pendente', message_type: 'outgoing', whatsapp_transport: 'unoapi')
         optimistic = Messages::MessageBuilder.new(agent, conversation, params).perform

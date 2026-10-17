@@ -1109,3 +1109,25 @@ docker compose -p chatwoot-uno \
 - Backup, stack anterior, stack efetiva, hashes, código montado, assets e rollback permanecem no diretório privado da seção 23. Intermediários de transferência/extração na VPS foram removidos após conferir os hashes; os assets antigos continuam junto dos novos para páginas abertas.
 
 **Atenção operacional:** o Portainer ainda mantém seu arquivo anterior sem os mounts. Antes de uma nova implantação pelo painel, incorporar os mounts do `stack-after.yml` ou substituí-los por uma imagem que contenha as correções. Uma reimplantação sem essa reconciliação pode desfazer o piloto. Para rollback somente de código, `ROLLBACK.md` documenta a aplicação da stack anterior via Docker; não restaurar o banco automaticamente.
+
+## 25. Echo da parceira após envio pela Meta — correção somente em dev, 17/10/2026
+
+### Evidência e causa
+
+Inspeção anterior somente leitura identificou a mensagem Meta `2489761` e o echo ViperConnect `2489762` com o mesmo original `CE550277C18EADC4F0ED`; a consulta diagnóstica retornou `matched`. O alias da resposta da API já apontava à mensagem do operador, porém a ingestão do echo da parceira não o adotava antes de criar uma nova bolha. O texto assinado do echo não é critério de identidade. O caso foi reproduzido com teste sintético que falhou por criar a segunda mensagem antes da correção.
+
+### Comportamento corrigido
+
+- Após a API Meta responder, o adaptador reconhecido registra o original e a evidência de saída com origem `api_response`. Isso ocorre junto do registro do alias, na transação do envio, sem esperar um recibo e sem inventar status de entrega/leitura. Envelope desconhecido não é decodificado por aproximação; evidência conflitante não é sobrescrita.
+- O echo tardio procura a identidade exata da parceira e seu alias de envio. A adoção exige comparação `matched`, candidato único, conta/par de caixas válidos, contato compatível, mensagem pública de saída na principal e snapshot do mesmo transporte/geração. Confirma ainda que o ID público coincide com a resposta da API. A reserva canônica é bloqueada antes da adoção e o alias é bloqueado/revalidado.
+- A mensagem existente torna-se canônica, preservando ID, `source_id`, autor, conteúdo, citação, Attachment, associação Active Storage e blob. O alias de cada transporte permanece próprio. O echo não gera novo `MESSAGE_CREATED`, nova conversa/contato, chamada de envio, download, upload ou purge. Imagem, áudio e PDF reaproveitam os bytes locais, com origem de transporte preservada.
+- Contato divergente, snapshot antigo, mensagem privada ou identidade ambígua ficam em revisão, sem adoção nem nova bolha. Não há comparação por nome, conteúdo assinado ou proximidade de horário.
+
+### Validação e fronteiras
+
+- Matriz nova: **20 cenários positivos** (principal Meta/ViperConnect, recibo Meta antes do echo ou somente depois, texto simples/citado, imagem/áudio/PDF citados), incluindo repetições e reconciliação do arquivo único. **Oito cenários de conflito** não criam bolhas; três testes adicionais verificam evidência da API, envelope desconhecido e original contraditório.
+- Regressão ampliada: **473 exemplos Ruby, zero falhas ou pendências**, cobrindo os fluxos unificados, observação/correlação, mídias, revisão, desunificação, agendamento, envio Meta, recebimento Meta/Uno e MessageBuilder. As rodadas focadas sobrepõem esses exemplos; não somar as contagens. RuboCop dos três serviços e do spec de observação sem infrações. O spec integrado conserva avisos de estilo preexistentes em exemplos anteriores; não foram relaxadas regras de produção.
+- HTTP externo bloqueado e storage DiskService descartável por cenário. Asserções conferem a preservação dos IDs públicos/internos, um único arquivo e ausência de efeitos de criação/exclusão. Isso não substitui aceite posterior com eventos reais nem teste de carga.
+- **Somente dev, sem acesso/modificação na VPS nesta implementação, sem apagar ou mesclar as bolhas existentes, sem commit/push ou novo hostpath.** Não há migração nem mudança de frontend/API pública; os bundles nativos não foram alterados. Não houve teste físico nesta rodada de backend.
+- Uma futura aplicação precisa levar os três serviços alterados: `MessageIdentityObservationService`, `UnifiedTransportService` e `UnifiedMessageAliasService`. O hostpath atualmente ativo não inclui os dois últimos; atualizar apenas o observador não entrega a correção completa. O tratamento das duplicadas históricas é uma operação separada e exige aprovação.
+- Rodada final focada: 28 cenários positivos/conflitantes aprovados após a conferência do contexto de citação do provider Meta. Banco descartável `viperchat_late_echo_test` (27 MB, sem sessões abertas) e seis relatórios intermediários removidos; storage temporário dos novos testes removido automaticamente. Banco normal, base de teste preexistente e arquivos do usuário preservados. Worker dev reiniciado após verificar zero jobs ocupados; API local HTTP 200. Sem compilação/build adicional, pois os arquivos alterados são exclusivamente backend, testes e esta documentação.

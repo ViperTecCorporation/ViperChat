@@ -9,6 +9,7 @@ class Whatsapp::UnifiedMessageAliasService
   end
 
   def link_identity
+    adopt_outbound_counterpart
     alias_row = WhatsappUnifiedMessageAlias.find_by(whatsapp_message_identity: @identity)
     return @record.aliases.create_or_find_by!(whatsapp_message_identity: @identity) unless alias_row&.message_id
 
@@ -39,6 +40,7 @@ class Whatsapp::UnifiedMessageAliasService
   def compatible?(participant:, message_kind:)
     compatible_statuses = %w[matched participant_identity_pending]
     @record.participant_key == participant && @record.message_kind == message_kind &&
+      compatible_outbound_alias? &&
       @record.identities.all? do |identity|
         next true if identity.id == @identity.id
         next false if identity.inbox_id == @inbox.id
@@ -49,6 +51,58 @@ class Whatsapp::UnifiedMessageAliasService
   end
 
   private
+
+  def outbound_counterparts
+    return [] unless @record.direction == 'outgoing' && @record.message_id.nil?
+
+    @comparison ||= Whatsapp::MessageIdentityCorrelationService.new(identity: @identity, partner_inbox: @link.partner_for(@inbox)).perform
+    @outbound_counterparts ||= WhatsappUnifiedMessageAlias.where(whatsapp_message_identity_id: @comparison[:candidate_identity_ids])
+                                                          .where.not(message_id: nil).to_a
+  end
+
+  def compatible_outbound_alias?
+    rows = outbound_counterparts
+    rows.empty? || (rows.one? && @comparison[:status] == 'matched' && verified_outbound_alias?(rows.first))
+  end
+
+  def adopt_outbound_counterpart
+    row = outbound_counterparts.sole unless outbound_counterparts.empty?
+    return unless row
+
+    row.lock!
+    raise ArgumentError, 'Conflicting outbound alias requires review' unless compatible_outbound_alias?
+
+    @record.update!(message: row.message, state: 'ready',
+                    media_inbox_id: row.message.attachments.exists? ? row.whatsapp_message_identity.inbox_id : nil)
+    row.update!(whatsapp_unified_message: @record)
+  end
+
+  def verified_outbound_alias?(row)
+    message = row.message
+    identity = row.whatsapp_message_identity
+    (row.whatsapp_unified_message_id.nil? || row.whatsapp_unified_message_id == @record.id) &&
+      verified_outbound_message?(message) && same_outbound_transport?(message, identity) &&
+      Whatsapp::MessageIdentityCorrelationService.new(identity: identity, partner_inbox: @inbox)
+                                                 .contact_matches_participant?(message.conversation.contact)
+  end
+
+  def same_outbound_transport?(message, identity)
+    metadata = message.content_attributes['whatsapp_transport'].to_h
+    message.source_id == identity.external_id && metadata['link_id'] == @link.id &&
+      metadata['activation_cutoff'] == @link.activated_at.iso8601(6) &&
+      metadata['inbox_id'] == identity.inbox_id && metadata['provider'] == identity.provider
+  end
+
+  def verified_outbound_message?(message)
+    @link.reload.enabled? && primary_message_scope?(message) &&
+      message.outgoing? && !message.private? && !message.web_attendance? && !message.conversation.group? &&
+      message.created_at >= @link.activated_at
+  end
+
+  def primary_message_scope?(message)
+    message.account_id == @link.account_id && message.inbox_id == @link.primary_inbox_id &&
+      message.conversation.inbox_id == message.inbox_id && message.conversation.account_id == @link.account_id
+  end
 
   def verified_copy?(message)
     message.account_id == @link.account_id && @link.covers?(message.inbox) &&

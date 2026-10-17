@@ -17,6 +17,21 @@ class Whatsapp::MessageIdentityObservationService
     end
   end
 
+  # A recognized Meta API response already proves the outbound envelope. Record
+  # that evidence before a partner echo, without inventing a delivery receipt.
+  def observe_api_response(message:, external_id:)
+    return unless @inbox.channel.provider == 'whatsapp_cloud'
+
+    parsed = Whatsapp::MetaMessageIdAdapter.parse(external_id)
+    return unless parsed && parsed['direction'] == 'outgoing'
+
+    @origin = 'api_response'
+    peer_key = parsed['participant_type'] == 'bsuid' ? :to_user_id : :to
+    event = { :id => external_id, :type => outgoing_kind(message), :from => @inbox.channel.phone_number,
+              peer_key => parsed['participant'], :timestamp => message.created_at.to_i.to_s }
+    observe(event.with_indifferent_access, :message_echoes)
+  end
+
   # Also runs when an API send receives its source_id after an early status.
   def self.link_message(message)
     WhatsappMessageIdentity.where(account_id: message.account_id, inbox_id: message.inbox_id,
@@ -26,6 +41,13 @@ class Whatsapp::MessageIdentityObservationService
   end
 
   private
+
+  def outgoing_kind(message)
+    return 'sticker' if message.content_type == 'sticker'
+
+    type = message.attachments.first&.file_type
+    { 'file' => 'document', 'contact' => 'contacts' }.fetch(type, type || 'text')
+  end
 
   def observe(event, kind)
     return unless observable_event?(event, kind)
@@ -88,7 +110,7 @@ class Whatsapp::MessageIdentityObservationService
 
   def merge_observations(previous, event, kind)
     result = previous.deep_dup
-    result['origin'] = 'webhook'
+    result['origin'] = @origin || 'webhook'
     result['contract_version'] = 1
     track_conflicts(result, result, { 'business_number' => @inbox.channel.phone_number })
     result['business_number'] ||= @inbox.channel.phone_number

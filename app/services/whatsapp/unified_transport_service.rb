@@ -106,6 +106,8 @@ class Whatsapp::UnifiedTransportService
     identity = WhatsappMessageIdentity.create_or_find_by!(account_id: @message.account_id, inbox_id: inbox.id,
                                                           channel_id: channel.id, provider: channel.provider, external_id: external_id)
     WhatsappUnifiedMessageAlias.create_or_find_by!(whatsapp_message_identity: identity) { |row| row.message = @message }
+    Whatsapp::MessageIdentityObservationService.new(inbox: inbox, value: {})
+                                               .observe_api_response(message: @message, external_id: external_id)
   end
 
   def can_reply?
