@@ -3,6 +3,7 @@
 ## 1. Situação, objetivo e autorização
 
 - Documento de planejamento: 15/10/2026, fuso America/Cuiaba.
+- Atualização em 17/10/2026: após a imagem inicial implantada manualmente pelo administrador, as correções `a9eec45e0` foram aplicadas via hostpath no Docker por SSH, com autorização explícita posterior à negativa do Portainer, backup prévio e verificações pós-aplicação (seção 24). IDs, arquivos verificados e vínculo preservados. O arquivo da stack no Portainer ainda exige reconciliação antes de uma futura reimplantação pelo painel.
 - Atualização em 16/10/2026: vínculo, ingestão única, BSUID-first, reconciliação de mídias e revisão administrativa implementados e validados em dev (seções 17–19). Interface disponível para aceite manual; não confundir esse avanço com release publicada, aceite nativo completo ou implantação na VPS. Aplicação dessas alterações na VPS continua adiada.
 - Atualização em 15/10/2026: P1 implementada e validada em dev; P2 aplicada via hostpath na VPS após autorização explícita do usuário. Evidências e limites estão na seção 5.4.
 - ViperConnect: commit `b1668845` (`feat(webhooks): expose original provider message identity`), branch `mobile-primary`. IDs públicos atuais e referências operacionais preservados; Typebot não recebe o novo campo.
@@ -1089,3 +1090,22 @@ O usuário solicitou aplicação **via hostpath**, sem trocar a imagem. Pacote e
 - IDs históricos, arquivos/IDs das mensagens de imagem/áudio verificadas e configuração do vínculo foram registrados por hashes em `validation-before.json`. Não houve backfill, reprocessamento, purge, mesclagem ou mudança dos volumes Active Storage/S3.
 
 Para prosseguir, liberar/esclarecer a autorização de atualização no Portainer ou aplicar manualmente o `stack-after.yml` pela interface autorizada, sem pull nem prune. `ROLLBACK.md` distingue retirar os mounts de restaurar dados; não restaurar o banco automaticamente sobre tráfego posterior. O código corrigido **ainda não está ativo em produção**.
+
+## 24. Hostpath aplicado no Docker por SSH — 17/10/2026
+
+Depois da negativa descrita na seção 23, o usuário autorizou explicitamente: **“aplica via ssh” / “no docker igual estávamos fazendo antes”**. A execução abaixo corresponde a essa nova autorização, não a uma atualização bem-sucedida pela API do Portainer.
+
+```bash
+docker compose -p chatwoot-uno \
+  -f /var/snap/docker/common/viperchat-hostpaths/review-a9eec45e0-20261017/stack-after.yml \
+  up -d --no-deps --no-build --pull never chatwoot-web chatwoot-worker
+```
+
+- Comparação adicional com os containers existentes: ambiente e comandos idênticos; duas réplicas do worker preservadas. Workers pausados e zero jobs ocupados antes da recriação. Somente web e dois workers foram recriados, iniciando por volta de 01:52:56 (America/Cuiaba).
+- Os quatro mounts read-only estão ativos nos três containers, preservando a imagem `viperchat:unified-b829f34ee`. Hashes dos três serviços Ruby e do manifesto são iguais ao pacote aprovado em todos os containers. Manifesto SHA-256 `0c0923ce8cd724c8235e6247ac4148450534d79cf62450b7536b37eb3aef4ce2`.
+- `validation-after.json`: sucesso, migrações inalteradas (`20261016000007`), hashes dos IDs históricos e das mídias verificadas idênticos, vínculo ativo sem mudança e containers ViperConnect/PostgreSQL/Redis/push relay preservados. Web e dois workers ativos, zero reinícios inesperados e workers fora do modo quiet.
+- API interna HTTP 200. Manifesto com 248 entradas e 257 arquivos referenciados, nenhum ausente. JavaScript dashboard/v3app e CSS dashboard servidos com HTTP 200; HTML de login referencia o manifesto novo. O primeiro probe ocorreu durante o boot e recebeu reset de conexão; a conferência foi repetida após inicialização e passou.
+- Não houve migração, envio de teste, reprocessamento/backfill, limpeza de conflitos anteriores, alteração de IDs, mesclagem ou escrita/purge de mídia pelo procedimento. Alertas antigos não são apagados automaticamente.
+- Backup, stack anterior, stack efetiva, hashes, código montado, assets e rollback permanecem no diretório privado da seção 23. Intermediários de transferência/extração na VPS foram removidos após conferir os hashes; os assets antigos continuam junto dos novos para páginas abertas.
+
+**Atenção operacional:** o Portainer ainda mantém seu arquivo anterior sem os mounts. Antes de uma nova implantação pelo painel, incorporar os mounts do `stack-after.yml` ou substituí-los por uma imagem que contenha as correções. Uma reimplantação sem essa reconciliação pode desfazer o piloto. Para rollback somente de código, `ROLLBACK.md` documenta a aplicação da stack anterior via Docker; não restaurar o banco automaticamente.
