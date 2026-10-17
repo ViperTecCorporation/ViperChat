@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { mount } from '@vue/test-utils';
 import ReplyBox from './ReplyBox.vue';
+import replyBoxSource from './ReplyBox.vue?raw';
 import { useAlert } from 'dashboard/composables';
-import { ref } from 'vue';
+import { compile, ref } from 'vue';
 import { useWhatsappTransport } from 'dashboard/composables/useWhatsappTransport';
 import scheduledMessagesApi from 'dashboard/api/scheduledMessages';
 
@@ -379,6 +381,46 @@ describe('ReplyBox Captain shortcuts', () => {
 });
 
 describe('ReplyBox compact composer', () => {
+  it.each([true, false])(
+    'shows the standalone schedule button only outside compact mode (compact=%s)',
+    async compact => {
+      // Render the production button fragment without mounting the editor's
+      // unrelated stores, uploads and websocket subscriptions.
+      const fragment = [...replyBoxSource.matchAll(/<NextButton\b[\s\S]*?\/>/g)]
+        .map(match => match[0])
+        .find(template => template.includes('WHATSAPP_UNIFIED.SCHEDULE.OPEN'));
+      const openScheduleModal = vi.fn();
+      const wrapper = mount(
+        {
+          render: compile(fragment),
+          data: () => ({
+            useCompactMessageComposer: compact,
+            isComposerActive: true,
+            isTransportSwitchDisabled: false,
+          }),
+          methods: { openScheduleModal },
+        },
+        {
+          global: {
+            mocks: { $t: key => key },
+            stubs: {
+              NextButton: {
+                props: ['label'],
+                template: '<button>{{ label }}</button>',
+              },
+            },
+          },
+        }
+      );
+      expect(wrapper.find('button').exists()).toBe(!compact);
+      if (!compact) {
+        await wrapper.get('button').trigger('click');
+        expect(openScheduleModal).toHaveBeenCalledOnce();
+      }
+      wrapper.unmount();
+    }
+  );
+
   it('queues recorded audio send until its upload finishes', async () => {
     let finishUpload;
     const uploadPromise = new Promise(resolve => {

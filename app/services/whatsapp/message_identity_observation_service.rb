@@ -28,7 +28,7 @@ class Whatsapp::MessageIdentityObservationService
   private
 
   def observe(event, kind)
-    return if event[:id].blank?
+    return unless observable_event?(event, kind)
 
     scope = identity_scope(event[:id])
     # Legacy Uno events need no new row, but may complete a pending observation.
@@ -45,6 +45,11 @@ class Whatsapp::MessageIdentityObservationService
       identity.save! if identity.changed?
       identity.link_matching_messages
     end
+  end
+
+  def observable_event?(event, kind)
+    # Sparse delivery echoes are not new messages and must not replace direction.
+    event[:id].present? && (kind == :statuses || event[:type].present?)
   end
 
   def identity_scope(external_id)

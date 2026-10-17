@@ -108,19 +108,7 @@ describe('unified inbox administrative review', () => {
     wrapper.unmount();
   });
 
-  it.each([
-    'delivery_confirmation_uncertain',
-    'link_disabled',
-    'invalid_scope',
-    'untrusted_mapping',
-    'incompatible_messages',
-    'unsupported_media',
-    'media_unavailable',
-    'attachment_count',
-    'attachment_scope',
-    'media_mismatch',
-    'principal_unavailable',
-  ])(
+  it.each(Object.keys(en.WHATSAPP_UNIFIED.REVIEWS.REASONS))(
     'translates known service review reason %s in both locales',
     async reason => {
       Inboxes.getWhatsappLinkReviews.mockResolvedValue({
@@ -133,6 +121,140 @@ describe('unified inbox administrative review', () => {
       );
       expect(en.WHATSAPP_UNIFIED.REVIEWS.REASONS[reason]).toBeTruthy();
       expect(ptBR.WHATSAPP_UNIFIED.REVIEWS.REASONS[reason]).toBeTruthy();
+      expect(wrapper.find('h5').text()).toBe(
+        `WHATSAPP_UNIFIED.REVIEWS.REASONS.${reason}`
+      );
+      expect(wrapper.find('[data-review-guidance]').text()).toBe(
+        `WHATSAPP_UNIFIED.REVIEWS.GUIDANCE.${reason}`
+      );
+      expect(en.WHATSAPP_UNIFIED.REVIEWS.GUIDANCE[reason]).toBeTruthy();
+      expect(ptBR.WHATSAPP_UNIFIED.REVIEWS.GUIDANCE[reason]).toBeTruthy();
+      wrapper.unmount();
+    }
+  );
+
+  it.each([
+    [
+      en,
+      'Waiting for the message from the other channel',
+      'automatically waits',
+      'not conflicting evidence',
+      'without resending the message or starting another file download',
+    ],
+    [
+      ptBR,
+      'Aguardando a mensagem do outro canal',
+      'aguarda automaticamente',
+      'não um conflito de evidências',
+      'sem reenviar a mensagem nem iniciar outro download',
+    ],
+  ])(
+    'renders counterpart_pending as automatic waiting, not a conflict, in each locale',
+    async (locale, title, waiting, distinction, guidance) => {
+      Inboxes.getWhatsappLinkReviews.mockResolvedValue({
+        data: {
+          ...response.data,
+          items: [
+            {
+              ...item,
+              kind: 'media',
+              state: 'pending',
+              reason: 'counterpart_pending',
+            },
+          ],
+        },
+      });
+      const wrapper = mount(WhatsappUnifiedReviews, {
+        ...options,
+        global: {
+          ...options.global,
+          mocks: {
+            $t: key =>
+              key.split('.').reduce((value, part) => value?.[part], locale) ??
+              key,
+          },
+        },
+      });
+      await flushPromises();
+      expect(wrapper.find('h5').text()).toBe(title);
+      const explanation = wrapper.find('[data-review-guidance]');
+      expect(explanation.text()).toContain(waiting);
+      expect(explanation.text()).toContain(distinction);
+      expect(explanation.text()).toContain(guidance);
+      expect(explanation.element.closest('details')).toBeNull();
+      expect(wrapper.find('details').element.open).toBe(false);
+      expect(Inboxes.recheckWhatsappLinkReview).not.toHaveBeenCalled();
+      expect(Inboxes.acknowledgeWhatsappLinkReview).not.toHaveBeenCalled();
+      wrapper.unmount();
+    }
+  );
+
+  it('keeps human context and action explanations outside collapsed technical details', async () => {
+    const wrapper = mount(WhatsappUnifiedReviews, options);
+    await flushPromises();
+    const card = wrapper.find('[data-review-id]');
+    const details = card.find('details');
+    expect(details.element.open).toBe(false);
+    expect(details.find('summary').text()).toBe(
+      'WHATSAPP_UNIFIED.REVIEWS.TECHNICAL_DETAILS'
+    );
+    [item.id, item.original_id, item.public_id, item.created_at].forEach(
+      value => {
+        expect(details.text()).toContain(value);
+      }
+    );
+    expect(details.text()).not.toContain(
+      'WHATSAPP_UNIFIED.REVIEWS.STATES.review'
+    );
+    expect(card.find('h5').text()).not.toContain(item.id);
+    expect(card.find('dl').text()).toContain(
+      'WHATSAPP_UNIFIED.REVIEWS.STATES.review'
+    );
+    expect(card.find('dl').text()).toContain(
+      'WHATSAPP_UNIFIED.REVIEWS.FIELDS.conversation_display_id'
+    );
+    expect(card.find('dl').text()).toContain('3');
+    expect(wrapper.text()).toContain('WHATSAPP_UNIFIED.REVIEWS.RECHECK_HELP');
+    expect(wrapper.text()).toContain(
+      'WHATSAPP_UNIFIED.REVIEWS.ACKNOWLEDGE_HELP'
+    );
+    expect(details.find('button').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it.each(['new_service_reason', '<img src=x onerror=alert(1)>', null])(
+    'retains unknown reason %s with safe generic guidance',
+    async reason => {
+      Inboxes.getWhatsappLinkReviews.mockResolvedValue({
+        data: {
+          ...response.data,
+          items: [
+            {
+              ...item,
+              kind: 'future_kind',
+              reason,
+              state: 'future_state',
+              conversation_display_id: null,
+            },
+          ],
+        },
+      });
+      const wrapper = mount(WhatsappUnifiedReviews, options);
+      await flushPromises();
+      expect(wrapper.find('h5').text()).toBe(
+        reason || 'WHATSAPP_UNIFIED.REVIEWS.UNKNOWN_REASON'
+      );
+      expect(wrapper.find('[data-review-guidance]').text()).toBe(
+        'WHATSAPP_UNIFIED.REVIEWS.UNKNOWN_GUIDANCE'
+      );
+      expect(wrapper.text()).toContain('future_state');
+      expect(wrapper.text()).toContain('WHATSAPP_UNIFIED.REVIEWS.UNKNOWN_KIND');
+      expect(wrapper.text()).toContain(
+        'WHATSAPP_UNIFIED.REVIEWS.NO_CONVERSATION'
+      );
+      expect(wrapper.find('details').text()).toContain('future_kind');
+      expect(wrapper.find('img').exists()).toBe(false);
+      expect(button(wrapper, 'RECHECK')).toBeDefined();
       wrapper.unmount();
     }
   );
@@ -487,7 +609,10 @@ describe('unified inbox administrative review', () => {
       wrapper
         .findAll('select')
         .forEach(select => expect(select.classes()).toContain('min-w-0'));
-      expect(wrapper.find('dd').classes()).toContain('break-all');
+      expect(wrapper.find('details dd').classes()).toContain('break-all');
+      expect(wrapper.find('h5').classes()).toContain(
+        '[overflow-wrap:anywhere]'
+      );
       expect(wrapper.find('.sm\\:flex-row').exists()).toBe(true);
       wrapper.unmount();
     }
@@ -497,12 +622,57 @@ describe('unified inbox administrative review', () => {
     const english = en.WHATSAPP_UNIFIED.REVIEWS;
     const portuguese = ptBR.WHATSAPP_UNIFIED.REVIEWS;
     expect(Object.keys(portuguese).sort()).toEqual(Object.keys(english).sort());
-    ['FIELDS', 'KINDS', 'STATUSES', 'STATES', 'REASONS'].forEach(section => {
-      expect(Object.keys(portuguese[section]).sort()).toEqual(
-        Object.keys(english[section]).sort()
-      );
-    });
+    ['FIELDS', 'KINDS', 'STATUSES', 'STATES', 'REASONS', 'GUIDANCE'].forEach(
+      section => {
+        expect(Object.keys(portuguese[section]).sort()).toEqual(
+          Object.keys(english[section]).sort()
+        );
+      }
+    );
     expect(portuguese.NO_RESEND).toContain('nunca reenviam');
     expect(portuguese.ACKNOWLEDGE_SUCCESS).toContain('não confirma a entrega');
   });
+
+  it.each([en, ptBR])(
+    'distinguishes file availability, trust, identity conflicts and uncertain sends in each locale',
+    locale => {
+      const reviews = locale.WHATSAPP_UNIFIED.REVIEWS;
+      expect(Object.keys(reviews.GUIDANCE).sort()).toEqual(
+        Object.keys(reviews.REASONS).sort()
+      );
+      if (locale === ptBR) {
+        expect(reviews.HELP).toContain('Não é uma fila de aprovação');
+        expect(reviews.GUIDANCE.correlation_conflict).toContain(
+          'remetente ou direção'
+        );
+        expect(reviews.GUIDANCE.untrusted_mapping).toContain(
+          'não tem evidências confiáveis'
+        );
+        expect(reviews.GUIDANCE.principal_unavailable).toContain(
+          'não significa que o canal está offline'
+        );
+        expect(reviews.GUIDANCE.delivery_confirmation_uncertain).toContain(
+          'não reenvie automaticamente'
+        );
+        expect(reviews.RECHECK_HELP).toContain('Não garante correção');
+        expect(reviews.ACKNOWLEDGE_HELP).toContain('não corrige a causa');
+      } else {
+        expect(reviews.HELP).toContain('not an approval queue');
+        expect(reviews.GUIDANCE.correlation_conflict).toContain(
+          'sender or direction'
+        );
+        expect(reviews.GUIDANCE.untrusted_mapping).toContain(
+          'does not yet have trustworthy evidence'
+        );
+        expect(reviews.GUIDANCE.principal_unavailable).toContain(
+          'does not mean the channel is offline'
+        );
+        expect(reviews.GUIDANCE.delivery_confirmation_uncertain).toContain(
+          'do not resend automatically'
+        );
+        expect(reviews.RECHECK_HELP).toContain('does not guarantee a fix');
+        expect(reviews.ACKNOWLEDGE_HELP).toContain('fix the cause');
+      }
+    }
+  );
 });

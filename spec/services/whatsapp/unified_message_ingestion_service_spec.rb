@@ -142,7 +142,30 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
               allow(ActiveStorage::Blob.service).to receive(:upload)
               attachment_count = Attachment.count
               blob_count = ActiveStorage::Blob.count
+              if media[:type] == 'audio'
+                receipt = payloads.fetch(:uno).deep_dup
+                receipt_value = receipt[:entry].first[:changes].first[:value]
+                incoming = receipt_value.delete(:messages).first
+                receipt_value[:statuses] = [{ id: incoming[:id], provider_message_id: incoming[:provider_message_id],
+                                             recipient_id: '5565987654321', status: 'delivered', timestamp: incoming[:timestamp] }]
+                ingest(:uno, receipt)
+              end
               2.times { arrival_order.each { |provider| ingest(provider, payloads.fetch(provider).deep_dup) } }
+
+              if media[:type] == 'audio'
+                sparse_echo = payloads.fetch(:uno).deep_dup
+                change = sparse_echo[:entry].first[:changes].first
+                incoming = change[:value].delete(:messages).first
+                change[:field] = 'smb_message_echoes'
+                change[:value][:message_echoes] = [{ id: incoming[:id], from: uno_channel.phone_number.delete_prefix('+'),
+                                                    to: '', timestamp: (incoming[:timestamp].to_i + 10).to_s }]
+                ingest(:uno, sparse_echo)
+                arrival_order.reverse_each { |provider| ingest(provider, payloads.fetch(provider).deep_dup) }
+                identity = WhatsappMessageIdentity.find_by!(inbox: uno_channel.inbox, external_id: incoming[:id])
+                expect(identity.observations['direction']).to eq('incoming')
+                expect(identity.observations['conflicting_observations']).to be_blank
+                expect(WhatsappUnifiedEvent.where(state: 'review')).to be_empty
+              end
 
               expect(public_messages.count).to eq(1)
               expect(account.conversations.count).to eq(1)
@@ -152,6 +175,19 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
               expect(public_messages.sole.attachments.sole.file.blob)
                 .to have_attributes(byte_size: media[:bytes].bytesize, content_type: media[:mime_type])
               expect(ActiveStorage::Blob.service).to have_received(:upload).once
+              canonical = public_messages.sole
+              file = canonical.attachments.sole.file
+              preserved = [canonical.id, canonical.source_id, file.id, file.blob_id]
+              ledger = WhatsappUnifiedMessage.find_by!(message: canonical)
+              origin = ledger.media_inbox_id
+              allow(ActiveStorage::Blob.service).to receive(:exist?).with(file.blob.key).and_return(true)
+              Whatsapp::ReconcileUnifiedMediaJob.perform_now(ledger.id)
+              expect(ledger.reload).to have_attributes(media_review_status: 'unchanged', media_review_reason: 'single_copy_retained',
+                                                      media_inbox_id: origin)
+              expect([canonical.id, canonical.source_id, file.reload.id, file.blob_id]).to eq(preserved)
+              expect(ActiveStorage::Blob.count - blob_count).to eq(1)
+              expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued
+              expect(Whatsapp::UnifiedReviewService.new(link: inbox_link, actor: nil).list(kind: 'media')[:meta][:total]).to eq(0)
             end
           end
 

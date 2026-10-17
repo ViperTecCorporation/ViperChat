@@ -43,16 +43,31 @@ class Whatsapp::UnifiedMediaReconciliationService
       next result(:review, :invalid_scope) unless @link.valid?
 
       @identities = @record.identities.order(:id).lock.to_a
+      next result(:pending, :counterpart_pending) if pending_counterpart?
       next result(:review, :untrusted_mapping) unless trusted_pair?
 
-      @messages = Message.where(id: copy_ids).order(:id).lock.to_a
-      next result(:review, :incompatible_messages) unless compatible_messages?
-
-      reconcile
+      reconcile_messages
     end
   end
 
   private
+
+  def reconcile_messages
+    @messages = Message.where(id: copy_ids).order(:id).lock.to_a
+    return result(:review, :incompatible_messages) unless compatible_messages?
+
+    reconcile
+  end
+
+  def pending_counterpart?
+    return false unless @identities.one?
+
+    identity = @identities.first
+    comparison = Whatsapp::MessageIdentityCorrelationService.new(identity: identity, partner_inbox: @link.partner_for(identity.inbox))
+    identity.account_id == @link.account_id && [@link.primary_inbox_id, @link.secondary_inbox_id].include?(identity.inbox_id) &&
+      identity.provider_message_id == @record.original_id && matching_observation?(identity) &&
+      recognized_mapping?(identity) && comparison.safe_for_unification?
+  end
 
   def trusted_pair?
     return false unless @identities.size == 2 && @identities.map(&:inbox_id).sort == [@link.primary_inbox_id, @link.secondary_inbox_id].sort
@@ -144,10 +159,26 @@ class Whatsapp::UnifiedMediaReconciliationService
     blobs = ActiveStorage::Blob.where(id: files.map(&:blob_id)).order(:id).lock.index_by(&:id)
     return result(:review, :media_mismatch) unless compatible_files?(files, blobs)
 
+    # Single ingestion deliberately downloads only the first arriving copy.
+    # Proven aliases for both providers do not imply a second stored file.
+    # Keep that file and its truthful origin; a later real principal copy still
+    # follows the normal replacement/purge path below.
+    return retain_single_copy(blobs.fetch(files.first.blob_id)) if single_canonical_copy?(files)
+
     winner = available_principal_blob(files, blobs)
     return result(:pending, :principal_unavailable) unless winner
 
     replace_blobs(files, winner)
+  end
+
+  def single_canonical_copy?(files)
+    @messages.one? && @messages.first.id == @record.message_id && @messages.first.inbox_id == @link.primary_inbox_id && files.one?
+  end
+
+  def retain_single_copy(blob)
+    return result(:pending, :media_unavailable) unless blob.byte_size.positive? && blob.service.exist?(blob.key)
+
+    result(:unchanged, :single_copy_retained)
   end
 
   def available_principal_blob(files, blobs)

@@ -2302,6 +2302,7 @@ export default {
         @update:model-value="selectWhatsappTransport"
       />
       <NextButton
+        v-if="!useCompactMessageComposer"
         class="mt-2 max-w-full"
         icon="i-lucide-calendar-clock"
         size="sm"

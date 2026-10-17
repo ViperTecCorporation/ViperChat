@@ -24,15 +24,15 @@ let active = true;
 
 const kinds = ['event', 'delivery', 'media', 'reservation'];
 const statuses = ['open', 'acknowledged', 'all'];
+const summaryFields = ['state', 'conversation_display_id'];
 const fields = [
-  'state',
-  'reason',
+  'id',
+  'kind',
   'provider',
   'original_id',
   'public_id',
   'message_id',
   'conversation_id',
-  'conversation_display_id',
   'created_at',
   'updated_at',
   'attempts',
@@ -59,6 +59,7 @@ const reasons = [
   'attachment_scope',
   'media_mismatch',
   'principal_unavailable',
+  'counterpart_pending',
   'reservation_without_message',
 ];
 const states = [
@@ -202,6 +203,26 @@ onBeforeUnmount(() => {
     <p class="text-n-slate-11">
       {{ $t('WHATSAPP_UNIFIED.REVIEWS.NO_RESEND') }}
     </p>
+    <dl
+      class="mt-3 grid min-w-0 grid-cols-1 gap-3 text-n-slate-11 sm:grid-cols-2"
+    >
+      <div>
+        <dt class="font-semibold">
+          {{ $t('WHATSAPP_UNIFIED.REVIEWS.RECHECK') }}
+        </dt>
+        <dd class="!m-0 break-words">
+          {{ $t('WHATSAPP_UNIFIED.REVIEWS.RECHECK_HELP') }}
+        </dd>
+      </div>
+      <div>
+        <dt class="font-semibold">
+          {{ $t('WHATSAPP_UNIFIED.REVIEWS.ACKNOWLEDGE') }}
+        </dt>
+        <dd class="!m-0 break-words">
+          {{ $t('WHATSAPP_UNIFIED.REVIEWS.ACKNOWLEDGE_HELP') }}
+        </dd>
+      </div>
+    </dl>
     <p v-if="!linkEnabled" class="text-n-amber-11">
       {{ $t('WHATSAPP_UNIFIED.REVIEWS.DISABLED_LINK') }}
     </p>
@@ -255,15 +276,34 @@ onBeforeUnmount(() => {
           class="min-w-0 rounded-lg border border-n-weak p-3"
           :data-review-id="item.id"
         >
-          <h5 class="mb-3 break-all font-semibold text-n-slate-12">
-            {{ $t(`WHATSAPP_UNIFIED.REVIEWS.KINDS.${item.kind}`) }}
-            <span class="font-mono text-xs">{{ item.id }}</span>
+          <p class="mb-1 break-words text-xs text-n-slate-11">
+            {{
+              $t(
+                `WHATSAPP_UNIFIED.REVIEWS.${kinds.includes(item.kind) ? `KINDS.${item.kind}` : 'UNKNOWN_KIND'}`
+              )
+            }}
+          </p>
+          <h5
+            class="mb-2 break-words [overflow-wrap:anywhere] font-semibold text-n-slate-12"
+          >
+            {{
+              valueTranslation('reason', item.reason)
+                ? $t(valueTranslation('reason', item.reason))
+                : item.reason || $t('WHATSAPP_UNIFIED.REVIEWS.UNKNOWN_REASON')
+            }}
           </h5>
+          <p class="break-words text-n-slate-11" data-review-guidance>
+            {{
+              $t(
+                `WHATSAPP_UNIFIED.REVIEWS.${reasons.includes(item.reason) ? `GUIDANCE.${item.reason}` : 'UNKNOWN_GUIDANCE'}`
+              )
+            }}
+          </p>
           <p v-if="item.kind === 'delivery'" class="text-n-amber-11">
             {{ $t('WHATSAPP_UNIFIED.REVIEWS.DELIVERY_WARNING') }}
           </p>
           <dl class="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
-            <template v-for="field in fields" :key="field">
+            <template v-for="field in summaryFields" :key="field">
               <div
                 v-if="item[field] !== null && item[field] !== undefined"
                 class="min-w-0"
@@ -271,7 +311,9 @@ onBeforeUnmount(() => {
                 <dt class="text-xs text-n-slate-11">
                   {{ $t(`WHATSAPP_UNIFIED.REVIEWS.FIELDS.${field}`) }}
                 </dt>
-                <dd class="!m-0 whitespace-pre-wrap break-all text-n-slate-12">
+                <dd
+                  class="!m-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-n-slate-12"
+                >
                   {{
                     valueTranslation(field, item[field])
                       ? $t(valueTranslation(field, item[field]))
@@ -281,6 +323,37 @@ onBeforeUnmount(() => {
               </div>
             </template>
           </dl>
+          <p v-if="!item.conversation_display_id" class="mt-2 text-n-slate-11">
+            {{ $t('WHATSAPP_UNIFIED.REVIEWS.NO_CONVERSATION') }}
+          </p>
+          <details class="mt-3 min-w-0 rounded-lg border border-n-weak p-3">
+            <summary
+              class="cursor-pointer break-words font-medium text-n-slate-12 focus-visible:outline focus-visible:outline-2"
+            >
+              {{ $t('WHATSAPP_UNIFIED.REVIEWS.TECHNICAL_DETAILS') }}
+            </summary>
+            <dl class="mt-3 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+              <template v-for="field in fields" :key="field">
+                <div
+                  v-if="item[field] !== null && item[field] !== undefined"
+                  class="min-w-0"
+                >
+                  <dt class="text-xs text-n-slate-11">
+                    {{ $t(`WHATSAPP_UNIFIED.REVIEWS.FIELDS.${field}`) }}
+                  </dt>
+                  <dd
+                    class="!m-0 whitespace-pre-wrap break-all text-n-slate-12"
+                  >
+                    {{
+                      valueTranslation(field, item[field])
+                        ? $t(valueTranslation(field, item[field]))
+                        : item[field]
+                    }}
+                  </dd>
+                </div>
+              </template>
+            </dl>
+          </details>
           <div class="mt-3 flex flex-col flex-wrap gap-2 sm:flex-row">
             <RouterLink
               v-if="conversationRoute(item)"

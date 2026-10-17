@@ -146,7 +146,7 @@ class Whatsapp::MessageIdentityCorrelationService
     to = phone(participants['to'])
     recipient = phone(participants['recipient_id'])
     (to.present? && recipient.present? && to != recipient) ||
-      (direction(identity) == 'incoming' && identity.observations['statuses'].present? && recipient.present?) || business_role_conflict?(identity)
+      (direction(identity) == 'incoming' && recipient.present? && recipient != peer(identity)) || business_role_conflict?(identity)
   end
 
   def business_role_conflict?(identity)

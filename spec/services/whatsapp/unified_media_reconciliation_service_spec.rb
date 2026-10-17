@@ -145,6 +145,53 @@ RSpec.describe Whatsapp::UnifiedMediaReconciliationService do
     end
   end
 
+  %w[whatsapp_cloud unoapi].each do |provider|
+    context "with only a canonical #{provider} media copy" do
+      let(:principal_provider) { provider }
+
+      before do
+        messages.except(principal_provider).values.sole.destroy!
+      end
+
+      it 'keeps one proven alias pending until its counterpart arrives' do
+        counterpart = identities.find { |identity| identity.inbox_id == link.secondary_inbox_id }
+        record.aliases.find_by!(whatsapp_message_identity: counterpart).destroy!
+        before = principal.file.attachment.reload.attributes
+
+        expect(service.perform).to have_attributes(status: :pending, reason: :counterpart_pending)
+        expect(principal.reload.file.attachment.attributes).to eq(before)
+        expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued
+      end
+
+      it 'retains the only stored file without relabelling its secondary origin' do
+        record.update!(media_inbox_id: link.secondary_inbox_id)
+        before = principal.file.attachment.reload.attributes
+
+        2.times { expect(service.perform).to have_attributes(status: :unchanged, reason: :single_copy_retained) }
+        expect(principal.reload.file.attachment.attributes).to eq(before)
+        expect(record.reload.media_inbox_id).to eq(link.secondary_inbox_id)
+        expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued
+      end
+
+      it 'keeps a single missing storage object pending instead of claiming it was retained' do
+        blob = principal.file.blob
+        storage.delete(blob.key)
+        before = principal.file.attachment.reload.attributes
+
+        expect(service.perform).to have_attributes(status: :pending, reason: :media_unavailable)
+        expect(principal.reload.file.attachment.attributes).to eq(before)
+        expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued
+      end
+
+      it 'keeps a single attachment without an AS file pending' do
+        principal.file.detach
+
+        expect(service.perform).to have_attributes(status: :pending, reason: :media_unavailable)
+        expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued
+      end
+    end
+  end
+
   it 'keeps secondary media until the principal object exists' do
     old_blob_id = secondary.file.blob_id
     principal.file.blob.service.delete(principal.file.blob.key)
@@ -214,7 +261,7 @@ RSpec.describe Whatsapp::UnifiedMediaReconciliationService do
     old_blob = secondary.file.blob
     service.perform
     scheduled = create(:scheduled_message, account: account, inbox: secondary.message.inbox,
-                                          conversation: secondary.message.conversation, contact: contact)
+                                           conversation: secondary.message.conversation, contact: contact)
     scheduled.items.sole.update!(attachment_blob_ids: [old_blob.signed_id])
 
     Whatsapp::PurgeUnifiedMediaBlobJob.perform_now(old_blob.id)
@@ -241,8 +288,9 @@ RSpec.describe Whatsapp::UnifiedMediaReconciliationService do
     expect { Whatsapp::ReconcileUnifiedMediaJob.perform_now(record.id) }.not_to change(Message, :count)
     expect(secondary.reload.file.blob_id).to eq(principal.file.blob_id)
     messages.each_value do |message|
-      expect(dispatcher).to have_received(:dispatch).with(Events::Types::MESSAGE_UPDATED, anything,
-                                                         hash_including(message: having_attributes(id: message.id)))
+      expect(dispatcher).to have_received(:dispatch).with(
+        Events::Types::MESSAGE_UPDATED, anything, hash_including(message: having_attributes(id: message.id))
+      )
     end
     expect(dispatcher).not_to have_received(:dispatch).with(Events::Types::MESSAGE_CREATED, anything, anything)
     expect(Message.where(id: ids).order(:id).pluck(:id)).to eq(ids)
