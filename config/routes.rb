@@ -256,6 +256,9 @@ Rails.application.routes.draw do
               resources :notes, only: [:index]
             end
           end
+          resources :vipererp_contacts, only: [:show, :update] do
+            get :changes, on: :collection
+          end
           resources :contacts, only: [:index, :show, :update, :create, :destroy] do
             collection do
               get :active
