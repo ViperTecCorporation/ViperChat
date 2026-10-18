@@ -204,6 +204,14 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
     whatsapp_channel.unoapi_api_url
   end
 
+  # UnoAPI's compatibility routes are independent of the Meta Graph API version.
+  def api_version(resource)
+    return 'v14.0' if resource == :business
+    return 'v24.0' if resource == :voice
+
+    'v13.0'
+  end
+
   def pix_payment_request?(message)
     message.content_attributes&.dig('whatsapp_interactive', 'type') == 'payment_request'
   end

@@ -127,4 +127,45 @@ RSpec.describe Whatsapp::UnifiedDeliveryAttemptService do
     expect(message.reload.content_attributes).to eq(before_attributes)
     expect(message.external_error).to be_blank
   end
+
+  it 'marks a preflight failure without claiming or calling the external provider' do
+    calls = 0
+    error = ArgumentError.new('synthetic private preparation details')
+    expect do
+      described_class.new(message: message).perform(preflight: -> { raise error }) { calls += 1 }
+    end.to raise_error { |raised| expect(raised).to equal(error) }
+
+    expect(calls).to eq(0)
+    expect(message.reload).to have_attributes(status: 'failed', external_error: described_class::PREFLIGHT_ERROR)
+    expect(message.content_attributes.dig('whatsapp_transport', 'delivery_state')).to eq('preflight_failed')
+    expect(message.content_attributes.dig('whatsapp_transport', 'delivery_attempt_id')).to be_nil
+    expect(message.content_attributes.to_json).not_to include(error.message)
+  end
+
+  it 'allows one corrected preflight retry and acknowledges it without leaving a false delivery error' do
+    expect do
+      described_class.new(message: message).perform(preflight: -> { raise ArgumentError }) { raise 'must not send' }
+    end.to raise_error(ArgumentError)
+    calls = 0
+    2.times do
+      described_class.new(message: Message.find(message.id)).perform(preflight: -> { :prepared }) do
+        calls += 1
+        Message.find(message.id).update!(source_id: 'corrected-public-id')
+      end
+    end
+
+    expect(calls).to eq(1)
+    expect(message.reload).to have_attributes(status: 'sent', external_error: nil, source_id: 'corrected-public-id')
+    expect(message.content_attributes.dig('whatsapp_transport', 'delivery_state')).to eq('acknowledged')
+  end
+
+  it 'does not reset a real uncertain attempt when another job fails preflight' do
+    described_class.new(message: message).perform { nil }
+    snapshot = message.reload.attributes
+    expect do
+      described_class.new(message: message).perform(preflight: -> { raise ArgumentError }) { raise 'must not send' }
+    end.to raise_error(ArgumentError)
+
+    expect(message.reload.attributes).to eq(snapshot)
+  end
 end

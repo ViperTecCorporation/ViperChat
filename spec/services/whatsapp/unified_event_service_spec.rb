@@ -121,6 +121,23 @@ RSpec.describe Whatsapp::UnifiedEventService do
       context 'with an unresolved BSUID from the real adapter' do
         let(:fixture_name) { 'bsuid_incoming' }
 
+        it 'leaves insufficient evidence in review after the automatic retry without inventing a contact' do
+          stored = event
+          stored.update!(state: 'review', attempts: 12, next_attempt_at: nil)
+          travel 5.minutes
+          clear_enqueued_jobs
+          Whatsapp::RecheckUnifiedEventsJob.perform_now
+          expect(Whatsapp::ProcessUnifiedEventJob).to have_been_enqueued.with(stored.id).once
+          Whatsapp::ProcessUnifiedEventJob.perform_now(stored.id)
+          expect(stored.reload).to have_attributes(state: 'review', attempts: 13, next_attempt_at: nil)
+          expect(stored.payload).to be_present
+          expect(account.contacts).to be_empty
+          expect(account.messages).to be_empty
+          clear_enqueued_jobs
+          Whatsapp::RecheckUnifiedEventsJob.perform_now
+          expect(Whatsapp::ProcessUnifiedEventJob).not_to have_been_enqueued
+        end
+
         it 'ignores an explicit job before the first due time without consuming an attempt' do
           stored = event
           snapshot = stored.attributes
@@ -212,6 +229,78 @@ RSpec.describe Whatsapp::UnifiedEventService do
 
       context 'with a conflicting correlation requiring human review' do
         let(:reason) { 'correlation_conflict' }
+
+        it 'rechecks retained evidence after five minutes and completes safely through normal ingestion' do
+          contact = create(:contact, account: account, phone_number: '+5565987654321')
+          create(:contact_inbox, inbox: meta.inbox, contact: contact, source_id: '556587654321')
+          create(:contact_inbox, inbox: uno.inbox, contact: contact, source_id: '5565987654321')
+          stored = event
+          clear_enqueued_jobs
+          travel 299.seconds
+          Whatsapp::RecheckUnifiedEventsJob.perform_now
+          expect(Whatsapp::ProcessUnifiedEventJob).not_to have_been_enqueued
+          travel 1.second
+          2.times { Whatsapp::RecheckUnifiedEventsJob.perform_now }
+          expect(Whatsapp::ProcessUnifiedEventJob).to have_been_enqueued.with(stored.id).once
+          expect(stored.reload.state).to eq('pending')
+          2.times { Whatsapp::ProcessUnifiedEventJob.perform_now(stored.id) }
+          message = account.messages.where(message_type: %i[incoming outgoing]).sole
+          expect(stored.reload).to have_attributes(state: 'completed', reason: 'correlated', payload: {})
+          expect(message.conversation.contact_id).to eq(contact.id)
+          expect(Whatsapp::UnifiedMessageIngestionService.message_for(identity).id).to eq(message.id)
+          expect(account.contacts.pluck(:id)).to eq([contact.id])
+          expect(message.attachments).to be_empty
+        end
+
+        %w[completed disabled pending].each do |state|
+          it "never automatically reopens a #{state} event" do
+            stored = event
+            stored.update!(state: state)
+            snapshot = stored.attributes
+            clear_enqueued_jobs
+            travel 5.minutes
+            Whatsapp::RecheckUnifiedEventsJob.perform_now
+            expect(stored.reload.attributes).to eq(snapshot)
+            expect(Whatsapp::ProcessUnifiedEventJob).not_to have_been_enqueued
+          end
+        end
+
+        it 'does not reuse an event from an earlier activation or a disabled inbox link' do
+          stored = event
+          link.update!(enabled: false)
+          clear_enqueued_jobs
+          travel 5.minutes
+          Whatsapp::RecheckUnifiedEventsJob.perform_now
+          link.update!(enabled: true)
+          Whatsapp::RecheckUnifiedEventsJob.perform_now
+          expect(stored.reload.state).to eq('review')
+          expect(Whatsapp::ProcessUnifiedEventJob).not_to have_been_enqueued
+        end
+
+        it 'does not replay discarded payloads or reset the processing attempt count' do
+          stored = event
+          stored.update!(payload: {})
+          clear_enqueued_jobs
+          travel 5.minutes
+          Whatsapp::RecheckUnifiedEventsJob.perform_now
+          expect(Whatsapp::ProcessUnifiedEventJob).not_to have_been_enqueued
+          stored.update!(payload: value, attempts: 12)
+          travel 5.minutes
+          Whatsapp::RecheckUnifiedEventsJob.perform_now
+          expect(stored.reload).to have_attributes(state: 'pending', attempts: 12)
+        end
+
+        it 'rolls back a failed enqueue without exposing the webhook payload' do
+          stored = event
+          travel 5.minutes
+          allow(Whatsapp::ProcessUnifiedEventJob).to receive(:perform_later).and_raise(IOError, 'private payload')
+          allow(Rails.logger).to receive(:warn)
+          expect { Whatsapp::RecheckUnifiedEventsJob.perform_now }.not_to raise_error
+          expect(stored.reload.state).to eq('review')
+          expect(Rails.logger).to have_received(:warn).with(
+            { event: 'whatsapp_unified_event_recheck_failed', event_id: stored.id, error_class: 'IOError' }.to_json
+          )
+        end
 
         it 'retains the payload for review without scheduling or replaying it' do
           observed_identity = identity

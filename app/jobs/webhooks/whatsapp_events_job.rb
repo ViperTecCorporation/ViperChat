@@ -10,6 +10,9 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
   retry_on Whatsapp::UnifiedMessageIngestionService::Busy, wait: 10.seconds, attempts: 40
 
   def perform(params = {})
+    params = params.with_indifferent_access
+    return if dispatched_or_ignored?(params)
+
     channel = find_channel_from_whatsapp_business_payload(params)
 
     if channel_is_inactive?(channel)
@@ -73,7 +76,7 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
   # - "from" is the business number, "to" is the contact (reversed from regular messages)
   # - No "contacts" array in echo payload
   def message_echo_event?(params)
-    params.dig(:entry, 0, :changes, 0, :field) == 'smb_message_echoes'
+    %w[smb_message_echoes message_echoes].include?(params.dig(:entry, 0, :changes, 0, :field))
   end
 
   def handle_message_echo(channel, params)
@@ -94,10 +97,60 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
 
   private
 
+  def dispatched_or_ignored?(params)
+    dispatch_batch(params) || ignore_group_event?(params) || dispatch_management(params)
+  end
+
+  def ignore_group_event?(params)
+    channel = find_channel_from_whatsapp_business_payload(params)
+    return false unless channel
+
+    policy = Whatsapp::GroupEventPolicy.new(inbox: channel.inbox)
+    value = params.dig(:entry, 0, :changes, 0, :value) || params
+    policy.ignored?(value, field: params.dig(:entry, 0, :changes, 0, :field))
+  end
+
+  def dispatch_batch(params)
+    units = Whatsapp::WebhookEnvelope.units(params)
+    return false unless units.size > 1
+
+    units.each { |unit| self.class.perform_later(unit) }
+    true
+  end
+
+  def dispatch_management(params)
+    field = params.dig(:entry, 0, :changes, 0, :field)
+    return false unless Whatsapp::WebhookEnvelope.administrative?(field)
+
+    receipts = Whatsapp::ManagementWebhookService.new(params: params).perform
+    return true unless field == 'group_settings_update'
+
+    dispatch_group_settings(params, receipts)
+  end
+
+  def dispatch_group_settings(params, receipts)
+    channel = find_channel_from_whatsapp_business_payload(params)
+    return false unless channel&.provider == 'whatsapp_cloud'
+    return true if receipts.empty? || channel_is_inactive?(channel)
+
+    receipts.each do |receipt|
+      receipt.with_lock do
+        next if receipt.state == 'processed'
+
+        Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: channel.inbox, params: params).perform
+        receipt.update!(state: 'processed')
+      end
+    end
+    true
+  end
+
   # Echo payloads reverse the fields — `from` is the business number and `to` is the contact.
   # Returns nil for status-only webhooks so they bypass the lock.
   def contact_sender_id(params)
     value = params.dig(:entry, 0, :changes, 0, :value) || params
+    group = Array(value[:messages] || value[:message_echoes]).first.to_h[:group_id].presence || Array(value[:contacts]).first.to_h[:group_id]
+    return "group:#{group}" if group.present?
+
     return contact_sender_id_from_message_echoes(value[:message_echoes]) if value[:message_echoes].present?
 
     contact_sender_id_from_messages(value[:messages], value[:contacts])

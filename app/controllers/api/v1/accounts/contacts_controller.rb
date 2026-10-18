@@ -74,6 +74,8 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   def contactable_inboxes
     @all_contactable_inboxes = Contacts::ContactableInboxesService.new(contact: @contact).get
     @contactable_inboxes = @all_contactable_inboxes.select { |contactable_inbox| policy(contactable_inbox[:inbox]).show? }
+    @contactable_inboxes = @contactable_inboxes.filter_map { |entry| operational_contactable_inbox(entry) }
+    @contactable_inboxes.uniq! { |entry| entry[:inbox].id }
   end
 
   # TODO : refactor this method into dedicated contacts/custom_attributes controller class and routes
@@ -129,6 +131,17 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   end
 
   private
+
+  def operational_contactable_inbox(entry)
+    link = WhatsappInboxLink.for_inbox(entry[:inbox])
+    return entry if !link || Whatsapp::OperationalInboxService.group?(@contact, entry[:source_id])
+
+    principal = Whatsapp::OperationalInboxService.canonical(inbox: entry[:inbox], contact: @contact, source_id: entry[:source_id])
+    return unless policy(principal).show?
+
+    source = @contact.contact_inboxes.where(inbox: principal).order(:id).pick(:source_id)
+    entry.merge(inbox: principal, source_id: source.presence || entry[:source_id])
+  end
 
   # TODO: Move this to a finder class
   def resolved_contacts

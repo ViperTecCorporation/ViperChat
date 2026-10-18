@@ -14,6 +14,7 @@ RSpec.describe Whatsapp::UnifiedTransportService do
   end
   let(:uno) do
     create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: "+556599#{suffix}",
+                              provider_config: { 'api_key' => 'synthetic', 'url' => 'https://uno.invalid', 'phone_number_id' => 'synthetic' },
                               sync_templates: false, validate_provider_config: false)
   end
   let(:contact) { create(:contact, account: account, phone_number: '+5565987654321') }
@@ -117,6 +118,43 @@ RSpec.describe Whatsapp::UnifiedTransportService do
             expect { Whatsapp::SendOnWhatsappService.new(message: outgoing).perform }
               .to raise_error(ArgumentError, /link changed/)
             expect(outgoing.reload.source_id).to be_blank
+          end
+
+          %w[legacy unavailable].each do |reference_kind|
+            it "sends a #{reference_kind} quote once, dropping only an unavailable provider reference" do
+              source = if reference_kind == 'unavailable'
+                         'unavailable-public-reference'
+                       elsif primary_provider == 'unoapi'
+                         '43574000-c9ae-11f1-8b89-01afaf97c044'
+                       else
+                         'wamid.legacy-public-reference'
+                       end
+              quoted = create(:message, account: account, inbox: conversation.inbox, conversation: conversation, sender: contact,
+                                        message_type: :incoming, source_id: source, created_at: 2.days.ago)
+              # A recent real incoming record opens the Meta reply window.
+              create(:message, account: account, inbox: meta.inbox, conversation: conversation, sender: contact, message_type: :incoming)
+              arguments = params.deep_dup
+              arguments[:content_attributes] = { in_reply_to: quoted.id }
+              outgoing = Messages::MessageBuilder.new(agent, conversation, arguments).perform
+              ids = account.messages.order(:id).pluck(:id, :source_id)
+              requests = []
+              request = stub_request(:post, effective.provider_service.send(:messages_path)).to_return do |sent|
+                requests << JSON.parse(sent.body)
+                { status: 200, headers: { 'Content-Type' => 'application/json' }, body: { messages: [{ id: external_id }] }.to_json }
+              end
+
+              2.times { Whatsapp::SendOnWhatsappService.new(message: outgoing.reload).perform }
+
+              expected_reference = source if reference_kind == 'legacy' && primary_provider == selected_provider
+              expect(request).to have_been_requested.once
+              expect(requests.sole['context']).to eq(expected_reference ? { 'message_id' => expected_reference } : nil)
+              expect(outgoing.reload.source_id).to eq(external_id)
+              expect(outgoing.content_attributes.dig('whatsapp_transport', 'delivery_state')).to eq('acknowledged')
+              expect(outgoing.content_attributes['in_reply_to']).to eq(quoted.id)
+              expect(outgoing.content_attributes['whatsapp_quote_fallback'].present?).to eq(expected_reference.nil?)
+              expect(account.messages.order(:id).pluck(:id)).to eq(ids.map(&:first))
+              expect(quoted.reload.source_id).to eq(source)
+            end
           end
         end
       end

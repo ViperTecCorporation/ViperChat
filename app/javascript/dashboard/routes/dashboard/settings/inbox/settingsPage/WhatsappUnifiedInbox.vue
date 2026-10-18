@@ -12,6 +12,8 @@ const partnerInboxId = ref('');
 const primaryInboxId = ref('');
 const defaultProvider = ref('');
 const enabled = ref(false);
+const metaInitialMessagesEnabled = ref(false);
+const metaInitialMessagesLimit = ref(5);
 const preview = ref(null);
 const confirmed = ref(false);
 const busy = ref(false);
@@ -22,6 +24,8 @@ const payload = computed(() => ({
   primary_inbox_id: Number(primaryInboxId.value),
   default_provider: defaultProvider.value,
   enabled: enabled.value,
+  meta_initial_messages_enabled: metaInitialMessagesEnabled.value,
+  meta_initial_messages_limit: metaInitialMessagesLimit.value,
 }));
 const inboxChoices = computed(() => [
   props.inbox,
@@ -29,8 +33,21 @@ const inboxChoices = computed(() => [
     inbox => inbox.id === Number(partnerInboxId.value)
   ),
 ]);
+const validMetaInitialMessagesLimit = computed(
+  () =>
+    Number.isInteger(metaInitialMessagesLimit.value) &&
+    metaInitialMessagesLimit.value >= 0 &&
+    metaInitialMessagesLimit.value <= 1000
+);
 const valid = computed(
-  () => partnerInboxId.value && primaryInboxId.value && defaultProvider.value
+  () =>
+    partnerInboxId.value &&
+    primaryInboxId.value &&
+    defaultProvider.value &&
+    validMetaInitialMessagesLimit.value
+);
+const metaInitialMessagesId = computed(
+  () => `whatsapp-meta-initial-messages-${props.inbox.id}`
 );
 const hasConflicts = computed(() => Boolean(preview.value?.conflicts?.length));
 const locked = computed(() => Boolean(link.value?.activated_at));
@@ -53,6 +70,9 @@ function applyResponse(data) {
   primaryInboxId.value = current?.primary_inbox_id || '';
   defaultProvider.value = current?.default_provider || '';
   enabled.value = current?.enabled || false;
+  metaInitialMessagesEnabled.value =
+    current?.meta_initial_messages_enabled ?? false;
+  metaInitialMessagesLimit.value = current?.meta_initial_messages_limit ?? 5;
   preview.value = null;
   confirmed.value = false;
 }
@@ -91,6 +111,7 @@ watch(
 );
 
 function inspect() {
+  if (!valid.value) return undefined;
   return run(async () => {
     preview.value = null;
     confirmed.value = false;
@@ -102,6 +123,7 @@ function inspect() {
   });
 }
 function save() {
+  if (!valid.value) return undefined;
   return run(async () => {
     const { data } = await Inboxes.updateWhatsappLink(props.inbox.id, {
       ...payload.value,
@@ -210,6 +232,55 @@ function remove() {
             {{ $t('WHATSAPP_UNIFIED.META') }}
           </option>
         </select>
+      </SettingsFieldSection>
+      <SettingsFieldSection
+        :label="$t('WHATSAPP_UNIFIED.META_INITIAL_MESSAGES.TITLE')"
+      >
+        <div class="flex min-w-0 flex-col gap-2">
+          <label class="flex min-w-0 items-start gap-2 py-2 text-sm">
+            <input
+              v-model="metaInitialMessagesEnabled"
+              type="checkbox"
+              class="mt-1 shrink-0"
+              :aria-describedby="`${metaInitialMessagesId}-help`"
+            />
+            <span class="min-w-0 break-words">
+              {{ $t('WHATSAPP_UNIFIED.META_INITIAL_MESSAGES.ENABLED') }}
+            </span>
+          </label>
+          <p
+            :id="`${metaInitialMessagesId}-help`"
+            class="text-sm text-n-slate-11 break-words"
+          >
+            {{ $t('WHATSAPP_UNIFIED.META_INITIAL_MESSAGES.HELP') }}
+          </p>
+          <label :for="metaInitialMessagesId" class="text-sm">
+            {{ $t('WHATSAPP_UNIFIED.META_INITIAL_MESSAGES.LIMIT') }}
+          </label>
+          <input
+            :id="metaInitialMessagesId"
+            v-model.number="metaInitialMessagesLimit"
+            type="number"
+            min="0"
+            max="1000"
+            step="1"
+            class="w-full min-w-0 !m-0"
+            :aria-invalid="!validMetaInitialMessagesLimit"
+            :aria-describedby="`${metaInitialMessagesId}-limit-help`"
+          />
+          <p
+            :id="`${metaInitialMessagesId}-limit-help`"
+            class="text-sm break-words"
+            :class="
+              validMetaInitialMessagesLimit
+                ? 'text-n-slate-11'
+                : 'text-n-ruby-11'
+            "
+            :role="!validMetaInitialMessagesLimit ? 'alert' : undefined"
+          >
+            {{ $t('WHATSAPP_UNIFIED.META_INITIAL_MESSAGES.LIMIT_HELP') }}
+          </p>
+        </div>
       </SettingsFieldSection>
       <p v-if="locked" class="text-sm text-n-slate-11">
         {{ $t('WHATSAPP_UNIFIED.LOCKED') }}

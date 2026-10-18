@@ -61,6 +61,33 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
                                                  'primary_inbox_id' => meta.id, 'secondary_inbox_id' => uno.id, 'default_provider' => 'unoapi')
   end
 
+  it 'persists the optional initial Meta rule and preserves it when an older client omits the fields' do
+    put path, headers: headers, params: attributes.merge(meta_initial_messages_enabled: true, meta_initial_messages_limit: 10), as: :json
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['link']).to include('meta_initial_messages_enabled' => true, 'meta_initial_messages_limit' => 10)
+    put path, headers: headers, params: attributes.merge(default_provider: 'unoapi'), as: :json
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['link']).to include('meta_initial_messages_enabled' => true, 'meta_initial_messages_limit' => 10)
+    expect(WhatsappMetaCycleSlot.count).to eq(0)
+  end
+
+  [-1, 1001, 1.5, 'invalid'].each do |limit|
+    it "rejects an invalid initial Meta limit #{limit.inspect} without creating a link" do
+      put path, headers: headers, params: attributes.merge(meta_initial_messages_enabled: true, meta_initial_messages_limit: limit), as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(WhatsappInboxLink.count).to eq(0)
+    end
+  end
+
+  it 'binds preview confirmation to the initial Meta settings as well as the inbox pair' do
+    put path, headers: headers, params: attributes, as: :json
+    link = WhatsappInboxLink.find(response.parsed_body.dig('link', 'id'))
+    previous = Whatsapp::InboxLinkPreviewService.new(link: link).perform
+    link.assign_attributes(meta_initial_messages_enabled: true, meta_initial_messages_limit: 5)
+    service = Whatsapp::InboxLinkPreviewService.new(link: link)
+    expect(service.confirmed?(previous[:confirmation], service.perform)).to be(false)
+  end
+
   it 'requires an explicit primary and rejects cross-account partners' do
     put path, headers: headers, params: attributes.except(:primary_inbox_id), as: :json
     expect(response).to have_http_status(:unprocessable_entity)

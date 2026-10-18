@@ -85,7 +85,7 @@ class Api::V1::Accounts::Inboxes::WhatsappLinksController < Api::V1::Accounts::B
   end
 
   def permitted_params
-    params.permit(:default_provider, :enabled).to_h
+    params.permit(:default_provider, :enabled, :meta_initial_messages_enabled, :meta_initial_messages_limit).to_h
   end
 
   def authorize_pair(link)
@@ -96,7 +96,8 @@ class Api::V1::Accounts::Inboxes::WhatsappLinksController < Api::V1::Accounts::B
   def payload(link, preview = nil)
     preview ||= link ? Whatsapp::InboxLinkPreviewService.new(link: link).perform : { conflicts: [], confirmation_required: false }
     {
-      link: link&.slice(:id, :primary_inbox_id, :secondary_inbox_id, :default_provider, :enabled, :activated_at),
+      link: link&.slice(:id, :primary_inbox_id, :secondary_inbox_id, :default_provider, :enabled, :activated_at,
+                        :meta_initial_messages_enabled, :meta_initial_messages_limit),
       candidates: candidates, preview: preview
     }
   end
@@ -104,7 +105,8 @@ class Api::V1::Accounts::Inboxes::WhatsappLinksController < Api::V1::Accounts::B
   def audit_change(link)
     Rails.logger.info({
       event: 'whatsapp_inbox_link_updated', account_id: Current.account.id, actor_id: Current.user.id, link_id: link.id,
-      changes: link.previous_changes.slice('primary_inbox_id', 'secondary_inbox_id', 'default_provider', 'enabled', 'activated_at')
+      changes: link.previous_changes.slice('primary_inbox_id', 'secondary_inbox_id', 'default_provider', 'enabled', 'activated_at',
+                                           'meta_initial_messages_enabled', 'meta_initial_messages_limit')
     }.to_json)
   end
 

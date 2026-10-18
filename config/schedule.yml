@@ -98,3 +98,21 @@ whatsapp_unified_events_job:
   class: 'Whatsapp::ProcessUnifiedEventJob'
   active_job: true
   queue: low
+
+whatsapp_recheck_unified_events_job:
+  cron: '*/5 * * * *'
+  class: 'Whatsapp::RecheckUnifiedEventsJob'
+  active_job: true
+  queue: low
+
+whatsapp_expire_management_payloads_job:
+  cron: '17 * * * *'
+  class: 'Whatsapp::ExpireManagementPayloadsJob'
+  active_job: true
+  queue: housekeeping
+
+whatsapp_import_history_job:
+  cron: '*/5 * * * *'
+  class: 'Whatsapp::ImportHistoryJob'
+  active_job: true
+  queue: low

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_16_000007) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_17_000004) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1741,6 +1741,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_16_000007) do
     t.datetime "activated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "meta_initial_messages_enabled", default: false, null: false
+    t.integer "meta_initial_messages_limit", default: 5, null: false
     t.index ["account_id"], name: "index_whatsapp_inbox_links_on_account_id"
     t.index ["primary_inbox_id"], name: "idx_wa_link_active_primary", unique: true, where: "enabled"
     t.index ["primary_inbox_id"], name: "index_whatsapp_inbox_links_on_primary_inbox_id"
@@ -1748,7 +1750,30 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_16_000007) do
     t.index ["secondary_inbox_id"], name: "index_whatsapp_inbox_links_on_secondary_inbox_id"
     t.check_constraint "NOT enabled OR activated_at IS NOT NULL", name: "wa_link_activation_cutoff"
     t.check_constraint "default_provider::text = ANY (ARRAY['unoapi'::character varying::text, 'whatsapp_cloud'::character varying::text])", name: "wa_link_provider"
+    t.check_constraint "meta_initial_messages_limit >= 0 AND meta_initial_messages_limit <= 1000", name: "wa_link_initial_meta_limit"
     t.check_constraint "primary_inbox_id <> secondary_inbox_id", name: "wa_link_distinct_inboxes"
+  end
+
+  create_table "whatsapp_management_events", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.bigint "channel_id", null: false
+    t.integer "inbox_id"
+    t.string "field", null: false
+    t.string "digest", limit: 64, null: false
+    t.string "state", default: "recorded", null: false
+    t.string "reason"
+    t.jsonb "payload", default: {}, null: false
+    t.boolean "truncated", default: false, null: false
+    t.jsonb "details", default: {}, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "channel_id", "field", "digest"], name: "index_whatsapp_management_events_on_delivery", unique: true
+    t.index ["account_id"], name: "index_whatsapp_management_events_on_account_id"
+    t.index ["channel_id", "created_at"], name: "index_whatsapp_management_events_on_channel_id_and_created_at"
+    t.index ["channel_id"], name: "index_whatsapp_management_events_on_channel_id"
+    t.index ["expires_at"], name: "index_whatsapp_management_events_on_expires_at"
+    t.index ["inbox_id"], name: "index_whatsapp_management_events_on_inbox_id"
   end
 
   create_table "whatsapp_message_identities", force: :cascade do |t|
@@ -1777,6 +1802,41 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_16_000007) do
     t.index ["whatsapp_message_identity_id", "message_id"], name: "idx_wa_identity_message", unique: true
   end
 
+  create_table "whatsapp_meta_cycle_slots", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.bigint "whatsapp_inbox_link_id", null: false
+    t.integer "conversation_id", null: false
+    t.integer "message_id"
+    t.integer "cycle", null: false
+    t.datetime "activation_cutoff", null: false
+    t.integer "position", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_whatsapp_meta_cycle_slots_on_account_id"
+    t.index ["conversation_id"], name: "index_whatsapp_meta_cycle_slots_on_conversation_id"
+    t.index ["message_id"], name: "index_whatsapp_meta_cycle_slots_on_message_id", unique: true
+    t.index ["whatsapp_inbox_link_id", "conversation_id", "cycle", "activation_cutoff", "position"], name: "index_wa_meta_cycle_slots_on_budget", unique: true
+    t.index ["whatsapp_inbox_link_id"], name: "index_whatsapp_meta_cycle_slots_on_whatsapp_inbox_link_id"
+  end
+
+  create_table "whatsapp_smb_sync_requests", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.bigint "channel_id", null: false
+    t.string "phone_number_id", null: false
+    t.string "waba_id", null: false
+    t.string "sync_type", null: false
+    t.string "state", default: "prepared", null: false
+    t.string "request_id"
+    t.string "reason"
+    t.integer "history_max_age_days", null: false
+    t.datetime "dispatched_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_whatsapp_smb_sync_requests_on_account_id"
+    t.index ["channel_id"], name: "index_whatsapp_smb_sync_requests_on_channel_id"
+    t.index ["phone_number_id", "sync_type"], name: "index_whatsapp_smb_sync_requests_on_phone_type", unique: true
+  end
+
   create_table "whatsapp_stickers", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false
@@ -1789,6 +1849,23 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_16_000007) do
     t.index ["inbox_id", "blob_id"], name: "index_whatsapp_stickers_on_inbox_id_and_blob_id", unique: true
     t.index ["inbox_id", "last_used_at"], name: "index_whatsapp_stickers_on_inbox_id_and_last_used_at"
     t.index ["inbox_id"], name: "index_whatsapp_stickers_on_inbox_id"
+  end
+
+  create_table "whatsapp_template_requests", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.bigint "channel_id", null: false
+    t.string "waba_id", null: false
+    t.string "name", null: false
+    t.string "language", null: false
+    t.string "fingerprint", null: false
+    t.string "state", default: "dispatched", null: false
+    t.string "provider_template_id"
+    t.jsonb "result", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "waba_id", "name", "language"], name: "index_whatsapp_template_requests_on_identity", unique: true
+    t.index ["account_id"], name: "index_whatsapp_template_requests_on_account_id"
+    t.index ["channel_id"], name: "index_whatsapp_template_requests_on_channel_id"
   end
 
   create_table "whatsapp_unified_events", force: :cascade do |t|
@@ -1900,11 +1977,22 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_16_000007) do
   add_foreign_key "whatsapp_inbox_links", "accounts"
   add_foreign_key "whatsapp_inbox_links", "inboxes", column: "primary_inbox_id", on_delete: :cascade
   add_foreign_key "whatsapp_inbox_links", "inboxes", column: "secondary_inbox_id", on_delete: :cascade
+  add_foreign_key "whatsapp_management_events", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_management_events", "channel_whatsapp", column: "channel_id", on_delete: :cascade
+  add_foreign_key "whatsapp_management_events", "inboxes", on_delete: :cascade
   add_foreign_key "whatsapp_message_identities", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_message_identities", "channel_whatsapp", column: "channel_id", on_delete: :cascade
   add_foreign_key "whatsapp_message_identities", "inboxes", on_delete: :cascade
   add_foreign_key "whatsapp_message_identity_links", "messages", on_delete: :cascade
   add_foreign_key "whatsapp_message_identity_links", "whatsapp_message_identities", on_delete: :cascade
+  add_foreign_key "whatsapp_meta_cycle_slots", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_meta_cycle_slots", "conversations", on_delete: :cascade
+  add_foreign_key "whatsapp_meta_cycle_slots", "messages", on_delete: :nullify
+  add_foreign_key "whatsapp_meta_cycle_slots", "whatsapp_inbox_links", on_delete: :cascade
+  add_foreign_key "whatsapp_smb_sync_requests", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_smb_sync_requests", "channel_whatsapp", column: "channel_id", on_delete: :cascade
+  add_foreign_key "whatsapp_template_requests", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_template_requests", "channel_whatsapp", column: "channel_id", on_delete: :cascade
   add_foreign_key "whatsapp_unified_events", "whatsapp_inbox_links", on_delete: :cascade
   add_foreign_key "whatsapp_unified_events", "whatsapp_message_identities", on_delete: :cascade
   add_foreign_key "whatsapp_unified_message_aliases", "messages", on_delete: :cascade

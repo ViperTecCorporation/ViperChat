@@ -1,6 +1,7 @@
 # Selection is persisted before enqueue. A failed delivery is never permission to
 # try the other provider. Public operational IDs always belong to that provider.
 class Whatsapp::UnifiedTransportService
+  class UnavailableReference < ArgumentError; end
   BASE = %w[text image audio video document sticker contacts location reaction quote].freeze
   UNO_ONLY = %w[edit delete view_once pix].freeze
   PROVIDERS = %w[unoapi whatsapp_cloud].freeze
@@ -25,6 +26,7 @@ class Whatsapp::UnifiedTransportService
     raise ArgumentError, 'Unknown WhatsApp transport' unless PROVIDERS.include?(requested)
 
     message.content_attributes = message.content_attributes.to_h.merge('whatsapp_transport' => transport_metadata(message, link, requested))
+    Whatsapp::InitialMetaMessagesService.capture!(message, link: link)
   end
 
   def self.transport_message?(message)
@@ -94,10 +96,20 @@ class Whatsapp::UnifiedTransportService
     return message.source_id unless enabled?
     return message.source_id if message.content_attributes.dig('whatsapp_transport', 'inbox_id') == inbox.id
 
-    identity = reference_aliases(message).joins(:whatsapp_message_identity)
-                                         .where(whatsapp_message_identities: { inbox_id: inbox.id, account_id: message.account_id })
-                                         .first&.whatsapp_message_identity
-    identity&.external_id || raise(ArgumentError, 'Message reference is not available in the selected provider')
+    provider_reference(message) || raise(UnavailableReference, 'Message reference is not available in the selected provider')
+  end
+
+  def reply_context
+    reply_id = @message.content_attributes['in_reply_to']
+    return if reply_id.blank? || skipped_quote?(reply_id)
+
+    target = @message.conversation.messages.where(private: false).find_by(id: reply_id)
+    return omit_quote(reply_id, 'target_unavailable') unless target
+
+    reference = reference_for(target)
+    reference.present? ? { message_id: reference } : omit_quote(reply_id, 'provider_reference_unavailable')
+  rescue UnavailableReference
+    omit_quote(reply_id, 'provider_reference_unavailable')
   end
 
   def register_source_id!(external_id)
@@ -117,6 +129,39 @@ class Whatsapp::UnifiedTransportService
   end
 
   private
+
+  def provider_reference(message)
+    identity = reference_aliases(message).joins(:whatsapp_message_identity)
+                                         .where(whatsapp_message_identities: { inbox_id: inbox.id, account_id: message.account_id })
+                                         .first&.whatsapp_message_identity
+    identity&.external_id.presence || legacy_reference(message)
+  end
+
+  def legacy_reference(message)
+    return unless message.inbox_id == inbox.id && message.created_at < Time.iso8601(@metadata.fetch('activation_cutoff'))
+    return if message.content_attributes['whatsapp_transport'].present? || message.content_attributes['whatsapp_unified_message_id'].present?
+
+    source = message.source_id.to_s
+    pattern = channel.provider == 'unoapi' ? /\A[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\z/i : /\Awamid\./
+    source if source.match?(pattern)
+  end
+
+  def skipped_quote?(reply_id)
+    fallback = @message.content_attributes['whatsapp_quote_fallback'].to_h
+    fallback['in_reply_to'].to_s == reply_id.to_s && fallback['provider'] == @metadata['provider']
+  end
+
+  def omit_quote(reply_id, reason)
+    @message.with_lock do
+      attributes = @message.content_attributes.deep_dup
+      attributes['whatsapp_quote_fallback'] = {
+        'in_reply_to' => reply_id, 'provider' => @metadata.fetch('provider'),
+        'reason' => reason, 'recorded_at' => Time.current.iso8601(6)
+      }
+      @message.update!(content_attributes: attributes)
+    end
+    nil
+  end
 
   def current_link?(link, selected)
     link && selected && link.id == @metadata['link_id'] && selected.id == @metadata['inbox_id'] &&

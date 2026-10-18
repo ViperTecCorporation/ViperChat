@@ -50,6 +50,19 @@ class Whatsapp::UnifiedMessageAliasService
       end
   end
 
+  # Read-only proof for the media reconciler. It may retain this one file, never
+  # use an incomplete peer identity to replace/purge another stored copy.
+  def verified_recipientless_copy?
+    return false unless @record.message && recipientless_uno?
+
+    comparison = Whatsapp::MessageIdentityCorrelationService.new(identity: @identity, partner_inbox: @link.partner_for(@inbox)).perform
+    return false unless comparison[:status] == 'participant_identity_pending' && comparison[:candidate_identity_ids].one?
+
+    row = @record.aliases.find_by(whatsapp_message_identity_id: comparison[:candidate_identity_ids].sole, message_id: @record.message_id)
+    row && verified_outbound_alias?(row) &&
+      @record.participant_key == Whatsapp::InboxLinkPhoneService.normalize(@record.message.conversation.contact.phone_number)
+  end
+
   private
 
   def outbound_counterparts
@@ -62,7 +75,22 @@ class Whatsapp::UnifiedMessageAliasService
 
   def compatible_outbound_alias?
     rows = outbound_counterparts
-    rows.empty? || (rows.one? && @comparison[:status] == 'matched' && verified_outbound_alias?(rows.first))
+    rows.empty? || (rows.one? && compatible_outbound_comparison? && verified_outbound_alias?(rows.first))
+  end
+
+  def compatible_outbound_comparison?
+    return true if @comparison[:status] == 'matched'
+
+    @comparison[:status] == 'participant_identity_pending' && recipientless_uno?
+  end
+
+  def recipientless_uno?
+    return false unless @identity.provider == 'unoapi' && @record.direction == 'outgoing'
+
+    # A missing Uno recipient is not contradictory evidence. The exact Meta API
+    # alias must still prove contact, business, link generation and public ID.
+    participants = @identity.observations.fetch('participants', {})
+    %w[to recipient_id to_user_id to_parent_user_id].all? { |key| participants[key].blank? }
   end
 
   def adopt_outbound_counterpart

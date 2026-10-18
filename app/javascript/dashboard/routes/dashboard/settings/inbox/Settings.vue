@@ -29,6 +29,8 @@ import WeeklyAvailability from './components/WeeklyAvailability.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
 import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
 import WhatsappUnifiedInbox from './settingsPage/WhatsappUnifiedInbox.vue';
+import WhatsappTemplates from './components/WhatsappTemplates.vue';
+import { useAdmin } from 'dashboard/composables/useAdmin';
 import VoiceConfigurationPage from './settingsPage/VoiceConfigurationPage.vue';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
@@ -61,6 +63,7 @@ export default {
     CollaboratorsPage,
     ConfigurationPage,
     WhatsappUnifiedInbox,
+    WhatsappTemplates,
     VoiceConfigurationPage,
     CustomerSatisfactionPage,
     FacebookReauthorize,
@@ -96,7 +99,7 @@ export default {
   },
   mixins: [inboxMixin],
   setup() {
-    return { v$: useVuelidate() };
+    return { v$: useVuelidate(), ...useAdmin() };
   },
   data() {
     return {
@@ -234,6 +237,13 @@ export default {
         visibleToAllChannelTabs.push({
           key: 'import-history',
           name: this.$t('INBOX_MGMT.GMAIL_HISTORY.TAB'),
+        });
+      }
+
+      if (this.isAWhatsAppCloudChannel && this.isAdmin) {
+        visibleToAllChannelTabs.push({
+          key: 'whatsapp-templates',
+          name: this.$t('WHATSAPP_TEMPLATE_CREATION.TITLE'),
         });
       }
 
@@ -893,7 +903,7 @@ export default {
         />
         <WhatsappManualMigrationBanner
           v-if="showWhatsAppManualMigration"
-          class="mx-6 mb-6"
+          class="mx-3 mb-6 min-w-0 flex-wrap sm:mx-6 [&>div]:min-w-0 [&>div]:max-w-full [&_button]:whitespace-normal"
           :class="bannerMaxWidth"
           @start="openWhatsAppManualMigrationDialog"
         />
@@ -1532,8 +1542,15 @@ export default {
         <div v-if="selectedTabKey === 'unoApiConfiguration'">
           <UnoapiConfiguration :inbox="inbox" />
         </div>
+        <WhatsappTemplates
+          v-if="isAWhatsAppCloudChannel && isAdmin"
+          v-show="selectedTabKey === 'whatsapp-templates'"
+          :inbox-id="inbox.id"
+          :active="selectedTabKey === 'whatsapp-templates'"
+        />
         <div v-if="selectedTabKey === 'whatsapp-health'">
           <AccountHealth
+            :inbox-id="inbox.id"
             :health-data="healthData"
             :is-registering-webhook="isRegisteringWebhook"
             @register-webhook="registerWebhook"

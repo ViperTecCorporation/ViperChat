@@ -48,7 +48,7 @@ if ARGV.first == 'cleanup'
   drain_cleanup.call
   puts({ cleaned_account_id: account.id }.to_json) # rubocop:disable Rails/Output
 else
-  raise 'Specify seed, seed_schedule or cleanup' unless %w[seed seed_schedule].include?(ARGV.first)
+  raise 'Specify seed, seed_schedule, seed_compose or cleanup' unless %w[seed seed_schedule seed_compose].include?(ARGV.first)
 
   password = "Qa!#{SecureRandom.hex(18)}9a"
   account = FactoryBot.create(:account, name: 'QA temporário — revisão unificada', locale: 'pt_BR')
@@ -70,7 +70,12 @@ else
   WhatsappUnifiedEvent.create!(whatsapp_inbox_link: link, whatsapp_message_identity: identity,
                                activation_cutoff: link.activated_at, state: 'review', reason: 'identity_pending', attempts: 12,
                                payload: { metadata: { display_phone_number: meta.phone_number.delete_prefix('+') }, messages: [] })
-  contact = FactoryBot.create(:contact, account: account, name: 'Contato sintético QA')
+  contact_attributes = { account: account, name: 'Contato sintético QA' }
+  contact_attributes[:phone_number] = '+5565987654321' if ARGV.first == 'seed_compose'
+  contact = FactoryBot.create(:contact, **contact_attributes)
+  target_contact = if ARGV.first == 'seed_compose'
+                     FactoryBot.create(:contact, account: account, name: 'QA destinatário unificado', phone_number: '+5565987654322')
+                   end
   conversation = FactoryBot.create(:conversation, account: account, inbox: uno.inbox, contact: contact)
   FactoryBot.create(:message, account: account, inbox: uno.inbox, conversation: conversation, sender: admin,
                               content: 'Mensagem sintética sem envio ao provedor', message_type: :outgoing,
@@ -86,6 +91,7 @@ else
   end
   # Ephemeral fixture credentials go only to the caller, never Rails logs.
   result = { account_id: account.id, inbox_id: uno.inbox.id, email: admin.email, password: password,
-             schedule_id: scheduled&.id, scheduled_at: scheduled&.scheduled_at }
+             schedule_id: scheduled&.id, scheduled_at: scheduled&.scheduled_at,
+             source_conversation_id: conversation.display_id, target_contact_id: target_contact&.id, meta_inbox_id: meta.inbox.id }
   puts(result.to_json) # rubocop:disable Rails/Output
 end

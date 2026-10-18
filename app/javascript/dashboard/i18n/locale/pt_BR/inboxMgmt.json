@@ -998,11 +998,124 @@
     },
     "CHANNEL_PREFERENCES": "Preferências do Canal",
     "WIDGET_FEATURES": "Recursos do widget",
+    "META_WEBHOOK_EVENTS": {
+      "TITLE": "Eventos de webhook da Meta",
+      "GRAPH_VERSION": "Versão da Graph API",
+      "SESSION_VERSION": "Formato dos dados da sessão do cadastro incorporado (sessionInfoVersion)",
+      "SUBSCRIPTION_NOTICE": "Os campos suportados precisam ser habilitados no painel do aplicativo da Meta, com as permissões necessárias. Esta seção não inscreve campos nem altera configurações da Meta automaticamente.",
+      "SUPPORTED_FIELDS": "Campos técnicos suportados",
+      "REFRESH": "Atualizar eventos",
+      "RETRY": "Tentar novamente",
+      "LOADING": "Carregando eventos da Meta…",
+      "ERROR": "Não foi possível carregar os eventos da Meta. Tente novamente.",
+      "UNAVAILABLE": "Indisponível",
+      "HISTORY_TITLE": "Configurações de histórico da coexistência",
+      "IGNORE_HISTORY": "Ignorar mensagens de histórico",
+      "IGNORE_GROUPS": "Ignorar grupos",
+      "IGNORE_GROUPS_NOTICE": "Não processar mensagens, recibos e alterações de grupos recebidos por este canal. Não exclui histórico existente. Assinar eventos não garante disponibilidade de grupos. Segundo a documentação da 360dialog, a API oficial de grupos não está disponível para números em coexistência.",
+      "MAX_AGE_DAYS": "Idade máxima das mensagens em dias (1–3650)",
+      "INVALID_DAYS": "Informe um número inteiro entre 1 e 3650 dias.",
+      "CUTOFF_NOTICE": "Como no ViperConnect, ignorar histórico vem ativado por padrão; o limite de idade padrão é de 7 dias. Ao desmarcar, as mensagens recebidas no histórico dentro dos dias configurados são importadas automaticamente, sem duplicar mensagens, contatos ou mídias. Isso não apaga mensagens existentes.",
+      "REVIEW_NOTICE": "A importação não gera notificações nem reabre conversas resolvidas. Identificações ambíguas continuam pendentes, sem forçar a associação a um contato. A sincronização de contatos (smb_app_state_sync) continua apenas para revisão nesta etapa, sem sincronização automática de contatos.",
+      "SAVE": "Salvar configurações de histórico",
+      "SAVED": "Configurações de histórico salvas.",
+      "SAVE_ERROR": "Não foi possível salvar as configurações de histórico. Tente novamente.",
+      "RECENT_EVENTS": "Eventos recebidos recentes (até 25)",
+      "EMPTY": "Nenhum evento recebido nesta caixa de entrada ainda.",
+      "RECEIVED_AT": "Recebido em {date}",
+      "UNKNOWN_STATE": "Aguardando revisão (situação desconhecida)",
+      "UNKNOWN_REASON": "Requer revisão",
+      "STATES": {
+        "recorded": "Recebido e registrado",
+        "processed": "Processado",
+        "pending_import": "Importação pendente",
+        "review": "Requer revisão"
+      },
+      "REASONS": {
+        "history_ignored": "Histórico ignorado pelas configurações da caixa",
+        "user_choice_required": "Requer revisão do administrador",
+        "automatic_import_pending": "Aguardando processamento da importação automática",
+        "import_identity_pending": "Identificação ambígua ou incompleta; aguardando evidências seguras",
+        "import_failed": "Falha na importação; confira o estado do processamento",
+        "unsupported_history_message": "Tipo de mensagem do histórico ainda não suportado",
+        "unknown_field": "Campo de evento desconhecido",
+        "unsupported_history_format": "Formato do histórico requer revisão",
+        "payload_expired": "Registro retido expirado",
+        "payload_too_large": "Registro excede o limite de tamanho para retenção",
+        "reauthorization_required": "Requer nova autorização na Meta"
+      },
+      "DETAILS": {
+        "messages_count": "Mensagens informadas",
+        "contacts_count": "Contatos informados",
+        "history_count": "Lotes de histórico informados",
+        "threads_count": "Conversas informadas",
+        "kept_messages_count": "Mensagens dentro do limite de idade",
+        "imported_messages_count": "Mensagens importadas",
+        "duplicate_messages_count": "Mensagens duplicadas evitadas",
+        "pending_messages_count": "Mensagens pendentes",
+        "failed_messages_count": "Mensagens com falha na importação",
+        "dropped_messages_count": "Mensagens excluídas pelo limite de idade",
+        "invalid_messages_count": "Mensagens com data e hora inválidas",
+        "max_daily_conversations_per_business": "Limite de mensagens da empresa informado",
+        "quality_rating": "Qualidade informada"
+      },
+      "QUALITY": {
+        "GREEN": "Alta",
+        "YELLOW": "Média",
+        "RED": "Baixa",
+        "UNKNOWN": "Desconhecida"
+      }
+    },
+    "ACCOUNT_INSIGHTS": {
+      "TITLE": "Indicadores da Meta",
+      "DESCRIPTION": "Métricas informativas somente do número de telefone selecionado nesta caixa de entrada. Não alteram o envio nem o roteamento de mensagens.",
+      "PERIOD": "Período",
+      "UTC_PERIOD": "Somente dias completos em UTC; o dia de hoje não está incluído.",
+      "DAYS": "Últimos {days} dias",
+      "REFRESH": "Atualizar indicadores",
+      "RETRY": "Tentar novamente",
+      "LOADING": "Carregando indicadores da Meta…",
+      "ERROR": "Não foi possível carregar os indicadores da Meta. Tente novamente.",
+      "UNAVAILABLE": "Indisponível",
+      "FETCHED_AT": "Dados consultados em {date}",
+      "MESSAGES": "Mensagens",
+      "PRICING": "Custos de mensagens",
+      "CALLS": "Chamadas",
+      "PRICING_CATEGORIES": "Categorias de cobrança",
+      "CATEGORIES": {
+        "MARKETING": "Marketing",
+        "UTILITY": "Utilidade",
+        "AUTHENTICATION": "Autenticação",
+        "AUTHENTICATION_INTERNATIONAL": "Autenticação internacional",
+        "SERVICE": "Serviço",
+        "UNKNOWN": "Categoria indisponível"
+      },
+      "METRICS": {
+        "SENT": "Enviadas",
+        "DELIVERED": "Entregues",
+        "RECEIVED": "Recebidas",
+        "VOLUME": "Volume informado",
+        "COUNT": "Chamadas informadas",
+        "COST": "Custo aproximado",
+        "FREE_CUSTOMER_SERVICE": "Volume gratuito de atendimento",
+        "FREE_ENTRY_POINT": "Volume gratuito de ponto de entrada",
+        "REGULAR": "Volume regular (pago)",
+        "AVERAGE_DURATION": "Duração média (unidade informada pela Meta)",
+        "BUSINESS_INITIATED": "Chamadas iniciadas pela empresa",
+        "USER_INITIATED": "Chamadas iniciadas pelo usuário"
+      },
+      "COST_NOTICE": "Os custos são valores aproximados informados pela Meta, não uma fatura. Dados ou moeda ausentes aparecem como indisponíveis, não como zero. A disponibilidade depende das permissões e dos relatórios da Meta."
+    },
     "ACCOUNT_HEALTH": {
       "TITLE": "Gerencie sua conta do WhatsApp",
       "DESCRIPTION": "Revise o status da sua conta do WhatsApp, os limites de mensagens e a qualidade. Atualize as configurações ou resolva problemas, se necessário",
       "GO_TO_SETTINGS": "Ir para o Meta Business Manager",
       "NO_DATA": "Dados de saúde não estão disponíveis",
+      "FETCHED_AT": "Dados de saúde consultados em {date}",
+      "LIMIT_SCOPE": {
+        "PORTFOLIO": "Limite compartilhado do portfólio empresarial, não uma franquia separada deste número.",
+        "UNKNOWN": "Escopo do limite indisponível. Não considere este valor uma franquia por número de telefone."
+      },
       "FIELDS": {
         "DISPLAY_PHONE_NUMBER": {
           "LABEL": "Número de telefone exibido",
@@ -1022,7 +1135,7 @@
         },
         "MESSAGING_LIMIT_TIER": {
           "LABEL": "Nível de limite de mensagens",
-          "TOOLTIP": "Limite diário de mensagens da sua conta"
+          "TOOLTIP": "Limite informado pela Meta de clientes únicos alcançados com mensagens iniciadas pela empresa em uma janela móvel de 24 horas; não é uma cota de mensagens nem uma franquia gratuita."
         },
         "ACCOUNT_MODE": {
           "LABEL": "Modo da conta",
@@ -1034,10 +1147,11 @@
           "TIER_250": "250 clientes por 24 h",
           "TIER_1000": "1 mil clientes por 24 h",
           "TIER_1K": "1 mil clientes por 24 h",
+          "TIER_2K": "2 mil clientes por 24 h",
           "TIER_10K": "10K clientes a cada 24h",
           "TIER_100K": "100K clientes a cada 24h",
           "TIER_UNLIMITED": "Clientes ilimitados a cada 24h",
-          "UNKNOWN": "Classificação não disponível"
+          "UNKNOWN": "Limite de mensagens indisponível"
         },
         "STATUSES": {
           "APPROVED": "Aceito",
@@ -1045,11 +1159,13 @@
           "AVAILABLE_WITHOUT_REVIEW": "Disponível sem revisão",
           "REJECTED": "Rejeitado",
           "DECLINED": "Sandbox",
-          "NON_EXISTS": "Não existe"
+          "NON_EXISTS": "Não existe",
+          "UNKNOWN": "Status indisponível"
         },
         "MODES": {
           "SANDBOX": "Sandbox",
-          "LIVE": "Em tempo real"
+          "LIVE": "Em tempo real",
+          "UNKNOWN": "Modo da conta indisponível"
         }
       },
       "WEBHOOK": {

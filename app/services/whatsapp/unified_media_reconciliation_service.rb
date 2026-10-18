@@ -71,8 +71,17 @@ class Whatsapp::UnifiedMediaReconciliationService
 
   def trusted_pair?
     return false unless @identities.size == 2 && @identities.map(&:inbox_id).sort == [@link.primary_inbox_id, @link.secondary_inbox_id].sort
+    return true if verified_recipientless_copy?
 
     @identities.all? { |identity| trusted_identity?(identity) }
+  end
+
+  def verified_recipientless_copy?
+    return false unless copy_ids == [@record.message_id]
+    return false unless @identities.all? { |identity| matching_observation?(identity) && recognized_mapping?(identity) }
+
+    identity = @identities.find { |item| item.provider == 'unoapi' }
+    identity && Whatsapp::UnifiedMessageAliasService.new(record: @record, identity: identity, inbox: identity.inbox).verified_recipientless_copy?
   end
 
   def trusted_identity?(identity)
@@ -125,6 +134,8 @@ class Whatsapp::UnifiedMediaReconciliationService
   end
 
   def matching_contact?(message)
+    return true if message.id == @record.message_id && verified_recipientless_copy?
+
     @identities.all? do |identity|
       comparison = Whatsapp::MessageIdentityCorrelationService.new(identity: identity, partner_inbox: @link.partner_for(identity.inbox))
       comparison.contact_matches_participant?(message.conversation.contact)

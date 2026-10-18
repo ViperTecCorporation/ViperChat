@@ -53,6 +53,64 @@ RSpec.describe Whatsapp::MessageIdentityCorrelationService do
         expect(service.perform[:status]).to eq('conflicting_observations')
         expect(service.safe_for_unification?).to be(false)
       end
+
+      context 'with the production phone/hosted-LID receipt' do
+        let!(:business_contact) do
+          number = Whatsapp::InboxLinkPhoneService.normalize(identity.channel.phone_number)
+          create(:contact, account: account, phone_number: "+#{number}", bsuid: '182222711709908@lid')
+        end
+
+        before do
+          observations = identity.observations.deep_dup
+          observations['statuses'] = { 'sent' => '1792229343' }
+          observations['participants']['recipient_id'] = '5565987654321'
+          observations['conflicting_observations'] = {
+            'participants.recipient_id' => ['5565987654321', '182222711709908@hosted.lid']
+          }
+          identity.update!(observations: observations)
+        end
+
+        it 'accepts only the proven Uno business-device receipt without changing evidence' do
+          snapshot = identity.attributes
+          expected = provider == 'unoapi' ? 'matched' : 'conflicting_observations'
+
+          expect(service.perform[:status]).to eq(expected)
+          expect(identity.reload.attributes).to eq(snapshot)
+        end
+
+        it 'keeps an unrelated LID in review rather than guessing a phone' do
+          business_contact.update!(phone_number: '+5511987654321')
+
+          expect(service.perform[:status]).to eq('conflicting_observations')
+        end
+
+        it 'does not bypass conflicting directions when the receipt alias is proven' do
+          identity.update!(observations: identity.observations.deep_merge('conflicting_observations' => { 'direction' => %w[incoming outgoing] }))
+
+          expect(service.perform[:status]).to eq('conflicting_observations')
+        end
+
+        it 'does not trust an alias from another account' do
+          business_contact.update!(account: create(:account))
+
+          expect(service.perform[:status]).to eq('conflicting_observations')
+        end
+
+        it 'does not apply the device exception to a message without receipts' do
+          identity.update!(observations: identity.observations.except('statuses'))
+
+          expect(service.perform[:status]).to eq('conflicting_observations')
+        end
+
+        it 'blocks an ambiguous established LID instead of choosing the first contact' do
+          other = create(:contact, account: account, phone_number: '+5511987654321')
+          legacy_alias = create(:contact_inbox, inbox: identity.inbox, contact: other, source_id: '5511987654321')
+          # Existing installations contain LID aliases predating today's validation.
+          legacy_alias.update_column(:source_id, '182222711709908@hosted.lid')
+
+          expect(service.perform[:status]).to eq('conflicting_observations')
+        end
+      end
     end
   end
 end

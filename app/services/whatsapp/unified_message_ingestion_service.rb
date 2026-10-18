@@ -1,16 +1,19 @@
 # A durable reservation precedes ingestion/download. Existing public IDs are aliases,
 # never rewritten. Events without reliable scope/evidence keep their legacy path.
 class Whatsapp::UnifiedMessageIngestionService
+  include Whatsapp::HistoryIngestionSupport
+
   class Busy < StandardError; end
-  SUPPORTED = %w[text image video audio document sticker location].freeze
+  SUPPORTED = %w[text image video audio document sticker location contacts].freeze
 
   attr_reader :link, :record
 
-  def initialize(inbox:, value:)
+  def initialize(inbox:, value:, historical: false)
     @inbox = inbox
     @value = value.to_h.with_indifferent_access
     @link = WhatsappInboxLink.for_inbox(inbox)
     @activation_cutoff = @link&.activated_at
+    @historical = historical
     @event = Array(@value[:messages] || @value[:message_echoes]).first&.with_indifferent_access
   end
 
@@ -21,7 +24,7 @@ class Whatsapp::UnifiedMessageIngestionService
     historical = Whatsapp::UnifiedHistoricalEventService.new(inbox: @inbox, identity: @identity).perform
     return historical.message if historical
     return if defer_changed_link?
-    return yield(nil) unless eligible?
+    return legacy_ingestion(&) unless eligible?
     return if defer_unready?
 
     ingest_reserved(&)
@@ -33,11 +36,11 @@ class Whatsapp::UnifiedMessageIngestionService
   def ingest_reserved
     reserve
     return defer_event('correlation_conflict') unless compatible?
-    return record.message.tap { alias_service.merge_status } if acquire
+    return record.message.tap { merge_observed_status } if acquire
 
     message = recovered_message || yield(self)
     complete(message)
-    alias_service.merge_status if message
+    merge_observed_status if message
     message
   end
 
@@ -53,6 +56,7 @@ class Whatsapp::UnifiedMessageIngestionService
   def acquire
     @token = SecureRandom.uuid
     record.with_lock do
+      adopt_history_counterpart
       alias_service.link_identity
       resolved_contact_link if record.message_id
       next true if record.message_id
@@ -110,8 +114,12 @@ class Whatsapp::UnifiedMessageIngestionService
   private
 
   def synchronize_mapped_message(message)
-    alias_service.merge_status if record
+    merge_observed_status if record
     message
+  end
+
+  def merge_observed_status
+    alias_service.merge_status unless @historical
   end
 
   def observed_identity
@@ -133,6 +141,10 @@ class Whatsapp::UnifiedMessageIngestionService
   end
 
   def defer_event(reason)
+    # The history receipt has its own durable retry. Never replay history through
+    # the live-event worker, which would enable notifications and bots.
+    return if @historical
+
     Whatsapp::UnifiedEventService.defer(link: link, identity: @identity, value: @value, reason: reason)
     nil
   end
@@ -157,17 +169,7 @@ class Whatsapp::UnifiedMessageIngestionService
   end
 
   def awaiting_outbound_response?
-    return false unless @identity.observations['direction'] == 'outgoing'
-
-    pending_outbound_messages?
-  end
-
-  def pending_outbound_messages?
-    link.primary_inbox.messages.outgoing.where(source_id: nil, status: %i[progress sent], private: false, delivery_destination: 'channel')
-        .where('created_at >= ?', link.activated_at).any? do |message|
-      metadata = message.content_attributes['whatsapp_transport']
-      metadata && metadata['link_id'] == link.id && metadata['activation_cutoff'] == link.activated_at.iso8601(6)
-    end
+    Whatsapp::UnifiedOutboundWaitService.new(link: link, identity: @identity, participant: participant).waiting?
   end
 
   def principal_contact_link(primary, source_id, contact)
@@ -203,7 +205,7 @@ class Whatsapp::UnifiedMessageIngestionService
 
   def supported_event?
     active_link? && @event && SUPPORTED.include?(@event[:type]) && @event[:message_type].blank? &&
-      @event[:timestamp].to_s.match?(/\A\d+\z/) && Time.zone.at(@event[:timestamp].to_i) >= link.activated_at
+      @event[:timestamp].to_s.match?(/\A\d+\z/) && eligible_timestamp?
   end
 
   def active_link?

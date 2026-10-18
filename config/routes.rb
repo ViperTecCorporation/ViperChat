@@ -325,6 +325,9 @@ Rails.application.routes.draw do
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]
           resource :branded_email_layout, only: [:show, :update]
           resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
+            resources :whatsapp_templates, only: [:index, :create], controller: 'inbox_whatsapp_templates' do
+              post :sync, on: :collection
+            end
             resource :whatsapp_link, only: [:show, :update, :destroy], controller: 'inboxes/whatsapp_links' do
               post :preview, on: :member
               resources :reviews, only: [:index], controller: 'inboxes/whatsapp_link_reviews' do
@@ -339,6 +342,9 @@ Rails.application.routes.draw do
             delete :avatar, on: :member
             post :sync_templates, on: :member
             get :health, on: :member
+            get :insights, on: :member
+            get :management_events, on: :member
+            patch :coexistence_settings, on: :member
             post :register_webhook, on: :member
             post :reset_secret, on: :member
             if ChatwootApp.enterprise?

@@ -51,7 +51,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def web_invitation_messages_path
-    "#{phone_id_path('v24.0')}/messages"
+    messages_path
   end
 
   def send_template(phone_number, template_info, message)
@@ -150,7 +150,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def media_url(media_id)
-    "#{api_base_path}/v13.0/#{media_id}"
+    "#{api_base_path}/#{api_version(:media)}/#{media_id}"
   end
 
   def send_message_update(message)
@@ -225,9 +225,12 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     whatsapp_channel.provider_config['url'] || ENV.fetch('WHATSAPP_CLOUD_BASE_URL', 'https://graph.facebook.com')
   end
 
-  # TODO: See if we can unify the API versions and for both paths and make it consistent with out facebook app API versions
-  def phone_id_path(version = 'v13.0')
-    "#{api_base_path}/#{version}/#{whatsapp_channel.provider_config['phone_number_id']}"
+  def api_version(_resource)
+    Whatsapp::ApiVersion.current
+  end
+
+  def phone_id_path(resource = :phone)
+    "#{api_base_path}/#{api_version(resource)}/#{whatsapp_channel.provider_config['phone_number_id']}"
   end
 
   def messages_path
@@ -235,7 +238,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def business_account_path
-    "#{api_base_path}/v14.0/#{whatsapp_channel.provider_config['business_account_id']}"
+    "#{api_base_path}/#{api_version(:business)}/#{whatsapp_channel.provider_config['business_account_id']}"
   end
 
   def log_transfer_failure(check, response)
@@ -339,7 +342,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     request_body[:mentions] = mention_ids if mention_ids.present?
 
     response = HTTParty.post(
-      "#{phone_id_path(voice_message?(type, attachment) ? 'v24.0' : 'v13.0')}/messages",
+      "#{phone_id_path(voice_message?(type, attachment) ? :voice : :phone)}/messages",
       headers: api_headers,
       body: outgoing_message_payload(request_body, message).to_json
     )
@@ -485,13 +488,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def whatsapp_reply_context(message)
-    if message.content_attributes['whatsapp_transport'].present?
-      reply_id = message.content_attributes['in_reply_to']
-      return nil if reply_id.blank?
+    return Whatsapp::UnifiedTransportService.new(message: message).reply_context if message.content_attributes['whatsapp_transport'].present?
 
-      target = message.conversation.messages.where(private: false).find(reply_id)
-      return { message_id: Whatsapp::UnifiedTransportService.new(message: message).reference_for(target) }
-    end
     reply_to = message.content_attributes[:in_reply_to_external_id]
     if reply_to.blank?
       in_reply_to_id = message.content_attributes[:in_reply_to]

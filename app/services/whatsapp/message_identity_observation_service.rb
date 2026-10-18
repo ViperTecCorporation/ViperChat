@@ -1,6 +1,9 @@
 # Observation only: never replaces source_id, sends messages or joins inboxes.
 class Whatsapp::MessageIdentityObservationService
-  PARTICIPANT_KEYS = %w[from to from_user_id to_user_id from_parent_user_id to_parent_user_id recipient_id recipient_type].freeze
+  PARTICIPANT_KEYS = %w[
+    from to from_user_id to_user_id from_parent_user_id to_parent_user_id
+    recipient_id recipient_user_id recipient_parent_user_id recipient_type group_id
+  ].freeze
   REFERENCE_KEYS = %w[id message_id original_message_id provider_message_id].freeze
 
   def initialize(inbox:, value:, outgoing_echo: false)
@@ -54,7 +57,7 @@ class Whatsapp::MessageIdentityObservationService
 
     scope = identity_scope(event[:id])
     # Legacy Uno events need no new row, but may complete a pending observation.
-    return if @inbox.channel.provider == 'unoapi' && event[:provider_message_id].blank? && !scope.exists?
+    return if legacy_unobserved_event?(event, scope)
 
     identity = scope.create_or_find_by!({})
     identity.with_lock do
@@ -72,6 +75,14 @@ class Whatsapp::MessageIdentityObservationService
   def observable_event?(event, kind)
     # Sparse delivery echoes are not new messages and must not replace direction.
     event[:id].present? && (kind == :statuses || event[:type].present?)
+  end
+
+  def group_event?(event)
+    event[:group_id].present? || Array(@value[:contacts]).any? { |contact| contact[:group_id].present? }
+  end
+
+  def legacy_unobserved_event?(event, scope)
+    @inbox.channel.provider == 'unoapi' && event[:provider_message_id].blank? && !scope.exists? && !group_event?(event)
   end
 
   def identity_scope(external_id)
@@ -114,7 +125,7 @@ class Whatsapp::MessageIdentityObservationService
     result['contract_version'] = 1
     track_conflicts(result, result, { 'business_number' => @inbox.channel.phone_number })
     result['business_number'] ||= @inbox.channel.phone_number
-    participants = event.slice(*PARTICIPANT_KEYS).stringify_keys.compact_blank
+    participants = observation_participants(result, event, kind)
     track_conflicts(result, result.fetch('participants', {}), participants, 'participants.')
     result['participants'] = result.fetch('participants', {}).merge(participants)
     if kind == :statuses
@@ -123,6 +134,18 @@ class Whatsapp::MessageIdentityObservationService
       merge_message_observation(result, event, kind)
     end
     result
+  end
+
+  def observation_participants(result, event, kind)
+    participants = event.slice(*PARTICIPANT_KEYS).stringify_keys.compact_blank
+    group = Whatsapp::GroupPayloadNormalizer.new(processed_params: @value, inbox: @inbox).perform unless kind == :statuses
+    participants['group_id'] = group[:group_source_id] if group && group[:group]
+    return participants unless kind == :statuses && result['message_type'].present?
+
+    previous = result.fetch('participants', {}).merge(result.fetch('receipt_participants', {}))
+    track_conflicts(result, previous, participants, 'participants.')
+    result['receipt_participants'] = result.fetch('receipt_participants', {}).merge(participants)
+    {}
   end
 
   def merge_message_observation(result, event, kind)

@@ -42,7 +42,8 @@ class Whatsapp::InboxLinkPreviewService
   end
 
   def configuration
-    [@link.id, @link.account_id, @link.primary_inbox_id, @link.secondary_inbox_id, @link.default_provider, @link.enabled]
+    [@link.id, @link.account_id, @link.primary_inbox_id, @link.secondary_inbox_id, @link.default_provider, @link.enabled,
+     @link.meta_initial_messages_enabled, @link.meta_initial_messages_limit]
   end
 
   def verifier

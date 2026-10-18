@@ -1,5 +1,13 @@
 {
   "WHATSAPP_UNIFIED": {
+    "COMPOSE_TRANSPORT_HELP": "The inbox keeps the conversation history. Choose the sending provider separately; Meta requires an approved template for a new conversation.",
+    "META_INITIAL_MESSAGES": {
+      "TITLE": "Initial messages via Meta",
+      "ENABLED": "Prioritize Meta at the start of each attendance cycle",
+      "HELP": "When enabled, the first N eligible public outbound messages in each attendance cycle use Meta, regardless of the provider requested in the editor. The editor selection stays unchanged. Outside Meta's messaging window or for unsupported resources, the compatible selected transport is retained. After a send attempt, there is no duplicate send or automatic fallback to another provider.",
+      "LIMIT": "Initial messages per attendance cycle",
+      "LIMIT_HELP": "Enter a whole number from 0 to 1000. The default is 5; 0 disables this policy, even when checked."
+    },
     "REVIEWS": {
       "TITLE": "Unified inbox technical exceptions",
       "HELP": "This panel lists identification, sending and file exceptions for this link. It is not an approval queue for every message. Check the reason and conversation; identifiers are under Technical details, without exposing webhook contents.",

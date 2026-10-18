@@ -51,6 +51,18 @@ RSpec.describe Whatsapp::MessageIdentityObservationService do
     )
   end
 
+  it 'keeps the business-device LID receipt separate from the message peer' do
+    identity
+    status = { id: event[:id], status: 'read', recipient_id: '182222711709908@hosted.lid', timestamp: '1792229343' }
+
+    described_class.new(inbox: channel.inbox, value: { statuses: [status] }).perform
+
+    expect(identity.reload.observations).to include(
+      'participants' => { 'from' => event[:from] },
+      'receipt_participants' => { 'recipient_id' => status[:recipient_id] }, 'statuses' => { 'read' => status[:timestamp] }
+    )
+  end
+
   context 'with a Meta API response' do
     let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
     let(:message) { create(:message, account: channel.account, inbox: channel.inbox, message_type: :outgoing, source_id: 'preserved-public-id') }
@@ -82,5 +94,18 @@ RSpec.describe Whatsapp::MessageIdentityObservationService do
       expect(row.reload.provider_message_id).to eq('existing-original')
       expect(row.observations.dig('meta_id_adapter', 'status')).to eq('conflicting')
     end
+  end
+
+  it 'records receipt BSUID metadata without replacing the original sender, direction or public ID' do
+    original = identity
+    participants = original.observations['participants'].deep_dup
+    status = { id: event[:id], status: 'read', recipient_id: '', recipient_user_id: 'user.receipt-bsuid',
+               recipient_parent_user_id: 'user.receipt-parent', timestamp: '1792151941' }
+    described_class.new(inbox: channel.inbox, value: { statuses: [status] }).perform
+    expect(original.reload).to have_attributes(external_id: event[:id], provider_message_id: event[:provider_message_id])
+    expect(original.observations).to include('direction' => 'incoming', 'participants' => participants)
+    expect(original.observations['receipt_participants']).to include(
+      'recipient_user_id' => status[:recipient_user_id], 'recipient_parent_user_id' => status[:recipient_parent_user_id]
+    )
   end
 end

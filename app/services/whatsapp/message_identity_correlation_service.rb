@@ -129,12 +129,13 @@ class Whatsapp::MessageIdentityCorrelationService
     envelope_direction = identity.observations.dig('meta_id_adapter', 'direction')
     conflicting_observations?(identity) ||
       (observed_direction.present? && envelope_direction.present? && observed_direction != envelope_direction) ||
-      envelope_peer_conflict?(identity) || participant_role_conflict?(identity)
+      envelope_peer_conflict?(identity) || participant_role_conflict?(identity) || receipt_role_conflict?(identity)
   end
 
   def conflicting_observations?(identity)
     identity.observations.fetch('conflicting_observations', {}).any? do |field, values|
       next true unless PHONE_OBSERVATION_FIELDS.include?(field)
+      next false if field == 'participants.recipient_id' && participant_service(identity).receipt_recipient?(Array(values), peer: peer(identity))
 
       keys = Array(values).map { |value| phone(value) }
       keys.include?(nil) || keys.uniq.size != 1
@@ -147,6 +148,15 @@ class Whatsapp::MessageIdentityCorrelationService
     recipient = phone(participants['recipient_id'])
     (to.present? && recipient.present? && to != recipient) ||
       (direction(identity) == 'incoming' && recipient.present? && recipient != peer(identity)) || business_role_conflict?(identity)
+  end
+
+  def participant_service(identity)
+    Whatsapp::MessageIdentityParticipantService.new(identity: identity)
+  end
+
+  def receipt_role_conflict?(identity)
+    recipient = identity.observations.dig('receipt_participants', 'recipient_id')
+    recipient.present? && !participant_service(identity).receipt_recipient?([recipient], peer: peer(identity))
   end
 
   def business_role_conflict?(identity)

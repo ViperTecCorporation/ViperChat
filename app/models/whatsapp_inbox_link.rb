@@ -10,6 +10,8 @@ class WhatsappInboxLink < ApplicationRecord
 
   validates :default_provider, inclusion: { in: PROVIDERS }
   validates :enabled, inclusion: { in: [true, false] }
+  validates :meta_initial_messages_enabled, inclusion: { in: [true, false] }
+  validates :meta_initial_messages_limit, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 1000 }
   validate :valid_pair
   validate :exclusive_active_pair
   validate :immutable_active_pair

@@ -15,6 +15,7 @@ import {
   fetchContactableInboxes,
   processContactableInboxes,
   mergeInboxDetails,
+  getContactInboxes,
 } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper';
 
 import Popover from 'dashboard/components-next/popover/Popover.vue';
@@ -160,6 +161,10 @@ const handleSelectedContact = async ({ value, action, ...rest }) => {
         contactableInboxes,
         inboxesList.value
       );
+      selectedContact.value.contactInboxes = getContactInboxes(
+        selectedContact.value,
+        inboxesList.value
+      );
 
       isFetchingInboxes.value = false;
     } catch (error) {
@@ -268,7 +273,16 @@ watch(
       // Then Merge processedInboxes with the inboxes list
       selectedContact.value = {
         ...currentContact,
-        contactInboxes: mergeInboxDetails(processedInboxes, inboxesList.value),
+        contactInboxes: getContactInboxes(
+          {
+            ...currentContact,
+            contactInboxes: mergeInboxDetails(
+              processedInboxes,
+              inboxesList.value
+            ),
+          },
+          inboxesList.value
+        ),
       };
     }
   },

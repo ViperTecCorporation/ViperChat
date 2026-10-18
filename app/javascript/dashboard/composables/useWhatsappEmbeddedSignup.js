@@ -50,6 +50,23 @@ export function useWhatsappEmbeddedSignup() {
       };
 
       messageHandler = createMessageHandler(data => {
+        const errorMessage = data.data?.error_message || data.error_message;
+        const errorCode = data.data?.error_code || data.error_code;
+        if (
+          data.event === 'ERROR' ||
+          data.event === 'error' ||
+          (data.event === 'CANCEL' && (errorMessage || errorCode))
+        ) {
+          settle(
+            reject,
+            new Error(
+              errorMessage ||
+                `Signup error${errorCode ? ` (${errorCode})` : ''}`
+            )
+          );
+          return;
+        }
+
         if (
           data.event === 'FINISH' ||
           data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'
@@ -62,8 +79,6 @@ export function useWhatsappEmbeddedSignup() {
           resolveIfReady();
         } else if (data.event === 'CANCEL') {
           settle(resolve, null);
-        } else if (data.event === 'error') {
-          settle(reject, new Error(data.error_message || 'Signup error'));
         }
       });
 

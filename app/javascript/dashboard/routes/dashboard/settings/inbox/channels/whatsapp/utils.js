@@ -9,7 +9,10 @@ export const loadFacebookSdk = async () => {
 };
 
 export const initializeFacebook = (appId, apiVersion) => {
-  const version = apiVersion || 'v22.0';
+  const version =
+    typeof apiVersion === 'string' && /^v[1-9]\d*\.0$/.test(apiVersion)
+      ? apiVersion
+      : 'v26.0';
   return new Promise(resolve => {
     const init = () => {
       window.FB.init({
@@ -24,18 +27,22 @@ export const initializeFacebook = (appId, apiVersion) => {
     if (window.FB) {
       init();
     } else {
-      window.fbAsyncInit = init;
+      const previousInit = window.fbAsyncInit;
+      window.fbAsyncInit = () => {
+        previousInit?.();
+        init();
+      };
     }
   });
 };
 
 export const isValidBusinessData = businessData => {
-  return businessData && businessData.business_id && businessData.waba_id;
+  return Boolean(businessData && businessData.waba_id);
 };
 
 export const createMessageHandler = onEmbeddedSignupData => {
   return event => {
-    if (!event.origin.endsWith('facebook.com')) return;
+    if (!/^https:\/\/([a-z0-9-]+\.)*facebook\.com$/i.test(event.origin)) return;
 
     try {
       let data;
@@ -83,7 +90,6 @@ export const initWhatsAppEmbeddedSignup = configId => {
 };
 
 export const setupFacebookSdk = async (appId, apiVersion) => {
-  const version = apiVersion || 'v22.0';
   await loadFacebookSdk();
-  await initializeFacebook(appId, version);
+  await initializeFacebook(appId, apiVersion);
 };

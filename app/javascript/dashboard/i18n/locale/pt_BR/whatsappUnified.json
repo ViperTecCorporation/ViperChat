@@ -1,5 +1,13 @@
 {
   "WHATSAPP_UNIFIED": {
+    "COMPOSE_TRANSPORT_HELP": "A caixa mantém o histórico da conversa. Escolha o provedor de envio separadamente; a Meta exige um modelo aprovado para uma nova conversa.",
+    "META_INITIAL_MESSAGES": {
+      "TITLE": "Mensagens iniciais pela Meta",
+      "ENABLED": "Priorizar a Meta no início de cada ciclo de atendimento",
+      "HELP": "Quando ativado, as primeiras N mensagens públicas de saída elegíveis de cada ciclo de atendimento usam a Meta, independentemente do transporte solicitado no editor. A seleção do editor não muda. Fora da janela da Meta ou para recursos não suportados, mantém-se o transporte selecionado compatível. Após uma tentativa de envio, não há envio duplicado nem troca automática de provedor.",
+      "LIMIT": "Mensagens iniciais por ciclo de atendimento",
+      "LIMIT_HELP": "Informe um número inteiro de 0 a 1000. O padrão é 5; 0 desativa esta política, mesmo com a opção marcada."
+    },
     "REVIEWS": {
       "TITLE": "Exceções técnicas da caixa unificada",
       "HELP": "Este painel reúne exceções de identificação, envio e arquivos do vínculo. Não é uma fila de aprovação de cada mensagem. Confira o motivo e a conversa; os identificadores ficam em Detalhes técnicos, sem exibir o conteúdo dos webhooks.",

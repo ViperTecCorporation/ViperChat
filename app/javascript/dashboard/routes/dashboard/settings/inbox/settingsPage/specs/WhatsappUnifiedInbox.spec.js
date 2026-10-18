@@ -27,9 +27,19 @@ const global = {
   mocks: { $t: key => key },
   stubs: { WhatsappUnifiedReviews: true },
 };
+const existingLink = {
+  id: 4,
+  primary_inbox_id: 2,
+  secondary_inbox_id: 1,
+  default_provider: 'unoapi',
+  enabled: true,
+};
 
 describe('unified inbox channel preferences', () => {
-  beforeEach(() => Inboxes.getWhatsappLink.mockResolvedValue(response));
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Inboxes.getWhatsappLink.mockResolvedValue(response);
+  });
 
   it('explains an empty compatible-inbox list and disables the empty dropdown', async () => {
     Inboxes.getWhatsappLink.mockResolvedValue({
@@ -155,8 +165,10 @@ describe('unified inbox channel preferences', () => {
       primary_inbox_id: 2,
       default_provider: 'unoapi',
       enabled: true,
+      meta_initial_messages_enabled: false,
+      meta_initial_messages_limit: 5,
     });
-    const confirm = wrapper.findAll('input[type=checkbox]')[1];
+    const confirm = wrapper.findAll('input[type=checkbox]')[2];
     expect(wrapper.findAll('button')[1].element.disabled).toBe(true);
     await confirm.setValue(true);
     expect(wrapper.findAll('button')[1].element.disabled).toBe(false);
@@ -206,9 +218,149 @@ describe('unified inbox channel preferences', () => {
     expect(wrapper.findAll('select')[1].element.disabled).toBe(true);
     await wrapper.findAll('button')[0].trigger('click');
     await flushPromises();
-    await wrapper.findAll('input[type=checkbox]')[1].setValue(true);
+    await wrapper.findAll('input[type=checkbox]')[2].setValue(true);
     expect(wrapper.text()).toContain('active conversations');
     expect(wrapper.findAll('button')[1].element.disabled).toBe(true);
     wrapper.unmount();
   });
+
+  it.each([null, existingLink])(
+    'defaults the initial Meta policy to false/5 when fields are missing: %s',
+    async link => {
+      Inboxes.getWhatsappLink.mockResolvedValue({
+        data: { ...response.data, link },
+      });
+      const wrapper = mount(WhatsappUnifiedInbox, {
+        props: { inbox: { id: 1, name: 'ViperConnect' } },
+        global,
+      });
+      await flushPromises();
+      expect(wrapper.findAll('input[type=checkbox]')[1].element.checked).toBe(
+        false
+      );
+      const limit = wrapper.find('input[type=number]');
+      expect(limit.element.value).toBe('5');
+      expect(limit.attributes()).toMatchObject({
+        min: '0',
+        max: '1000',
+        step: '1',
+        'aria-invalid': 'false',
+      });
+      expect(limit.classes()).toEqual(
+        expect.arrayContaining(['w-full', 'min-w-0'])
+      );
+      expect(wrapper.text()).toContain(
+        'WHATSAPP_UNIFIED.META_INITIAL_MESSAGES.HELP'
+      );
+      wrapper.unmount();
+    }
+  );
+
+  it.each([0, 5, 1000])(
+    'loads and submits policy limit %s without changing the default provider',
+    async limit => {
+      const link = {
+        ...existingLink,
+        meta_initial_messages_enabled: true,
+        meta_initial_messages_limit: limit,
+      };
+      Inboxes.getWhatsappLink.mockResolvedValue({
+        data: { ...response.data, link },
+      });
+      Inboxes.previewWhatsappLink.mockResolvedValue({
+        data: { preview: { conflicts: [], confirmation: 'policy-token' } },
+      });
+      Inboxes.updateWhatsappLink.mockResolvedValue({
+        data: {
+          ...response.data,
+          link: {
+            ...link,
+            meta_initial_messages_enabled: false,
+            meta_initial_messages_limit: 0,
+          },
+        },
+      });
+      const wrapper = mount(WhatsappUnifiedInbox, {
+        props: { inbox: { id: 1, name: 'ViperConnect' } },
+        global,
+      });
+      await flushPromises();
+      expect(wrapper.find('input[type=number]').element.value).toBe(
+        String(limit)
+      );
+      expect(wrapper.findAll('input[type=checkbox]')[1].element.checked).toBe(
+        true
+      );
+      await wrapper.findAll('button')[0].trigger('click');
+      await flushPromises();
+      const policyPayload = expect.objectContaining({
+        default_provider: 'unoapi',
+        meta_initial_messages_enabled: true,
+        meta_initial_messages_limit: limit,
+      });
+      expect(Inboxes.previewWhatsappLink).toHaveBeenCalledWith(
+        1,
+        policyPayload
+      );
+      await wrapper.findAll('input[type=checkbox]')[2].setValue(true);
+      await wrapper.findAll('button')[1].trigger('click');
+      await flushPromises();
+      expect(Inboxes.updateWhatsappLink).toHaveBeenCalledWith(1, policyPayload);
+      expect(wrapper.findAll('input[type=checkbox]')[1].element.checked).toBe(
+        false
+      );
+      expect(wrapper.find('input[type=number]').element.value).toBe('0');
+      expect(wrapper.findAll('select')[2].element.value).toBe('unoapi');
+      wrapper.unmount();
+    }
+  );
+
+  it.each(['enabled', 'limit', '', '-1', '1.5', '1001', 'invalid'])(
+    'invalidates preview and confirmation after policy edit: %s',
+    async edit => {
+      Inboxes.getWhatsappLink.mockResolvedValue({
+        data: { ...response.data, link: existingLink },
+      });
+      Inboxes.previewWhatsappLink.mockResolvedValue({
+        data: { preview: { conflicts: [], confirmation: 'policy-token' } },
+      });
+      const wrapper = mount(WhatsappUnifiedInbox, {
+        props: { inbox: { id: 1, name: 'ViperConnect' } },
+        global,
+      });
+      await flushPromises();
+      await wrapper.findAll('button')[0].trigger('click');
+      await flushPromises();
+      const confirm = wrapper.findAll('input[type=checkbox]')[2];
+      await confirm.setValue(true);
+      expect(wrapper.findAll('button')[1].element.disabled).toBe(false);
+      if (edit === 'enabled') {
+        await wrapper.findAll('input[type=checkbox]')[1].setValue(true);
+      } else {
+        await wrapper
+          .find('input[type=number]')
+          .setValue(edit === 'limit' ? '6' : edit);
+      }
+      expect(confirm.element.checked).toBe(false);
+      expect(wrapper.text()).not.toContain('WHATSAPP_UNIFIED.NO_CONFLICTS');
+      expect(wrapper.findAll('button')[1].element.disabled).toBe(true);
+      expect(wrapper.findAll('select')[2].element.value).toBe('unoapi');
+      const invalid = !['enabled', 'limit'].includes(edit);
+      expect(wrapper.findAll('button')[0].element.disabled).toBe(invalid);
+      expect(
+        wrapper.find('input[type=number]').attributes('aria-invalid')
+      ).toBe(String(invalid));
+      if (invalid) {
+        await wrapper.findAll('button')[0].trigger('click');
+        await confirm.setValue(true);
+        await wrapper.findAll('button')[1].trigger('click');
+        expect(Inboxes.previewWhatsappLink).toHaveBeenCalledOnce();
+        expect(Inboxes.updateWhatsappLink).not.toHaveBeenCalled();
+        expect(wrapper.find('[role=alert]').text()).toBe(
+          'WHATSAPP_UNIFIED.META_INITIAL_MESSAGES.LIMIT_HELP'
+        );
+      }
+      wrapper.unmount();
+    }
+  );
 });

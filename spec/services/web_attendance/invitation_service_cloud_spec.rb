@@ -8,7 +8,7 @@ RSpec.describe WebAttendance::InvitationService do
                               provider_config: { 'url' => 'https://cloud.example.com', 'api_key' => 'test_key',
                                                  'phone_number_id' => '556600000000', 'business_account_id' => '556600000000' })
   end
-  let(:provider_url) { "https://cloud.example.com/v24.0/#{channel.provider_config['phone_number_id']}/messages" }
+  let(:provider_url) { "https://cloud.example.com/v26.0/#{channel.provider_config['phone_number_id']}/messages" }
 
   before do
     create(:message, account: account, conversation: conversation, sender: contact, created_at: 1.hour.ago)

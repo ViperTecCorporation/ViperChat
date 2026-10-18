@@ -18,6 +18,8 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   end
 
   def perform_reply
+    Whatsapp::InitialMetaMessagesService.new(message: message).perform
+    @unified_transport = nil
     if selected_meta_template_missing?
       message.update!(status: :failed, external_error: 'The selected Meta transport requires an approved template outside its reply window')
       return
@@ -64,9 +66,10 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
       return
     end
 
-    Whatsapp::UnifiedDeliveryAttemptService.new(message: message).perform do
+    recipient = nil
+    Whatsapp::UnifiedDeliveryAttemptService.new(message: message).perform(preflight: -> { recipient = whatsapp_recipient }) do
       message_id = channel.send_template(
-        whatsapp_recipient,
+        recipient || whatsapp_recipient,
         { name: name, namespace: namespace, lang_code: lang_code, parameters: processed_parameters },
         message
       )
@@ -75,8 +78,13 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   end
 
   def send_session_message
-    Whatsapp::UnifiedDeliveryAttemptService.new(message: message).perform do
-      message_id = channel.send_message(whatsapp_recipient, message)
+    recipient = nil
+    preflight = lambda do
+      recipient = whatsapp_recipient
+      unified_transport.reply_context if unified_transport.enabled?
+    end
+    Whatsapp::UnifiedDeliveryAttemptService.new(message: message).perform(preflight: preflight) do
+      message_id = channel.send_message(recipient || whatsapp_recipient, message)
       persist_source_id(message_id)
     end
   end

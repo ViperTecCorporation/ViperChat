@@ -1,10 +1,8 @@
 class Whatsapp::HealthService
-  BASE_URI = 'https://graph.facebook.com'.freeze
-
   def initialize(channel)
     @channel = channel
     @access_token = channel.provider_config['api_key']
-    @api_version = GlobalConfigService.load('WHATSAPP_API_VERSION', 'v22.0')
+    @client = Whatsapp::ManagementApiClient.new(channel)
   end
 
   def fetch_health_status
@@ -23,25 +21,14 @@ class Whatsapp::HealthService
   def fetch_phone_health_data
     phone_number_id = @channel.provider_config['phone_number_id']
 
-    response = HTTParty.get(
-      "#{BASE_URI}/#{@api_version}/#{phone_number_id}",
-      query: {
-        fields: health_fields,
-        access_token: @access_token
-      }
-    )
-
-    handle_response(response)
-  rescue StandardError => e
-    Rails.logger.error "[WHATSAPP HEALTH] Error fetching health data: #{e.message}"
-    raise e
+    response = @client.get(phone_number_id, fields: health_fields)
+    format_health_response(response).merge(fetch_messaging_limit, fetched_at: Time.current.iso8601)
   end
 
   def health_fields
     %w[
       id
       quality_rating
-      messaging_limit_tier
       code_verification_status
       account_mode
       display_phone_number
@@ -55,15 +42,13 @@ class Whatsapp::HealthService
     ].join(',')
   end
 
-  def handle_response(response)
-    unless response.success?
-      error_message = "WhatsApp API request failed: #{response.code} - #{response.body}"
-      Rails.logger.error "[WHATSAPP HEALTH] #{error_message}"
-      raise error_message
-    end
-
-    data = response.parsed_response
-    format_health_response(data)
+  def fetch_messaging_limit
+    data = @client.get(@channel.provider_config['business_account_id'], fields: 'whatsapp_business_manager_messaging_limit')
+    tier = data['whatsapp_business_manager_messaging_limit'].presence
+    { messaging_limit_tier: tier, whatsapp_business_manager_messaging_limit: tier,
+      messaging_limit_scope: tier ? 'business_portfolio' : 'unknown', limit_source: 'whatsapp_business_manager_messaging_limit' }
+  rescue Whatsapp::ManagementApiClient::Error
+    { messaging_limit_tier: nil, whatsapp_business_manager_messaging_limit: nil, messaging_limit_scope: 'unknown', limit_source: nil }
   end
 
   def format_health_response(response)
@@ -73,7 +58,6 @@ class Whatsapp::HealthService
       verified_name: response['verified_name'],
       name_status: response['name_status'],
       quality_rating: response['quality_rating'],
-      messaging_limit_tier: response['messaging_limit_tier'],
       account_mode: response['account_mode'],
       code_verification_status: response['code_verification_status'],
       webhook_configuration: response['webhook_configuration'],

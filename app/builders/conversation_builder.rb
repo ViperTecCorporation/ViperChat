@@ -2,10 +2,31 @@ class ConversationBuilder
   pattr_initialize [:params!, :contact_inbox!]
 
   def perform
+    return unified_conversation if unified_principal?
+
     look_up_exising_conversation || create_new_conversation
   end
 
   private
+
+  def unified_principal?
+    link = WhatsappInboxLink.for_inbox(@contact_inbox.inbox)
+    link && link.primary_inbox_id == @contact_inbox.inbox_id &&
+      !Whatsapp::OperationalInboxService.group?(@contact_inbox.contact, @contact_inbox.source_id)
+  end
+
+  def unified_conversation
+    @contact_inbox.with_lock do
+      conversations = @contact_inbox.contact.conversations.where(inbox_id: @contact_inbox.inbox_id)
+      conversations = conversations.where.not(status: :resolved) unless @contact_inbox.inbox.lock_to_single_conversation?
+      conversation = conversations.order(created_at: :desc, id: :desc).first
+      next create_new_conversation unless conversation
+
+      # Staffing and existing IDs belong to the principal, not to the transport selected for this message.
+      conversation.open! if conversation.resolved?
+      conversation
+    end
+  end
 
   def look_up_exising_conversation
     return unless @contact_inbox.inbox.lock_to_single_conversation?
