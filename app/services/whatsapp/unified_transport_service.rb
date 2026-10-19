@@ -83,11 +83,7 @@ class Whatsapp::UnifiedTransportService
   end
 
   def recipient
-    return @message.conversation.group_source_id if @message.conversation.group?
-
-    contact = @message.conversation.contact
-    source = contact.contact_inboxes.where(inbox_id: inbox.id).order(:id).pluck(:source_id).find { |id| valid_recipient?(id) }
-    source.presence || contact.phone_number&.delete_prefix('+').presence || raise(ArgumentError, 'Recipient identity pending for selected transport')
+    Whatsapp::OutboundRecipientService.new(conversation: @message.conversation, inbox: inbox).perform
   end
 
   def reference_for(message)
@@ -123,9 +119,12 @@ class Whatsapp::UnifiedTransportService
   end
 
   def can_reply?
-    return true if channel.provider == 'unoapi'
+    channel.provider == 'unoapi' || [legacy_incoming_at, *provider_incoming_times].compact.max&.>(24.hours.ago)
+  end
 
-    [legacy_incoming_at, *provider_incoming_times].compact.max&.> 24.hours.ago
+  def can_reply_in_current_cycle?
+    latest = [legacy_incoming_at(current_cycle: true), *provider_incoming_times(current_cycle: true)].compact.max
+    latest && latest > 24.hours.ago && latest >= (@message.conversation.web_attendance_started_at || @message.conversation.created_at)
   end
 
   private
@@ -173,30 +172,30 @@ class Whatsapp::UnifiedTransportService
       !message.private? && !message.web_attendance?
   end
 
-  def valid_recipient?(source)
-    return source.present? if channel.provider == 'unoapi'
-
-    source.to_s.match?(/\A(?:\d+|[A-Z]{2}\.\d{8,32})\z/)
-  end
-
   def reference_aliases(message)
     WhatsappUnifiedMessageAlias.left_joins(:whatsapp_unified_message)
                                .where('whatsapp_unified_message_aliases.message_id = ? OR whatsapp_unified_messages.message_id = ?',
                                       message.id, message.id)
   end
 
-  def legacy_incoming_at
-    @message.conversation.messages.incoming.where(delivery_destination: 'channel', private: false, inbox_id: inbox.id)
-            .with_content_attribute('whatsapp_unified_message_id', nil).maximum(:created_at)
+  def legacy_incoming_at(current_cycle: false)
+    scope = @message.conversation.messages.incoming.where(delivery_destination: 'channel', private: false, inbox_id: inbox.id)
+                    .with_content_attribute('whatsapp_unified_message_id', nil)
+    (current_cycle ? current_cycle_messages(scope) : scope).maximum(:created_at)
   end
 
-  def provider_incoming_times
+  def provider_incoming_times(current_cycle: false)
     aliases = WhatsappUnifiedMessageAlias.joins(:whatsapp_message_identity, whatsapp_unified_message: :message)
                                          .where(messages: { conversation_id: @message.conversation_id, private: false,
                                                             delivery_destination: 'channel', message_type: Message.message_types[:incoming] })
                                          .where(whatsapp_message_identities: { inbox_id: inbox.id, account_id: @message.account_id,
                                                                                provider: 'whatsapp_cloud' })
+    aliases = current_cycle_messages(aliases) if current_cycle
     aliases.filter_map { |entry| incoming_time(entry.whatsapp_message_identity.observations) }
+  end
+
+  def current_cycle_messages(scope)
+    scope.merge(Message.without_history_import.where('messages.id >= ?', @message.conversation.web_attendance_start_message_id.to_i))
   end
 
   def incoming_time(observations)

@@ -244,6 +244,90 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
       end
 
       describe 'Meta eligibility' do
+        it 'routes an explicitly selected Meta message through Uno outside the window without using a slot' do
+          incoming_meta.update!(created_at: 25.hours.ago)
+          meta_request
+          uno_request
+          outgoing = Messages::MessageBuilder.new(agent, conversation, params.merge(whatsapp_transport: 'whatsapp_cloud')).perform
+
+          Whatsapp::SendOnWhatsappService.new(message: outgoing).perform
+
+          expect(outgoing.reload.content_attributes.fetch('whatsapp_transport')).to include(
+            'requested_provider' => 'whatsapp_cloud', 'provider' => 'unoapi', 'reason' => 'awaiting_customer_reply'
+          )
+          expect(outgoing.source_id).to be_present
+          expect(slots).to be_empty
+          expect(meta_request).not_to have_been_requested
+          expect(uno_request).to have_been_requested.once
+        end
+
+        it 'waits for the first customer reply in a new conversation even with Meta selected' do
+          incoming_meta.destroy!
+          outgoing = Messages::MessageBuilder.new(agent, conversation, params.merge(whatsapp_transport: 'whatsapp_cloud')).perform
+
+          described_class.new(message: outgoing).perform
+
+          expect(outgoing.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
+          expect(slots).to be_empty
+          create(:message, account: account, inbox: meta.inbox, conversation: conversation, sender: contact, message_type: :incoming)
+          reply = Messages::MessageBuilder.new(agent, conversation, params).perform
+          described_class.new(message: reply).perform
+          expect(reply.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('whatsapp_cloud')
+          expect(slots.pluck(:position)).to eq([1])
+        end
+
+        it 'does not count historical imports as a reply in the current cycle' do
+          incoming_meta.update!(content_attributes: { whatsapp_history_import: true })
+          described_class.new(message: message).perform
+          expect(message.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
+          expect(slots).to be_empty
+        end
+
+        it 'uses the Meta timestamp on a correlated incoming message instead of webhook arrival time' do
+          incoming_meta.destroy!
+          incoming = create(:message, account: account, inbox: link.primary_inbox, conversation: conversation, sender: contact,
+                                     message_type: :incoming, content_attributes: { whatsapp_unified_message_id: 123 })
+          ledger = WhatsappUnifiedMessage.create!(whatsapp_inbox_link: link, message: incoming,
+                                                  original_id: SecureRandom.hex(10), direction: 'incoming',
+                                                  participant_key: '5565987654321', message_kind: 'text')
+          identity = WhatsappMessageIdentity.create!(account: account, inbox: meta.inbox, channel: meta,
+                                                     provider: 'whatsapp_cloud', external_id: "wamid.#{SecureRandom.uuid}",
+                                                     observations: { 'direction' => 'incoming', 'timestamp' => 25.hours.ago.to_i.to_s })
+          WhatsappUnifiedMessageAlias.create!(whatsapp_unified_message: ledger, whatsapp_message_identity: identity)
+          described_class.new(message: message).perform
+          expect(message.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
+          expect(slots).to be_empty
+
+          identity.update!(observations: { 'direction' => 'incoming', 'timestamp' => Time.current.to_i.to_s })
+          reply = Messages::MessageBuilder.new(agent, conversation, params).perform
+          described_class.new(message: reply).perform
+          expect(reply.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('whatsapp_cloud')
+          expect(slots.pluck(:position)).to eq([1])
+        end
+
+        it 'accepts the customer message that automatically reopens a resolved conversation' do
+          conversation.update!(status: :resolved)
+          incoming = create(:message, account: account, inbox: meta.inbox, conversation: conversation, sender: contact,
+                                     message_type: :incoming)
+          conversation.reload
+          expect(conversation.web_attendance_start_message_id).to eq(incoming.id)
+          described_class.new(message: message).perform
+          expect(message.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('whatsapp_cloud')
+          expect(slots.pluck(:position)).to eq([1])
+        end
+
+        it 'keeps explicit templates on their normal path without consuming the initial-message quota' do
+          incoming_meta.update!(created_at: 25.hours.ago)
+          outgoing = build(:message, account: account, inbox: conversation.inbox, conversation: conversation, sender: agent,
+                                    message_type: :outgoing, additional_attributes: { template_params: { name: 'synthetic' } })
+          Whatsapp::UnifiedTransportService.prepare!(message: outgoing, requested_provider: 'whatsapp_cloud')
+          outgoing.save!
+          described_class.new(message: outgoing).perform
+          expect(outgoing.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('whatsapp_cloud')
+          expect(outgoing.content_attributes.dig('whatsapp_initial_meta_policy', 'decision')).to eq('explicit_template')
+          expect(slots).to be_empty
+        end
+
         it 'does not mistake a fresh Uno incoming message for an open Meta reply window' do
           incoming_meta.update!(created_at: 25.hours.ago)
           create(:message, account: account, inbox: uno.inbox, conversation: conversation, sender: contact, message_type: :incoming)
@@ -353,6 +437,12 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
           conversation.update!(status: :resolved)
           conversation.update!(status: :open)
           expect(conversation.reload.web_attendance_cycle).to eq(old_cycle + 1)
+
+          waiting = Messages::MessageBuilder.new(agent, conversation, params.merge(whatsapp_transport: 'whatsapp_cloud')).perform
+          described_class.new(message: waiting).perform
+          expect(waiting.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
+          expect(slots.where(cycle: old_cycle + 1)).to be_empty
+          create(:message, account: account, inbox: meta.inbox, conversation: conversation, sender: contact, message_type: :incoming)
 
           reopened = Array.new(3) { Messages::MessageBuilder.new(agent, conversation, params).perform }
           reopened.each { |reply| described_class.new(message: reply).perform }

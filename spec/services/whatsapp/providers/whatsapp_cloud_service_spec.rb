@@ -342,6 +342,57 @@ describe Whatsapp::Providers::WhatsappCloudService do
     end
   end
 
+  describe 'BSUID recipient addressing' do
+    it 'sends a quoted text with recipient and preserves its reference' do
+      request = stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
+                .with do |sent|
+                  body = JSON.parse(sent.body)
+                  body['recipient'] == 'BR.1316081087211411' && body.exclude?('to') &&
+                    body['context'] == { 'message_id' => message.source_id }
+                end
+                .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_message('BR.1316081087211411', message_with_reply)).to eq('message_id')
+      expect(request).to have_been_requested.once
+      expect(message.reload.source_id).to eq('external_id')
+    end
+
+    it 'sends image media with recipient without recreating the attachment or blob' do
+      attachment = message.attachments.build(account: message.account, file_type: :image)
+      attachment.file.attach(io: StringIO.new(Rails.root.join('spec/assets/sample.png').binread),
+                             filename: 'sample.png', content_type: 'image/png')
+      attachment.save!
+      original_blob = attachment.file.blob.id
+      original_count = ActiveStorage::Blob.count
+      request = stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
+                .with do |sent|
+                  body = JSON.parse(sent.body)
+                  body['recipient'] == 'BR.1316081087211411' && body.exclude?('to') && body['type'] == 'image'
+                end
+                .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_message('BR.1316081087211411', message)).to eq('message_id')
+      expect(request).to have_been_requested.once
+      expect(message.reload.attachments.pluck(:id)).to eq([attachment.id])
+      expect(attachment.reload.file.blob.id).to eq(original_blob)
+      expect(ActiveStorage::Blob.count).to eq(original_count)
+    end
+
+    it 'uses recipient for a BSUID in a template without changing its content' do
+      info = { name: 'synthetic', lang_code: 'pt_BR', parameters: [] }
+      request = stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
+                .with do |sent|
+                  body = JSON.parse(sent.body)
+                  body['recipient'] == 'BR.1316081087211411' && body.exclude?('to') &&
+                    body['type'] == 'template' && body.dig('template', 'name') == 'synthetic'
+                end
+                .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_template('BR.1316081087211411', info, message)).to eq('message_id')
+      expect(request).to have_been_requested.once
+    end
+  end
+
   describe '#send_interactive message' do
     context 'when called' do
       it 'calls message endpoints with button payload when number of items is less than or equal to 3' do

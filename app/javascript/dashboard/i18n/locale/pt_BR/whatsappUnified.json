@@ -4,7 +4,7 @@
     "META_INITIAL_MESSAGES": {
       "TITLE": "Mensagens iniciais pela Meta",
       "ENABLED": "Priorizar a Meta no início de cada ciclo de atendimento",
-      "HELP": "Quando ativado, as primeiras N mensagens públicas de saída elegíveis de cada ciclo de atendimento usam a Meta, independentemente do transporte solicitado no editor. A seleção do editor não muda. Fora da janela da Meta ou para recursos não suportados, mantém-se o transporte selecionado compatível. Após uma tentativa de envio, não há envio duplicado nem troca automática de provedor.",
+      "HELP": "Quando ativado, o contato precisa responder no ciclo atual antes de iniciar a contagem das N mensagens pela Meta. Antes dessa resposta, inclusive após reabrir ou criar uma conversa, ou após 24 horas sem resposta, os envios sem template usam a ViperConnect, mesmo com Meta selecionada, sem consumir a contagem. Após uma resposta confirmada pela Meta, as próximas N mensagens públicas elegíveis usam a Meta enquanto a janela estiver aberta. A seleção do editor não muda. Templates explícitos e recursos não suportados seguem seu fluxo próprio. Não há troca de provedor após uma tentativa de envio.",
       "LIMIT": "Mensagens iniciais por ciclo de atendimento",
       "LIMIT_HELP": "Informe um número inteiro de 0 a 1000. O padrão é 5; 0 desativa esta política, mesmo com a opção marcada."
     },

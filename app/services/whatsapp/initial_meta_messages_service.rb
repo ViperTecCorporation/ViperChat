@@ -39,6 +39,10 @@ class Whatsapp::InitialMetaMessagesService
 
     @link = WhatsappInboxLink.for_inbox(@message.inbox)
     reason = ineligible_reason(policy, metadata)
+    if reason == 'awaiting_customer_reply'
+      transport = metadata.merge('provider' => 'unoapi', 'inbox_id' => @link.inbox_for('unoapi').id, 'reason' => reason)
+      return record_decision(policy, reason, transport)
+    end
     return record_decision(policy, reason) if reason
 
     apply_meta(policy, metadata)
@@ -48,7 +52,14 @@ class Whatsapp::InitialMetaMessagesService
     return 'rule_disabled' unless active_rule?
     return 'link_changed' unless current_link?(metadata)
     return 'cycle_closed' if @conversation.resolved? || policy['cycle'] != @conversation.web_attendance_cycle
+
+    meta_eligibility_reason(metadata)
+  end
+
+  def meta_eligibility_reason(metadata)
+    return 'explicit_template' if metadata['capability'] == 'template'
     return 'capability_unsupported' unless Whatsapp::UnifiedTransportService.capabilities('whatsapp_cloud')[metadata['capability']]
+    return 'awaiting_customer_reply' unless meta_transport(metadata).can_reply_in_current_cycle?
 
     'meta_unavailable' unless meta_available?(metadata)
   end
@@ -65,12 +76,16 @@ class Whatsapp::InitialMetaMessagesService
     meta = @link.inbox_for('whatsapp_cloud')
     return false if !meta || meta.channel.reauthorization_required? || !@link.account.active?
 
-    attributes = { 'whatsapp_transport' => metadata.merge('provider' => 'whatsapp_cloud', 'inbox_id' => meta.id) }
-    probe = Message.new(account: @message.account, inbox: @message.inbox, conversation: @conversation, content_attributes: attributes)
-    transport = Whatsapp::UnifiedTransportService.new(message: probe)
+    transport = meta_transport(metadata)
     transport.can_reply? && transport.recipient.present?
   rescue ArgumentError
     false
+  end
+
+  def meta_transport(metadata)
+    attributes = { 'whatsapp_transport' => metadata.merge('provider' => 'whatsapp_cloud', 'inbox_id' => @link.inbox_for('whatsapp_cloud').id) }
+    probe = Message.new(account: @message.account, inbox: @message.inbox, conversation: @conversation, content_attributes: attributes)
+    Whatsapp::UnifiedTransportService.new(message: probe)
   end
 
   def apply_meta(policy, metadata)

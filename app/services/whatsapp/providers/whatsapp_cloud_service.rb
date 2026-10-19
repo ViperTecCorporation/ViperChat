@@ -198,7 +198,11 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   private
 
   def outgoing_message_payload(request_body, _message)
-    request_body
+    address = request_body[:to] || request_body['to']
+    return request_body unless address.to_s.match?(/\A[A-Z]{2}\.\d{8,32}\z/)
+
+    # Cloud API addresses a BSUID through recipient, never as a phone in to.
+    request_body.except(:to, 'to').merge(recipient: address)
   end
 
   def api_key

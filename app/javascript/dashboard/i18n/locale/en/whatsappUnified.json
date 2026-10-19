@@ -4,7 +4,7 @@
     "META_INITIAL_MESSAGES": {
       "TITLE": "Initial messages via Meta",
       "ENABLED": "Prioritize Meta at the start of each attendance cycle",
-      "HELP": "When enabled, the first N eligible public outbound messages in each attendance cycle use Meta, regardless of the provider requested in the editor. The editor selection stays unchanged. Outside Meta's messaging window or for unsupported resources, the compatible selected transport is retained. After a send attempt, there is no duplicate send or automatic fallback to another provider.",
+      "HELP": "When enabled, the customer must reply in the current attendance cycle before the N-message Meta quota starts. Before that reply, including after reopening or creating a conversation, or after 24 hours without a reply, non-template messages use ViperConnect even when Meta is selected, without consuming quota. After a reply confirmed by Meta, the next N eligible public messages use Meta while the reply window is open. The editor selection stays unchanged. Explicit templates and unsupported resources keep their own routing. Providers are never switched after a delivery attempt.",
       "LIMIT": "Initial messages per attendance cycle",
       "LIMIT_HELP": "Enter a whole number from 0 to 1000. The default is 5; 0 disables this policy, even when checked."
     },

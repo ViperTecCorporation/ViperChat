@@ -44,6 +44,49 @@ RSpec.describe Whatsapp::UnifiedTransportService do
                               contact_inbox: primary_provider == 'unoapi' ? uno_alias : meta_alias)
       end
 
+      it 'prefers the Meta phone alias over an older BSUID using the production contact scenario without rewriting IDs' do
+        contact.update!(phone_number: '+5565996598456', bsuid: '30984414191647@lid')
+        meta_alias.update!(source_id: 'BR.1316081087211411')
+        create(:contact_inbox, inbox: meta.inbox, contact: contact, source_id: '556596598456')
+        incoming = create(:message, account: account, inbox: meta.inbox, conversation: conversation,
+                                   sender: contact, message_type: :incoming, source_id: 'wamid.production-incoming')
+        outgoing = Messages::MessageBuilder.new(agent, conversation,
+                                                ActionController::Parameters.new(content: 'Synthetic recipient check',
+                                                                                 whatsapp_transport: 'whatsapp_cloud')).perform
+        original_aliases = contact.contact_inboxes.order(:id).pluck(:id, :inbox_id, :source_id)
+        request = stub_request(:post, meta.provider_service.send(:messages_path))
+                  .with { |sent| JSON.parse(sent.body).slice('to', 'recipient') == { 'to' => '556596598456' } }
+                  .to_return(status: 200, body: { messages: [{ id: 'wamid.synthetic-phone-reply' }] }.to_json,
+                             headers: { 'Content-Type' => 'application/json' })
+
+        2.times { Whatsapp::SendOnWhatsappService.new(message: outgoing.reload).perform }
+
+        expect(request).to have_been_requested.once
+        expect(outgoing.reload.source_id).to eq('wamid.synthetic-phone-reply')
+        expect(incoming.reload.source_id).to eq('wamid.production-incoming')
+        expect(contact.reload).to have_attributes(phone_number: '+5565996598456', bsuid: '30984414191647@lid')
+        expect(contact.contact_inboxes.order(:id).pluck(:id, :inbox_id, :source_id)).to eq(original_aliases)
+      end
+
+      it 'sends a Meta-only BSUID via recipient rather than to without using a different inbox identity' do
+        contact.update!(phone_number: nil, bsuid: '30984414191647@lid')
+        meta_alias.update!(source_id: 'BR.1316081087211411')
+        create(:message, account: account, inbox: meta.inbox, conversation: conversation, sender: contact, message_type: :incoming)
+        outgoing = Messages::MessageBuilder.new(agent, conversation,
+                                                ActionController::Parameters.new(content: 'Synthetic BSUID check',
+                                                                                 whatsapp_transport: 'whatsapp_cloud')).perform
+        request = stub_request(:post, meta.provider_service.send(:messages_path))
+                  .with { |sent| JSON.parse(sent.body).slice('to', 'recipient') == { 'recipient' => 'BR.1316081087211411' } }
+                  .to_return(status: 200, body: { messages: [{ id: 'wamid.synthetic-bsuid-reply' }] }.to_json,
+                             headers: { 'Content-Type' => 'application/json' })
+
+        Whatsapp::SendOnWhatsappService.new(message: outgoing).perform
+
+        expect(request).to have_been_requested.once
+        expect(meta_alias.reload.source_id).to eq('BR.1316081087211411')
+        expect(contact.reload.bsuid).to eq('30984414191647@lid')
+      end
+
       %w[unoapi whatsapp_cloud].each do |selected_provider|
         context "with #{selected_provider} selected at the top level" do
           let(:params) do
