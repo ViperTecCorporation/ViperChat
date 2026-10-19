@@ -30,3 +30,7 @@ Consulta executada em transação PostgreSQL **READ ONLY** na VPS, em **19/10/20
 ## Limites do pacote
 
 A correção de **novas ingestões** escolhe o contato antigo por evidência telefônica do próprio evento Meta, no par ativo, sem transferir alias legado durante o webhook. A reconciliação administrativa deste documento é uma ação distinta, autorizada exclusivamente para os seis pares listados. Alterações extras de dados ou outras pessoas ficam fora desse agendamento.
+
+## Resultado da execução autorizada
+
+Aplicada na janela das 12h de 19/10/2026, depois do backup e do drain dos workers. A nova prévia manteve exatamente o fingerprint acima, sem bloqueios. O executor terminou com saída zero e a comparação antes/depois confirmou os 12 contatos intactos, 12 conversas e 102 mensagens com IDs/conteúdos preservados, 14 anexos e 14 blobs idênticos. Alteradas somente as associações autorizadas; nenhum alias/conversa dos pares permaneceu sob os legados. Os dois workers foram liberados novamente e confirmados com `quiet=false`. Detalhes e caminhos das evidências restritas no [runbook de execução](hostpath-meta-cycle-recipient-20261019.md).
