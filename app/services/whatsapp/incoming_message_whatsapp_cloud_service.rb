@@ -136,23 +136,29 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
 
   def set_contact_from_message_identity
     return false if group_message?
+    return true if set_canonical_unified_contact
 
-    if (link = @unified_ingestion&.resolved_contact_link)
-      @contact_inbox = link
-      @contact = link.contact
-      @sender = @message_type == :outgoing ? nil : @contact
-      @contact_from_message_identity = true
-      return true
-    end
-
-    resolver = Whatsapp::MessageIdentityContactResolver.new(inbox: inbox, message: messages_data.first)
-    link = resolver.perform || resolver.pending_contact
+    link = @unified_ingestion&.resolved_contact_link || message_identity_contact_link
     return false unless link
 
     @contact_inbox = link
     @contact = link.contact
     @sender = @message_type == :outgoing ? nil : @contact
     @contact_from_message_identity = true
+  end
+
+  def set_canonical_unified_contact
+    contact = @unified_ingestion&.canonical_contact
+    return false unless contact
+
+    @contact = contact
+    @sender = @message_type == :outgoing ? nil : @contact
+    @contact_from_message_identity = true
+  end
+
+  def message_identity_contact_link
+    resolver = Whatsapp::MessageIdentityContactResolver.new(inbox: inbox, message: messages_data.first)
+    resolver.perform || resolver.pending_contact
   end
 
   def merge_contact_conversation_aliases

@@ -106,6 +106,10 @@ class Whatsapp::UnifiedMessageIngestionService
     participant_service.contact_link(record: record)
   end
 
+  def canonical_contact
+    @canonical_contact ||= Whatsapp::CanonicalContactService.new(identity: @identity, link: link).perform
+  end
+
   def self.message_for(identity)
     row = WhatsappUnifiedMessageAlias.find_by(whatsapp_message_identity: identity)
     row&.whatsapp_unified_message&.message || row&.message
