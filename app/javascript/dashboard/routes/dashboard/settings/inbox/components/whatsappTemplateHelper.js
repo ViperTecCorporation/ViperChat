@@ -115,10 +115,7 @@ export function templateError(error, creating = false) {
 }
 
 export function matchesTemplate(template, draft) {
-  if (
-    template.name !== draft.name ||
-    template.language !== draft.language
-  )
+  if (template.name !== draft.name || template.language !== draft.language)
     return false;
   const components = template.components || [];
   const header = components.find(component => component.type === 'HEADER');
