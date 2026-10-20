@@ -39,6 +39,8 @@ RSpec.describe ScheduledMessages::TransportService do
                                   default_provider: 'unoapi', enabled: true,
                                   meta_initial_messages_enabled: true, meta_initial_messages_limit: 2)
       end
+      let(:transport) { described_class.new(schedule) }
+      let(:public_outgoing) { account.messages.outgoing.where(private: false) }
       let(:conversation) do
         create(:conversation, account: account, inbox: link.primary_inbox, contact: contact,
                               contact_inbox: principal == 'unoapi' ? uno_alias : meta_alias).reload
@@ -49,14 +51,14 @@ RSpec.describe ScheduledMessages::TransportService do
                                  scheduled_at: 1.hour.from_now, content: 'Synthetic scheduled policy reply')
       end
       let!(:item) { schedule.items.create!(position: 0, content: schedule.content, content_type: 'text') }
-      let!(:incoming_meta) do
+
+      before do
         create(:message, account: account, inbox: meta.inbox, conversation: conversation, sender: contact,
                          message_type: :incoming, source_id: "wamid.scheduled-incoming-#{SecureRandom.uuid}")
       end
-      let(:transport) { described_class.new(schedule) }
-      let(:public_outgoing) { account.messages.outgoing.where(private: false) }
 
-      it 'validates the selected Uno snapshot, then sends once through Meta and updates the item executor without changing intent' do
+      # The first delivery and its replay share the same claims and provider spies.
+      it 'sends the Uno selection through Meta once, preserving intent on retries', :aggregate_failures do # rubocop:disable RSpec/ExampleLength
         meta_request = stub_request(:post, meta.provider_service.send(:messages_path))
                        .with { |request| JSON.parse(request.body)['to'] == meta_alias.source_id }
                        .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
@@ -70,9 +72,9 @@ RSpec.describe ScheduledMessages::TransportService do
         expect(selection).to include('requested_provider' => 'unoapi', 'selection_source' => 'explicit')
         expect(executor).to include('requested_provider' => 'unoapi', 'provider' => 'unoapi', 'inbox_id' => uno.inbox.id)
 
-        expect { ScheduledMessages::DeliveryService.new(schedule).perform }.not_to change { public_outgoing.count }
+        expect { ScheduledMessages::DeliveryService.new(schedule).perform }.not_to(change(public_outgoing, :count))
         expect(schedule.reload.target_conversation_id).to eq(conversation.id)
-        expect { ScheduledMessages::SequenceItemService.new(schedule, 0).perform }.to change { public_outgoing.count }.by(1)
+        expect { ScheduledMessages::SequenceItemService.new(schedule, 0).perform }.to change(public_outgoing, :count).by(1)
 
         outgoing = item.reload.message
         expect(outgoing).to be_outgoing
@@ -90,7 +92,7 @@ RSpec.describe ScheduledMessages::TransportService do
         expect(meta_request).not_to have_been_requested
         expect(uno_request).not_to have_been_requested
 
-        expect { Whatsapp::SendOnWhatsappService.new(message: outgoing).perform }.not_to change { public_outgoing.count }
+        expect { Whatsapp::SendOnWhatsappService.new(message: outgoing).perform }.not_to(change(public_outgoing, :count))
 
         expect(outgoing.reload.source_id).to eq('wamid.scheduled-policy-reply')
         expect(outgoing.content_attributes.dig('whatsapp_initial_meta_policy', 'decision')).to eq('applied')

@@ -4,7 +4,7 @@ RSpec.describe Whatsapp::WebhookEnvelope do
   it 'splits every entry/change without losing WABA, timestamp or URL scope' do
     params = { object: 'whatsapp_business_account', phone_number: '+5511999999999', entry: [
       { id: 'waba-a', time: 123, changes: [{ field: 'account_alerts', value: { status: 'RESTRICTED' } },
-                                         { field: 'security', value: { status: 'ACTIVE' } }] },
+                                           { field: 'security', value: { status: 'ACTIVE' } }] },
       { id: 'waba-b', changes: [{ field: 'business_capability_update', value: { current_limit: 2000 } }] }
     ] }
     units = described_class.units(params)

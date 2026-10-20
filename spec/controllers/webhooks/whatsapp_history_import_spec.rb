@@ -18,7 +18,7 @@ RSpec.describe 'Meta historical webhook automatic ingestion', type: :request do
   end
 
   before do
-    channel.update_column(:provider_config, channel.provider_config.merge('ignore_history_messages' => false, 'app_secret' => secret))
+    channel.update!(provider_config: channel.provider_config.merge('ignore_history_messages' => false, 'app_secret' => secret))
   end
 
   it 'imports a signed history webhook automatically and deduplicates its redelivery without sending anything' do
@@ -44,7 +44,7 @@ RSpec.describe 'Meta historical webhook automatic ingestion', type: :request do
     expect(channel.account.messages).to be_empty
   end
 
-  context 'after requesting initial SMB synchronization' do
+  context 'with initial SMB synchronization requested' do
     let(:admin) { create(:user, account: channel.account, role: :administrator) }
     let(:media_message) do
       message.merge(id: 'history-signed-image', type: 'image', text: nil,
@@ -59,7 +59,7 @@ RSpec.describe 'Meta historical webhook automatic ingestion', type: :request do
     end
 
     before do
-      channel.update_column(:provider_config, channel.provider_config.merge('phone_number_id' => '111222', 'business_account_id' => '333444'))
+      channel.update!(provider_config: channel.provider_config.merge('phone_number_id' => '111222', 'business_account_id' => '333444'))
       allow(Whatsapp::ApiVersion).to receive(:current).and_return('v26.0')
       stub_request(:get, 'https://graph.facebook.com/v26.0/111222')
         .with(query: { fields: 'is_on_biz_app,platform_type' })
@@ -87,7 +87,7 @@ RSpec.describe 'Meta historical webhook automatic ingestion', type: :request do
       end
     end
 
-    it 'requests once then automatically imports redelivered batches once within the configured two days, without duplicating media' do
+    it 'imports redelivered two-day history once without duplicating media', :aggregate_failures do
       initial_blobs = ActiveStorage::Blob.count
       2.times do
         perform_enqueued_jobs(only: Whatsapp::RequestSmbAppDataJob) do
@@ -114,7 +114,7 @@ RSpec.describe 'Meta historical webhook automatic ingestion', type: :request do
   end
 
   context 'with a large but individually valid batch' do
-    let(:messages) { 3.times.map { |index| message.merge(id: "large-history-#{index}", text: { body: 'a' * 100_000 }) } }
+    let(:messages) { Array.new(3) { |index| message.merge(id: "large-history-#{index}", text: { body: 'a' * 100_000 }) } }
 
     it 'splits before retention truncation and imports all items once' do
       perform_enqueued_jobs(only: [Webhooks::WhatsappEventsJob, Whatsapp::ImportHistoryJob]) do

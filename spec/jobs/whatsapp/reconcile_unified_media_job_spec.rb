@@ -4,15 +4,15 @@ RSpec.describe Whatsapp::ReconcileUnifiedMediaJob do
   let(:account) { create(:account) }
   let(:uno) do
     create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: '+5565987654321',
-                             sync_templates: false, validate_provider_config: false)
+                              sync_templates: false, validate_provider_config: false)
   end
   let(:meta) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '+556587654321',
-                             sync_templates: false, validate_provider_config: false)
+                              sync_templates: false, validate_provider_config: false)
   end
   let(:link) do
     WhatsappInboxLink.create!(account: account, primary_inbox: uno.inbox, secondary_inbox: meta.inbox,
-                             default_provider: 'unoapi', enabled: true)
+                              default_provider: 'unoapi', enabled: true)
   end
   let(:conversation) { create(:conversation, account: account, inbox: uno.inbox) }
   let(:message) { create(:message, account: account, inbox: uno.inbox, conversation: conversation) }

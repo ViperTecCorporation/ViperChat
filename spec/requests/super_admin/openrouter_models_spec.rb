@@ -2,13 +2,16 @@ require 'rails_helper'
 
 RSpec.describe 'Super admin OpenRouter models', type: :request do
   let(:super_admin) { create(:super_admin) }
+  let(:catalog) { Llm::OpenRouterCatalog.new }
+
   before do
     sign_in(super_admin, scope: :super_admin) unless RSpec.current_example.metadata[:ordinary_agent]
     InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT').update!(value: 'https://openrouter.ai/api/v1')
-    allow_any_instance_of(Llm::OpenRouterCatalog).to receive(:models).with(feature: 'assistant')
-      .and_return([{ 'id' => 'vendor/chat', 'name' => 'New chat' }])
-    allow_any_instance_of(Llm::OpenRouterCatalog).to receive(:models).with(feature: 'audio_transcription')
-      .and_return([{ 'id' => 'vendor/stt', 'name' => 'New STT' }])
+    allow(Llm::OpenRouterCatalog).to receive(:new).and_return(catalog)
+    allow(catalog).to receive(:models).with(feature: 'assistant')
+                                      .and_return([{ 'id' => 'vendor/chat', 'name' => 'New chat' }])
+    allow(catalog).to receive(:models).with(feature: 'audio_transcription')
+                                      .and_return([{ 'id' => 'vendor/stt', 'name' => 'New STT' }])
   end
 
   it 'renders separate model selectors without losing existing selections' do
@@ -26,7 +29,8 @@ RSpec.describe 'Super admin OpenRouter models', type: :request do
 
   it 'rejects incompatible new models before saving other settings' do
     old_model = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_MODEL')&.value
-    post '/super_admin/app_config?config=captain', params: { app_config: { CAPTAIN_OPEN_AI_MODEL: 'vendor/invalid', CAPTAIN_AUDIO_TRANSCRIPTION_MODEL: 'vendor/chat' } }
+    post '/super_admin/app_config?config=captain',
+         params: { app_config: { CAPTAIN_OPEN_AI_MODEL: 'vendor/invalid', CAPTAIN_AUDIO_TRANSCRIPTION_MODEL: 'vendor/chat' } }
     expect(response).to have_http_status(:redirect)
     expect(InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_MODEL')&.value).to eq(old_model)
   end

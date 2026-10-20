@@ -36,7 +36,7 @@ RSpec.describe Search::TextQuery, type: :request do
     account.enable_features!('search_with_gin')
     message = create(:message, account: account, inbox: inbox, conversation: conversation, content: "João & Cláudia: d'água")
     search = SearchService.new(current_user: user, current_account: account,
-                              params: { q: "joao & claudia: d'agua" }, search_type: 'Message')
+                               params: { q: "joao & claudia: d'agua" }, search_type: 'Message')
     expect(search.perform[:messages].map(&:id)).to include(message.id)
   end
 

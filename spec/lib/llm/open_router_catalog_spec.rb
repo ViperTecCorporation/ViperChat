@@ -1,7 +1,10 @@
 require 'rails_helper'
 
 RSpec.describe Llm::OpenRouterCatalog do
-  let(:chat) { { id: 'vendor/new-chat', name: 'New chat', architecture: { input_modalities: ['text'], output_modalities: ['text'] }, supported_parameters: ['tools'] } }
+  let(:chat) do
+    { id: 'vendor/new-chat', name: 'New chat', architecture: { input_modalities: ['text'], output_modalities: ['text'] },
+      supported_parameters: ['tools'] }
+  end
   let(:audio) { { id: 'vendor/new-stt', name: 'New STT', architecture: { input_modalities: ['audio'], output_modalities: ['transcription'] } } }
 
   before do

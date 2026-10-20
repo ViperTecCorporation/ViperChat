@@ -119,8 +119,8 @@ RSpec.describe Whatsapp::SmbAppDataService do
 
   it 'does not repeat a request after a process crash left the dispatch unacknowledged' do
     WhatsappSmbSyncRequest.create!(account: account, channel: channel, waba_id: channel.provider_config['business_account_id'],
-                                 phone_number_id: channel.provider_config['phone_number_id'], sync_type: 'smb_app_state_sync',
-                                 history_max_age_days: 7, state: 'dispatched', dispatched_at: 10.minutes.ago)
+                                   phone_number_id: channel.provider_config['phone_number_id'], sync_type: 'smb_app_state_sync',
+                                   history_max_age_days: 7, state: 'dispatched', dispatched_at: 10.minutes.ago)
     service.perform
     expect(client).not_to have_received(:request)
   end
@@ -137,8 +137,8 @@ RSpec.describe Whatsapp::SmbAppDataService do
   it 'does not reuse another account or channel journal even when a misconfigured inbox repeats its phone ID' do
     other = create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
     WhatsappSmbSyncRequest.create!(account: other.account, channel: other, waba_id: 'other-waba',
-                                 phone_number_id: channel.provider_config['phone_number_id'], sync_type: 'history',
-                                 history_max_age_days: 7, state: 'accepted', request_id: 'private-other-request')
+                                   phone_number_id: channel.provider_config['phone_number_id'], sync_type: 'history',
+                                   history_max_age_days: 7, state: 'accepted', request_id: 'private-other-request')
     service.perform
     expect(management).not_to have_received(:get)
     expect(setup).not_to have_received(:register_callback)
@@ -157,7 +157,7 @@ RSpec.describe Whatsapp::SmbAppDataService do
   it 'does not retarget callbacks if the phone identity changes while Meta coexistence is being checked' do
     allow(management).to receive(:get) do
       channel.update_column(:provider_config, channel.provider_config.merge('phone_number_id' => 'another-phone',
-                                                                          'business_account_id' => 'another-waba'))
+                                                                            'business_account_id' => 'another-waba'))
       { 'is_on_biz_app' => true, 'platform_type' => 'CLOUD_API' }
     end
     service.perform

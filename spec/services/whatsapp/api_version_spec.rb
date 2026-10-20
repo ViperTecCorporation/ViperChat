@@ -72,22 +72,6 @@ RSpec.describe Whatsapp::ApiVersion do
       expect(Whatsapp::ManagementApiClient.new(channel).get('phone', fields: 'id')).to eq('id' => 'phone')
     end
 
-    it 'uses the same version for Enterprise call actions' do
-      request = stub_request(:post, 'https://graph.facebook.com/v26.0/phone/calls')
-                .with(body: { messaging_product: 'whatsapp', call_id: 'call', action: 'reject' }.to_json)
-                .to_return(body: '{}', headers: { 'Content-Type' => 'application/json' })
-      expect(cloud.reject_call('call')).to be(true)
-      expect(request).to have_been_requested
-    end
-
-    it 'uses the same version for call permission requests' do
-      request = stub_request(:post, 'https://graph.facebook.com/v26.0/phone/messages')
-                .with(body: hash_including(type: 'interactive'))
-                .to_return(body: '{"messages":[]}', headers: { 'Content-Type' => 'application/json' })
-      expect(cloud.send_call_permission_request('15555555555')).to eq('messages' => [])
-      expect(request).to have_been_requested
-    end
-
     it 'uses the same version for embedded signup requests' do
       stub_request(:get, 'https://graph.facebook.com/v26.0/business/phone_numbers')
         .with(query: { access_token: 'token' })

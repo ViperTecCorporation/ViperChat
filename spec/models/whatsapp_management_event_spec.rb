@@ -52,12 +52,12 @@ describe WhatsappManagementEvent do
 
   it 'exposes only safe receipt details even if stored details contain PII' do
     event = described_class.create!(attributes.merge(
-                                     details: { 'contacts_count' => 4, 'quality_rating' => 'RED', 'name' => 'Private',
-                                                'status' => 'private@example.test', 'current_limit' => 'Private' },
-                                     payload: { 'email' => 'private@example.test' }
-                                   ))
+                                      details: { 'contacts_count' => 4, 'quality_rating' => 'RED', 'name' => 'Private',
+                                                 'status' => 'private@example.test', 'current_limit' => 'Private' },
+                                      payload: { 'email' => 'private@example.test' }
+                                    ))
     expect(event.summary).to eq(id: event.id, field: 'security', state: 'recorded', received_at: event.created_at,
-                               details: { 'contacts_count' => 4, 'quality_rating' => 'RED' })
+                                details: { 'contacts_count' => 4, 'quality_rating' => 'RED' })
   end
 
   it 'exposes a pending import reason without importing or deleting historical messages' do

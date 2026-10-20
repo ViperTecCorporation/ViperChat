@@ -9,7 +9,7 @@ RSpec.describe Whatsapp::HealthService do
 
   before do
     stub_request(:get, %r{https://graph.facebook.com/v[\d.]+/test-phone})
-      .with { |request| !CGI.parse(request.uri.query)['fields'].sole.split(',').include?('messaging_limit_tier') }
+      .with { |request| CGI.parse(request.uri.query)['fields'].sole.split(',').exclude?('messaging_limit_tier') }
       .to_return(status: 200, body: { id: 'test-phone', quality_rating: 'GREEN', messaging_limit_tier: 'TIER_250' }.to_json,
                  headers: { 'Content-Type' => 'application/json' })
   end
@@ -21,15 +21,15 @@ RSpec.describe Whatsapp::HealthService do
                  headers: { 'Content-Type' => 'application/json' })
     data = described_class.new(channel).fetch_health_status
     expect(data).to include(messaging_limit_tier: 'TIER_2K', whatsapp_business_manager_messaging_limit: 'TIER_2K',
-                           messaging_limit_scope: 'business_portfolio', quality_rating: 'GREEN')
+                            messaging_limit_scope: 'business_portfolio', quality_rating: 'GREEN')
     expect(data[:fetched_at]).to be_present
   end
 
   it 'keeps health available but explicitly unknown if the limit is unavailable' do
     stub_request(:get, %r{https://graph.facebook.com/v[\d.]+/test-waba}).to_return(status: 403, body: '{}',
-                                                                                            headers: { 'Content-Type' => 'application/json' })
+                                                                                   headers: { 'Content-Type' => 'application/json' })
     expect(described_class.new(channel).fetch_health_status).to include(messaging_limit_tier: nil, messaging_limit_scope: 'unknown',
-                                                                      quality_rating: 'GREEN')
+                                                                        quality_rating: 'GREEN')
   end
 
   it 'does not propagate Graph error payloads or tokens' do

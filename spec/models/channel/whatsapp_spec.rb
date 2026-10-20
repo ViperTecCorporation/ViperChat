@@ -203,27 +203,28 @@ RSpec.describe Channel::Whatsapp do
 
   describe 'validate_provider_config' do
     let(:channel) { build(:channel_whatsapp, provider: 'whatsapp_cloud', account: create(:account)) }
+    let(:business_path) { "https://graph.facebook.com/#{Whatsapp::ApiVersion.current}/" }
 
     it 'validates false when provider config is wrong' do
-      stub_request(:get, 'https://graph.facebook.com/v14.0//message_templates?access_token=test_key').to_return(status: 401)
+      stub_request(:get, "#{business_path}/message_templates?access_token=test_key").to_return(status: 401)
       expect(channel.save).to be(false)
     end
 
     it 'validates true when provider config is right' do
-      stub_request(:get, 'https://graph.facebook.com/v14.0//message_templates?access_token=test_key')
+      stub_request(:get, "#{business_path}/message_templates?access_token=test_key")
         .to_return(status: 200,
                    body: { data: [{
                      id: '123456789', name: 'test_template'
                    }] }.to_json)
-      stub_request(:get, 'https://graph.facebook.com/v14.0//phone_numbers?fields=id&limit=100&access_token=test_key')
+      stub_request(:get, "#{business_path}/phone_numbers?fields=id&limit=100&access_token=test_key")
         .to_return(status: 200, body: { data: [{ id: 'random_id' }] }.to_json, headers: { 'Content-Type' => 'application/json' })
       expect(channel.save).to be(true)
     end
 
     it 'validates false when phone number id is wrong' do
-      stub_request(:get, 'https://graph.facebook.com/v14.0//message_templates?access_token=test_key')
+      stub_request(:get, "#{business_path}/message_templates?access_token=test_key")
         .to_return(status: 200, body: { data: [] }.to_json)
-      stub_request(:get, 'https://graph.facebook.com/v14.0//phone_numbers?fields=id&limit=100&access_token=test_key')
+      stub_request(:get, "#{business_path}/phone_numbers?fields=id&limit=100&access_token=test_key")
         .to_return(status: 200, body: { data: [{ id: 'another_phone_id' }] }.to_json, headers: { 'Content-Type' => 'application/json' })
       expect(channel.save).to be(false)
     end

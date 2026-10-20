@@ -1,6 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe Whatsapp::ContactReconciliationService do
+  subject(:service) { described_class.new(link: link, pairs: [[legacy.id, canonical.id]]) }
+
   let(:account) { create(:account) }
   let(:meta) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '+556696222471',
@@ -19,11 +21,14 @@ RSpec.describe Whatsapp::ContactReconciliationService do
   let!(:legacy_alias) { create(:contact_inbox, inbox: meta.inbox, contact: legacy, source_id: legacy.bsuid) }
   let!(:phone_alias) { create(:contact_inbox, inbox: meta.inbox, contact: legacy, source_id: '556696092506') }
   let!(:conversation) { create(:conversation, inbox: meta.inbox, account: account, contact: legacy, contact_inbox: legacy_alias) }
-  let!(:message) { create(:message, account: account, inbox: meta.inbox, conversation: conversation, sender: legacy, message_type: :incoming, source_id: 'wamid.keep') }
-  subject(:service) { described_class.new(link: link, pairs: [[legacy.id, canonical.id]]) }
+  let!(:message) do
+    create(:message, account: account, inbox: meta.inbox, conversation: conversation, sender: legacy, message_type: :incoming,
+                     source_id: 'wamid.keep')
+  end
 
   it 'previews without changing a contact, alias, conversation or message' do
-    before = [canonical.reload.attributes, legacy.reload.attributes, conversation.reload.attributes, message.reload.attributes, legacy_alias.reload.attributes]
+    before = [canonical.reload.attributes, legacy.reload.attributes, conversation.reload.attributes, message.reload.attributes,
+              legacy_alias.reload.attributes]
     preview = service.preview
     expect(preview[:blocked]).to be(false)
     expect(preview).to include(deletes: 0, message_moves: 0, media_changes: 0)
@@ -32,7 +37,7 @@ RSpec.describe Whatsapp::ContactReconciliationService do
             message.reload.attributes, legacy_alias.reload.attributes]).to eq(before)
   end
 
-  it 'reconciles relationships while retaining both contacts, conversation/message IDs, content and media' do
+  it 'reconciles relationships while retaining both contacts, conversation/message IDs, content and media', :aggregate_failures do
     attachment = message.attachments.build(account: account, file_type: :image)
     attachment.file.attach(io: StringIO.new(Rails.root.join('spec/assets/sample.png').binread), filename: 'keep.png', content_type: 'image/png')
     attachment.save!

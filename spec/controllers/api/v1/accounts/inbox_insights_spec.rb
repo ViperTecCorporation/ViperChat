@@ -33,7 +33,8 @@ RSpec.describe 'Inbox insights API', type: :request do
 
   it 'returns informational data only for the authorized cloud inbox' do
     result = { informational_only: true, sections: {} }
-    allow_any_instance_of(Whatsapp::AccountInsightsService).to receive(:perform).and_return(result)
+    service = instance_double(Whatsapp::AccountInsightsService, perform: result)
+    allow(Whatsapp::AccountInsightsService).to receive(:new).and_return(service)
     get url, headers: admin.create_new_auth_token, params: { days: 7 }
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to eq(result.stringify_keys)

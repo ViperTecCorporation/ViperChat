@@ -260,7 +260,7 @@ RSpec.describe Whatsapp::HistoryImportService do
     let(:followup) do
       params = { 'phone_number' => channel.phone_number,
                  'entry' => [{ 'id' => channel.provider_config['business_account_id'],
-                              'changes' => [{ 'field' => 'history', 'value' => { 'messages' => [media_message] } }] }] }
+                               'changes' => [{ 'field' => 'history', 'value' => { 'messages' => [media_message] } }] }] }
       Whatsapp::ManagementWebhookService.new(params: params).perform.sole
     end
 
@@ -287,7 +287,7 @@ RSpec.describe Whatsapp::HistoryImportService do
 
     it 'reuses a retained outgoing placeholder context without guessing from the media sender' do
       placeholder = media_message.slice('id', 'timestamp').merge('from' => channel.phone_number.delete_prefix('+'),
-                                                              'type' => 'media_placeholder', 'history_context' => { 'status' => 'PLAYED' })
+                                                                 'type' => 'media_placeholder', 'history_context' => { 'status' => 'PLAYED' })
       params = history_payload([placeholder]).merge('phone_number' => channel.phone_number)
       original = Whatsapp::ManagementWebhookService.new(params: params).perform.sole
       described_class.new(event: original).perform

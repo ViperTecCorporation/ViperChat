@@ -5,6 +5,7 @@ require 'rails_helper'
 # File name is fixed by the integration-test ownership contract.
 # rubocop:disable RSpec/AnyInstance, RSpec/MultipleMemoizedHelpers, RSpec/SpecFilePathFormat
 RSpec.describe Whatsapp::UnifiedTransportService do
+  reference_kinds = %w[legacy unavailable].freeze
   let(:account) { create(:account) }
   let(:agent) { create(:user, account: account) }
   let(:suffix) { SecureRandom.random_number(10**7).to_s.rjust(7, '0') }
@@ -49,7 +50,7 @@ RSpec.describe Whatsapp::UnifiedTransportService do
         meta_alias.update!(source_id: 'BR.1316081087211411')
         create(:contact_inbox, inbox: meta.inbox, contact: contact, source_id: '556596598456')
         incoming = create(:message, account: account, inbox: meta.inbox, conversation: conversation,
-                                   sender: contact, message_type: :incoming, source_id: 'wamid.production-incoming')
+                                    sender: contact, message_type: :incoming, source_id: 'wamid.production-incoming')
         outgoing = Messages::MessageBuilder.new(agent, conversation,
                                                 ActionController::Parameters.new(content: 'Synthetic recipient check',
                                                                                  whatsapp_transport: 'whatsapp_cloud')).perform
@@ -131,7 +132,7 @@ RSpec.describe Whatsapp::UnifiedTransportService do
             expect(outgoing.source_id).not_to eq('3EB0ABC1237785D6ED0F2A')
           end
 
-          it 'does not fall back to the partner after a timeout or silently change transport metadata' do
+          it 'does not fall back to the partner after a timeout or silently change transport metadata', :aggregate_failures do
             outgoing = message
             create(:message, account: account, inbox: meta.inbox, conversation: conversation,
                              sender: contact, message_type: :incoming)
@@ -163,8 +164,8 @@ RSpec.describe Whatsapp::UnifiedTransportService do
             expect(outgoing.reload.source_id).to be_blank
           end
 
-          %w[legacy unavailable].each do |reference_kind|
-            it "sends a #{reference_kind} quote once, dropping only an unavailable provider reference" do
+          reference_kinds.each do |reference_kind|
+            it "sends a #{reference_kind} quote once, dropping only an unavailable provider reference", :aggregate_failures do
               source = if reference_kind == 'unavailable'
                          'unavailable-public-reference'
                        elsif primary_provider == 'unoapi'

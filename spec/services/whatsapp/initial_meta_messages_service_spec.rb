@@ -4,6 +4,16 @@ require 'rails_helper'
 # The principal inbox is deliberately independent of the requested/effective provider.
 # rubocop:disable RSpec/MultipleMemoizedHelpers
 RSpec.describe Whatsapp::InitialMetaMessagesService do
+  media_formats = [%w[image png image/png], %w[audio mp3 audio/mpeg], %w[video mp4 video/mp4], %w[file pdf application/pdf]].freeze
+  attempted_states = %w[attempting uncertain].freeze
+  excluded_messages = [
+    ['a private note', { private: true }],
+    ['an automation rule response', { content_attributes: { automation_rule_id: 123 } }],
+    ['an automated campaign', { additional_attributes: { campaign_id: 123 } }],
+    ['an automated web absence reminder', { content_attributes: { web_absence_request_key: 'synthetic-reminder' } }],
+    ['a historical import', { historical_import: true, content_attributes: { whatsapp_history_import: true } }],
+    ['an incoming message', { message_type: :incoming }]
+  ].freeze
   let(:account) { create(:account) }
   let(:agent) { create(:user, account: account) }
   let(:suffix) { SecureRandom.random_number(10**7).to_s.rjust(7, '0') }
@@ -79,14 +89,14 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
           link.update!(meta_initial_messages_enabled: false)
 
           expect(message.content_attributes['whatsapp_initial_meta_policy']).to be_blank
-          expect { described_class.new(message: message).perform }.not_to change { slots.count }
+          expect { described_class.new(message: message).perform }.not_to(change(slots, :count))
           expect(message.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
         end
 
         it 'treats a zero limit as disabled even when the toggle is on' do
           link.update!(meta_initial_messages_limit: 0)
 
-          expect { described_class.new(message: message).perform }.not_to change { slots.count }
+          expect { described_class.new(message: message).perform }.not_to(change(slots, :count))
           expect(message.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
         end
 
@@ -106,7 +116,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
           uno_request
         end
 
-        it 'sends the first two eligible replies through Meta and the third through Uno without changing editor selection' do
+        it 'sends the first two eligible replies through Meta and the third through Uno without changing editor selection', :aggregate_failures do
           replies = Array.new(3) { Messages::MessageBuilder.new(agent, conversation, params).perform }
 
           replies.each { |reply| Whatsapp::SendOnWhatsappService.new(message: reply).perform }
@@ -143,7 +153,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
 
         it 'counts an explicitly requested Meta send against the same quota' do
           selected_meta = Messages::MessageBuilder.new(agent, conversation, params.merge(whatsapp_transport: 'whatsapp_cloud')).perform
-          replies = [selected_meta, *Array.new(2) { Messages::MessageBuilder.new(agent, conversation, params).perform }]
+          replies = [selected_meta] + Array.new(2) { Messages::MessageBuilder.new(agent, conversation, params).perform }
 
           replies.each { |reply| Whatsapp::SendOnWhatsappService.new(message: reply).perform }
 
@@ -155,8 +165,8 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
           expect(uno_request).to have_been_requested.once
         end
 
-        [%w[image png image/png], %w[audio mp3 audio/mpeg], %w[video mp4 video/mp4], %w[file pdf application/pdf]].each do |kind, extension, mime|
-          it "routes #{kind} through Meta once without recreating the attachment/blob or changing the sender" do
+        media_formats.each do |kind, extension, mime|
+          it "routes #{kind} through Meta once without recreating the attachment/blob or changing the sender", :aggregate_failures do
             outgoing = message
             attachment = outgoing.attachments.build(account: account, file_type: kind)
             attachment.file.attach(io: StringIO.new(File.binread(Rails.root.join("spec/assets/sample.#{extension}"))),
@@ -202,7 +212,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
           expect(outgoing.reload.content_attributes.dig('whatsapp_transport', 'requested_provider')).to eq('unoapi')
         end
 
-        it 'does not fall back or release quota after an uncertain Meta HTTP attempt' do
+        it 'does not fall back or release quota after an uncertain Meta HTTP attempt', :aggregate_failures do
           outgoing = message
           timeout_request = stub_request(:post, meta.provider_service.send(:messages_path)).to_timeout
 
@@ -225,7 +235,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
           expect(slots.count).to eq(2)
         end
 
-        %w[attempting uncertain].each do |state|
+        attempted_states.each do |state|
           it "does not reroute or reserve a slot for an Uno message with an #{state} delivery attempt" do
             outgoing = message
             attributes = outgoing.content_attributes.deep_dup
@@ -235,7 +245,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
             )
             outgoing.update!(content_attributes: attributes)
 
-            expect { described_class.new(message: outgoing).perform }.not_to change { slots.count }
+            expect { described_class.new(message: outgoing).perform }.not_to(change(slots, :count))
             expect(outgoing.reload.content_attributes.fetch('whatsapp_transport')).to eq(attributes.fetch('whatsapp_transport'))
             expect(meta_request).not_to have_been_requested
             expect(uno_request).not_to have_been_requested
@@ -286,7 +296,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
         it 'uses the Meta timestamp on a correlated incoming message instead of webhook arrival time' do
           incoming_meta.destroy!
           incoming = create(:message, account: account, inbox: link.primary_inbox, conversation: conversation, sender: contact,
-                                     message_type: :incoming, content_attributes: { whatsapp_unified_message_id: 123 })
+                                      message_type: :incoming, content_attributes: { whatsapp_unified_message_id: 123 })
           ledger = WhatsappUnifiedMessage.create!(whatsapp_inbox_link: link, message: incoming,
                                                   original_id: SecureRandom.hex(10), direction: 'incoming',
                                                   participant_key: '5565987654321', message_kind: 'text')
@@ -308,7 +318,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
         it 'accepts the customer message that automatically reopens a resolved conversation' do
           conversation.update!(status: :resolved)
           incoming = create(:message, account: account, inbox: meta.inbox, conversation: conversation, sender: contact,
-                                     message_type: :incoming)
+                                      message_type: :incoming)
           conversation.reload
           expect(conversation.web_attendance_start_message_id).to eq(incoming.id)
           described_class.new(message: message).perform
@@ -319,7 +329,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
         it 'keeps explicit templates on their normal path without consuming the initial-message quota' do
           incoming_meta.update!(created_at: 25.hours.ago)
           outgoing = build(:message, account: account, inbox: conversation.inbox, conversation: conversation, sender: agent,
-                                    message_type: :outgoing, additional_attributes: { template_params: { name: 'synthetic' } })
+                                     message_type: :outgoing, additional_attributes: { template_params: { name: 'synthetic' } })
           Whatsapp::UnifiedTransportService.prepare!(message: outgoing, requested_provider: 'whatsapp_cloud')
           outgoing.save!
           described_class.new(message: outgoing).perform
@@ -351,7 +361,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
         it 'skips an unsupported view-once message without spending quota' do
           outgoing = Messages::MessageBuilder.new(agent, conversation, params.merge(content_attributes: { view_once: true })).perform
 
-          expect { described_class.new(message: outgoing).perform }.not_to change { slots.count }
+          expect { described_class.new(message: outgoing).perform }.not_to(change(slots, :count))
           expect(outgoing.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
           described_class.new(message: message).perform
           expect(slots.pluck(:message_id)).to eq([message.id])
@@ -361,7 +371,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
         it 'skips Meta while its channel needs reauthorization' do
           meta.prompt_reauthorization!
 
-          expect { described_class.new(message: message).perform }.not_to change { slots.count }
+          expect { described_class.new(message: message).perform }.not_to(change(slots, :count))
           expect(message.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
         ensure
           meta.reauthorized!
@@ -373,20 +383,13 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
           contact.update!(phone_number: nil)
           conversation.reload
 
-          expect { described_class.new(message: message).perform }.not_to change { slots.count }
+          expect { described_class.new(message: message).perform }.not_to(change(slots, :count))
           expect(message.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
         end
       end
 
       describe 'excluded messages' do
-        [
-          ['a private note', { private: true }],
-          ['an automation rule response', { content_attributes: { automation_rule_id: 123 } }],
-          ['an automated campaign', { additional_attributes: { campaign_id: 123 } }],
-          ['an automated web absence reminder', { content_attributes: { web_absence_request_key: 'synthetic-reminder' } }],
-          ['a historical import', { historical_import: true, content_attributes: { whatsapp_history_import: true } }],
-          ['an incoming message', { message_type: :incoming }]
-        ].each do |label, attributes|
+        excluded_messages.each do |label, attributes|
           it "does not snapshot or allocate quota for #{label}" do
             excluded = build(:message, account: account, inbox: conversation.inbox, conversation: conversation,
                                        sender: agent, message_type: :outgoing, **attributes)
@@ -394,7 +397,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
             excluded.save!
 
             expect(excluded.content_attributes['whatsapp_initial_meta_policy']).to be_blank
-            expect { described_class.new(message: excluded).perform }.not_to change { slots.count }
+            expect { described_class.new(message: excluded).perform }.not_to(change(slots, :count))
             expect(excluded.reload.content_attributes.dig('whatsapp_transport', 'reason')).not_to eq('initial_meta_messages')
           end
         end
@@ -405,7 +408,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
 
           expect(outgoing.sender).to eq(bot)
           expect(outgoing.content_attributes['whatsapp_initial_meta_policy']).to be_blank
-          expect { described_class.new(message: outgoing).perform }.not_to change { slots.count }
+          expect { described_class.new(message: outgoing).perform }.not_to(change(slots, :count))
         end
 
         it 'excludes web delivery regardless of the selected WhatsApp provider' do
@@ -415,7 +418,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
           expect(outgoing).to be_web_attendance
           expect(outgoing.content_attributes['whatsapp_initial_meta_policy']).to be_blank
           expect(outgoing.content_attributes['whatsapp_transport']).to be_blank
-          expect { described_class.new(message: outgoing).perform }.not_to change { slots.count }
+          expect { described_class.new(message: outgoing).perform }.not_to(change(slots, :count))
         end
 
         it 'leaves group routing unchanged and does not reserve a direct-chat slot' do
@@ -423,7 +426,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
 
           expect(message.content_attributes['whatsapp_initial_meta_policy']).to be_blank
           expect(message.content_attributes['whatsapp_transport']).to be_blank
-          expect { described_class.new(message: message).perform }.not_to change { slots.count }
+          expect { described_class.new(message: message).perform }.not_to(change(slots, :count))
         end
       end
 
@@ -459,7 +462,7 @@ RSpec.describe Whatsapp::InitialMetaMessagesService do
           conversation.update!(status: :resolved)
           conversation.update!(status: :open)
 
-          expect { described_class.new(message: outgoing.reload).perform }.not_to change { slots.count }
+          expect { described_class.new(message: outgoing.reload).perform }.not_to(change(slots, :count))
           expect(outgoing.reload.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
           expect(outgoing.content_attributes.dig('whatsapp_initial_meta_policy', 'cycle')).to eq(snapshot.fetch('cycle'))
         end

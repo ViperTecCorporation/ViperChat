@@ -1,3 +1,5 @@
+# Standalone diagnostic CLI: retain machine-readable stdout, exit status and atomic fixture scenarios.
+# rubocop:disable Rails/Output
 # Dry-run: ACCOUNT_ID=1 bundle exec rails runner script/repair_duplicate_group_avatars.rb
 # Apply reviewed contact IDs only, with a new private backup file:
 # ACCOUNT_ID=1 APPLY_CONTACT_IDS=4697,51828 BACKUP_PATH=/private/group-avatar.jsonl bundle exec rails runner script/repair_duplicate_group_avatars.rb
@@ -21,3 +23,5 @@ begin
 ensure
   backup&.close
 end
+
+# rubocop:enable Rails/Output

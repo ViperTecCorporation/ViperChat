@@ -3,6 +3,8 @@ require 'base64'
 require 'stringio'
 
 RSpec.describe Whatsapp::UsernameProfileSyncService do
+  arrival_orders = [%i[meta uno], %i[uno meta]].freeze
+  bsuid_kinds = %w[bsuid_incoming bsuid_echo].freeze
   let(:account) { create(:account) }
   let(:bsuid) { 'BR.1234567890123456' }
   let(:meta_channel) do
@@ -37,15 +39,18 @@ RSpec.describe Whatsapp::UsernameProfileSyncService do
     value = payload.dig(:entry, 0, :changes, 0, :value)
     channel = channels.fetch(provider)
     value[:metadata] = { phone_number_id: channel.provider_config['phone_number_id'], display_phone_number: channel.phone_number.delete_prefix('+') }
-    if provider == :meta
-      value[:contacts].first[:profile] = { name: 'Nome recebido, não substituir', username: username, country_code: 'BR' }.compact
-      value[:contacts].first[:user_id] = bsuid
-      value[:contacts].first[:wa_id] ||= ''
-      Array(value[:messages]).each { |message| message[:from] ||= '' }
-      Array(value[:message_echoes]).each { |message| message[:to] ||= '' }
-    end
+    apply_meta_profile(value, username) if provider == :meta
     Array(value[:message_echoes]).each { |message| message[:from] = channel.phone_number.delete_prefix('+') }
     payload
+  end
+
+  def apply_meta_profile(value, username)
+    profile = value[:contacts].first
+    profile[:profile] = { name: 'Nome recebido, não substituir', username: username, country_code: 'BR' }.compact
+    profile[:user_id] = bsuid
+    profile[:wa_id] ||= ''
+    Array(value[:messages]).each { |message| message[:from] ||= '' }
+    Array(value[:message_echoes]).each { |message| message[:to] ||= '' }
   end
 
   def ingest(provider, payload)
@@ -170,7 +175,7 @@ RSpec.describe Whatsapp::UsernameProfileSyncService do
   end
 
   %i[meta uno].each do |principal|
-    [%i[meta uno], %i[uno meta]].each do |arrival_order|
+    arrival_orders.each do |arrival_order|
       context "with #{principal} principal and #{arrival_order.join(' then ')}" do
         before do
           create(:contact_inbox, inbox: meta_channel.inbox, contact: contact, source_id: bsuid)
@@ -180,7 +185,7 @@ RSpec.describe Whatsapp::UsernameProfileSyncService do
                                     default_provider: 'whatsapp_cloud', enabled: true, activated_at: 1.day.ago)
         end
 
-        %w[bsuid_incoming bsuid_echo].each do |kind|
+        bsuid_kinds.each do |kind|
           it "refreshes the mapped #{kind} contact without adding contacts, messages or media" do
             payloads = channels.keys.index_with { |provider| webhook(provider, kind) }
             arrival_order.each { |provider| ingest(provider, payloads.fetch(provider).deep_dup) }
@@ -231,7 +236,7 @@ RSpec.describe Whatsapp::UsernameProfileSyncService do
     value = payload.dig(:entry, 0, :changes, 0, :value)
     echo = value.delete(:message_echoes).sole
     value[:statuses] = [{ id: echo[:id], provider_message_id: echo[:provider_message_id], recipient_id: '5565987654321',
-                         status: 'read', timestamp: echo[:timestamp] }]
+                          status: 'read', timestamp: echo[:timestamp] }]
     value[:contacts].sole[:user_id] = '123456789876543@lid'
     expect(described_class).not_to receive(:new)
     ingest(:uno, payload)

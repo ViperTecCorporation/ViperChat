@@ -4,7 +4,7 @@ RSpec.describe Whatsapp::ImportHistoryJob do
   let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
   let!(:event) do
     WhatsappManagementEvent.create!(account: channel.account, channel: channel, inbox: channel.inbox, field: 'history',
-                                     digest: 'a' * 64, state: 'pending_import', expires_at: 7.days.from_now)
+                                    digest: 'a' * 64, state: 'pending_import', expires_at: 7.days.from_now)
   end
 
   it 'enqueues an immediate import after receipt creation' do
@@ -24,7 +24,7 @@ RSpec.describe Whatsapp::ImportHistoryJob do
 
   it 'does not let one failed receipt block another and logs only technical identifiers' do
     other = WhatsappManagementEvent.create!(account: channel.account, channel: channel, inbox: channel.inbox, field: 'history',
-                                             digest: 'b' * 64, state: 'pending_import', expires_at: 7.days.from_now)
+                                            digest: 'b' * 64, state: 'pending_import', expires_at: 7.days.from_now)
     first = instance_double(Whatsapp::HistoryImportService)
     second = instance_double(Whatsapp::HistoryImportService)
     allow(Whatsapp::HistoryImportService).to receive(:new).with(event: event).and_return(first)

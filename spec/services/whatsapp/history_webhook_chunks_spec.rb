@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Whatsapp::HistoryWebhookChunks do
-  let(:messages) { 4.times.map { |index| { 'id' => "history-#{index}", 'text' => { 'body' => 'a' * 80_000 } } } }
+  let(:messages) { Array.new(4) { |index| { 'id' => "history-#{index}", 'text' => { 'body' => 'a' * 80_000 } } } }
   let(:change) do
     { 'field' => 'history', 'value' => { 'metadata' => { 'phone_number_id' => 'configured-phone' }, 'history' => [
       { 'metadata' => { 'phase' => 0, 'progress' => 80 }, 'threads' => [{ 'id' => '5566996269251', 'messages' => messages }] }
@@ -35,7 +35,7 @@ RSpec.describe Whatsapp::HistoryWebhookChunks do
   end
 
   it 'does not erase an oversized lifecycle-only history envelope with no messages to split' do
-    change['value']['history'] = [{ 'threads' => [], 'errors' => [{ 'code' => 2593109 }] }]
+    change['value']['history'] = [{ 'threads' => [], 'errors' => [{ 'code' => 2_593_109 }] }]
     change['value']['large'] = 'a' * WhatsappManagementEvent::MAX_PAYLOAD_BYTES
     expect(described_class.split(change)).to eq([change])
   end

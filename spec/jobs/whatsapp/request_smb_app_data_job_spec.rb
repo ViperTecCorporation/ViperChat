@@ -13,7 +13,8 @@ RSpec.describe Whatsapp::RequestSmbAppDataJob do
     allow(Whatsapp::SmbAppDataService).to receive(:new).with(channel: channel).and_return(service)
     allow(service).to receive(:perform).and_raise(Whatsapp::SmbAppDataService::PreparationError, 'webhook_setup_failed')
     expect { described_class.perform_now(channel.id) }.to have_enqueued_job(described_class).with(channel.id)
-      .at(a_value_between(5.minutes.from_now, 6.minutes.from_now))
+                                                                                            .at(a_value_between(5.minutes.from_now,
+                                                                                                                6.minutes.from_now))
     expect(WhatsappSmbSyncRequest.count).to eq(0)
   end
 end

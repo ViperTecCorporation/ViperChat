@@ -1,3 +1,5 @@
+# Standalone diagnostic CLI: retain machine-readable stdout, exit status and atomic fixture scenarios.
+# rubocop:disable Rails/Output
 # ACCOUNT_ID=1 bundle exec rails runner script/repair_inherited_group_avatars.rb
 # Apply only reviewed database IDs, never display IDs:
 # ACCOUNT_ID=1 APPLY_IDS=39258 BACKUP_PATH=/private/backup.jsonl bundle exec rails runner script/repair_inherited_group_avatars.rb
@@ -32,3 +34,5 @@ begin
 ensure
   backup&.close
 end
+
+# rubocop:enable Rails/Output

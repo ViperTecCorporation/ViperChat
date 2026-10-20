@@ -5,6 +5,8 @@ require 'tmpdir'
 # Persist the complete scheduler/MessageBuilder path; mock only provider IO.
 # rubocop:disable RSpec/AnyInstance, RSpec/MultipleMemoizedHelpers
 RSpec.describe ScheduledMessages::TransportService do
+  invalid_transports = [{ provider: 'unoapi' }, 'unknown', ''].freeze
+  media_types = %w[image/png audio/ogg application/pdf].freeze
   let(:account) { create(:account) }
   let(:agent) { create(:user, account: account, role: :administrator) }
   let(:suffix) { SecureRandom.random_number(10**7).to_s.rjust(7, '0') }
@@ -99,7 +101,7 @@ RSpec.describe ScheduledMessages::TransportService do
           expect(item.reload.whatsapp_transport).to eq(effective)
         end
 
-        it "dispatches #{selected} to a single primary conversation and preserves operational IDs" do
+        it "dispatches #{selected} to a single primary conversation and preserves operational IDs", :aggregate_failures do
           canonical = if conversation.inbox_id == link.primary_inbox_id
                         conversation
                       else
@@ -140,7 +142,7 @@ RSpec.describe ScheduledMessages::TransportService do
 
       it 'captures already-existing schedules before any conversation or assignment mutation' do
         expect(schedule.whatsapp_transport).to eq({})
-        schedule.update_column(:scheduled_at, 1.minute.ago)
+        travel_to(schedule.scheduled_at + 1.minute)
         ScheduledMessages::DeliveryService.new(schedule).perform
         expect(schedule.reload.whatsapp_transport).to include('requested_provider' => origin_provider, 'selection_source' => 'legacy_inbox')
         expect(schedule.target_conversation.inbox_id).to eq(link.primary_inbox_id)
@@ -195,7 +197,7 @@ RSpec.describe ScheduledMessages::TransportService do
       end
 
       it 'rejects forged top-level transport objects and unknown providers' do
-        [{ provider: 'unoapi' }, 'unknown', ''].each do |invalid|
+        invalid_transports.each do |invalid|
           expect { service.capture!(requested_provider: invalid) }.to raise_error(ArgumentError)
         end
         expect(schedule.reload.whatsapp_transport).to eq({})
@@ -276,7 +278,7 @@ RSpec.describe ScheduledMessages::TransportService do
         expect(outgoing.reload.source_id).to be_nil
       end
 
-      %w[image/png audio/ogg application/pdf].each do |mime|
+      media_types.each do |mime|
         it "keeps the same #{mime} blob and transport through actual MessageBuilder dispatch", :scheduled_storage do
           blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('synthetic bytes'), filename: 'synthetic-scheduled-media',
                                                         content_type: mime, identify: false, metadata: { identified: true })

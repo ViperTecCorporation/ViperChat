@@ -5,7 +5,7 @@ describe Whatsapp::SmbAppDataClient do
 
   let(:provider) { 'whatsapp_cloud' }
   let(:config) { { 'phone_number_id' => '123456789', 'api_key' => 'fake-smb-token' } }
-  let(:channel) { double('channel', provider: provider, provider_config: config) }
+  let(:channel) { instance_double(Channel::Whatsapp, provider: provider, provider_config: config) }
   let(:url) { 'https://graph.facebook.com/v26.0/123456789/smb_app_data' }
   let(:headers) { { 'Content-Type' => 'application/json' } }
 
@@ -122,7 +122,7 @@ describe Whatsapp::SmbAppDataClient do
     [301, 400, 401, 403, 409, 429, 500, 503].each do |status|
       it "treats HTTP #{status} as ambiguous without retrying or exposing the body" do
         request = stub_request(:post, url).to_return(status: status, body: 'private body fake-smb-token',
-                                                   headers: headers.merge('Location' => 'https://example.invalid/redirect'))
+                                                     headers: headers.merge('Location' => 'https://example.invalid/redirect'))
 
         expect { client.request('history') }.to raise_error do |error|
           expect(error.class.name).to eq('Whatsapp::SmbAppDataClient::Error')

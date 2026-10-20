@@ -10,7 +10,7 @@ RSpec.describe Whatsapp::ExpireManagementPayloadsJob do
     id = event.id
     2.times { described_class.perform_now }
     expect(event.reload).to have_attributes(id: id, digest: 'a' * 64, payload: {}, details: { 'messages_count' => 10 },
-                                           state: 'review', reason: 'payload_expired')
+                                            state: 'review', reason: 'payload_expired')
     expect(WhatsappManagementEvent.count).to eq(1)
     expect(channel.account.messages).to be_empty
   end

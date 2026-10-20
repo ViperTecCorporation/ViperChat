@@ -306,11 +306,13 @@ describe SearchService do
 
         it 'matches a decomposed Unicode group name as well as the legacy contact-name fallback' do
           named_group.update!(group_title: 'Vendas Cláudia'.unicode_normalize(:nfd))
-          result = described_class.new(current_user: user, current_account: account, params: { q: 'vendas claudia' }, search_type: 'Conversation').perform
+          result = described_class.new(current_user: user, current_account: account, params: { q: 'vendas claudia' },
+                                       search_type: 'Conversation').perform
           expect(result[:conversations]).to include(named_group)
           named_group.update!(group_title: nil)
           named_group.contact.update!(name: 'Vendas Cláudia')
-          result = described_class.new(current_user: user, current_account: account, params: { q: 'vendas claudia' }, search_type: 'Conversation').perform
+          result = described_class.new(current_user: user, current_account: account, params: { q: 'vendas claudia' },
+                                       search_type: 'Conversation').perform
           expect(result[:conversations]).to include(named_group)
         end
 
@@ -318,8 +320,9 @@ describe SearchService do
           named_group.update!(group_title: 'Manutenção Matriz')
           foreign_group = create(:conversation, group: true, group_title: 'Manutenção Câmeras Cláudia')
           hidden = create(:conversation, account: account, inbox: create(:inbox, account: account), group: true,
-                                        group_title: 'Manutenção Câmeras Cláudia')
-          result = described_class.new(current_user: user, current_account: account, params: { q: 'manutencao cameras' }, search_type: 'Conversation').perform
+                                         group_title: 'Manutenção Câmeras Cláudia')
+          result = described_class.new(current_user: user, current_account: account, params: { q: 'manutencao cameras' },
+                                       search_type: 'Conversation').perform
           expect(result[:conversations]).not_to include(named_group, foreign_group, hidden)
         end
 
