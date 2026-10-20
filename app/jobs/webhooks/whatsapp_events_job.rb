@@ -119,6 +119,8 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
   end
 
   def dispatch_management(params)
+    return false if params[:whatsapp_provider].present? && params[:whatsapp_provider] != 'whatsapp_cloud'
+
     field = params.dig(:entry, 0, :changes, 0, :field)
     return false unless Whatsapp::WebhookEnvelope.administrative?(field)
 
@@ -200,10 +202,15 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
   def find_channel_by_url_param(params)
     return unless params[:phone_number]
 
-    Channel::Whatsapp.find_by(phone_number: params[:phone_number])
+    scope = Channel::Whatsapp.where(phone_number: params[:phone_number])
+    scope = scope.where(provider: params[:whatsapp_provider]) if params[:whatsapp_provider].present?
+    channels = scope.limit(2).to_a
+    channels.first if channels.one?
   end
 
   def find_channel_from_whatsapp_business_payload(params)
+    return authenticated_channel(params) if params[:whatsapp_channel_id].present?
+
     # for the case where facebook cloud api support multiple numbers for a single app
     # https://github.com/chatwoot/chatwoot/issues/4712#issuecomment-1173838350
     # we will give priority to the phone_number in the payload
@@ -214,15 +221,30 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
     find_channel_by_url_param(params)
   end
 
+  def authenticated_channel(params)
+    channel = Channel::Whatsapp.find_by(id: params[:whatsapp_channel_id])
+    return channel unless params[:object] == 'whatsapp_business_account'
+
+    metadata = wb_payload_metadata(params)
+    return if channel.blank? || metadata.blank?
+    return unless channel.provider_config['phone_number_id'].to_s == metadata[:phone_number_id].to_s
+
+    channel
+  end
+
   def get_channel_from_wb_payload(wb_params)
     metadata = wb_payload_metadata(wb_params)
     return if metadata.blank?
 
     phone_number = payload_phone_number(wb_params)
     phone_number_id = metadata[:phone_number_id]
-    channel = Channel::Whatsapp.find_by(phone_number: phone_number)
+    scope = Whatsapp::ChannelPhoneIdentity.channels(phone_number)
+    scope = scope.where(provider: wb_params[:whatsapp_provider]) if wb_params[:whatsapp_provider].present?
+    channels = scope.select do |candidate|
+      candidate.provider_config['phone_number_id'].to_s == phone_number_id.to_s
+    end
     # validate to ensure the phone number id matches the whatsapp channel
-    return channel if channel && channel.provider_config['phone_number_id'] == phone_number_id
+    channels.first if channels.one?
   end
 
   def fallback_channel_from_url_param(wb_params)
@@ -234,9 +256,10 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
 
     payload_number = payload_phone_number(wb_params)
     return find_channel_by_url_param(wb_params) if payload_number.blank?
-    return if Channel::Whatsapp.exists?(phone_number: payload_number)
+    return if Whatsapp::ChannelPhoneIdentity.channels(payload_number).exists?
 
-    find_channel_by_url_param(wb_params)
+    channel = find_channel_by_url_param(wb_params)
+    channel if channel && channel.provider_config['phone_number_id'].to_s == wb_payload_metadata(wb_params)[:phone_number_id].to_s
   end
 
   def payload_phone_number(wb_params)

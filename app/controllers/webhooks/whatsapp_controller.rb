@@ -4,22 +4,32 @@ class Webhooks::WhatsappController < ActionController::API
   before_action :verify_meta_signature!, only: :process_payload
 
   def process_payload
+    return head :unauthorized if whatsapp_channel.blank? && url_channels.many?
+
     if inactive_whatsapp_number?
       Rails.logger.warn("Rejected webhook for inactive WhatsApp number: #{params[:phone_number]}")
       render json: { error: 'Inactive WhatsApp number' }, status: :unprocessable_entity
       return
     end
 
-    Webhooks::WhatsappEventsJob.perform_later(params.to_unsafe_hash)
+    payload = params.to_unsafe_hash.except('whatsapp_channel_id', 'whatsapp_provider')
+    if whatsapp_channel
+      payload['whatsapp_provider'] = whatsapp_channel.provider
+      payload['whatsapp_channel_id'] = whatsapp_channel.id if whatsapp_channel.provider == 'unoapi'
+    end
+    Webhooks::WhatsappEventsJob.perform_later(payload)
     head :ok
   end
 
   private
 
   def valid_token?(token)
-    channel = Channel::Whatsapp.find_by(phone_number: params[:phone_number])
-    whatsapp_webhook_verify_token = channel.provider_config['webhook_verify_token'] if channel.present?
-    token == whatsapp_webhook_verify_token if whatsapp_webhook_verify_token.present?
+    return false if token.blank?
+
+    url_channels.any? do |channel|
+      expected = channel.provider_config['webhook_verify_token']
+      expected.present? && ActiveSupport::SecurityUtils.secure_compare(expected, token)
+    end
   end
 
   def meta_app_secrets
@@ -30,7 +40,28 @@ class Webhooks::WhatsappController < ActionController::API
   end
 
   def whatsapp_channel
-    @whatsapp_channel ||= whatsapp_business_payload_channel || Channel::Whatsapp.find_by(phone_number: params[:phone_number])
+    @whatsapp_channel ||= authenticated_unoapi_channel || whatsapp_business_payload_channel || url_channel
+  end
+
+  def url_channel
+    return url_channels.first if url_channels.one?
+    return unless params[:object] == 'whatsapp_business_account' && request.headers[META_SIGNATURE_HEADER].present?
+
+    url_channels.find { |channel| channel.provider == 'whatsapp_cloud' }
+  end
+
+  def url_channels
+    @url_channels ||= Channel::Whatsapp.where(phone_number: params[:phone_number]).to_a
+  end
+
+  def authenticated_unoapi_channel
+    authorization = request.headers['Authorization'].to_s.delete_prefix('Bearer ')
+    return if authorization.blank?
+
+    url_channels.find do |channel|
+      expected = channel.provider_config['webhook_verify_token']
+      channel.provider == 'unoapi' && expected.present? && ActiveSupport::SecurityUtils.secure_compare(expected, authorization)
+    end
   end
 
   def meta_signature_verification_required?
@@ -52,7 +83,8 @@ class Webhooks::WhatsappController < ActionController::API
 
     phone_number = normalized_phone_number(metadata[:display_phone_number])
     phone_number_id = metadata[:phone_number_id]
-    channel = Channel::Whatsapp.find_by(phone_number: phone_number)
+    channel = Whatsapp::ChannelPhoneIdentity.channels(phone_number).where(provider: 'whatsapp_cloud')
+                                            .find_by("provider_config->>'phone_number_id' = ?", phone_number_id.to_s)
 
     return channel if channel && channel.provider_config['phone_number_id'] == phone_number_id
   end

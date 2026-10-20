@@ -25,8 +25,8 @@ class Whatsapp::ChannelCreationService
   end
 
   def find_existing_channel
-    Channel::Whatsapp.find_by(
-      phone_number: @phone_info[:phone_number]
+    Whatsapp::ChannelPhoneIdentity.conflict(
+      phone_number: @phone_info[:phone_number], provider: 'whatsapp_cloud', account_id: @account.id
     )
   end
 

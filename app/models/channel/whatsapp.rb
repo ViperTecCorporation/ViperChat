@@ -14,7 +14,8 @@
 #
 # Indexes
 #
-#  index_channel_whatsapp_on_phone_number  (phone_number) UNIQUE
+#  index_channel_whatsapp_official_phone  (phone_number) UNIQUE for official providers
+#  index_channel_whatsapp_unoapi_phone    (phone_number) UNIQUE for unoapi
 #
 
 class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLength
@@ -31,9 +32,11 @@ class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLengt
   before_validation :ensure_unoapi_group_conversation_schema_default
   before_validation :normalize_unoapi_pix_config
   before_validation :ensure_webhook_verify_token
+  before_validation :lock_phone_identity, if: :phone_identity_changed?
 
   validates :provider, inclusion: { in: PROVIDERS }
-  validates :phone_number, presence: true, uniqueness: true
+  validates :phone_number, presence: true
+  validate :validate_phone_number_coexistence, if: :phone_identity_changed?
   validate :validate_unoapi_pix_config
   validate :validate_provider_config
 
@@ -166,6 +169,26 @@ class Channel::Whatsapp < ApplicationRecord # rubocop:disable Metrics/ClassLengt
   end
 
   private
+
+  def phone_identity_changed?
+    new_record? || will_save_change_to_phone_number? || will_save_change_to_provider? || will_save_change_to_account_id?
+  end
+
+  def validate_phone_number_coexistence
+    return if phone_number.blank?
+
+    conflict = Whatsapp::ChannelPhoneIdentity.conflict(phone_number: phone_number, provider: provider, account_id: account_id, except_id: id)
+    errors.add(:phone_number, :taken) if conflict
+  end
+
+  def lock_phone_identity
+    connection = self.class.connection
+    return unless connection.transaction_open?
+
+    # Partial indexes allow a partner; serialize ownership checks across providers/accounts.
+    key = "whatsapp-channel:#{Whatsapp::ChannelPhoneIdentity.comparison_key(phone_number)}"
+    connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(#{connection.quote(key)}, 0))")
+  end
 
   def check_channel_creation_permission
     return unless new_record? || will_save_change_to_provider?

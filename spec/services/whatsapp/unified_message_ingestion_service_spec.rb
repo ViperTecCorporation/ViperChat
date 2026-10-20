@@ -85,6 +85,7 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
   end
 
   arrival_orders = [%i[meta uno], %i[uno meta]]
+  business_representations = %w[without_ninth same_phone]
   receipt_orders = [false, true]
   outbound_conflicts = %w[contact generation private ambiguous recipient_alias recipient]
   pdf_bytes = Base64.decode64(<<~BASE64)
@@ -108,6 +109,44 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
         WhatsappInboxLink.create!(account: account, primary_inbox: channels.fetch(principal).inbox,
                                   secondary_inbox: channels.fetch(principal == :meta ? :uno : :meta).inbox,
                                   default_provider: 'whatsapp_cloud', enabled: true, activated_at: 1.day.ago)
+      end
+
+      business_representations.each do |representation|
+        context "with the customer business phone registered as #{representation}" do
+          let(:meta_channel) do
+            number = representation == 'without_ninth' ? '+558188985300' : '+5581988985300'
+            create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: number,
+                                      sync_templates: false, validate_provider_config: false)
+          end
+          let(:uno_channel) do
+            create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: '+5581988985300',
+                                      provider_config: { 'api_key' => 'synthetic', 'url' => 'https://uno.invalid' },
+                                      sync_templates: false, validate_provider_config: false)
+          end
+
+          arrival_orders.each do |order|
+            it "keeps one message after linking when #{order.join(' then ')} arrives" do
+              snapshot = channels.transform_values { |channel| channel.attributes.slice('id', 'phone_number') }
+              payloads = channels.keys.index_with { |provider| webhook(provider, 'phone_incoming') }
+              payloads[:meta].dig(:entry, 0, :changes, 0, :value, :metadata)[:display_phone_number] = '558188985300'
+              order.each { |provider| ingest(provider, payloads.fetch(provider)) }
+
+              expect(public_messages.count).to eq(1)
+              expect(account.conversations.sole.inbox_id).to eq(channels.fetch(principal).inbox.id)
+              expect(channels.transform_values { |channel| channel.reload.attributes.slice('id', 'phone_number') }).to eq(snapshot)
+              expect(public_messages.sole.sender_id).to eq(known_contact.id)
+            end
+          end
+
+          it 'does not guess a deduplication when the legacy ViperConnect webhook omits the original message ID' do
+            payload = webhook(:uno, 'phone_incoming')
+            payload.dig(:entry, 0, :changes, 0, :value, :messages).first.delete(:provider_message_id)
+            ingest(:meta, webhook(:meta, 'phone_incoming'))
+            ingest(:uno, payload)
+
+            expect(public_messages.count).to eq(2)
+          end
+        end
       end
 
       arrival_orders.each do |arrival_order|

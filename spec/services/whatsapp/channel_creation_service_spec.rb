@@ -39,6 +39,16 @@ describe Whatsapp::ChannelCreationService do
     end
 
     context 'when channel does not exist' do
+      it 'allows Embedded Signup beside ViperConnect without changing the original channel' do
+        original = create(:channel_whatsapp, account: account, phone_number: phone_info[:phone_number], provider: 'unoapi',
+                                             sync_templates: false, validate_provider_config: false)
+        created = service.perform
+        expect(created.provider).to eq('whatsapp_cloud')
+        expect(original.reload.provider).to eq('unoapi')
+        expect(created.id).not_to eq(original.id)
+        expect(original.phone_number).to eq(phone_info[:phone_number])
+      end
+
       it 'creates a new channel' do
         expect { service.perform }.to change(Channel::Whatsapp, :count).by(1)
       end

@@ -9,7 +9,8 @@ class Whatsapp::WebhookEnvelope
         next [] unless change.is_a?(Hash)
 
         values(change).map do |value|
-          body.slice(:object, :phone_number).merge(entry: [entry.except(:changes).merge(changes: [change.merge(value: value)])])
+          body.slice(:object, :phone_number, :whatsapp_channel_id, :whatsapp_provider)
+              .merge(entry: [entry.except(:changes).merge(changes: [change.merge(value: value)])])
         end
       end
     end
