@@ -801,6 +801,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_18_150000) do
     t.index ["account_id", "contact_type"], name: "index_contacts_on_account_id_and_contact_type"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["account_id", "last_activity_at"], name: "index_contacts_on_account_id_and_last_activity_at", order: { last_activity_at: "DESC NULLS LAST" }
+    t.index ["account_id", "updated_at", "id"], name: "idx_contacts_replication_cursor"
     t.index ["account_id", "whatsapp_username"], name: "index_contacts_on_account_id_and_whatsapp_username", where: "(whatsapp_username IS NOT NULL)"
     t.index ["account_id"], name: "index_contacts_on_account_id"
     t.index ["account_id"], name: "index_resolved_contact_account_id", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
