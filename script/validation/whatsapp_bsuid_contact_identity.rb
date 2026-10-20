@@ -174,4 +174,4 @@ assert.call(uno_message.reload.conversation_id == conversation.id && meta_messag
             'existing messages and conversations never moved by resolver')
 
 # Machine-readable CLI report, not an application log.
-puts({ result: 'PASS', database: ActiveRecord::Base.connection_db_config.database, checks: checks.size, scenarios: checks }.to_json) # rubocop:disable Rails/Output
+puts({ result: 'PASS', database: ActiveRecord::Base.connection_db_config.database, checks: checks.size, scenarios: checks }.to_json)

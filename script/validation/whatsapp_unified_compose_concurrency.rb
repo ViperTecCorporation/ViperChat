@@ -77,6 +77,6 @@ checks = %w[unoapi whatsapp_cloud].flat_map do |principal|
     { principal: principal, unique: unique, independent_connections: 4, intended_messages: 4, conversations_during_race: 1 }
   end
 end
-puts({ result: 'PASS', synthetic_contacts: checks.size, scenarios: checks }.to_json) # rubocop:disable Rails/Output
+puts({ result: 'PASS', synthetic_contacts: checks.size, scenarios: checks }.to_json)
 
 # rubocop:enable Metrics/BlockLength

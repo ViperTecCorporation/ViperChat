@@ -68,6 +68,6 @@ checks = %w[unoapi whatsapp_cloud].map do |principal|
 
   { principal: principal, independent_connections: 4, messages: 4, meta_slots: 2, replay_slots: slots.count }
 end
-puts({ result: 'PASS', scenarios: checks }.to_json) # rubocop:disable Rails/Output
+puts({ result: 'PASS', scenarios: checks }.to_json)
 
 # rubocop:enable Metrics/BlockLength

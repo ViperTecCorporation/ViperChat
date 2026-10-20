@@ -170,4 +170,4 @@ resolver = Whatsapp::MessageIdentityContactResolver
 end
 # rubocop:enable Metrics/BlockLength
 
-puts({ result: 'PASS', checks: checks.size, scenarios: checks }.to_json) # rubocop:disable Rails/Output
+puts({ result: 'PASS', checks: checks.size, scenarios: checks }.to_json)

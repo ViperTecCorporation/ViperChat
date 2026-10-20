@@ -74,6 +74,6 @@ checks = []
 
   checks << { principal: principal, direction: direction, independent_connections: 2, messages: 1, contacts: 1, aliases: 2 }
 end
-puts({ result: 'PASS', scenarios: checks }.to_json) # rubocop:disable Rails/Output
+puts({ result: 'PASS', scenarios: checks }.to_json)
 
 # rubocop:enable Metrics/BlockLength

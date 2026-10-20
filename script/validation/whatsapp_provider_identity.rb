@@ -392,4 +392,4 @@ end
 ActiveRecord::Migration.suppress_messages { CreateWhatsappUnifiedEvents.new.migrate(:up) } if had_unified_events
 
 # Machine-readable CLI report, not an application log.
-puts({ result: 'PASS', database: ActiveRecord::Base.connection_db_config.database, checks: checks.size, scenarios: checks }.to_json) # rubocop:disable Rails/Output
+puts({ result: 'PASS', database: ActiveRecord::Base.connection_db_config.database, checks: checks.size, scenarios: checks }.to_json)
