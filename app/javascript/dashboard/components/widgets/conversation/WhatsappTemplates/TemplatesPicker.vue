@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, toRef } from 'vue';
 import { useAlert } from 'dashboard/composables';
 import { useFunctionGetter, useStore } from 'dashboard/composables/store';
@@ -31,7 +32,7 @@ const whatsAppTemplateMessages = useFunctionGetter(
 
 const filteredTemplateMessages = computed(() =>
   whatsAppTemplateMessages.value.filter(template =>
-    template.name.toLowerCase().includes(query.value.toLowerCase())
+    includesNormalized(template.name, query.value)
   )
 );
 

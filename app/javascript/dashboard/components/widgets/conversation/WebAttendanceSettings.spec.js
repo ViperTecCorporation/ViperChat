@@ -33,6 +33,7 @@ describe('web attendance inbox settings', () => {
         webAttendanceButtonText: 'Abrir atendimento',
         webAttendanceInvitationMessage: 'Manual invitation',
         widgetBuilderStorageKey: 'web-attendance-greeting-test',
+        $refs: {},
         $store: { dispatch: vi.fn().mockResolvedValue() },
         $t: key => key,
         get webAttendanceGreetingTooLong() {
@@ -102,6 +103,7 @@ describe('web attendance inbox settings', () => {
         webAttendanceButtonText: ' Open Web ',
         webAttendanceInvitationMessage: ' Continue online ',
         widgetBuilderStorageKey: 'web-attendance-settings-test',
+        $refs: {},
         $store: { dispatch: vi.fn().mockResolvedValue() },
         $t: key => key,
       };
@@ -131,6 +133,7 @@ describe('web attendance inbox settings', () => {
         currentInboxId: 7,
         inbox: { provider, channel_type: 'Channel::Whatsapp' },
         widgetBuilderStorageKey: 'web-attendance-settings-test',
+        $refs: {},
         $store: { dispatch: vi.fn().mockResolvedValue() },
         $t: key => key,
       };
@@ -173,6 +176,7 @@ describe('web attendance inbox settings', () => {
         currentInboxId: 7,
         inbox: { provider },
         widgetBuilderStorageKey: 'web-attendance-settings-test',
+        $refs: {},
         $store: { dispatch: vi.fn().mockResolvedValue() },
         $t: key => key,
       };

@@ -1,13 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe Messages::AudioTranscriptionService, type: :service do
-  let(:account) { create(:account, audio_transcriptions: true) }
-  let(:conversation) { create(:conversation, account: account) }
-  let(:message) { create(:message, account: account, conversation: conversation) }
-  let(:attachment) { message.attachments.create!(account: account, file_type: :audio) }
-
   before do
-    # Create required installation configs
+    allow(Llm::Endpoint).to receive(:openrouter?).and_return(false)
     InstallationConfig.find_or_create_by!(name: 'CAPTAIN_OPEN_AI_API_KEY') { |config| config.value = 'test-api-key' }
     InstallationConfig.find_or_create_by!(name: 'CAPTAIN_OPEN_AI_MODEL') { |config| config.value = 'gpt-4o-mini' }
 
@@ -20,6 +15,11 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
       }
     )
   end
+
+  let(:account) { create(:account, audio_transcriptions: true) }
+  let(:conversation) { create(:conversation, account: account) }
+  let(:message) { create(:message, account: account, conversation: conversation) }
+  let(:attachment) { message.attachments.create!(account: account, file_type: :audio) }
 
   describe '#perform' do
     let(:service) { described_class.new(attachment) }
@@ -122,7 +122,7 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
     it 'adds extension from content type when filename has no extension' do
       temp_file_path = service.send(:fetch_audio_file)
 
-      expect(File.extname(temp_file_path)).to eq('.mpeg')
+      expect(File.extname(temp_file_path)).to eq('.mp3')
     ensure
       FileUtils.rm_f(temp_file_path) if temp_file_path.present?
     end
@@ -142,6 +142,26 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
 
     after do
       FileUtils.rm_f(audio_file_path)
+    end
+
+    it 'uses the OpenRouter speech model and removes its temporary audio file' do
+      allow(Llm::Endpoint).to receive(:openrouter?).and_return(true)
+      InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_AUDIO_TRANSCRIPTION_MODEL').update!(value: 'vendor/speech')
+      gateway_service = described_class.new(attachment)
+      allow(gateway_service).to receive(:fetch_audio_file).and_return(audio_file_path)
+      expect(audio_api).not_to receive(:transcribe)
+      expect(Llm::OpenRouterTranscription).to receive(:call).with(file_path: audio_file_path, model: 'vendor/speech').and_return('Transcript')
+      expect(gateway_service).to receive(:update_transcription).with('Transcript')
+      expect(gateway_service.send(:transcribe_audio)).to eq('Transcript')
+      expect(File.exist?(audio_file_path)).to be(false)
+    end
+
+    it 'removes temporary audio on an OpenRouter error without saving a false transcription' do
+      allow(Llm::Endpoint).to receive(:openrouter?).and_return(true)
+      allow(Llm::OpenRouterTranscription).to receive(:call).and_raise(Llm::OpenRouterTranscription::Error, 'Synthetic provider error')
+      expect(service).not_to receive(:update_transcription)
+      expect { service.send(:transcribe_audio) }.to raise_error(Llm::OpenRouterTranscription::Error)
+      expect(File.exist?(audio_file_path)).to be(false)
     end
 
     it 'uses the audio transcription feature model' do

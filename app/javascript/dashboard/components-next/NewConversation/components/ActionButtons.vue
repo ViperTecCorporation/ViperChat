@@ -20,6 +20,7 @@ const props = defineProps({
   isTwilioWhatsAppInbox: { type: Boolean, default: false },
   // eslint-disable-next-line vue/no-unused-properties
   messageTemplates: { type: Array, default: () => [] },
+  useTransportTemplates: { type: Boolean, default: false },
   channelType: { type: String, default: '' },
   isLoading: { type: Boolean, default: false },
   disableSendButton: { type: Boolean, default: false },
@@ -150,6 +151,8 @@ const keyboardEvents = {
       if (
         isEditorHotKeyEnabled('enter') &&
         isRegularMessageMode.value &&
+        !props.disableSendButton &&
+        !props.isLoading &&
         !props.isDropdownActive
       ) {
         emit('sendMessage');
@@ -161,6 +164,8 @@ const keyboardEvents = {
       if (
         isEditorHotKeyEnabled('cmd_enter') &&
         isRegularMessageMode.value &&
+        !props.disableSendButton &&
+        !props.isLoading &&
         !props.isDropdownActive
       ) {
         emit('sendMessage');
@@ -191,12 +196,15 @@ useEventListener(document, 'paste', onPaste);
 
 <template>
   <div
-    class="flex items-center justify-between w-full h-[3.25rem] gap-2 px-4 py-3"
+    class="flex flex-wrap items-center justify-between w-full min-h-[3.25rem] gap-2 px-4 py-3"
   >
     <div class="flex gap-2 items-center">
       <WhatsAppOptions
         v-if="isWhatsappInbox"
+        :key="inboxId"
         :inbox-id="inboxId"
+        :templates="useTransportTemplates ? messageTemplates : null"
+        :disabled="disableSendButton || isLoading"
         @send-message="emit('sendWhatsappMessage', $event)"
       />
       <ContentTemplateSelector

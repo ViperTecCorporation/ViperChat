@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -46,7 +47,7 @@ const filteredCategories = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
   if (!query) return props.categories;
   return props.categories.filter(category =>
-    category.name?.toLowerCase().includes(query)
+    includesNormalized(category.name, query)
   );
 });
 

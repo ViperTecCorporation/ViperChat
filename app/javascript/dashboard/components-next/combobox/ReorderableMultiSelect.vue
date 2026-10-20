@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, nextTick } from 'vue';
 import { OnClickOutside } from '@vueuse/components';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -86,9 +87,7 @@ const dropdownOptions = computed(() => {
   if (props.serverSearch) return available;
 
   const query = searchQuery.value.toLowerCase();
-  return available.filter(option =>
-    option.label?.toLowerCase().includes(query)
-  );
+  return available.filter(option => includesNormalized(option.label, query));
 });
 
 const onSearch = value => {

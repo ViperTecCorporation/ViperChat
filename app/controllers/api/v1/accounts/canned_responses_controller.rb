@@ -34,9 +34,8 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
 
   def canned_responses
     if params[:search]
-      Current.account.canned_responses
-             .where('short_code ILIKE :search OR content ILIKE :search', search: "%#{params[:search]}%")
-             .order_by_search(params[:search])
+      Search::TextQuery.apply(Current.account.canned_responses, %w[short_code content], params[:search])
+                       .order_by_search(params[:search])
 
     else
       Current.account.canned_responses

@@ -3,7 +3,7 @@ module AutoAssignmentHandler
   include Events::Types
 
   included do
-    after_save :run_auto_assignment
+    after_save :run_auto_assignment, unless: -> { historical_import && saved_change_to_id? }
   end
 
   private

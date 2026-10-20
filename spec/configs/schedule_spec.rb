@@ -4,6 +4,15 @@
 require 'rails_helper'
 
 RSpec.context 'with valid schedule.yml' do
+  it 'enqueues scheduled delivery with an ActiveJob envelope rather than as a Sidekiq worker' do
+    entry = YAML.load_file(Rails.root.join('config/schedule.yml')).fetch('scheduled_messages_delivery_job')
+
+    expect(entry.fetch('class').constantize).to be < ActiveJob::Base
+    expect(entry.fetch('active_job')).to be(true)
+    expect(entry.fetch('queue')).to eq('scheduled_jobs')
+    expect(entry.fetch('cron')).to eq('*/1 * * * *')
+  end
+
   it 'does not have duplicates' do
     file = Rails.root.join('config/schedule.yml')
     schedule_keys = []

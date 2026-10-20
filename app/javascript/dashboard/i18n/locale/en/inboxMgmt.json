@@ -1016,11 +1016,124 @@
     },
     "CHANNEL_PREFERENCES": "Channel Preferences",
     "WIDGET_FEATURES": "Widget features",
+    "META_WEBHOOK_EVENTS": {
+      "TITLE": "Meta webhook events",
+      "GRAPH_VERSION": "Graph API version",
+      "SESSION_VERSION": "Embedded Signup session data format (sessionInfoVersion)",
+      "SUBSCRIPTION_NOTICE": "Supported fields must be enabled in the Meta app panel with the required permissions. This section does not subscribe fields or change Meta settings automatically.",
+      "SUPPORTED_FIELDS": "Supported technical fields",
+      "REFRESH": "Refresh events",
+      "RETRY": "Try again",
+      "LOADING": "Loading Meta events…",
+      "ERROR": "Could not load Meta events. Try again.",
+      "UNAVAILABLE": "Unavailable",
+      "HISTORY_TITLE": "Coexistence history settings",
+      "IGNORE_HISTORY": "Ignore history messages",
+      "IGNORE_GROUPS": "Ignore groups",
+      "IGNORE_GROUPS_NOTICE": "Do not process group messages, receipts or updates received through this channel. Existing history is not deleted. Subscribing to events does not guarantee group availability. According to 360dialog documentation, the official Groups API is not available for phone numbers in coexistence.",
+      "MAX_AGE_DAYS": "Maximum message age in days (1–3650)",
+      "INVALID_DAYS": "Enter a whole number between 1 and 3650 days.",
+      "CUTOFF_NOTICE": "Like ViperConnect, ignoring history is enabled by default; the age limit defaults to 7 days. Turning it off automatically imports received history messages within the configured days, without duplicating messages, contacts or media. This does not delete existing messages.",
+      "REVIEW_NOTICE": "Importing does not trigger notifications or reopen resolved conversations. Ambiguous identities remain pending without forcing a contact association. Contact sync (smb_app_state_sync) remains review-only at this stage, without automatic contact synchronization.",
+      "SAVE": "Save history settings",
+      "SAVED": "History settings saved.",
+      "SAVE_ERROR": "Could not save history settings. Try again.",
+      "RECENT_EVENTS": "Recent received events (up to 25)",
+      "EMPTY": "No events received for this inbox yet.",
+      "RECEIVED_AT": "Received at {date}",
+      "UNKNOWN_STATE": "Awaiting review (unrecognized state)",
+      "UNKNOWN_REASON": "Requires review",
+      "STATES": {
+        "recorded": "Received and recorded",
+        "processed": "Processed",
+        "pending_import": "Import pending",
+        "review": "Requires review"
+      },
+      "REASONS": {
+        "history_ignored": "History ignored by inbox settings",
+        "user_choice_required": "Administrator review required",
+        "automatic_import_pending": "Awaiting automatic import processing",
+        "import_identity_pending": "Ambiguous or incomplete identity; awaiting reliable evidence",
+        "import_failed": "Import failed; check the processing status",
+        "unsupported_history_message": "History message type is not supported yet",
+        "unknown_field": "Unrecognized event field",
+        "unsupported_history_format": "History format requires review",
+        "payload_expired": "Retained receipt expired",
+        "payload_too_large": "Receipt exceeds the retention size limit",
+        "reauthorization_required": "Meta reauthorization required"
+      },
+      "DETAILS": {
+        "messages_count": "Messages reported",
+        "contacts_count": "Contacts reported",
+        "history_count": "History batches reported",
+        "threads_count": "Threads reported",
+        "kept_messages_count": "Messages within the age cutoff",
+        "imported_messages_count": "Imported messages",
+        "duplicate_messages_count": "Duplicate messages prevented",
+        "pending_messages_count": "Pending messages",
+        "failed_messages_count": "Messages with import failures",
+        "dropped_messages_count": "Messages excluded by the age cutoff",
+        "invalid_messages_count": "Messages with invalid timestamps",
+        "max_daily_conversations_per_business": "Reported business messaging limit",
+        "quality_rating": "Reported quality"
+      },
+      "QUALITY": {
+        "GREEN": "High",
+        "YELLOW": "Medium",
+        "RED": "Low",
+        "UNKNOWN": "Unknown"
+      }
+    },
+    "ACCOUNT_INSIGHTS": {
+      "TITLE": "Meta insights",
+      "DESCRIPTION": "Informational metrics for this inbox's selected phone number only. These metrics do not change message delivery or routing.",
+      "PERIOD": "Period",
+      "UTC_PERIOD": "Completed UTC days only; today is not included.",
+      "DAYS": "Last {days} days",
+      "REFRESH": "Refresh insights",
+      "RETRY": "Try again",
+      "LOADING": "Loading Meta insights…",
+      "ERROR": "Could not load Meta insights. Try again.",
+      "UNAVAILABLE": "Unavailable",
+      "FETCHED_AT": "Data fetched at {date}",
+      "MESSAGES": "Messages",
+      "PRICING": "Message pricing",
+      "CALLS": "Calls",
+      "PRICING_CATEGORIES": "Pricing categories",
+      "CATEGORIES": {
+        "MARKETING": "Marketing",
+        "UTILITY": "Utility",
+        "AUTHENTICATION": "Authentication",
+        "AUTHENTICATION_INTERNATIONAL": "International authentication",
+        "SERVICE": "Service",
+        "UNKNOWN": "Category unavailable"
+      },
+      "METRICS": {
+        "SENT": "Sent",
+        "DELIVERED": "Delivered",
+        "RECEIVED": "Received",
+        "VOLUME": "Reported volume",
+        "COUNT": "Reported calls",
+        "COST": "Approximate cost",
+        "FREE_CUSTOMER_SERVICE": "Free customer service volume",
+        "FREE_ENTRY_POINT": "Free entry point volume",
+        "REGULAR": "Regular (paid) volume",
+        "AVERAGE_DURATION": "Average duration (Meta-reported units)",
+        "BUSINESS_INITIATED": "Business-initiated calls",
+        "USER_INITIATED": "User-initiated calls"
+      },
+      "COST_NOTICE": "Costs are approximate Meta-reported amounts, not an invoice. Missing data or currency is shown as unavailable, not zero. Availability depends on Meta permissions and reporting."
+    },
     "ACCOUNT_HEALTH": {
       "TITLE": "Manage your WhatsApp account",
       "DESCRIPTION": "Review your WhatsApp account status, messaging limits, and quality. Update settings or resolve issues if needed",
       "GO_TO_SETTINGS": "Go to Meta Business Manager",
       "NO_DATA": "Health data is not available",
+      "FETCHED_AT": "Health data fetched at {date}",
+      "LIMIT_SCOPE": {
+        "PORTFOLIO": "Shared business portfolio limit, not a separate allowance for this number.",
+        "UNKNOWN": "Limit scope is unavailable. Do not assume this is an allowance per phone number."
+      },
       "FIELDS": {
         "DISPLAY_PHONE_NUMBER": {
           "LABEL": "Display phone number",
@@ -1040,7 +1153,7 @@
         },
         "MESSAGING_LIMIT_TIER": {
           "LABEL": "Messaging limit tier",
-          "TOOLTIP": "Daily messaging limit for your account"
+          "TOOLTIP": "Meta-reported limit on unique customers reached with business-initiated messages in a rolling 24-hour window; not a message quota or free allowance."
         },
         "ACCOUNT_MODE": {
           "LABEL": "Account mode",
@@ -1052,10 +1165,11 @@
           "TIER_250": "250 customers per 24h",
           "TIER_1000": "1K customers per 24h",
           "TIER_1K": "1K customers per 24h",
+          "TIER_2K": "2K customers per 24h",
           "TIER_10K": "10K customers per 24h",
           "TIER_100K": "100K customers per 24h",
           "TIER_UNLIMITED": "Unlimited customers per 24h",
-          "UNKNOWN": "Rating not available"
+          "UNKNOWN": "Messaging limit unavailable"
         },
         "STATUSES": {
           "APPROVED": "Approved",
@@ -1063,11 +1177,13 @@
           "AVAILABLE_WITHOUT_REVIEW": "Available Without Review",
           "REJECTED": "Rejected",
           "DECLINED": "Declined",
-          "NON_EXISTS": "Non exists"
+          "NON_EXISTS": "Non exists",
+          "UNKNOWN": "Status unavailable"
         },
         "MODES": {
           "SANDBOX": "Sandbox",
-          "LIVE": "Live"
+          "LIVE": "Live",
+          "UNKNOWN": "Account mode unavailable"
         }
       },
       "WEBHOOK": {

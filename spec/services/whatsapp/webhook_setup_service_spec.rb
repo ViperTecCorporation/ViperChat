@@ -36,6 +36,113 @@ describe Whatsapp::WebhookSetupService do
                                                                       })
   end
 
+  describe '#register_callback webhook field union' do
+    let(:sibling) do
+      create(:channel_whatsapp,
+             account: channel.account,
+             phone_number: '+1234567891',
+             provider: 'whatsapp_cloud',
+             provider_config: { 'business_account_id' => waba_id, 'phone_number_id' => 'sibling_phone' },
+             sync_templates: false,
+             validate_provider_config: false).tap do |sibling_channel|
+        # The factory overwrites business_account_id during creation.
+        sibling_channel.update!(provider_config: sibling_channel.provider_config.merge('business_account_id' => waba_id))
+      end
+    end
+
+    before do
+      channel.update!(provider_config: channel.provider_config.merge('business_account_id' => waba_id))
+      allow(api_client).to receive(:subscribe_phone_number_webhook).and_return({ 'success' => true })
+    end
+
+    it 'unions whitelisted optional fields from this inbox with the mandatory defaults' do
+      channel.update!(provider_config: channel.provider_config.merge('webhook_fields' => %w[history message_echoes messages]))
+
+      service.register_callback
+
+      expect(api_client).to have_received(:subscribe_phone_number_webhook)
+        .with(waba_id, '123456789', anything, 'test_verify_token',
+              subscribed_fields: match_array(%w[messages smb_message_echoes history message_echoes]))
+    end
+
+    it 'unions and deduplicates optional fields from a sibling on the same WABA' do
+      channel.update!(provider_config: channel.provider_config.merge('webhook_fields' => %w[history]))
+      sibling.update!(provider_config: sibling.provider_config.merge('webhook_fields' => %w[history group_lifecycle_update]))
+
+      service.register_callback
+
+      expect(api_client).to have_received(:subscribe_phone_number_webhook)
+        .with(waba_id, '123456789', anything, 'test_verify_token',
+              subscribed_fields: match_array(%w[messages smb_message_echoes history group_lifecycle_update]))
+    end
+
+    it 'rejects unknown fields from both this inbox and a sibling while retaining known fields' do
+      channel.update!(provider_config: channel.provider_config.merge('webhook_fields' => %w[unknown_own history]))
+      sibling.update!(provider_config: sibling.provider_config.merge('webhook_fields' => %w[unknown_sibling account_update]))
+
+      service.register_callback
+
+      expect(api_client).to have_received(:subscribe_phone_number_webhook)
+        .with(waba_id, '123456789', anything, 'test_verify_token',
+              subscribed_fields: match_array(%w[messages smb_message_echoes history account_update]))
+    end
+
+    it 'preserves calls enabled on this inbox alongside optional fields' do
+      channel.update!(provider_config: channel.provider_config.merge('calling_enabled' => true, 'webhook_fields' => %w[history calls]))
+
+      service.register_callback
+
+      expect(api_client).to have_received(:subscribe_phone_number_webhook)
+        .with(waba_id, '123456789', anything, 'test_verify_token',
+              subscribed_fields: match_array(%w[messages smb_message_echoes history calls]))
+    end
+
+    it 'preserves calls enabled on a same-WABA sibling when this inbox has calling disabled' do
+      channel.update!(provider_config: channel.provider_config.merge('calling_enabled' => false, 'webhook_fields' => %w[history]))
+      sibling.update!(provider_config: sibling.provider_config.merge('calling_enabled' => true, 'webhook_fields' => %w[account_update calls]))
+
+      service.register_callback
+
+      expect(api_client).to have_received(:subscribe_phone_number_webhook)
+        .with(waba_id, '123456789', anything, 'test_verify_token',
+              subscribed_fields: match_array(%w[messages smb_message_echoes history account_update calls]))
+    end
+
+    it 'does not enable calls merely because the optional field is listed on this inbox or its sibling' do
+      channel.update!(provider_config: channel.provider_config.merge('calling_enabled' => false, 'webhook_fields' => %w[history calls]))
+      sibling.update!(provider_config: sibling.provider_config.merge('calling_enabled' => false, 'webhook_fields' => %w[calls]))
+
+      service.register_callback
+
+      expect(api_client).to have_received(:subscribe_phone_number_webhook)
+        .with(waba_id, '123456789', anything, 'test_verify_token',
+              subscribed_fields: match_array(%w[messages smb_message_echoes history]))
+    end
+
+    it 'does not inherit optional fields or calls from a different WABA' do
+      sibling.update!(provider_config: sibling.provider_config.merge(
+        'business_account_id' => 'other_waba', 'calling_enabled' => true, 'webhook_fields' => %w[history calls]
+      ))
+
+      service.register_callback
+
+      expect(api_client).to have_received(:subscribe_phone_number_webhook)
+        .with(waba_id, '123456789', anything, 'test_verify_token',
+              subscribed_fields: match_array(%w[messages smb_message_echoes]))
+    end
+
+    it 'does not inherit optional fields or calls from a non-Meta sibling' do
+      sibling.update!(provider: 'unoapi',
+                      provider_config: sibling.provider_config.merge('calling_enabled' => true, 'webhook_fields' => %w[history calls]))
+
+      service.register_callback
+
+      expect(api_client).to have_received(:subscribe_phone_number_webhook)
+        .with(waba_id, '123456789', anything, 'test_verify_token',
+              subscribed_fields: match_array(%w[messages smb_message_echoes]))
+    end
+  end
+
   describe '#perform' do
     context 'when phone number is NOT verified (should register)' do
       before do
@@ -250,13 +357,13 @@ describe Whatsapp::WebhookSetupService do
 
       it 'raises error with webhook setup failure message' do
         with_modified_env FRONTEND_URL: 'https://app.chatwoot.com' do
-          expect { service.perform }.to raise_error(/Webhook setup failed: Invalid access token/)
+          expect { service.perform }.to raise_error('Webhook setup failed')
         end
       end
 
       it 'logs the webhook setup failure' do
         with_modified_env FRONTEND_URL: 'https://app.chatwoot.com' do
-          expect(Rails.logger).to receive(:error).with('[WHATSAPP] Webhook setup failed: Invalid access token')
+          expect(Rails.logger).to receive(:error).with('[WHATSAPP] Webhook setup failed: error_class=RuntimeError')
           expect { service.perform }.to raise_error(/Webhook setup failed/)
         end
       end

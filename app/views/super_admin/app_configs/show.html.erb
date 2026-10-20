@@ -22,8 +22,16 @@
         <div class="field-unit__label">
           <%= form.label "app_config[#{key}]", t("super_admin.config_fields.#{key}.name", default: @installation_configs[key]&.dig('display_title') || key), title: t("super_admin.config_fields.#{key}.description", default: @installation_configs[key]&.dig('description') || '') %>
         </div>
-        <div class="-mt-2 field-unit__field ">
-          <% if @installation_configs[key]&.dig('type') == 'boolean' %>
+        <div class="-mt-2 field-unit__field min-w-0 max-w-full">
+          <% if @openrouter_models&.key?(key) %>
+            <% options = @openrouter_models[key].map { |item| ["#{item['name']} (#{item['id']})", item['id']] } %>
+            <% current = @app_config[key] %>
+            <% options.unshift([current, current]) if current.present? && options.none? { |item| item.last == current } %>
+            <%= form.select "app_config[#{key}]", options,
+                { selected: current, include_blank: true },
+                class: "mt-2 border border-slate-100 p-2 rounded-md w-full min-w-0 max-w-full" %>
+            <p class="pt-2 text-xs text-slate-400"><%= t('super_admin.openrouter.capability_notice') %></p>
+          <% elsif @installation_configs[key]&.dig('type') == 'boolean' %>
             <%= form.select "app_config[#{key}]",
               [[t('super_admin.app_configs.true'), true], [t('super_admin.app_configs.false'), false]],
               { selected: ActiveModel::Type::Boolean.new.cast(@app_config.fetch(key) { @installation_configs[key]&.dig('value') }) },

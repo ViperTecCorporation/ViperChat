@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -32,9 +33,7 @@ const contentTemplates = computed(() => {
 const filteredTemplates = computed(() => {
   return contentTemplates.value.filter(
     template =>
-      template.friendly_name
-        .toLowerCase()
-        .includes(searchQuery.value.toLowerCase()) &&
+      includesNormalized(template.friendly_name, searchQuery.value) &&
       template.status === 'approved'
   );
 });

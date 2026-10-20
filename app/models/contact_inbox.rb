@@ -74,9 +74,18 @@ class ContactInbox < ApplicationRecord
   end
 
   def validate_whatsapp_source_id
+    return if pending_unified_identity?
     return if source_id.include?('@g.us') || source_id.include?('@lid') || WHATSAPP_CHANNEL_REGEX.match?(source_id)
 
     errors.add(:source_id, "invalid source id for whatsapp inbox. valid Regex #{WHATSAPP_CHANNEL_REGEX}")
+  end
+
+  def pending_unified_identity?
+    return false unless inbox.channel.provider == 'whatsapp_cloud' && source_id == "unified-contact:#{contact_id}"
+    return false unless additional_attributes['whatsapp_unified_pending_identity'] == true && contact.account_id == inbox.account_id
+
+    link = WhatsappInboxLink.for_inbox(inbox)
+    link && link.primary_inbox_id == inbox_id && contact.contact_inboxes.exists?(inbox: link.inbox_for('unoapi'))
   end
 
   def valid_source_id_format?

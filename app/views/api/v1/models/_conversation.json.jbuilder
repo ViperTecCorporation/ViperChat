@@ -24,3 +24,5 @@ json.messages do
   end
 end
 json.account_id conversation.account_id
+transport_options = WhatsappInboxLink.for_inbox(conversation.inbox)&.transport_options(conversation)
+json.whatsapp_transport_options transport_options if transport_options

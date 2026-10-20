@@ -1,3 +1,4 @@
+import { includesNormalized } from 'shared/helpers/search';
 /**
  * Conversation Filter Helpers
  * ---------------------------
@@ -165,7 +166,7 @@ const contains = (filterValue, conversationValue) => {
     typeof conversationValue === 'string' &&
     typeof filterValue === 'string'
   ) {
-    return conversationValue.toLowerCase().includes(filterValue.toLowerCase());
+    return includesNormalized(conversationValue, filterValue);
   }
   return false;
 };

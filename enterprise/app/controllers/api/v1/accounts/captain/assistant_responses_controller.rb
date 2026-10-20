@@ -46,13 +46,7 @@ class Api::V1::Accounts::Captain::AssistantResponsesController < Api::V1::Accoun
 
     base_query = base_query.where(status: permitted_params[:status]) if permitted_params[:status].present?
 
-    if permitted_params[:search].present?
-      search_term = "%#{permitted_params[:search]}%"
-      base_query = base_query.where(
-        'question ILIKE :search OR answer ILIKE :search',
-        search: search_term
-      )
-    end
+    base_query = Search::TextQuery.apply(base_query, %w[question answer], permitted_params[:search]) if permitted_params[:search].present?
 
     base_query
   end

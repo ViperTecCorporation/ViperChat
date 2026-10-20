@@ -6,6 +6,10 @@ import Modal from 'dashboard/components/Modal.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { createPendingMessage } from 'dashboard/helper/commons';
 import {
+  useWhatsappTransport,
+  withWhatsappTransport,
+} from 'dashboard/composables/useWhatsappTransport';
+import {
   currentLocation,
   locationMessagePayload,
 } from 'dashboard/helper/locationSharing';
@@ -17,6 +21,10 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 const { t } = useI18n();
 const store = useStore();
+const { selectedProvider, options } = useWhatsappTransport(
+  computed(() => store.getters.getSelectedChat),
+  computed(() => store.getters.getCurrentUser?.id)
+);
 const label = key => t(`CONVERSATION.LOCATION_PICKER.${key}`);
 const mapElement = ref(null);
 const mapUrl = new URL(
@@ -141,14 +149,17 @@ const search = () => {
 const send = async () => {
   if (!canSend.value) return;
   sending.value = true;
-  const pending = createPendingMessage({
-    ...locationMessagePayload(props.conversationId, {
-      ...point.value,
-      name: name.value.trim(),
-      address: address.value.trim(),
-    }),
-    delivery_destination: props.deliveryDestination,
-  });
+  const pending = createPendingMessage(
+    withWhatsappTransport(
+      locationMessagePayload(props.conversationId, {
+        ...point.value,
+        name: name.value.trim(),
+        address: address.value.trim(),
+      }),
+      options.value ? selectedProvider.value : undefined,
+      props.deliveryDestination
+    )
+  );
   try {
     await store.dispatch('sendMessageWithData', pending);
   } catch {

@@ -8,10 +8,11 @@ class ScheduledMessages::DeliveryService
     @scheduled_message.with_lock do
       next unless @scheduled_message.scheduled?
 
+      transport.validate!
       claimed = true
       @scheduled_message.sending!
       @scheduled_message.ensure_legacy_item!
-      conversation = target_conversation
+      conversation = locked_target_conversation
       conversation.update!(assignee: @scheduled_message.sender)
       conversation.conversation_participants.find_or_create_by!(user: @scheduled_message.sender)
       @scheduled_message.update!(target_conversation: conversation, error_message: nil)
@@ -24,19 +25,29 @@ class ScheduledMessages::DeliveryService
 
   private
 
+  def transport
+    @transport ||= ScheduledMessages::TransportService.new(@scheduled_message)
+  end
+
+  def locked_target_conversation
+    return target_conversation if @scheduled_message.whatsapp_transport.blank?
+
+    transport.canonical_inbox.with_lock { target_conversation }
+  end
+
   def target_conversation
-    current = @scheduled_message.contact.conversations.where(inbox: @scheduled_message.inbox).order(created_at: :desc).first
+    current = @scheduled_message.contact.conversations.where(inbox: transport.canonical_inbox).order(created_at: :desc).first
     return create_conversation if current.nil?
     return current unless current.resolved? || current.snoozed?
-    return current.tap(&:open!) if @scheduled_message.inbox.lock_to_single_conversation?
+    return current.tap(&:open!) if transport.canonical_inbox.lock_to_single_conversation?
 
     create_conversation
   end
 
   def create_conversation
-    contact_inbox = @scheduled_message.contact.contact_inboxes.find_by!(inbox: @scheduled_message.inbox)
+    contact_inbox = @scheduled_message.contact.contact_inboxes.find_by!(inbox: transport.canonical_inbox)
     Conversation.create!(
-      account: @scheduled_message.account, inbox: @scheduled_message.inbox, contact: @scheduled_message.contact,
+      account: @scheduled_message.account, inbox: transport.canonical_inbox, contact: @scheduled_message.contact,
       contact_inbox: contact_inbox, assignee: @scheduled_message.sender
     )
   end

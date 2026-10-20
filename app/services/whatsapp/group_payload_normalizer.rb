@@ -32,7 +32,7 @@ class Whatsapp::GroupPayloadNormalizer
   private
 
   def message
-    @message ||= processed_params[:messages]&.first || {}
+    @message ||= processed_params[:messages]&.first || processed_params[:message_echoes]&.first || {}
   end
 
   def contact
@@ -64,7 +64,7 @@ class Whatsapp::GroupPayloadNormalizer
 
   def sender_phone
     raw_phone = message[:from].presence || contact[:wa_id]
-    return if raw_phone.to_s.include?('@lid')
+    return if raw_phone.to_s.include?('@') || raw_phone.to_s.start_with?('BR.')
 
     digits = raw_phone.to_s.gsub(/\D/, '')
     return if digits.blank? || digits == '0'
@@ -74,7 +74,7 @@ class Whatsapp::GroupPayloadNormalizer
   end
 
   def sender_bsuid
-    message[:from_user_id].presence || contact[:user_id].presence
+    message[:from_parent_user_id].presence || message[:from_user_id].presence || contact[:parent_user_id].presence || contact[:user_id].presence
   end
 
   def sender_username
@@ -92,8 +92,9 @@ class Whatsapp::GroupPayloadNormalizer
     raw = value.to_s.strip
     return '' if raw.blank?
     return raw if raw.end_with?('@g.us')
+    return raw if inbox&.channel&.provider == 'whatsapp_cloud'
 
-    digits = raw.gsub(/\D/, '')
-    digits.present? ? "#{digits}@g.us" : raw
+    # Opaque Meta identifiers must not be converted into invented phone/JID IDs.
+    raw.match?(/\A[0-9]+(?:-[0-9]+)?\z/) ? "#{raw}@g.us" : raw
   end
 end

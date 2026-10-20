@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -13,6 +14,23 @@ const props = defineProps({
 const emit = defineEmits(['edit', 'delete', 'retry', 'open']);
 
 const showMenu = ref(false);
+const { t } = useI18n();
+const providerName = provider => {
+  if (provider === 'unoapi') return t('WHATSAPP_UNIFIED.VIPERCONNECT');
+  if (provider === 'whatsapp_cloud') return t('WHATSAPP_UNIFIED.META');
+  return t('WHATSAPP_UNIFIED.SCHEDULE.UNKNOWN');
+};
+const requestedProvider = computed(
+  () => props.item.whatsapp_transport?.requested_provider
+);
+const effectiveTransports = computed(() =>
+  (props.item.messages || [])
+    .map((message, index) => ({
+      index: index + 1,
+      ...message.whatsapp_transport,
+    }))
+    .filter(transport => transport.provider)
+);
 
 const statusConfig = {
   scheduled: { label: 'Agendado', className: 'text-n-blue-11 bg-n-blue-3' },
@@ -132,6 +150,41 @@ const handleAction = ({ action }) => {
     <p class="mb-0 text-sm leading-5 text-n-slate-12 line-clamp-3">
       {{ preview }}
     </p>
+
+    <div
+      v-if="requestedProvider"
+      class="flex flex-col min-w-0 gap-1 text-xs break-words text-n-slate-11"
+      data-testid="scheduled-transport-provenance"
+    >
+      <p class="mb-0">
+        {{
+          $t('WHATSAPP_UNIFIED.SCHEDULE.REQUESTED', {
+            provider: providerName(requestedProvider),
+          })
+        }}
+      </p>
+      <p
+        v-if="item.whatsapp_transport.selection_source === 'legacy_inbox'"
+        class="mb-0 text-n-amber-11"
+      >
+        {{ $t('WHATSAPP_UNIFIED.SCHEDULE.LEGACY') }}
+      </p>
+      <p
+        v-for="transport in effectiveTransports"
+        :key="transport.index"
+        class="mb-0"
+      >
+        {{
+          $t('WHATSAPP_UNIFIED.SCHEDULE.EFFECTIVE', {
+            index: transport.index,
+            provider: providerName(transport.provider),
+          })
+        }}
+        <span v-if="transport.reason === 'capability_routing'">
+          {{ $t('WHATSAPP_UNIFIED.SCHEDULE.CAPABILITY_ROUTING') }}
+        </span>
+      </p>
+    </div>
 
     <div
       v-if="item.reason"

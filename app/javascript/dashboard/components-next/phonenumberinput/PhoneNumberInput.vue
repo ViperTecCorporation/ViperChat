@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, watch } from 'vue';
 import parsePhoneNumber from 'libphonenumber-js';
 import { useI18n } from 'vue-i18n';
@@ -76,7 +77,7 @@ const countryList = computed(() => {
 const filteredCountries = computed(() => {
   const query = searchQuery.value.toLowerCase();
   return countryList.value.filter(({ label, dialCode, value }) =>
-    [label, dialCode, value].some(field => field.toLowerCase().includes(query))
+    [label, dialCode, value].some(field => includesNormalized(field, query))
   );
 });
 

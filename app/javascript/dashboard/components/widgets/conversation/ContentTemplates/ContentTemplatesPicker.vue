@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed } from 'vue';
 import { useAlert } from 'dashboard/composables';
 import { useStore } from 'dashboard/composables/store';
@@ -28,9 +29,8 @@ const twilioTemplates = computed(() => {
 const filteredTemplateMessages = computed(() =>
   twilioTemplates.value.filter(
     template =>
-      template.friendly_name
-        .toLowerCase()
-        .includes(query.value.toLowerCase()) && template.status === 'approved'
+      includesNormalized(template.friendly_name, query.value) &&
+      template.status === 'approved'
   )
 );
 

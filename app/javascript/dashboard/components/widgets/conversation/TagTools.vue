@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, watch } from 'vue';
 import ToolsDropdown from 'dashboard/components-next/captain/assistant/ToolsDropdown.vue';
 import { useKeyboardNavigableList } from 'dashboard/composables/useKeyboardNavigableList';
@@ -20,7 +21,7 @@ const selectedIndex = ref(0);
 const filteredTools = computed(() => {
   const search = props.searchKey?.trim().toLowerCase() || '';
 
-  return tools.value.filter(tool => tool.title.toLowerCase().includes(search));
+  return tools.value.filter(tool => includesNormalized(tool.title, search));
 });
 
 const adjustScroll = () => {};

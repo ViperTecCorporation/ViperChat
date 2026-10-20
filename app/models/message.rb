@@ -86,6 +86,8 @@ class Message < ApplicationRecord
   attr_accessor :echo_id
   # Transient flag used to skip waiting_since clearing for specific bot/system messages.
   attr_accessor :preserve_waiting_since
+  # Insertion-only context supplied by the history importer; never persisted.
+  attr_accessor :historical_import
 
   enum message_type: { incoming: 0, outgoing: 1, activity: 2, template: 3 }
   enum content_type: {
@@ -147,6 +149,10 @@ class Message < ApplicationRecord
     SQL
     value.nil? ? where("#{attributes} ->> ? IS NULL", key) : where("#{attributes} ->> ? = ?", key, value.to_s)
   }
+  scope :without_history_import, lambda {
+    with_content_attribute('whatsapp_history_import', nil)
+      .or(where.not(with_content_attribute('whatsapp_history_import', true).where_clause.ast))
+  }
   scope :today, -> { where("date_trunc('day', created_at) = ?", Date.current) }
   scope :voice_calls, -> { where(content_type: :voice_call) }
 
@@ -161,6 +167,8 @@ class Message < ApplicationRecord
   belongs_to :sender, polymorphic: true, optional: true
 
   has_many :attachments, dependent: :destroy, autosave: true, before_add: :validate_attachments_limit
+  has_many :whatsapp_message_identity_links, dependent: :delete_all
+  has_many :whatsapp_message_identities, through: :whatsapp_message_identity_links
   has_one :csat_survey_response, dependent: :destroy_async
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
 
@@ -168,11 +176,16 @@ class Message < ApplicationRecord
   after_create_commit :schedule_web_absence_reminder
 
   after_update_commit :dispatch_update_event
+  after_save :link_whatsapp_message_identities, if: -> { saved_change_to_source_id? && source_id.present? && inbox.whatsapp? }
   after_commit -> { Conversations::LinksService.expire(self) }, on: [:create, :update, :destroy]
   after_commit :reindex_for_search, if: :should_index?, on: [:create, :update]
 
   def channel_token
     @token ||= inbox.channel.try(:page_access_token)
+  end
+
+  def link_whatsapp_message_identities
+    Whatsapp::MessageIdentityObservationService.link_message(self)
   end
 
   def push_event_data
@@ -192,6 +205,8 @@ class Message < ApplicationRecord
   end
 
   def schedule_web_absence_reminder
+    return if historical_import
+
     return unless web_attendance? && outgoing? && !private? && sender.is_a?(User)
 
     WebAttendance::AbsenceReminderService.new(conversation).schedule!(self)
@@ -350,6 +365,8 @@ class Message < ApplicationRecord
   private
 
   def prevent_message_flooding
+    return if historical_import
+
     # Added this to cover the validation specs in messages
     # We can revisit and see if we can remove this later
     return if conversation.blank?
@@ -386,6 +403,8 @@ class Message < ApplicationRecord
   end
 
   def execute_after_create_commit_callbacks
+    return if historical_import
+
     # rails issue with order of active record callbacks being executed https://github.com/rails/rails/issues/20911
     reopen_conversation
     mark_pending_conversation_as_open_for_human_response

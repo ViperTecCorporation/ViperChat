@@ -291,6 +291,72 @@ describe SearchService do
         expect(jid_search.perform[:conversations]).to include(group_conversation)
       end
 
+      context 'with group names typed in the general search' do
+        let!(:named_group) do
+          create(:conversation, account: account, inbox: inbox, group: true,
+                                group_title: '🛠️ Manutenção — Câmeras da Cláudia', group_source_id: '120363040468224422@g.us')
+        end
+
+        ['manutencao', 'cameras claudia', 'CLAUDIA MANUTENCAO', "Ca\u0302meras", '  cameras   claudia  '].each do |query|
+          it "finds the same group using #{query.inspect}" do
+            result = described_class.new(current_user: user, current_account: account, params: { q: query }, search_type: 'Conversation').perform
+            expect(result[:conversations]).to include(named_group)
+          end
+        end
+
+        it 'matches a decomposed Unicode group name as well as the legacy contact-name fallback' do
+          named_group.update!(group_title: 'Vendas Cláudia'.unicode_normalize(:nfd))
+          result = described_class.new(current_user: user, current_account: account, params: { q: 'vendas claudia' },
+                                       search_type: 'Conversation').perform
+          expect(result[:conversations]).to include(named_group)
+          named_group.update!(group_title: nil)
+          named_group.contact.update!(name: 'Vendas Cláudia')
+          result = described_class.new(current_user: user, current_account: account, params: { q: 'vendas claudia' },
+                                       search_type: 'Conversation').perform
+          expect(result[:conversations]).to include(named_group)
+        end
+
+        it 'does not match partial sets of words or leak inaccessible groups and other accounts' do
+          named_group.update!(group_title: 'Manutenção Matriz')
+          foreign_group = create(:conversation, group: true, group_title: 'Manutenção Câmeras Cláudia')
+          hidden = create(:conversation, account: account, inbox: create(:inbox, account: account), group: true,
+                                         group_title: 'Manutenção Câmeras Cláudia')
+          result = described_class.new(current_user: user, current_account: account, params: { q: 'manutencao cameras' },
+                                       search_type: 'Conversation').perform
+          expect(result[:conversations]).not_to include(named_group, foreign_group, hidden)
+        end
+
+        it 'keeps agent assignment restrictions for the accent-insensitive group branch' do
+          account.enable_features!('hide_all_chats_for_agent', 'hide_unassigned_for_agent')
+          named_group.update!(assignee: create(:user, account: account))
+          params = { q: 'cameras claudia' }
+          hidden = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Conversation').perform
+          expect(hidden[:conversations]).not_to include(named_group)
+          named_group.update!(assignee: user)
+          visible = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Conversation').perform
+          expect(visible[:conversations]).to include(named_group)
+        end
+
+        it 'finds resolved groups and allows administrators without explicit inbox membership' do
+          named_group.update!(status: :resolved)
+          administrator = create(:user, account: account, role: :administrator)
+          result = described_class.new(current_user: administrator, current_account: account,
+                                       params: { q: 'cameras claudia' }, search_type: 'Conversation').perform
+          expect(result[:conversations]).to include(named_group)
+        end
+
+        it 'preserves fifteen-item pagination and does not duplicate matching groups' do
+          create_list(:conversation, 16, account: account, inbox: inbox, group: true, group_title: named_group.group_title)
+          first_page = described_class.new(current_user: user, current_account: account,
+                                           params: { q: 'cameras claudia', page: 1 }, search_type: 'Conversation').perform[:conversations].pluck(:id)
+          next_page = described_class.new(current_user: user, current_account: account,
+                                          params: { q: 'cameras claudia', page: 2 }, search_type: 'Conversation').perform[:conversations].pluck(:id)
+          expect(first_page.size).to eq(15)
+          expect(next_page.size).to eq(2)
+          expect(first_page & next_page).to be_empty
+        end
+      end
+
       # rubocop:disable RSpec/MultipleMemoizedHelpers
       context 'with agent visibility flags' do
         let!(:other_agent) { create(:user, account: account) }

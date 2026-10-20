@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { computed, ref } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store.js';
 
@@ -41,8 +42,8 @@ const filteredLocales = computed(() => {
   if (!query) return props.locales;
   return props.locales.filter(
     locale =>
-      locale.name?.toLowerCase().includes(query) ||
-      locale.code?.toLowerCase().includes(query)
+      includesNormalized(locale.name, query) ||
+      includesNormalized(locale.code, query)
   );
 });
 

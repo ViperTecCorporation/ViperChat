@@ -52,7 +52,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect_message_has_attachment
       end
 
-      it 'syncs contact avatar when a status webhook includes profile picture' do
+      it 'does not create a contact or sync an avatar from an unknown status message' do
         status_params = {
           phone_number: whatsapp_channel.phone_number,
           object: 'whatsapp_business_account',
@@ -90,16 +90,9 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
 
         expect do
           described_class.new(inbox: whatsapp_channel.inbox, params: status_params).perform
-        end.to have_enqueued_job(Avatar::AvatarFromUrlJob).with(
-          instance_of(Contact),
-          'https://cdn.example.com/profile/sojan.jpg',
-          {
-            'content_length' => '41053',
-            'content_type' => 'image/jpeg',
-            'etag' => '"avatar-etag"',
-            'last_modified' => '2026-06-15T19:24:29.000Z'
-          }
-        )
+        end.not_to have_enqueued_job(Avatar::AvatarFromUrlJob)
+        expect(whatsapp_channel.inbox.contact_inboxes).to be_empty
+        expect(whatsapp_channel.account.contacts).to be_empty
       end
 
       it 'increments reauthorization count if fetching attachment fails' do
@@ -511,7 +504,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
           }]
         }.with_indifferent_access
 
-        stub_request(:get, 'https://graph.facebook.com/v22.0/BR.1597711494623173')
+        stub_request(:get, "https://graph.facebook.com/#{Whatsapp::ApiVersion.current}/BR.1597711494623173")
           .to_return(status: 404, body: { error: 'Phone number is not available' }.to_json)
 
         described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
@@ -554,7 +547,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
             }]
           }]
         }.with_indifferent_access
-        stub_request(:get, "https://graph.facebook.com/v22.0/#{user_id}")
+        stub_request(:get, "https://graph.facebook.com/#{Whatsapp::ApiVersion.current}/#{user_id}")
           .with(headers: { 'Authorization' => 'Bearer test_key', 'Content-Type' => 'application/json' })
           .to_return(
             status: 200,
@@ -564,7 +557,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
 
         described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
 
-        expect(a_request(:get, "https://graph.facebook.com/v22.0/#{user_id}")).to have_been_made.once
+        expect(a_request(:get, "https://graph.facebook.com/#{Whatsapp::ApiVersion.current}/#{user_id}")).to have_been_made.once
         expect(whatsapp_channel.inbox.contact_inboxes.pluck(:source_id)).to include('5511987654321', user_id)
         phone_contact_inbox = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: '5511987654321')
         bsuid_contact_inbox = whatsapp_channel.inbox.contact_inboxes.find_by!(source_id: user_id)
@@ -602,7 +595,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
             }]
           }]
         }.with_indifferent_access
-        stub_request(:get, "https://graph.facebook.com/v22.0/#{user_id}")
+        stub_request(:get, "https://graph.facebook.com/#{Whatsapp::ApiVersion.current}/#{user_id}")
           .to_return(
             status: 200,
             body: { id: user_id, phone_number: '5511987654321' }.to_json,
@@ -644,7 +637,7 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
 
         described_class.new(inbox: whatsapp_channel.inbox, params: echo_params, outgoing_echo: true).perform
 
-        expect(a_request(:get, "https://graph.facebook.com/v22.0/#{user_id}")).not_to have_been_made
+        expect(a_request(:get, "https://graph.facebook.com/#{Whatsapp::ApiVersion.current}/#{user_id}")).not_to have_been_made
         expect(whatsapp_channel.inbox.messages.last.conversation.contact).to eq(contact_inbox.contact)
       end
     end

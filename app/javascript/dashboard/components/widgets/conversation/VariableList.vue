@@ -1,4 +1,5 @@
 <script>
+import { includesNormalized } from 'shared/helpers/search';
 import { mapGetters } from 'vuex';
 import { MESSAGE_VARIABLES } from 'shared/constants/messages';
 import { sanitizeVariableSearchKey } from 'dashboard/helper/commons';
@@ -29,8 +30,8 @@ export default {
     standardAttributeVariables() {
       return MESSAGE_VARIABLES.filter(variable => {
         return (
-          variable.label.includes(this.sanitizedSearchKey) ||
-          variable.key.includes(this.sanitizedSearchKey)
+          includesNormalized(variable.label, this.sanitizedSearchKey) ||
+          includesNormalized(variable.key, this.sanitizedSearchKey)
         );
       }).map(variable => ({
         label: variable.key,

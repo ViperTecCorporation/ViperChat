@@ -38,6 +38,8 @@ describe Sms::SendOnSmsService do
         allow(sms_request).to receive(:parsed_response).and_return({ 'id' => '123456789' })
         allow(attachment).to receive(:download_url).and_return('url1')
         allow(attachment2).to receive(:download_url).and_return('url2')
+        # Database/association iteration order must not reverse an MMS album.
+        message.attachments.target.replace([attachment2, attachment])
         expect(HTTParty).to receive(:post).with(
           'https://messaging.bandwidth.com/api/v2/users/1/messages',
           basic_auth: { username: '1', password: '1' },

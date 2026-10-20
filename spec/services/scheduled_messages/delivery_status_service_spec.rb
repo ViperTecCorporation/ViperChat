@@ -48,4 +48,15 @@ RSpec.describe ScheduledMessages::DeliveryStatusService do
     expect(scheduled_message.reload).to be_failed
     expect(scheduled_message.error_message).to eq('Provider error')
   end
+
+  it 'ignores a late failure after confirmed completion without restarting the sequence' do
+    described_class.new(message).sent
+    clear_enqueued_jobs
+
+    described_class.new(message).failed(StandardError.new('Late duplicate job'))
+
+    expect(first_item.reload).to be_sent
+    expect(scheduled_message.reload).to be_sent
+    expect(ScheduledMessages::SequenceItemJob).not_to have_been_enqueued
+  end
 end

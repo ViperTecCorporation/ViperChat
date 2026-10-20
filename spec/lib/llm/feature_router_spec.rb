@@ -5,6 +5,12 @@ require 'rails_helper'
 RSpec.describe Llm::FeatureRouter do
   let(:account) { create(:account) }
 
+  before do
+    allow(Llm::Endpoint).to receive(:openrouter?).and_return(false)
+    allow(InstallationConfig).to receive(:find_by).and_call_original
+    allow(InstallationConfig).to receive(:find_by).with(name: 'CAPTAIN_AUDIO_TRANSCRIPTION_MODEL').and_return(nil)
+  end
+
   describe '.resolve' do
     it 'returns the feature default without an account' do
       resolved = described_class.resolve(feature: 'editor')

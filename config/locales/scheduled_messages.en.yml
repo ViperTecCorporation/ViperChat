@@ -1,0 +1,9 @@
+en:
+  scheduled_messages:
+    transport_errors:
+      invalid_provider: "Choose a valid WhatsApp provider for this schedule."
+      link_changed: "The inbox link changed or was disabled. Review and explicitly select the scheduled transport again. No message was sent."
+      sender_unavailable: "The scheduled sender no longer has access to the primary inbox. Review the schedule before sending."
+      already_dispatched: "This sequence already has dispatched or uncertain messages. Review their receipts before creating a new schedule; automatic resending is not allowed."
+      executor_changed: "The effective scheduled provider or capability changed. Review the schedule before sending. No alternative provider was attempted."
+      delivery_uncertain: "Delivery confirmation is uncertain. Review the provider receipt before a new intentional send; this sequence was stopped without switching providers."

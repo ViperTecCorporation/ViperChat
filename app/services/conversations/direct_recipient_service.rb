@@ -46,6 +46,8 @@ class Conversations::DirectRecipientService
     latest = existing.conversations.order(created_at: :desc).first if existing
     raise Pundit::NotAuthorizedError if latest && !visibility.conversations.exists?(id: latest.id)
 
+    return Whatsapp::OperationalInboxService.contact_inbox(contact: contact, inbox: @inbox) if WhatsappInboxLink.for_inbox(@inbox)
+
     existing || ContactInboxBuilder.new(contact: contact, inbox: @inbox, source_id: source_id).perform
   end
 
@@ -71,18 +73,38 @@ class Conversations::DirectRecipientService
     raise ActionController::BadRequest, 'Missing area or country code' unless raw.start_with?('+') || digits.match?(/\A(?:\d{10,11}|55\d{10,11})\z/)
 
     digits = "55#{digits}" if !raw.start_with?('+') && [10, 11].include?(digits.length)
+    digits = operational_phone(digits)
     phone = "+#{digits}"
     raise ActionController::BadRequest, 'Invalid phone number or missing area code' unless Phonelib.valid?(phone)
 
     phone
   end
 
+  def operational_phone(digits)
+    return digits unless WhatsappInboxLink.for_inbox(@inbox)
+
+    Whatsapp::InboxLinkPhoneService.normalize(digits) || digits
+  end
+
   def matching_contacts(identity)
     value = identity.values.first.delete_prefix('+').delete_suffix('@lid')
-    aliases = [value, "#{value}@lid", "#{value}@s.whatsapp.net"]
+    values = phone_aliases(value, identity)
+    aliases = values.flat_map { |candidate| [candidate, "#{candidate}@lid", "#{candidate}@s.whatsapp.net"] }
     linked_ids = @inbox.contact_inboxes.where(source_id: aliases).select(:contact_id)
     @account.contacts.where(bsuid: aliases)
-            .or(@account.contacts.where(phone_number: "+#{value}"))
+            .or(@account.contacts.where(phone_number: values.map { |candidate| "+#{candidate}" }))
             .or(@account.contacts.where(id: linked_ids))
+  end
+
+  def phone_aliases(value, identity)
+    return [value] unless identity.key?(:phone_number) && WhatsappInboxLink.for_inbox(@inbox)
+
+    normalized = Whatsapp::InboxLinkPhoneService.normalize(value) || value
+    values = [value, normalized]
+    if normalized.match?(/\A55\d{2}9\d{8}\z/)
+      without_ninth = normalized[0, 4] + normalized[5..]
+      values << without_ninth if Whatsapp::InboxLinkPhoneService.normalize(without_ninth) == normalized
+    end
+    values.uniq
   end
 end

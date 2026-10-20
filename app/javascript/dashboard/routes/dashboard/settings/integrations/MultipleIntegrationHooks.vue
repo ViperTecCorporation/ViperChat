@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useIntegrationHook } from 'dashboard/composables/useIntegrationHook';
@@ -62,7 +63,7 @@ const filteredHooks = computed(() => {
   const lowerQuery = query.toLowerCase();
   return (
     hooks.value?.filter(hook =>
-      hook.properties?.some(prop => prop?.toLowerCase().includes(lowerQuery))
+      hook.properties?.some(prop => includesNormalized(prop, lowerQuery))
     ) || []
   );
 });

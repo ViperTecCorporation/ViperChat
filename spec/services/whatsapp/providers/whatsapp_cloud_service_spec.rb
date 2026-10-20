@@ -42,14 +42,15 @@ describe Whatsapp::Providers::WhatsappCloudService do
   let(:whatsapp_response) { { messages: [{ id: 'message_id' }] } }
 
   before do
+    allow(Whatsapp::ApiVersion).to receive(:current).and_return('v26.0')
     whatsapp_channel.account.disable_features!('send_agent_name_in_whatsapp_message')
-    stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+    stub_request(:get, 'https://graph.facebook.com/v26.0/123456789/message_templates?access_token=test_key')
   end
 
   describe '#send_message' do
     context 'when called' do
       it 'calls message endpoints for normal messages' do
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -68,7 +69,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         whatsapp_channel.account.enable_features!('send_agent_name_in_whatsapp_message')
         whatsapp_channel.update!(provider_config: whatsapp_channel.provider_config.merge('send_agent_name' => false))
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -88,7 +89,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         whatsapp_channel.account.enable_features!('send_agent_name_in_whatsapp_message')
         whatsapp_channel.update!(provider_config: whatsapp_channel.provider_config.except('send_agent_name'))
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -108,7 +109,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         conversation.update!(group: true, group_source_id: '120363040468224422@g.us', group_title: 'Equipe Comercial')
         expected_body = "*#{message.sender_name}*: test"
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -139,7 +140,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         )
         expected_body = "*#{message.sender_name}*: Oi @94047083475061"
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -171,7 +172,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         )
         expected_body = "*#{message.sender_name}*: @11343495192601 oi"
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -201,7 +202,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         )
         expected_body = "*#{message.sender_name}*: @11343495192601 oi"
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -233,7 +234,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         )
         expected_body = "*#{message.sender_name}*: Oi @5566996222471"
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -251,7 +252,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
       end
 
       it 'calls message endpoints for a reply to messages' do
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp',
@@ -272,7 +273,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         attachment = message.attachments.new(account_id: message.account_id, file_type: :image)
         attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: hash_including({
                                    messaging_product: 'whatsapp',
@@ -291,7 +292,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
         # ref: https://github.com/bblimke/webmock/issues/900
         # reason for Webmock::API.hash_including
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: hash_including({
                                    messaging_product: 'whatsapp',
@@ -308,7 +309,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         attachment = message.attachments.new(account_id: message.account_id, file_type: :audio, meta: { 'is_voice_message' => true })
         attachment.file.attach(io: Rails.root.join('spec/assets/sample.ogg').open, filename: 'voice.ogg', content_type: 'audio/ogg')
 
-        stub_request(:post, 'https://graph.facebook.com/v24.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: hash_including({
                                    messaging_product: 'whatsapp',
@@ -325,7 +326,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
         attachment = message.attachments.new(account_id: message.account_id, file_type: :audio)
         attachment.file.attach(io: Rails.root.join('spec/assets/sample.ogg').open, filename: 'audio.ogg', content_type: 'audio/ogg')
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: hash_including({
                                    messaging_product: 'whatsapp',
@@ -341,6 +342,57 @@ describe Whatsapp::Providers::WhatsappCloudService do
     end
   end
 
+  describe 'BSUID recipient addressing' do
+    it 'sends a quoted text with recipient and preserves its reference' do
+      request = stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
+                .with do |sent|
+                  body = JSON.parse(sent.body)
+                  body['recipient'] == 'BR.1316081087211411' && body.exclude?('to') &&
+                    body['context'] == { 'message_id' => message.source_id }
+                end
+                .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_message('BR.1316081087211411', message_with_reply)).to eq('message_id')
+      expect(request).to have_been_requested.once
+      expect(message.reload.source_id).to eq('external_id')
+    end
+
+    it 'sends image media with recipient without recreating the attachment or blob' do
+      attachment = message.attachments.build(account: message.account, file_type: :image)
+      attachment.file.attach(io: StringIO.new(Rails.root.join('spec/assets/sample.png').binread),
+                             filename: 'sample.png', content_type: 'image/png')
+      attachment.save!
+      original_blob = attachment.file.blob.id
+      original_count = ActiveStorage::Blob.count
+      request = stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
+                .with do |sent|
+                  body = JSON.parse(sent.body)
+                  body['recipient'] == 'BR.1316081087211411' && body.exclude?('to') && body['type'] == 'image'
+                end
+                .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_message('BR.1316081087211411', message)).to eq('message_id')
+      expect(request).to have_been_requested.once
+      expect(message.reload.attachments.pluck(:id)).to eq([attachment.id])
+      expect(attachment.reload.file.blob.id).to eq(original_blob)
+      expect(ActiveStorage::Blob.count).to eq(original_count)
+    end
+
+    it 'uses recipient for a BSUID in a template without changing its content' do
+      info = { name: 'synthetic', lang_code: 'pt_BR', parameters: [] }
+      request = stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
+                .with do |sent|
+                  body = JSON.parse(sent.body)
+                  body['recipient'] == 'BR.1316081087211411' && body.exclude?('to') &&
+                    body['type'] == 'template' && body.dig('template', 'name') == 'synthetic'
+                end
+                .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_template('BR.1316081087211411', info, message)).to eq('message_id')
+      expect(request).to have_been_requested.once
+    end
+  end
+
   describe '#send_interactive message' do
     context 'when called' do
       it 'calls message endpoints with button payload when number of items is less than or equal to 3' do
@@ -353,7 +405,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
                                        { title: 'Sushi', value: 'Sushi' }
                                      ]
                                    })
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp', recipient_type: 'individual', to: '+123456789',
@@ -380,7 +432,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
           sections: [{ rows: %w[Burito Pasta Sushi Salad].map { |i| { id: i, title: i } } }]
         }.to_json
 
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: {
               messaging_product: 'whatsapp', recipient_type: 'individual', to: '+123456789',
@@ -458,7 +510,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
       message.update!(content_attributes: { deleted: true })
       payload = message.webhook_data.deep_symbolize_keys
 
-      stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+      stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
         .with(
           body: {
             messaging_product: 'whatsapp',
@@ -479,7 +531,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
       payload[:conversation][:group] = true
       payload[:conversation][:group_source_id] = '120363040468224422@g.us'
 
-      stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+      stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
         .with(
           body: {
             messaging_product: 'whatsapp',
@@ -524,7 +576,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
 
     context 'when called' do
       it 'calls message endpoints with template params for template messages' do
-        stub_request(:post, 'https://graph.facebook.com/v13.0/123456789/messages')
+        stub_request(:post, 'https://graph.facebook.com/v26.0/123456789/messages')
           .with(
             body: template_body.to_json
           )
@@ -538,20 +590,20 @@ describe Whatsapp::Providers::WhatsappCloudService do
   describe '#sync_templates' do
     context 'when called' do
       it 'updated the message templates' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+        stub_request(:get, 'https://graph.facebook.com/v26.0/123456789/message_templates?access_token=test_key')
           .to_return(
             { status: 200, headers: response_headers,
               body: { data: [
                 { id: '123456789', name: 'test_template' }
-              ], paging: { next: 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key' } }.to_json },
+              ], paging: { next: 'https://graph.facebook.com/v26.0/123456789/message_templates?access_token=test_key' } }.to_json },
             { status: 200, headers: response_headers,
               body: { data: [
                 { id: '123456789', name: 'next_template' }
-              ], paging: { next: 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key' } }.to_json },
+              ], paging: { next: 'https://graph.facebook.com/v26.0/123456789/message_templates?access_token=test_key' } }.to_json },
             { status: 200, headers: response_headers,
               body: { data: [
                 { id: '123456789', name: 'last_template' }
-              ], paging: { prev: 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key' } }.to_json }
+              ], paging: { prev: 'https://graph.facebook.com/v26.0/123456789/message_templates?access_token=test_key' } }.to_json }
           )
 
         timstamp = whatsapp_channel.reload.message_templates_last_updated
@@ -563,7 +615,7 @@ describe Whatsapp::Providers::WhatsappCloudService do
       end
 
       it 'updates message_templates_last_updated even when template request fails' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+        stub_request(:get, 'https://graph.facebook.com/v26.0/123456789/message_templates?access_token=test_key')
           .to_return(status: 401)
 
         timstamp = whatsapp_channel.reload.message_templates_last_updated
@@ -576,13 +628,13 @@ describe Whatsapp::Providers::WhatsappCloudService do
   describe '#validate_provider_config' do
     context 'when called' do
       it 'returns true if valid' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key')
+        stub_request(:get, 'https://graph.facebook.com/v26.0/123456789/message_templates?access_token=test_key')
         expect(subject.validate_provider_config?).to be(true)
         expect(whatsapp_channel.errors.present?).to be(false)
       end
 
       it 'returns false if invalid' do
-        stub_request(:get, 'https://graph.facebook.com/v14.0/123456789/message_templates?access_token=test_key').to_return(status: 401)
+        stub_request(:get, 'https://graph.facebook.com/v26.0/123456789/message_templates?access_token=test_key').to_return(status: 401)
         expect(subject.validate_provider_config?).to be(false)
       end
     end

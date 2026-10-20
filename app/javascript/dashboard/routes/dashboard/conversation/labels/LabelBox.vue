@@ -1,7 +1,7 @@
 <script>
 import { ref } from 'vue';
 import { mapGetters } from 'vuex';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import { useLabelCreation } from 'dashboard/composables/useLabelCreation';
 import { useConversationLabels } from 'dashboard/composables/useConversationLabels';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import Spinner from 'shared/components/Spinner.vue';
@@ -15,7 +15,7 @@ export default {
     AddLabel,
   },
   setup() {
-    const { isAdmin } = useAdmin();
+    const { canCreateLabels } = useLabelCreation();
 
     const {
       savedLabels,
@@ -53,7 +53,7 @@ export default {
     };
     useKeyboardEvents(keyboardEvents);
     return {
-      isAdmin,
+      canCreateLabels,
       savedLabels,
       activeLabels,
       accountLabels,
@@ -113,7 +113,7 @@ export default {
             v-if="showSearchDropdownLabel"
             :account-labels="accountLabels"
             :selected-labels="savedLabels"
-            :allow-creation="isAdmin"
+            :allow-creation="canCreateLabels"
             @add="addLabelToConversation"
             @remove="removeLabelFromConversation"
           />

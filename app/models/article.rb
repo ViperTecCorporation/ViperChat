@@ -99,7 +99,8 @@ class Article < ApplicationRecord
         normalization: 2
       }
     },
-    ranked_by: ':tsearch'
+    ranked_by: ':tsearch',
+    ignoring: :accents
   )
 
   def self.search(params)

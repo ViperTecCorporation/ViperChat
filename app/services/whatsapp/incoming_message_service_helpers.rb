@@ -283,6 +283,10 @@ module Whatsapp::IncomingMessageServiceHelpers
 
     messages = inbox.messages.where(source_id: source_id).order(:created_at).to_a
     @message = messages.find { |message| !message.content_attributes['external_echo'] } || messages.first
+    return @message if @message
+
+    identity = WhatsappMessageIdentity.find_by(account_id: inbox.account_id, inbox_id: inbox.id, external_id: source_id)
+    @message = Whatsapp::UnifiedMessageIngestionService.message_for(identity) if identity
   end
 
   def lock_message_source_id!

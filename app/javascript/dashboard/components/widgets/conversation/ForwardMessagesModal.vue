@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import camelcaseKeys from 'camelcase-keys';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -7,12 +8,19 @@ import Modal from 'dashboard/components/Modal.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ContactSelector from 'dashboard/components-next/NewConversation/components/ContactSelector.vue';
 import InboxSelector from 'dashboard/components-next/NewConversation/components/InboxSelector.vue';
+import WhatsappTransportSelector from 'dashboard/components-next/NewConversation/components/WhatsappTransportSelector.vue';
+import {
+  getWhatsappInboxLink,
+  getWhatsappTransport,
+  getWhatsappRouting,
+} from 'dashboard/components-next/NewConversation/helpers/whatsappUnifiedInbox';
 import {
   searchContacts,
   createNewContact,
   fetchContactableInboxes,
   mergeInboxDetails,
   buildContactableInboxesList,
+  getContactInboxes,
 } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper.js';
 import ConversationApi from 'dashboard/api/conversations';
 import SearchAPI from 'dashboard/api/search';
@@ -45,55 +53,28 @@ const isFetchingInboxes = ref(false);
 const isSearching = ref(false);
 const showContactsDropdown = ref(false);
 const showInboxesDropdown = ref(false);
+const isForwarding = ref(false);
+const whatsappTransport = ref('');
+const whatsappLink = computed(() =>
+  getWhatsappInboxLink(targetInbox.value, selectedContact.value)
+);
+watch(
+  () => [
+    whatsappLink.value?.linkId,
+    targetInbox.value?.id,
+    selectedContact.value,
+  ],
+  () => {
+    whatsappTransport.value = whatsappLink.value?.defaultProvider || '';
+  },
+  { immediate: true }
+);
 
 const contactableInboxesList = computed(() => {
-  const contactInboxes = selectedContact.value?.contactInboxes || [];
-  const baseInboxes = buildContactableInboxesList(contactInboxes);
-
-  const bsuid = selectedContact.value?.bsuid || '';
-  const groupId = selectedContact.value?.email?.endsWith('@g.us')
-    ? selectedContact.value.email
-    : '';
-  const contactPhone = selectedContact.value?.phoneNumber || bsuid || groupId;
-
-  const unoFallbackInboxes = (() => {
-    if (!contactPhone || (!bsuid && !groupId)) return [];
-
-    return (
-      inboxesList.value
-        ?.filter(inbox => {
-          const provider = inbox.provider || inbox.provider_name;
-          const channelType = inbox.channel_type || inbox.channelType;
-          return (
-            channelType === 'Channel::Whatsapp' &&
-            provider &&
-            provider.toLowerCase() === 'unoapi'
-          );
-        })
-        .map(inbox => ({
-          id: inbox.id,
-          name: inbox.name,
-          email: inbox.email,
-          phoneNumber: contactPhone,
-          channelType: inbox.channel_type || inbox.channelType,
-          medium: inbox.medium,
-          sourceId: inbox.source_id || inbox.sourceId,
-        })) || []
-    );
-  })();
-
-  if (!unoFallbackInboxes.length) {
-    return baseInboxes;
-  }
-
-  const unoContactable = buildContactableInboxesList(unoFallbackInboxes);
-  const existingIds = new Set(baseInboxes.map(inbox => inbox.id));
-  const merged = [
-    ...unoContactable.filter(inbox => !existingIds.has(inbox.id)),
-    ...baseInboxes,
-  ];
-
-  return merged;
+  return buildContactableInboxesList(
+    getContactInboxes(selectedContact.value, inboxesList.value),
+    selectedContact.value
+  );
 });
 
 const forwardMessagePreview = computed(() => {
@@ -165,8 +146,10 @@ const handleContactSearch = async value => {
       searchContacts({ query }),
       SearchAPI.conversations({ q: query }),
     ]);
-    const conversationResults =
-      conversationResponse?.data?.payload?.conversations || [];
+    const conversationResults = camelcaseKeys(
+      conversationResponse?.data?.payload?.conversations || [],
+      { deep: true }
+    );
     const groupResults = conversationResults
       .filter(
         conversation =>
@@ -179,7 +162,10 @@ const handleContactSearch = async value => {
           conversation.groupTitle ||
           conversation.contact?.name ||
           groupSourceId;
-        const inbox = conversation.inbox || {};
+        const inbox = mergeInboxDetails(
+          [conversation.inbox || { id: conversation.inboxId }],
+          inboxesList.value
+        )[0];
 
         return {
           ...conversation.contact,
@@ -212,8 +198,14 @@ const handleContactSearch = async value => {
 };
 
 const handleSelectedContact = async ({ value, action, ...rest }) => {
+  targetInbox.value = null;
   let contact;
-  if (action === 'create') {
+  if (action === 'direct') {
+    contact = {
+      recipient: rest.recipient,
+      name: Object.values(rest.recipient)[0],
+    };
+  } else if (action === 'create') {
     isCreatingContact.value = true;
     try {
       contact = await createNewContact(value);
@@ -223,7 +215,7 @@ const handleSelectedContact = async ({ value, action, ...rest }) => {
     }
     isCreatingContact.value = false;
   } else {
-    contact = rest;
+    contact = camelcaseKeys(rest, { deep: true });
   }
 
   contact = {
@@ -234,7 +226,8 @@ const handleSelectedContact = async ({ value, action, ...rest }) => {
   selectedContact.value = contact;
 
   if (contact.targetConversationId) {
-    targetInbox.value = contactableInboxesList.value[0] || null;
+    targetInbox.value =
+      buildContactableInboxesList(contact.contactInboxes, contact)[0] || null;
     return;
   }
 
@@ -269,7 +262,14 @@ const canSubmit = computed(() => {
     !!selectedContact.value &&
     !!targetInbox.value &&
     hasForwardableContent.value &&
-    !isFetchingInboxes.value
+    !isFetchingInboxes.value &&
+    !isForwarding.value &&
+    (!whatsappLink.value ||
+      !!getWhatsappTransport(
+        targetInbox.value,
+        whatsappTransport.value,
+        selectedContact.value
+      ))
   );
 });
 
@@ -294,24 +294,45 @@ const handleForward = async () => {
   }
 
   try {
+    isForwarding.value = true;
+    const routing = getWhatsappRouting(
+      targetInbox.value,
+      whatsappTransport.value,
+      selectedContact.value
+    );
     const { data } = await ConversationApi.forwardMessages(
       props.conversationId,
       selectedContact.value.targetConversationId
         ? {
             message_ids: props.selectedMessages.map(message => message.id),
             target_conversation_id: selectedContact.value.targetConversationId,
+            ...(routing.whatsappTransport
+              ? { whatsapp_transport: routing.whatsappTransport }
+              : {}),
           }
         : {
             message_ids: props.selectedMessages.map(message => message.id),
-            target_contact_id: selectedContact.value.id,
-            target_inbox_id: targetInbox.value.id,
+            ...(selectedContact.value.recipient
+              ? { recipient: selectedContact.value.recipient }
+              : { target_contact_id: selectedContact.value.id }),
+            target_inbox_id: routing.inboxId,
+            ...(routing.whatsappTransport
+              ? { whatsapp_transport: routing.whatsappTransport }
+              : {}),
           }
     );
     emit('forwarded', data);
     show.value = false;
     resetState();
   } catch (error) {
-    useAlert(t('CONVERSATION.FORWARD_MESSAGES.ERROR_API'));
+    useAlert(
+      error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.response?.data?.errors?.join?.(', ') ||
+        t('CONVERSATION.FORWARD_MESSAGES.ERROR_API')
+    );
+  } finally {
+    isForwarding.value = false;
   }
 };
 </script>
@@ -322,7 +343,9 @@ const handleForward = async () => {
       :header-title="$t('CONVERSATION.FORWARD_MESSAGES.TITLE')"
       :header-content="$t('CONVERSATION.FORWARD_MESSAGES.DESCRIPTION')"
     />
-    <div class="flex flex-col gap-4 p-8">
+    <div
+      class="flex min-w-0 flex-col gap-4 overflow-y-auto max-h-[calc(100dvh-10rem-env(safe-area-inset-bottom))] p-4 sm:p-8"
+    >
       <p class="text-xs text-n-slate-11">
         {{
           $t('CONVERSATION.FORWARD_MESSAGES.SELECTED_COUNT', {
@@ -348,6 +371,7 @@ const handleForward = async () => {
           @update-dropdown="handleContactDropdownUpdate"
         />
         <InboxSelector
+          v-if="!selectedContact?.targetConversationId"
           :target-inbox="targetInbox"
           :selected-contact="selectedContact"
           :show-inboxes-dropdown="showInboxesDropdown"
@@ -357,10 +381,17 @@ const handleForward = async () => {
           @toggle-dropdown="handleInboxDropdownToggle"
           @handle-inbox-action="handleTargetInbox"
         />
+        <WhatsappTransportSelector
+          v-if="whatsappLink"
+          v-model="whatsappTransport"
+          :inbox="targetInbox"
+          :contact="selectedContact"
+          :disabled="isForwarding"
+        />
       </div>
 
       <div
-        class="rounded-md bg-n-alpha-2 p-3 text-xs text-n-slate-12 whitespace-pre-line"
+        class="min-w-0 break-words rounded-md bg-n-alpha-2 p-3 text-xs text-n-slate-12 whitespace-pre-line"
       >
         {{ forwardMessagePreview }}
       </div>

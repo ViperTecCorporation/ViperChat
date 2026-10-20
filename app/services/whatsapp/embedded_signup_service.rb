@@ -2,7 +2,6 @@ class Whatsapp::EmbeddedSignupService
   def initialize(account:, params:, inbox_id: nil)
     @account = account
     @code = params[:code]
-    @business_id = params[:business_id]
     @waba_id = params[:waba_id]
     @phone_number_id = params[:phone_number_id]
     @inbox_id = inbox_id
@@ -24,6 +23,9 @@ class Whatsapp::EmbeddedSignupService
     # 2. We need to run check_channel_health_and_prompt_reauth after webhook setup completes
     # 3. The channel is marked with source: 'embedded_signup' to skip the after_commit callback
     channel.setup_webhooks
+    # The job checks the opt-in, deployment gate and actual Meta coexistence status.
+    # Reauthorization never resets the durable one-shot request journal.
+    Whatsapp::RequestSmbAppDataJob.perform_later(channel.id)
     # Skip health check during reauthorization — phone numbers in pending provisioning state
     # (platform_type: NOT_APPLICABLE) would incorrectly trigger a disconnect email right after
     # a successful reauth. Only run health check for new channel creation.
@@ -80,7 +82,6 @@ class Whatsapp::EmbeddedSignupService
   def validate_parameters!
     missing_params = []
     missing_params << 'code' if @code.blank?
-    missing_params << 'business_id' if @business_id.blank?
     missing_params << 'waba_id' if @waba_id.blank?
 
     return if missing_params.empty?

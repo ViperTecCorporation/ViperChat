@@ -8,11 +8,13 @@ import {
   ref,
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
 import { DirectUpload } from 'dashboard/helper/multipartUpload';
 import { getAllowedFileTypesByChannel } from '@chatwoot/utils';
 
 import scheduledMessagesApi from 'dashboard/api/scheduledMessages';
+import ConversationsAPI from 'dashboard/api/conversations';
 import SearchAPI from 'dashboard/api/search';
 import { useAlert } from 'dashboard/composables';
 import {
@@ -31,10 +33,12 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import { AUDIO_FORMATS } from 'shared/constants/messages';
 import ScheduledMessageCard from './components/ScheduledMessageCard.vue';
 import ScheduledMessageSequenceEditor from './components/ScheduledMessageSequenceEditor.vue';
+import ScheduledWhatsappTransport from './components/ScheduledWhatsappTransport.vue';
 
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
+const { t } = useI18n();
 
 const copy = Object.freeze({
   title: 'Agendamentos',
@@ -81,6 +85,7 @@ const isLoadingDay = ref(false);
 const isLoadingWeek = ref(false);
 const isLoadingMonth = ref(false);
 const isSaving = ref(false);
+const isLoadingConversation = ref(false);
 const isUploading = ref(false);
 const editMode = ref('edit');
 const boardMode = ref('day');
@@ -106,8 +111,19 @@ const editForm = reactive({
   labelId: '',
   reason: '',
   senderId: '',
+  whatsappProvider: '',
   messages: [],
 });
+
+const scheduledTransportOptions = computed(() =>
+  editMode.value === 'create'
+    ? selectedConversation.value?.whatsapp_transport_options
+    : editingItem.value?.whatsapp_transport_options
+);
+const isLegacyTransport = computed(
+  () =>
+    editingItem.value?.whatsapp_transport?.selection_source === 'legacy_inbox'
+);
 
 const currentUser = computed(() => store.getters.getCurrentUser || {});
 const accountId = computed(() => Number(route.params.accountId));
@@ -126,7 +142,9 @@ const activeInbox = computed(() => {
   return inboxes.value.find(inbox => inbox.id === inboxId) || {};
 });
 const scheduleAudioFormat = computed(() =>
-  activeInbox.value.provider === 'whatsapp_cloud'
+  (scheduledTransportOptions.value
+    ? editForm.whatsappProvider
+    : activeInbox.value.provider) === 'whatsapp_cloud'
     ? AUDIO_FORMATS.OGG
     : AUDIO_FORMATS.MP3
 );
@@ -455,6 +473,7 @@ const resetEditForm = (item, retry = false) => {
   editForm.labelId = item.label.id;
   editForm.reason = item.reason || '';
   editForm.senderId = item.sender.id;
+  editForm.whatsappProvider = item.whatsapp_transport?.requested_provider || '';
   editForm.messages = (
     item.messages?.length
       ? item.messages
@@ -490,6 +509,7 @@ const resetEditForm = (item, retry = false) => {
 };
 
 const openEdit = async (item, retry = false) => {
+  selectedConversation.value = null;
   editingItem.value = item;
   editMode.value = retry ? 'retry' : 'edit';
   resetEditForm(item, retry);
@@ -498,6 +518,7 @@ const openEdit = async (item, retry = false) => {
 };
 
 const openCreate = async () => {
+  isLoadingConversation.value = false;
   editingItem.value = null;
   selectedConversation.value = null;
   conversationResults.value = [];
@@ -507,6 +528,7 @@ const openCreate = async () => {
   editForm.labelId = labels.value[0]?.id || '';
   editForm.reason = '';
   editForm.senderId = currentUser.value.id;
+  editForm.whatsappProvider = '';
   editForm.messages = [
     {
       content: '',
@@ -542,14 +564,40 @@ const searchConversations = query => {
   }, 300);
 };
 
-const selectConversation = ({ conversation }) => {
+const selectConversation = async ({ conversation }) => {
   selectedConversation.value = conversation;
   conversationPickerOpen.value = false;
+  editForm.whatsappProvider = '';
+  isLoadingConversation.value = true;
+  try {
+    const { data } = await ConversationsAPI.show(conversation.id);
+    if (selectedConversation.value?.id !== conversation.id) return;
+    selectedConversation.value = { ...conversation, ...data };
+    editForm.whatsappProvider =
+      data.whatsapp_transport_options?.default_provider || '';
+  } catch (error) {
+    if (selectedConversation.value?.id === conversation.id) {
+      selectedConversation.value = null;
+      useAlert(
+        error?.response?.data?.error ||
+          t('WHATSAPP_UNIFIED.SCHEDULE.CONVERSATION_ERROR')
+      );
+    }
+  } finally {
+    if (
+      selectedConversation.value?.id === conversation.id ||
+      !selectedConversation.value
+    ) {
+      isLoadingConversation.value = false;
+    }
+  }
 };
 
 const saveEdit = async () => {
   if (!editForm.scheduledAt || !editForm.labelId) return;
   if (editMode.value === 'create' && !selectedConversation.value) return;
+  if (isLoadingConversation.value) return;
+  if (scheduledTransportOptions.value && !editForm.whatsappProvider) return;
   isSaving.value = true;
   try {
     const scheduledMessage = {
@@ -557,6 +605,9 @@ const saveEdit = async () => {
       label_id: editForm.labelId,
       reason: editForm.reason,
       sender_id: editForm.senderId,
+      ...(scheduledTransportOptions.value && {
+        whatsapp_transport: editForm.whatsappProvider,
+      }),
       messages: editForm.messages.map(message => ({
         content: message.content,
         content_type: message.content_type || 'text',
@@ -592,7 +643,9 @@ const saveEdit = async () => {
     await refresh();
   } catch (error) {
     useAlert(
-      error?.response?.data?.error || 'Não foi possível atualizar o agendamento'
+      error?.response?.data?.error ||
+        error?.response?.data?.errors?.join('; ') ||
+        'Não foi possível atualizar o agendamento'
     );
   } finally {
     isSaving.value = false;
@@ -1107,6 +1160,8 @@ onBeforeUnmount(() => {
         !editForm.scheduledAt ||
         !editForm.labelId ||
         isUploading ||
+        isLoadingConversation ||
+        (scheduledTransportOptions && !editForm.whatsappProvider) ||
         !messagesValid ||
         (editMode === 'create' && !selectedConversation)
       "
@@ -1173,6 +1228,11 @@ onBeforeUnmount(() => {
           />
         </div>
       </div>
+      <ScheduledWhatsappTransport
+        v-model="editForm.whatsappProvider"
+        :options="scheduledTransportOptions"
+        :legacy="isLegacyTransport"
+      />
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input
           v-model="editForm.scheduledAt"

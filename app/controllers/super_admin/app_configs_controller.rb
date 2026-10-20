@@ -1,4 +1,5 @@
 class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
+  OPENROUTER_MODEL_FEATURES = { 'CAPTAIN_OPEN_AI_MODEL' => 'assistant', 'CAPTAIN_AUDIO_TRANSCRIPTION_MODEL' => 'audio_transcription' }.freeze
   GOOGLE_CONFIGS = %w[
     GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN
     GOOGLE_GMAIL_API_ENABLED GOOGLE_MAPS_API_KEY
@@ -21,9 +22,12 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     @installation_configs = ConfigLoader.new.general_configs.each_with_object({}) do |config_hash, result|
       result[config_hash['name']] = config_hash.except('name')
     end
+    load_openrouter_models if @config == 'captain' && Llm::Endpoint.openrouter?(@app_config['CAPTAIN_OPEN_AI_ENDPOINT'])
   end
 
   def create
+    return unless valid_openrouter_models?
+
     errors = []
     params['app_config'].each do |key, value|
       next unless @allowed_configs.include?(key)
@@ -60,7 +64,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       'notion' => %w[NOTION_CLIENT_ID NOTION_CLIENT_SECRET],
       'google' => GOOGLE_CONFIGS,
       'unoapi' => %w[UNOAPI_API_URL UNOAPI_AUTH_TOKEN],
-      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT]
+      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT CAPTAIN_AUDIO_TRANSCRIPTION_MODEL]
     }
 
     @allowed_configs = mapping.fetch(
@@ -74,6 +78,43 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     return message unless restart_required_config_saved?
 
     "#{message} #{I18n.t('super_admin.config_restart')}"
+  end
+
+  def load_openrouter_models
+    catalog = Llm::OpenRouterCatalog.new
+    @openrouter_models = {
+      'CAPTAIN_OPEN_AI_MODEL' => catalog.models(feature: 'assistant'),
+      'CAPTAIN_AUDIO_TRANSCRIPTION_MODEL' => catalog.models(feature: 'audio_transcription')
+    }
+  rescue Llm::OpenRouterCatalog::Unavailable
+    flash.now[:alert] = I18n.t('super_admin.openrouter.catalog_unavailable')
+    @openrouter_models = { 'CAPTAIN_OPEN_AI_MODEL' => [], 'CAPTAIN_AUDIO_TRANSCRIPTION_MODEL' => [] }
+  end
+
+  def valid_openrouter_models?
+    return true unless @config == 'captain'
+
+    values = params.fetch('app_config', {})
+    endpoint = values['CAPTAIN_OPEN_AI_ENDPOINT'] || InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value
+    return true unless Llm::Endpoint.openrouter?(endpoint)
+
+    return true unless invalid_openrouter_model?(values)
+
+    redirect_to super_admin_app_config_path(config: @config), alert: I18n.t('super_admin.openrouter.invalid_model')
+    false
+  rescue Llm::OpenRouterCatalog::Unavailable
+    redirect_to super_admin_app_config_path(config: @config), alert: I18n.t('super_admin.openrouter.catalog_unavailable')
+    false
+  end
+
+  def invalid_openrouter_model?(values)
+    catalog = Llm::OpenRouterCatalog.new
+    OPENROUTER_MODEL_FEATURES.any? do |key, feature|
+      value = values[key]
+      next false if value.blank? || value == InstallationConfig.find_by(name: key)&.value
+
+      !catalog.valid?(feature: feature, model: value)
+    end
   end
 
   def success_flash

@@ -15,6 +15,7 @@ export const buildCreatePayload = ({
   templateParams,
   isVoiceMessage = false,
   deliveryDestination,
+  whatsappTransport,
 }) => {
   let payload;
   if (files && files.length !== 0) {
@@ -62,6 +63,13 @@ export const buildCreatePayload = ({
       payload.delivery_destination = deliveryDestination;
     }
   }
+  if (whatsappTransport && !isPrivate && deliveryDestination !== 'web') {
+    if (payload instanceof FormData) {
+      payload.append('whatsapp_transport', whatsappTransport);
+    } else {
+      payload.whatsapp_transport = whatsappTransport;
+    }
+  }
   return payload;
 };
 
@@ -87,6 +95,7 @@ class MessageApi extends ApiClient {
     templateParams,
     isVoiceMessage = false,
     delivery_destination: deliveryDestination,
+    whatsapp_transport: whatsappTransport,
   }) {
     const normalizedContentAttributes =
       contentAttributes || contentAttributesSnake;
@@ -108,6 +117,7 @@ class MessageApi extends ApiClient {
         templateParams,
         isVoiceMessage,
         deliveryDestination,
+        whatsappTransport,
       }),
     });
   }

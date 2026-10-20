@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -13,6 +14,8 @@ const props = defineProps({
     type: Number,
     required: true,
   },
+  templates: { type: Array, default: null },
+  disabled: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['sendMessage']);
@@ -26,12 +29,16 @@ const searchQuery = ref('');
 const selectedTemplate = ref(null);
 
 const whatsAppTemplateMessages = computed(() => {
-  return getFilteredWhatsAppTemplates.value(props.inboxId);
+  return props.templates !== null
+    ? props.templates.filter(
+        template => template.status?.toLowerCase() === 'approved'
+      )
+    : getFilteredWhatsAppTemplates.value(props.inboxId);
 });
 
 const filteredTemplates = computed(() => {
   return whatsAppTemplateMessages.value.filter(template =>
-    template.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    includesNormalized(template.name, searchQuery.value)
   );
 });
 
@@ -57,6 +64,7 @@ const handleBack = () => {
 };
 
 const handleSendMessage = (template, hide) => {
+  if (props.disabled) return;
   emit('sendMessage', template);
   hide();
 };
@@ -74,13 +82,13 @@ const handleSendMessage = (template, hide) => {
       :label="t('COMPOSE_NEW_CONVERSATION.FORM.WHATSAPP_OPTIONS.LABEL')"
       color="slate"
       size="sm"
-      :disabled="selectedTemplate"
+      :disabled="!!selectedTemplate || disabled"
       class="!text-xs font-medium"
     />
     <template #content="{ hide }">
       <div
         v-if="!selectedTemplate"
-        class="flex flex-col gap-2 p-4 items-center w-[21.875rem]"
+        class="flex flex-col gap-2 p-4 items-center w-[21.875rem] max-w-[calc(100vw-2rem)]"
       >
         <div class="relative w-full">
           <Icon
@@ -98,9 +106,10 @@ const handleSendMessage = (template, hide) => {
             class="w-full h-8 py-2 ltr:pl-10 rtl:pr-10 ltr:pr-2 rtl:pl-2 text-sm reset-base outline-none border-none rounded-lg bg-n-alpha-black2 dark:bg-n-solid-1 text-n-slate-12"
           />
         </div>
-        <div
+        <button
           v-for="template in filteredTemplates"
           :key="template.id"
+          type="button"
           class="flex flex-col gap-2 p-2 w-full rounded-lg cursor-pointer dark:hover:bg-n-alpha-3 hover:bg-n-alpha-1"
           @click="handleTemplateClick(template)"
         >
@@ -108,7 +117,7 @@ const handleSendMessage = (template, hide) => {
           <p class="mb-0 text-xs leading-5 text-n-slate-11 line-clamp-2">
             {{ getTemplateBody(template) }}
           </p>
-        </div>
+        </button>
         <template v-if="filteredTemplates.length === 0">
           <p class="pt-2 w-full text-sm text-n-slate-11">
             {{

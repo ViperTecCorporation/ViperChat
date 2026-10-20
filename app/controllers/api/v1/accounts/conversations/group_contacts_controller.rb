@@ -80,13 +80,8 @@ class Api::V1::Accounts::Conversations::GroupContactsController < Api::V1::Accou
     query = params[:query].to_s.strip
     return scope if query.blank?
 
-    pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query.downcase)}%"
-    scope.where(
-      'LOWER(contacts.name) LIKE :pattern OR LOWER(contacts.whatsapp_username) LIKE :pattern OR ' \
-      'LOWER(contacts.bsuid) LIKE :pattern OR LOWER(contacts.phone_number) LIKE :pattern OR ' \
-      'LOWER(contacts.email) LIKE :pattern OR LOWER(group_contacts.metadata::text) LIKE :pattern',
-      pattern: pattern
-    )
+    Search::TextQuery.apply(scope, %w[contacts.name contacts.whatsapp_username contacts.bsuid
+                                      contacts.phone_number contacts.email group_contacts.metadata], query)
   end
 
   def remove_provider_participants(participants)

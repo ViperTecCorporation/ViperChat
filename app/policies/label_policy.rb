@@ -12,7 +12,7 @@ class LabelPolicy < ApplicationPolicy
   end
 
   def create?
-    @account_user.administrator?
+    @account_user.administrator? || (@account_user.agent? && @account.allow_agents_to_create_labels == true)
   end
 
   def destroy?

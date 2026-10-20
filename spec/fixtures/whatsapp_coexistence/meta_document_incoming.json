@@ -1,0 +1,42 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "200000000000000",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "5565991234567",
+              "phone_number_id": "100000000000000"
+            },
+            "contacts": [
+              {
+                "wa_id": "556587654321",
+                "profile": {
+                  "name": "Contato Sintético"
+                }
+              }
+            ],
+            "messages": [
+              {
+                "id": "wamid.HBgMNTU2NTg3NjU0MzIxFQIAEhgWM0VCMEQwQzEyM0U5MTcxMENEMzgzQgA=",
+                "timestamp": "1792152000",
+                "type": "document",
+                "from": "556587654321",
+                "document": {
+                  "id": "100000000000003",
+                  "mime_type": "application/pdf",
+                  "filename": "synthetic.pdf",
+                  "caption": "Documento sintético"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

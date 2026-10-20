@@ -60,7 +60,7 @@ describe Whatsapp::PhoneInfoService do
         allow(api_client).to receive(:fetch_phone_numbers).with(waba_id).and_return(phone_response)
       end
 
-      it 'uses the first available phone number' do
+      it 'uses the only available phone number' do
         result = service.perform
         expect(result[:phone_number_id]).to eq('first_phone_id')
       end
@@ -85,10 +85,53 @@ describe Whatsapp::PhoneInfoService do
         allow(api_client).to receive(:fetch_phone_numbers).with(waba_id).and_return(phone_response)
       end
 
-      it 'uses the first available phone number as fallback' do
-        result = service.perform
-        expect(result[:phone_number_id]).to eq('available_phone_id')
-        expect(result[:phone_number]).to eq('+9876543210')
+      it 'fails instead of falling back to a different phone number' do
+        expect { service.perform }.to raise_error('Phone number different_id not found for WABA test_waba_id')
+      end
+    end
+
+    context 'when the WABA has multiple phone numbers' do
+      let(:phone_response) do
+        { 'data' => [
+          { 'id' => 'first_phone_id', 'display_phone_number' => '1234567890' },
+          { 'id' => 'selected_phone_id', 'display_phone_number' => '9876543210' }
+        ] }
+      end
+
+      before do
+        allow(api_client).to receive(:fetch_phone_numbers).with(waba_id).and_return(phone_response)
+      end
+
+      context 'without a phone_number_id' do
+        let(:phone_number_id) { nil }
+
+        it 'fails clearly instead of choosing the first phone' do
+          expect { service.perform }.to raise_error(/multiple WABA phones; phone_number_id is required/)
+        end
+      end
+
+      context 'with an exact phone_number_id' do
+        let(:phone_number_id) { 'selected_phone_id' }
+
+        it 'selects the matching phone even when it is not first' do
+          expect(service.perform).to include(phone_number_id: 'selected_phone_id', phone_number: '+9876543210')
+        end
+      end
+
+      it 'fails when the supplied ID is absent instead of choosing the first phone' do
+        expect { service.perform }.to raise_error(/Phone number test_phone_number_id not found/)
+      end
+    end
+
+    context 'when only one phone is returned but more pages exist' do
+      let(:phone_number_id) { nil }
+      let(:phone_response) do
+        { 'data' => [{ 'id' => 'first_phone_id' }], 'paging' => { 'next' => 'https://example.test/next' } }
+      end
+
+      it 'does not assume that the first page proves a unique phone' do
+        allow(api_client).to receive(:fetch_phone_numbers).with(waba_id).and_return(phone_response)
+        expect { service.perform }.to raise_error(/additional pages; phone_number_id is required/)
       end
     end
 

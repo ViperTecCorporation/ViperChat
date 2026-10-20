@@ -171,7 +171,7 @@
 - name: WHATSAPP_API_VERSION
   display_title: 'WhatsApp API Version'
   description: 'Configure this if you want to use a different WhatsApp API version. Make sure its prefixed with `v`'
-  value: 'v22.0'
+  value: 'v26.0'
   locked: false
 # ------- End of WhatsApp Channel Related Config ------- #
 
@@ -195,6 +195,10 @@
 - name: CAPTAIN_OPEN_AI_MODEL
   display_title: 'OpenAI Model'
   description: 'The OpenAI model configured for use in Captain AI. Default: gpt-4.1-mini'
+  locked: false
+- name: CAPTAIN_AUDIO_TRANSCRIPTION_MODEL
+  display_title: 'Audio transcription model'
+  description: 'Model used for speech-to-text. With OpenRouter, choose a transcription model from its catalog; otherwise use an OpenAI transcription model. Blank keeps the provider default.'
   locked: false
 - name: CAPTAIN_OPEN_AI_ENDPOINT
   display_title: 'OpenAI API Endpoint (optional)'

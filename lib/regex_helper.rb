@@ -15,7 +15,8 @@ module RegexHelper
 
   TWILIO_CHANNEL_SMS_REGEX = Regexp.new('\A\+\d{1,15}\z')
   WHATSAPP_BSUID_PATTERN = '[A-Z]{2}\.(?:ENT\.)?[A-Za-z0-9]{1,128}'.freeze
-  WHATSAPP_BSUID_REGEX = Regexp.new("\\A#{WHATSAPP_BSUID_PATTERN}\\z")
+  WHATSAPP_OPAQUE_BSUID_PATTERN = 'user\.[a-fA-F0-9]{64}'.freeze
+  WHATSAPP_BSUID_REGEX = Regexp.new("\\A(?:#{WHATSAPP_BSUID_PATTERN}|#{WHATSAPP_OPAQUE_BSUID_PATTERN})\\z")
   TWILIO_CHANNEL_WHATSAPP_REGEX = Regexp.new("\\A(?:whatsapp:\\+\\d{1,15}|whatsapp:#{WHATSAPP_BSUID_PATTERN})\\z")
-  WHATSAPP_CHANNEL_REGEX = Regexp.new("\\A(?:\\d{1,15}|#{WHATSAPP_BSUID_PATTERN})\\z")
+  WHATSAPP_CHANNEL_REGEX = Regexp.new("\\A(?:\\d{1,15}|#{WHATSAPP_BSUID_PATTERN}|#{WHATSAPP_OPAQUE_BSUID_PATTERN})\\z")
 end
