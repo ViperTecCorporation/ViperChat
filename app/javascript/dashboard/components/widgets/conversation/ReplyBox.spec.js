@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import { compile, ref } from 'vue';
 import { useWhatsappTransport } from 'dashboard/composables/useWhatsappTransport';
 import scheduledMessagesApi from 'dashboard/api/scheduledMessages';
+import mediaEditorMixin from 'dashboard/mixins/mediaEditorMixin';
 
 vi.mock('dashboard/api/scheduledMessages', () => ({
   default: { create: vi.fn() },
@@ -17,6 +18,100 @@ vi.mock('dashboard/composables', async importOriginal => ({
 }));
 
 describe('ReplyBox unified WhatsApp composer', () => {
+  it.each(
+    [true, false].flatMap(compact =>
+      ['unoapi', 'whatsapp_cloud', undefined].flatMap(provider =>
+        ['image/jpeg', 'video/mp4'].map(type => ({ compact, provider, type }))
+      )
+    )
+  )(
+    'opens edited media through the actual ReplyBox handler: %j',
+    async ({ compact, provider, type }) => {
+      const onIndirectFileUpload = vi.fn();
+      const wrapper = mount({
+        mixins: [mediaEditorMixin],
+        data: () => ({
+          useCompactMessageComposer: compact,
+          selectedWhatsappProvider: provider,
+          whatsappTransportOptions: provider ? { link_id: 1 } : null,
+          transportUploadCount: 0,
+          currentChat: { id: 9 },
+          accountId: 1,
+          isAUnoapiChannel: true,
+          isPrivate: false,
+          isOnPrivateNote: false,
+          isEditorDisabled: false,
+          isReplyRestricted: false,
+          showFileUpload: true,
+          attachedFiles: [],
+          attachedContacts: [],
+          message: 'Caption',
+          inReplyTo: { id: 123 },
+          globalConfig: { directUploadsEnabled: false },
+        }),
+        methods: {
+          onFileUpload: ReplyBox.methods.onFileUpload,
+          onIndirectFileUpload,
+        },
+        template:
+          '<div><div v-if="mediaEditorSession" data-test="media-editor" /></div>',
+      });
+      const media = new File(['media'], 'media', { type });
+      await wrapper.vm.onFileUpload({ file: media });
+      expect(wrapper.find('[data-test="media-editor"]').exists()).toBe(true);
+      expect(wrapper.vm.mediaEditorFiles).toEqual([media]);
+      expect(wrapper.vm.mediaEditorSession.whatsappProvider).toBe(provider);
+      expect(wrapper.vm.transportUploadCount).toBe(0);
+      expect(onIndirectFileUpload).not.toHaveBeenCalled();
+      expect(ReplyBox.computed.isTransportSwitchDisabled.call(wrapper.vm)).toBe(
+        true
+      );
+      expect(wrapper.vm.selectedWhatsappProvider).toBe(provider);
+      wrapper.unmount();
+    }
+  );
+
+  it.each(['application/pdf', 'audio/ogg', 'image/jpeg'])(
+    'keeps ordinary attachments and private-note images on the upload path: %s',
+    async type => {
+      const context = {
+        ...mediaEditorMixin.data(),
+        transportUploadCount: 0,
+        isPrivate: type === 'image/jpeg',
+        isEditorDisabled: false,
+        showFileUpload: true,
+        attachedFiles: [],
+        attachedContacts: [],
+        isAUnoapiChannel: true,
+        globalConfig: { directUploadsEnabled: false },
+        onIndirectFileUpload: vi.fn().mockResolvedValue(true),
+      };
+      const item = { file: new File(['data'], 'attachment', { type }) };
+      await ReplyBox.methods.onFileUpload.call(context, item);
+      expect(context.onIndirectFileUpload).toHaveBeenCalledWith(item);
+      expect(context.mediaEditorSession).toBeNull();
+      expect(context.transportUploadCount).toBe(0);
+    }
+  );
+
+  it('unlocks transport selection after an ordinary upload fails', async () => {
+    const context = {
+      ...mediaEditorMixin.data(),
+      transportUploadCount: 0,
+      isPrivate: true,
+      globalConfig: { directUploadsEnabled: false },
+      onIndirectFileUpload: vi
+        .fn()
+        .mockRejectedValue(new Error('Upload failed')),
+    };
+    await expect(
+      ReplyBox.methods.onFileUpload.call(context, {
+        file: new File(['data'], 'file.pdf', { type: 'application/pdf' }),
+      })
+    ).rejects.toThrow('Upload failed');
+    expect(context.transportUploadCount).toBe(0);
+  });
+
   it('allows the scheduling shortcut for a linked inbox despite the current Meta reply restriction', () => {
     const context = {
       isComposerActive: true,

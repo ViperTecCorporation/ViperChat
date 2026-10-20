@@ -1123,7 +1123,7 @@ export default {
     async onFileUpload(file) {
       this.transportUploadCount += 1;
       try {
-        return await fileUploadMixin.methods.onFileUpload.call(this, file);
+        return await mediaEditorMixin.methods.onFileUpload.call(this, file);
       } finally {
         this.transportUploadCount -= 1;
       }
@@ -2286,7 +2286,7 @@ export default {
     v-if="mediaEditorSession && isComposerActive"
     :files="mediaEditorFiles"
     :caption="mediaEditorSession.caption"
-    :allow-view-once="isAUnoapiChannel"
+    :allow-view-once="mediaEditorUsesUnoapi"
     :recipient="currentChat.meta?.sender?.name || ''"
     :max-caption="Math.min(1024, maxLength)"
     :max-video-output-bytes="

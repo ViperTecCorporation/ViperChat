@@ -9,10 +9,18 @@ import {
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { useAlert } from 'dashboard/composables';
 import { getUndefinedVariablesInMessage } from '@chatwoot/utils';
+import { withWhatsappTransport } from 'dashboard/composables/useWhatsappTransport';
 
 export default {
   data() {
     return { mediaEditorFiles: [], mediaEditorSession: null };
+  },
+  computed: {
+    mediaEditorUsesUnoapi() {
+      return this.mediaEditorSession?.whatsappProvider
+        ? this.mediaEditorSession.whatsappProvider === 'unoapi'
+        : this.isAUnoapiChannel;
+    },
   },
   watch: {
     accountId() {
@@ -56,6 +64,9 @@ export default {
             conversationId: this.currentChat.id,
             accountId: this.accountId,
             deliveryDestination: this.deliveryDestination || 'channel',
+            whatsappProvider: this.whatsappTransportOptions
+              ? this.selectedWhatsappProvider
+              : undefined,
             caption: this.message,
             reply: { ...this.inReplyTo },
             consumed: false,
@@ -155,7 +166,7 @@ export default {
       if (session.reply.id)
         payload.contentAttributes = { in_reply_to: session.reply.id };
       if (
-        this.isAUnoapiChannel &&
+        this.mediaEditorUsesUnoapi &&
         viewOnce === true &&
         /^(image|video)\//.test(file.type)
       ) {
@@ -165,7 +176,7 @@ export default {
         };
       }
       if (
-        this.isAUnoapiChannel &&
+        this.mediaEditorUsesUnoapi &&
         file.type.startsWith('video/') &&
         ['sd', 'hd'].includes(videoQuality)
       ) {
@@ -175,7 +186,11 @@ export default {
         };
       }
       const pending = createPendingMessage(
-        this.withGroupMentionsInPayload(payload, caption)
+        withWhatsappTransport(
+          this.withGroupMentionsInPayload(payload, caption),
+          session.whatsappProvider,
+          session.deliveryDestination || 'channel'
+        )
       );
       // Once dispatched, retry belongs to the existing failed-message bubble, never to this editor.
       if (!session.consumed) {

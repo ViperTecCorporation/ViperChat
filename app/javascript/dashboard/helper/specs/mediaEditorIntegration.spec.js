@@ -31,6 +31,9 @@ const makeVm = () => {
     showFileUpload: true,
     globalConfig: { directUploadsEnabled: false },
     maxSizeFor: () => 40,
+    get mediaEditorUsesUnoapi() {
+      return mixin.computed.mediaEditorUsesUnoapi.call(this);
+    },
     sender: { id: 7 },
     message: 'Initial',
     removeFromDraft: vi.fn(),
@@ -41,6 +44,38 @@ const makeVm = () => {
   };
 };
 describe('editor upload and message integration', () => {
+  it.each(['unoapi', 'whatsapp_cloud'])(
+    'uses the selected provider, not the primary inbox, for view-once: %s',
+    async provider => {
+      const vm = makeVm();
+      vm.mediaEditorSession.whatsappProvider = provider;
+      vm.isAUnoapiChannel = provider !== 'unoapi';
+      await mixin.methods.submitEditedMedia.call(vm, file, '', {
+        viewOnce: true,
+      });
+      expect(vm.$store.dispatch.mock.calls[0][1].contentAttributes).toEqual({
+        in_reply_to: 123,
+        ...(provider === 'unoapi' ? { view_once: true } : {}),
+      });
+    }
+  );
+  it.each(['unoapi', 'whatsapp_cloud'])(
+    'preserves the editor session transport %s and quote after selection changes',
+    async provider => {
+      const vm = makeVm();
+      vm.mediaEditorSession.whatsappProvider = provider;
+      vm.selectedWhatsappProvider =
+        provider === 'unoapi' ? 'whatsapp_cloud' : 'unoapi';
+      await mixin.methods.submitEditedMedia.call(vm, file, 'Edited caption');
+      expect(vm.$store.dispatch).toHaveBeenCalledOnce();
+      expect(vm.$store.dispatch.mock.calls[0][1]).toMatchObject({
+        whatsapp_transport: provider,
+        contentAttributes: { in_reply_to: 123 },
+        files: [file],
+        content: 'Edited caption',
+      });
+    }
+  );
   it('keeps the session web destination through an edited-media upload', async () => {
     const vm = makeVm();
     vm.mediaEditorSession.deliveryDestination = 'web';
