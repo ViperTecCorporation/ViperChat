@@ -192,6 +192,50 @@ RSpec.describe Whatsapp::UnifiedMediaReconciliationService do
     end
   end
 
+  context 'with media-1421 and a separate status-only Uno identity' do
+    let(:principal_provider) { 'unoapi' }
+    let(:direction) { 'outgoing' }
+    let(:original_id) { 'CE6824EC060CD0E5280A' }
+    let(:kind) { 'audio' }
+    let(:file_type) { 'audio' }
+    let(:mime) { 'audio/ogg' }
+
+    it 'retains the one stored audio blob without deleting the sparse receipt or downloading a copy' do
+      messages.fetch('whatsapp_cloud').destroy!
+      uno = channels.fetch('unoapi')
+      receipt = WhatsappMessageIdentity.create!(account: account, inbox: uno.inbox, channel: uno, provider: 'unoapi',
+        external_id: original_id, provider_message_id: original_id, observations: {
+          origin: 'webhook', business_number: uno.phone_number, contract_version: 1, statuses: { delivered: nil }, participants: {}
+        })
+      before = [principal.file.blob_id, principal.file.attachment.id, receipt.reload.attributes]
+      expect(Down).not_to receive(:download)
+      expect(service.perform).to have_attributes(status: :unchanged, reason: :single_copy_retained)
+      expect([principal.file.blob_id, principal.file.attachment.id, receipt.reload.attributes]).to eq(before)
+      expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued
+    end
+  end
+
+  [[665, '3EB099916BB88ABE9D76DC'], [694, '3EB05144FB4BF157D21876']].each do |number, original|
+    context "with media-#{number} after contact reconciliation" do
+      let(:principal_provider) { 'unoapi' }
+      let(:direction) { 'outgoing' }
+      let(:kind) { 'document' }
+      let(:file_type) { 'file' }
+      let(:mime) { 'application/pdf' }
+      let(:original_id) { original }
+
+      it 're-evaluates stale media review through the original safety checks, retaining its file' do
+        messages.fetch('whatsapp_cloud').destroy!
+        record.update!(media_review_status: 'review', media_review_reason: 'incompatible_messages')
+        before = [record.message_id, principal.file.attachment.id, principal.file.blob_id]
+        expect { Whatsapp::ReconcileUnifiedMediaJob.perform_now(record.id) }.not_to change(Message, :count)
+        expect(record.reload.media_review_status).to eq('unchanged')
+        expect([record.message_id, principal.file.attachment.id, principal.file.blob_id]).to eq(before)
+        expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued
+      end
+    end
+  end
+
   it 'keeps secondary media until the principal object exists' do
     old_blob_id = secondary.file.blob_id
     principal.file.blob.service.delete(principal.file.blob.key)

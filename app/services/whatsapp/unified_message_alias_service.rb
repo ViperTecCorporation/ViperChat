@@ -118,7 +118,16 @@ class Whatsapp::UnifiedMessageAliasService
     metadata = message.content_attributes['whatsapp_transport'].to_h
     message.source_id == identity.external_id && metadata['link_id'] == @link.id &&
       metadata['activation_cutoff'] == @link.activated_at.iso8601(6) &&
-      metadata['inbox_id'] == identity.inbox_id && metadata['provider'] == identity.provider
+      ((metadata['inbox_id'] == identity.inbox_id && metadata['provider'] == identity.provider) ||
+        acknowledged_uno_meta_echo?(metadata, identity))
+  end
+
+  def acknowledged_uno_meta_echo?(metadata, identity)
+    return false unless identity.provider == 'whatsapp_cloud' && metadata['provider'] == 'unoapi'
+    return false unless metadata['inbox_id'] == @link.inbox_for('unoapi').id && metadata['delivery_state'] == 'acknowledged'
+
+    parsed = Whatsapp::MetaMessageIdAdapter.parse(identity.external_id)
+    parsed && parsed['direction'] == 'outgoing' && parsed['provider_message_id'] == @record.original_id
   end
 
   def verified_outbound_message?(message)

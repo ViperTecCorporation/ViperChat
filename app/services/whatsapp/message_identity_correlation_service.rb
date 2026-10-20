@@ -18,6 +18,10 @@ class Whatsapp::MessageIdentityCorrelationService
                                                channel_id: @partner.channel_id, provider: @partner.channel.provider,
                                                provider_message_id: @identity.provider_message_id).to_a
     return result('no_candidate') if candidates.empty?
+
+    # Uno can emit a bare status under the original ID as well as the real
+    # message UUID. An unlinked, evidence-free receipt is not a second message.
+    candidates = candidates.reject { |candidate| bare_unlinked_receipt?(candidate) } if candidates.many?
     # Never pick one apparently compatible row out of a reused/conflicting ID.
     return result('ambiguous', candidates) if candidates.size != 1
 
@@ -38,6 +42,18 @@ class Whatsapp::MessageIdentityCorrelationService
   end
 
   private
+
+  def bare_unlinked_receipt?(candidate)
+    candidate.provider == 'unoapi' && candidate.external_id == candidate.provider_message_id &&
+      bare_receipt_observations?(candidate.observations) &&
+      observed_business?(candidate, business_number(@identity.inbox)) && !candidate.message_links.exists? &&
+      !WhatsappUnifiedMessageAlias.exists?(whatsapp_message_identity: candidate)
+  end
+
+  def bare_receipt_observations?(values)
+    values['statuses'].present? && (values['statuses'].keys - %w[sent delivered read]).empty? &&
+      (values.keys - %w[origin statuses participants business_number contract_version]).empty? && values['participants'].blank?
+  end
 
   def scope_status
     return 'invalid_scope' unless valid_scope?

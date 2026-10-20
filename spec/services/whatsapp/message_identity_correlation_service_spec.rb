@@ -19,6 +19,36 @@ RSpec.describe Whatsapp::MessageIdentityCorrelationService do
     end
   end
 
+  context 'with the bare Uno status observed in media-1421' do
+    let(:meta_identity) { identities.find { |item| item.provider == 'whatsapp_cloud' } }
+    let!(:bare) do
+      uno = channels.fetch('unoapi')
+      WhatsappMessageIdentity.create!(account: account, inbox: uno.inbox, channel: uno, provider: 'unoapi',
+        external_id: 'original-id', provider_message_id: 'original-id', observations: {
+          'origin' => 'webhook', 'business_number' => uno.phone_number, 'contract_version' => 1,
+          'statuses' => { 'delivered' => nil }, 'participants' => {}
+        })
+    end
+
+    it 'ignores only the evidence-free unlinked receipt, preserving the row and its ID' do
+      before = bare.reload.attributes
+      result = described_class.new(identity: meta_identity, partner_inbox: channels.fetch('unoapi').inbox).perform
+      expect(result[:status]).to eq('matched')
+      expect(result[:candidate_identity_ids]).to eq([identities.find { |item| item.provider == 'unoapi' }.id])
+      expect(bare.reload.attributes).to eq(before)
+    end
+
+    %w[participants conflicting_observations direction unknown].each do |field|
+      it "keeps additional #{field} evidence ambiguous rather than choosing a message" do
+        value = { 'participants' => { 'recipient_id' => '5511987654321' },
+                  'conflicting_observations' => { 'direction' => %w[incoming outgoing] },
+                  'direction' => 'incoming', 'unknown' => 'unrecognized-evidence' }.fetch(field)
+        bare.update!(observations: bare.observations.merge(field => value))
+        expect(described_class.new(identity: meta_identity, partner_inbox: channels.fetch('unoapi').inbox).perform[:status]).to eq('ambiguous')
+      end
+    end
+  end
+
   %w[whatsapp_cloud unoapi].each do |provider|
     context "with the receipt on #{provider}" do
       let(:identity) { identities.find { |item| item.provider == provider } }

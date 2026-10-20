@@ -13,6 +13,12 @@ class Whatsapp::RecheckUnifiedEventsJob < ApplicationJob
                         .where('whatsapp_unified_events.updated_at <= ?', INTERVAL.ago)
                         .where.not(payload: {})
                         .order(:updated_at, :id).limit(BATCH_SIZE).each { |event| recheck(event) }
+    # Contact/receipt evidence can improve after the media job's short retries
+    # have finished. Reuse the same proof checks; never force a success status.
+    WhatsappUnifiedMessage.where(media_review_status: %w[pending review]).where.not(message_id: nil)
+                          .where(whatsapp_inbox_link_id: WhatsappInboxLink.active.select(:id))
+                          .where('updated_at <= ?', INTERVAL.ago).order(:updated_at, :id).limit(BATCH_SIZE)
+                          .each { |record| Whatsapp::ReconcileUnifiedMediaJob.perform_later(record.id) }
   end
 
   private

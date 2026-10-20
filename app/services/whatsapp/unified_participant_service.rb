@@ -35,12 +35,45 @@ class Whatsapp::UnifiedParticipantService
       row.contact = @resolved_contact
       row.additional_attributes = { 'whatsapp_unified_message_id' => record.id }
     end
+    # An exact-message match may be completed without moving a legacy BSUID
+    # alias. Its technical owner and the old human contact both remain intact.
+    return if retained_legacy_alias?(link, record)
+
     raise ArgumentError, 'Established contact alias conflict requires review' unless link.contact_id == @resolved_contact.id
 
     link
   end
 
+  # Read-only proof: binding a message is separate from reassigning a contact
+  # alias. Used only to retain the single already stored canonical media copy.
+  def verified_existing_message?(record:)
+    return false unless eligible? && participant == record.participant_key && @resolved_contact
+    return false unless resolved_message?(record)
+
+    source = @identity.observations.dig('meta_id_adapter', 'participant')
+    alias_row = @inbox.contact_inboxes.find_by(source_id: source)
+    return false unless alias_row
+
+    alias_row.contact_id == @resolved_contact.id || retained_legacy_alias?(alias_row, record)
+  end
+
   private
+
+  def resolved_message?(record)
+    record.message&.conversation&.contact_id == @resolved_contact.id && record.original_id == @identity.provider_message_id
+  end
+
+  def retained_legacy_alias?(alias_row, record)
+    legacy_bsuid_owner?(alias_row) && record.message&.conversation&.contact_id == @resolved_contact.id &&
+      record.original_id == @identity.provider_message_id
+  end
+
+  def legacy_bsuid_owner?(alias_row)
+    owner = alias_row.contact
+    @identity.provider == 'whatsapp_cloud' && owner.id != @resolved_contact.id &&
+      alias_row.source_id.match?(/\A[A-Z]{2}\.\d{8,32}\z/) && owner.bsuid == alias_row.source_id &&
+      owner.phone_number.blank? && @resolved_contact.created_at < owner.created_at
+  end
 
   def bsuid_role_matches?
     adapter = @identity.observations.fetch('meta_id_adapter', {})
