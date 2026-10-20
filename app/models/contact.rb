@@ -77,6 +77,7 @@ class Contact < ApplicationRecord
   after_update_commit :dispatch_update_event
   after_destroy_commit :dispatch_destroy_event
   before_save :sync_contact_attributes
+  before_update :retire_changed_whatsapp_phone_identity
 
   enum contact_type: { visitor: 0, lead: 1, customer: 2 }
 
@@ -215,6 +216,10 @@ class Contact < ApplicationRecord
     return unless account.feature_enabled?('ip_lookup')
 
     ContactIpLookupJob.perform_later(self)
+  end
+
+  def retire_changed_whatsapp_phone_identity
+    Whatsapp::ContactPhoneChangeService.new(contact: self).perform
   end
 
   def phone_number_format

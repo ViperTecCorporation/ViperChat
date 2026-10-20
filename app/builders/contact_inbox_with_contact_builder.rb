@@ -103,8 +103,7 @@ class ContactInboxWithContactBuilder
   end
 
   def contact_name
-    name = contact_attributes[:name] || ::Haikunator.haikunate(1000)
-    name.truncate(ApplicationRecord::MAX_STRING_COLUMN_LENGTH, omission: '')
+    (contact_attributes[:name] || ::Haikunator.haikunate(1000)).truncate(ApplicationRecord::MAX_STRING_COLUMN_LENGTH, omission: '')
   end
 
   def find_contact
@@ -130,6 +129,8 @@ class ContactInboxWithContactBuilder
   end
 
   def update_contact(contact, attrs)
+    return if Whatsapp::ContactPhoneChangeService.retired?(contact, inbox, source_id, attrs[:bsuid])
+
     return contact.update_columns(safe_legacy_unoapi_attrs(contact, attrs).merge(updated_at: Time.current)) if legacy_unoapi_duplicate_phone?(contact)
 
     contact.update!(attrs)

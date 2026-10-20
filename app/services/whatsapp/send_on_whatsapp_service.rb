@@ -115,7 +115,9 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
 
     return message.conversation.group_source_id if message.conversation.group?
 
-    contact_inbox = message.conversation.contact_inbox
+    contact_inbox = message.conversation.contact_inbox.reload
+    return recipient_for_retired_identity if contact_inbox.whatsapp_identity_retired?
+
     source_id = contact_inbox.source_id
     return source_id unless uuid_source_id?(source_id)
 
@@ -124,5 +126,9 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
 
   def uuid_source_id?(source_id)
     source_id.to_s.match?(/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/)
+  end
+
+  def recipient_for_retired_identity
+    Whatsapp::OutboundRecipientService.new(conversation: message.conversation, inbox: message.inbox).perform
   end
 end

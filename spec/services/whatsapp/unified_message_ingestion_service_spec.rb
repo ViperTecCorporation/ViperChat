@@ -535,7 +535,8 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService do
               ingest(:uno, webhook(:uno, 'phone_incoming'))
               quoted = public_messages.sole
               unless recipient_present
-                known_contact.update!(phone_number: '+5566996269251')
+                # Set the captured fixture identity, not an administrative change of person/phone.
+                known_contact.update_columns(phone_number: '+5566996269251') # rubocop:disable Rails/SkipsModelValidations
                 meta_alias.update!(source_id: '556696269251')
                 uno_alias.update!(source_id: '5566996269251')
               end

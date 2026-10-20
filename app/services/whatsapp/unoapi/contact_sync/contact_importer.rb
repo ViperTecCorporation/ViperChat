@@ -48,6 +48,9 @@ class Whatsapp::Unoapi::ContactSync::ContactImporter # rubocop:disable Metrics/C
 
   def perform
     validate_identity!
+    if @inbox.contact_inboxes.where(source_id: source_ids).any?(&:whatsapp_identity_retired?)
+      raise IdentityConflictError, 'Contact identity was retired after a phone change'
+    end
     return :skipped if already_imported?
 
     contact = nil

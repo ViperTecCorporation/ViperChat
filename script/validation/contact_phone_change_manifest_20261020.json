@@ -1,0 +1,72 @@
+[
+  {
+    "path": "app/builders/contact_inbox_with_contact_builder.rb",
+    "base_sha256": "ae095c1c7db56baf6113f190958f1f23c32818fac7a7a55bcc246de342bc5423",
+    "sha256": "c0aff5cd64720cc3974eda453ab6e49420180df7e035a3f2e23555fa4fa5112e"
+  },
+  {
+    "path": "app/controllers/api/v1/accounts/contacts_controller.rb",
+    "base_sha256": "50d8b26d0d7696749694ec1c7cace5c9fcff83e21584fce8f90f659a2a1e3c75",
+    "sha256": "c84e0eb12933adb320c5d12392fc57bf266331569714dd6da4b5ac8bf8bf0885"
+  },
+  {
+    "path": "app/models/contact.rb",
+    "base_sha256": "2e59e18f097475823df7f2efa98a30fbec2b5b404f6ac71065d90e5e94e54330",
+    "sha256": "6a54a92ae7d202b4f8aea822384f765c397cafd8fff3ff1f352eb7a1c706dceb"
+  },
+  {
+    "path": "app/models/contact_inbox.rb",
+    "base_sha256": "41c6520dd460f0c79824df86c03ebf1e906a2530044aa2d31c918f82e5a25394",
+    "sha256": "56c613aabc3e00e938c878a7fe4675d35ade98be44047f091fa13cce62c15d25"
+  },
+  {
+    "path": "app/services/whatsapp/identifier_sync_service.rb",
+    "base_sha256": "2f3b6f18c7ea7f913084c309d9d38c734e25dfd8951af3ec99217096bbb8650d",
+    "sha256": "8368ee84a801c05be1bce6fd7ee40bfba1b61c1eef08b84789ffb137275169ac"
+  },
+  {
+    "path": "app/services/whatsapp/message_identity_participant_service.rb",
+    "base_sha256": "895365c7034aec5627bdc262153362e45a5c3c4d299c00539d86232b36dec8e2",
+    "sha256": "caff324510a2abe5e3df967ff8cf82030d689b23079c0f396011c2f3d08c815a"
+  },
+  {
+    "path": "app/services/whatsapp/outbound_recipient_service.rb",
+    "base_sha256": "8fef820296bef0d9fd320984434a3d483fc317fadc48df7a686c949b2f66fb8d",
+    "sha256": "042df6f6d479a7d68c1c57c27ef9ca850c7e694a47e47185edc0dc1403e873eb"
+  },
+  {
+    "path": "app/services/whatsapp/send_on_whatsapp_service.rb",
+    "base_sha256": "2474ca0fc9dcccd15ea07902cdd0e945f46da1129700cf988c6555b6b414dd24",
+    "sha256": "afb2e6c68bc6f28d97b04366fd30da3315b4054dbee5a799a3690e8aefa7b54c"
+  },
+  {
+    "path": "app/services/whatsapp/unoapi/contact_sync/contact_exporter.rb",
+    "base_sha256": "c8f68e347be2fef43cb7805e712d1bbafd0d42b64818eaed4133f97e218069c8",
+    "sha256": "e1dd60194d2746b9bbe599a780ccc26c08f1a0dabf47ea894eb0be059bdc572a"
+  },
+  {
+    "path": "app/services/whatsapp/unoapi/contact_sync/contact_importer.rb",
+    "base_sha256": "2543ee52805ee7727f2f592c424f1a8d7d03928135c76e7f82094a09b990766f",
+    "sha256": "6051e2706032e56a7b51401596d56ff2ef377d3013603e650d9858a1b218820e"
+  },
+  {
+    "path": "app/services/whatsapp/unoapi/group_participant_contact_merger.rb",
+    "base_sha256": "8e5f3824831a329633e7c1ccafbd887480d4f7218fadbe9e5d568c52731910b6",
+    "sha256": "5526391fdee6b4a6d8239d74f8db6b5b499f12de14d0fb6e601ef9cc25a2972b"
+  },
+  {
+    "path": "app/services/whatsapp/unoapi/lid_identity.rb",
+    "base_sha256": "f99724691c86915c95c4a8aeb02316df11330f59d281af4f903aa22b8297987e",
+    "sha256": "4ded454951718b45715246e84c6fb2315f98389b422c4e7e0c33c0486d2ddd2c"
+  },
+  {
+    "path": "app/services/whatsapp/unoapi/outgoing_identity_payload.rb",
+    "base_sha256": "644934d0cdd721ec7365b13d22e28f8f11dad3170fde0c0c17286bdb886e1328",
+    "sha256": "a795a286713bde7a5d3b01838aacb77576e2ae7909e7fe2356dffd3adf8a7e5f"
+  },
+  {
+    "path": "app/services/whatsapp/contact_phone_change_service.rb",
+    "base_sha256": null,
+    "sha256": "7aefd17ae113536c08e45b088a22ad76c09907f3122e65d676d74f25e9ddaecb"
+  }
+]

@@ -9,7 +9,7 @@ class Whatsapp::OutboundRecipientService
     return @conversation.group_source_id if @conversation.group?
 
     contact = @conversation.contact
-    sources = contact.contact_inboxes.where(inbox_id: @inbox.id).order(:id).pluck(:source_id)
+    sources = contact.contact_inboxes.active_whatsapp_identity.where(inbox_id: @inbox.id).order(:id).pluck(:source_id)
     source = @inbox.channel.provider == 'whatsapp_cloud' ? meta_recipient(sources) : sources.find(&:present?)
     source.presence || contact.phone_number&.delete_prefix('+').presence || raise(ArgumentError, 'Recipient identity pending for selected transport')
   end

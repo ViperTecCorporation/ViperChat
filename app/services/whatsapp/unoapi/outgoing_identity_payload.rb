@@ -9,6 +9,10 @@ class Whatsapp::Unoapi::OutgoingIdentityPayload
     return request_body if group_message?
 
     payload = request_body.dup
+    %i[user_id username].each do |key|
+      payload.delete(key)
+      payload.delete(key.to_s)
+    end
     payload[recipient_key(payload)] = recipient if recipient.present?
     payload[:user_id] = lid if lid.present?
     payload[:username] = username if username.present?

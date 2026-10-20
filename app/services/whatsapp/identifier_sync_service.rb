@@ -3,6 +3,8 @@ class Whatsapp::IdentifierSyncService
 
   def perform(source_ids: [], username: nil, phone_number: nil)
     source_ids = normalize_source_ids(source_ids)
+    return if inbox.contact_inboxes.where(source_id: source_ids).any?(&:whatsapp_identity_retired?)
+
     replace_stale_unoapi_lids(source_ids)
     create_contact_inboxes(source_ids)
     update_contact(username, phone_number)
@@ -43,7 +45,7 @@ class Whatsapp::IdentifierSyncService
   end
 
   def stale_lid_links(canonical_lid)
-    inbox.contact_inboxes.where(contact: synced_contact).where("source_id ILIKE '%@lid'").where.not(source_id: canonical_lid)
+    inbox.contact_inboxes.active_whatsapp_identity.where(contact: synced_contact).where("source_id ILIKE '%@lid'").where.not(source_id: canonical_lid)
   end
 
   def canonical_lid_from(source_ids)

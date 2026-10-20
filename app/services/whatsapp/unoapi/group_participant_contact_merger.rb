@@ -8,6 +8,7 @@ class Whatsapp::Unoapi::GroupParticipantContactMerger
   def perform(participant:, source_id:)
     bsuid = participant_bsuid(participant)
     return if bsuid.blank?
+    return if @inbox.contact_inboxes.where(source_id: [source_id, bsuid]).any?(&:whatsapp_identity_retired?)
 
     phone_contact = phone_source?(source_id) ? participant_phone_contact(participant, source_id) : compatible_group_phone_contact(participant)
     lid_contact = participant_lid_contact(bsuid)

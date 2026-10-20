@@ -323,6 +323,8 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   end
 
   def sync_whatsapp_contact_inbox_source_ids
+    return if Whatsapp::ContactPhoneChangeService.changed?(@contact)
+
     source_id = whatsapp_source_id_for_contact
     return if source_id.blank?
 

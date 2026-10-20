@@ -14,6 +14,7 @@ module Whatsapp::Unoapi::LidIdentity
     return if message.blank? || message.conversation.group?
 
     inbox.contact_inboxes
+         .active_whatsapp_identity
          .where(contact_id: message.conversation.contact_id)
          .where("source_id ILIKE '%@lid'")
          .order(updated_at: :desc, id: :desc)

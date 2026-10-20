@@ -35,7 +35,7 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter # rubocop:disable Metrics/C
   private
 
   def links
-    @links ||= @channel.inbox.contact_inboxes.where(contact: @contact).to_a
+    @links ||= @channel.inbox.contact_inboxes.active_whatsapp_identity.where(contact: @contact).to_a
   end
 
   def imported_from_unoapi?
@@ -87,6 +87,11 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter # rubocop:disable Metrics/C
 
   def verified_phone(verification, fallback)
     phone_number = verification[:wa_id].to_s.gsub(/\D/, '')
+    if @contact.additional_attributes['whatsapp_phone_changes'].present? && phone_number.present? &&
+       Whatsapp::InboxLinkPhoneService.normalize(phone_number) != Whatsapp::InboxLinkPhoneService.normalize(fallback)
+      raise Whatsapp::Unoapi::ContactSync::Client::PermanentError, 'Verified WhatsApp phone differs from the changed contact phone'
+    end
+
     phone_number.match?(/\A[1-9]\d{6,14}\z/) ? phone_number : fallback
   end
 
@@ -168,13 +173,13 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter # rubocop:disable Metrics/C
   end
 
   def stale_lid_links(verified_lid)
-    @contact.contact_inboxes.where("source_id LIKE '%@lid'").where.not(source_id: verified_lid).to_a
+    @contact.contact_inboxes.active_whatsapp_identity.where("source_id LIKE '%@lid'").where.not(source_id: verified_lid).to_a
   end
 
   def replace_source_links!(old_source_id, verified_source_id)
     return if old_source_id.blank? || old_source_id == verified_source_id
 
-    @contact.contact_inboxes.where(source_id: old_source_id).to_a.each do |link|
+    @contact.contact_inboxes.active_whatsapp_identity.where(source_id: old_source_id).to_a.each do |link|
       replace_source_link!(link, verified_source_id)
     end
   end
@@ -210,6 +215,7 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter # rubocop:disable Metrics/C
     verified_link = @channel.inbox.contact_inboxes.find_or_initialize_by(source_id: source_id)
     ensure_link_belongs_to_contact!(verified_link) if verified_link.persisted?
     verified_link.contact = @contact
+    verified_link.additional_attributes = (verified_link.additional_attributes || {}).except('whatsapp_identity_retired')
     verified_link.save!
   end
 
@@ -221,6 +227,8 @@ class Whatsapp::Unoapi::ContactSync::ContactExporter # rubocop:disable Metrics/C
   end
 
   def merge_contact_conversation_aliases!
+    return if @contact.contact_inboxes.where("additional_attributes ? 'whatsapp_identity_retired'").exists?
+
     @contact.inboxes.distinct.each do |inbox|
       next unless unoapi_single_conversation_inbox?(inbox)
 

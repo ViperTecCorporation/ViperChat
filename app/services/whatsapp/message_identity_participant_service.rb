@@ -34,7 +34,7 @@ class Whatsapp::MessageIdentityParticipantService
     return unless value.to_s.match?(/\A[1-9][0-9]*@(hosted\.)?lid\z/)
 
     aliases = [value, value.sub('@hosted.lid', '@lid')].uniq
-    ids = @identity.inbox.contact_inboxes.where(source_id: aliases).pluck(:contact_id)
+    ids = @identity.inbox.contact_inboxes.active_whatsapp_identity.where(source_id: aliases).pluck(:contact_id)
     contacts = @identity.inbox.account.contacts.where(id: ids).or(@identity.inbox.account.contacts.where(bsuid: aliases)).to_a
     phone(contacts.sole.phone_number) if contacts.one?
   end

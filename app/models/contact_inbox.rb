@@ -36,6 +36,14 @@ class ContactInbox < ApplicationRecord
 
   has_many :conversations, dependent: :destroy_async
 
+  scope :active_whatsapp_identity, lambda {
+    where("NOT (COALESCE(contact_inboxes.additional_attributes, '{}'::jsonb) ? 'whatsapp_identity_retired')")
+  }
+
+  def whatsapp_identity_retired?
+    additional_attributes&.key?('whatsapp_identity_retired') == true
+  end
+
   # contact_inboxes that are not associated with any conversation
   scope :stale_without_conversations, lambda { |time_period|
     left_joins(:conversations)
