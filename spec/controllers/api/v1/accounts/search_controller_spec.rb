@@ -20,6 +20,23 @@ RSpec.describe 'Search', type: :request do
   end
 
   describe 'GET /api/v1/accounts/{account.id}/search' do
+    %w[search search/conversations].each do |endpoint|
+      it "finds a group by an accent-free multipart name through #{endpoint}" do
+        inbox = create(:inbox, account: account)
+        create(:inbox_member, user: agent, inbox: inbox)
+        group = create(:conversation, account: account, inbox: inbox, group: true,
+                                      group_title: 'Câmeras — Manutenção Cláudia', group_source_id: '120363000000111@g.us')
+        hidden = create(:conversation, group: true, group_title: group.group_title)
+        get "/api/v1/accounts/#{account.id}/#{endpoint}", headers: agent.create_new_auth_token,
+                                                        params: { q: 'claudia cameras' }, as: :json
+        expect(response).to have_http_status(:ok)
+        rows = response.parsed_body.dig('payload', 'conversations')
+        expect(rows.map { |row| row['id'] }).to include(group.display_id)
+        expect(rows).to include(a_hash_including('group' => true, 'group_title' => group.group_title, 'group_source_id' => group.group_source_id))
+        expect(rows.map { |row| row['account_id'] }).not_to include(hidden.account_id)
+      end
+    end
+
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do
         get "/api/v1/accounts/#{account.id}/search", params: { q: 'test' }

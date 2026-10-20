@@ -15,7 +15,7 @@ class Llm::LegacyBaseOpenAiService
     @client = OpenAI::Client.new(
       access_token: InstallationConfig.find_by!(name: 'CAPTAIN_OPEN_AI_API_KEY').value,
       uri_base: uri_base,
-      log_errors: Rails.env.development?
+      log_errors: false
     )
     setup_model
   rescue StandardError => e

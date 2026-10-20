@@ -41,6 +41,128 @@ describe('unified inbox channel preferences', () => {
     Inboxes.getWhatsappLink.mockResolvedValue(response);
   });
 
+  it.each([true, false])(
+    'persists policy=%s from general Update and reloads it despite historical conflicts',
+    async enabled => {
+      let stored = {
+        ...existingLink,
+        activated_at: '2026-10-17T12:00:00Z',
+        meta_initial_messages_enabled: !enabled,
+        meta_initial_messages_limit: 5,
+      };
+      Inboxes.getWhatsappLink.mockImplementation(async () => ({
+        data: { ...response.data, link: { ...stored } },
+      }));
+      Inboxes.updateWhatsappLink.mockImplementation(async (_id, payload) => {
+        stored = { ...stored, ...payload };
+        return { data: { ...response.data, link: { ...stored } } };
+      });
+      Inboxes.previewWhatsappLink.mockResolvedValue({
+        data: { preview: { conflicts: ['historical conflict'] } },
+      });
+      const options = { props: { inbox: { id: 1 } }, global };
+      let wrapper = mount(WhatsappUnifiedInbox, options);
+      await flushPromises();
+      await wrapper.findAll('button')[0].trigger('click');
+      await flushPromises();
+      await wrapper.findAll('input[type=checkbox]')[1].setValue(enabled);
+      await wrapper.find('input[type=number]').setValue(10);
+      expect(wrapper.findAll('button')[1].element.disabled).toBe(false);
+      await wrapper.vm.savePendingChanges();
+      expect(Inboxes.updateWhatsappLink).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          meta_initial_messages_enabled: enabled,
+          meta_initial_messages_limit: 10,
+          default_provider: 'unoapi',
+          enabled: true,
+        })
+      );
+      expect(wrapper.text()).toContain('WHATSAPP_UNIFIED.SAVED');
+      await wrapper.vm.savePendingChanges();
+      expect(Inboxes.updateWhatsappLink).toHaveBeenCalledOnce();
+      wrapper.unmount();
+      wrapper = mount(WhatsappUnifiedInbox, options);
+      await flushPromises();
+      expect(wrapper.findAll('input[type=checkbox]')[1].element.checked).toBe(
+        enabled
+      );
+      expect(wrapper.find('input[type=number]').element.value).toBe('10');
+      wrapper.unmount();
+    }
+  );
+
+  it('saves an active policy directly with Save link, without a new preview', async () => {
+    const stored = { ...existingLink, activated_at: '2026-10-17' };
+    Inboxes.getWhatsappLink.mockResolvedValue({
+      data: { ...response.data, link: stored },
+    });
+    Inboxes.updateWhatsappLink.mockResolvedValue({
+      data: {
+        ...response.data,
+        link: {
+          ...stored,
+          meta_initial_messages_enabled: true,
+          meta_initial_messages_limit: 5,
+        },
+      },
+    });
+    const wrapper = mount(WhatsappUnifiedInbox, {
+      props: { inbox: { id: 1 } },
+      global,
+    });
+    await flushPromises();
+    await wrapper.findAll('input[type=checkbox]')[1].setValue(true);
+    await wrapper.findAll('button')[1].trigger('click');
+    await flushPromises();
+    expect(Inboxes.previewWhatsappLink).not.toHaveBeenCalled();
+    expect(Inboxes.updateWhatsappLink).toHaveBeenCalledOnce();
+    expect(wrapper.text()).toContain('WHATSAPP_UNIFIED.SAVED');
+    wrapper.unmount();
+  });
+
+  it('propagates failed persistence and preserves edits for another attempt', async () => {
+    Inboxes.getWhatsappLink.mockResolvedValue({
+      data: {
+        ...response.data,
+        link: { ...existingLink, activated_at: '2026-10-17' },
+      },
+    });
+    Inboxes.updateWhatsappLink.mockRejectedValue(new Error('Network failure'));
+    const wrapper = mount(WhatsappUnifiedInbox, {
+      props: { inbox: { id: 1 } },
+      global,
+    });
+    await flushPromises();
+    await wrapper.findAll('input[type=checkbox]')[1].setValue(true);
+    await expect(wrapper.vm.savePendingChanges()).rejects.toThrow(
+      'Network failure'
+    );
+    expect(wrapper.find('[role=alert]').text()).toBe('Network failure');
+    expect(wrapper.text()).not.toContain('WHATSAPP_UNIFIED.SAVED');
+    expect(wrapper.findAll('input[type=checkbox]')[1].element.checked).toBe(
+      true
+    );
+    wrapper.unmount();
+  });
+
+  it('does not activate an unreviewed link through the general Update button', async () => {
+    Inboxes.getWhatsappLink.mockResolvedValue({
+      data: { ...response.data, link: { ...existingLink, enabled: false } },
+    });
+    const wrapper = mount(WhatsappUnifiedInbox, {
+      props: { inbox: { id: 1 } },
+      global,
+    });
+    await flushPromises();
+    await wrapper.findAll('input[type=checkbox]')[0].setValue(true);
+    await expect(wrapper.vm.savePendingChanges()).rejects.toMatchObject({
+      code: 'whatsapp_link_review_required',
+    });
+    expect(Inboxes.updateWhatsappLink).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it('explains an empty compatible-inbox list and disables the empty dropdown', async () => {
     Inboxes.getWhatsappLink.mockResolvedValue({
       data: { link: null, candidates: [] },

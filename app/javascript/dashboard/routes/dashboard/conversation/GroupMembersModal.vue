@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
@@ -81,7 +82,7 @@ const matchesSearch = member => {
     memberSubtitle(member),
     memberContact(member).email,
     memberContact(member).identifier,
-  ].some(value => value?.toString().toLowerCase().includes(query));
+  ].some(value => includesNormalized(value?.toString(), query));
 };
 
 const filteredMembers = computed(() => members.value.filter(matchesSearch));

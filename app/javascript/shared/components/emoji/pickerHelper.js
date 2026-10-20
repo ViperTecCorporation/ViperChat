@@ -1,3 +1,4 @@
+import { includesNormalized } from 'shared/helpers/search';
 import emojiGroups from 'shared/components/emoji/emojisGroup.json';
 
 // Recently used emojis persisted in localStorage.
@@ -6,7 +7,7 @@ const MAX_RECENT_EMOJIS = 16;
 
 const matchesSearch = (emoji, term) =>
   emoji.slug.replaceAll('_', ' ').includes(term) ||
-  emoji.name.toLowerCase().includes(term);
+  includesNormalized(emoji.name, term);
 
 // Emoji sections for the search term; prepends "Frequently used" when idle.
 export const buildEmojiSections = (search, recentEmojis, frequentLabel) => {

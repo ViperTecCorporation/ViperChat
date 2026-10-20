@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -37,7 +38,7 @@ const whatsAppTemplateMessages = computed(() => {
 
 const filteredTemplates = computed(() => {
   return whatsAppTemplateMessages.value.filter(template =>
-    template.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    includesNormalized(template.name, searchQuery.value)
   );
 });
 

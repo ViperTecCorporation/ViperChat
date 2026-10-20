@@ -137,6 +137,10 @@ class Whatsapp::UnifiedReviewService
 
   def serialize(kind, record)
     message = kind == 'delivery' ? record : record.try(:message)
+    if kind == 'event'
+      message = Whatsapp::UnifiedMessageIngestionService.message_for(record.whatsapp_message_identity) ||
+                Whatsapp::UnifiedEventResolutionService.new(event: record).message
+    end
     reviewed = acknowledged_action(kind, record)
     {
       id: "#{kind}-#{record.id}", kind: kind, state: state(kind, record), reason: reason(kind, record),

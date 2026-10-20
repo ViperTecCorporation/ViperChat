@@ -1,5 +1,7 @@
 {
   "WHATSAPP_UNIFIED": {
+    "SAVED": "Linked inbox preferences saved successfully.",
+    "SAVE_REVIEW_REQUIRED": "Check the link settings and generate a preview to confirm the change before updating. Meta priority can be saved directly for an already active link.",
     "COMPOSE_TRANSPORT_HELP": "The inbox keeps the conversation history. Choose the sending provider separately; Meta requires an approved template for a new conversation.",
     "META_INITIAL_MESSAGES": {
       "TITLE": "Initial messages via Meta",

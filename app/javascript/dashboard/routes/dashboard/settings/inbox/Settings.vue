@@ -762,11 +762,16 @@ export default {
         if (this.avatarFile) {
           payload.avatar = this.avatarFile;
         }
+        await this.$refs.whatsappUnifiedInbox?.savePendingChanges();
         await this.$store.dispatch('inboxes/updateInbox', payload);
         useAlert(this.$t('INBOX_MGMT.EDIT.API.SUCCESS_MESSAGE'));
         this.showBusinessNameInput = false;
       } catch (error) {
-        useAlert(error.message || this.$t('INBOX_MGMT.EDIT.API.ERROR_MESSAGE'));
+        useAlert(
+          error.code === 'whatsapp_link_review_required'
+            ? this.$t('WHATSAPP_UNIFIED.SAVE_REVIEW_REQUIRED')
+            : error.message || this.$t('INBOX_MGMT.EDIT.API.ERROR_MESSAGE')
+        );
       }
     },
     handleImageUpload({ file, url }) {
@@ -1344,6 +1349,7 @@ export default {
             >
               <WhatsappUnifiedInbox
                 v-if="isAUnoapiChannel || isAWhatsAppCloudChannel"
+                ref="whatsappUnifiedInbox"
                 :inbox="inbox"
               />
               <SettingsToggleSection

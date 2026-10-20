@@ -1,4 +1,5 @@
 <script>
+import { includesNormalized } from 'shared/helpers/search';
 import countries from 'shared/constants/countries.js';
 import parsePhoneNumber from 'libphonenumber-js';
 import {
@@ -60,9 +61,9 @@ export default {
         const { name, dial_code, id } = country;
         const search = this.searchCountry.toLowerCase();
         return (
-          name.toLowerCase().includes(search) ||
-          dial_code.toLowerCase().includes(search) ||
-          id.toLowerCase().includes(search)
+          includesNormalized(name, search) ||
+          includesNormalized(dial_code, search) ||
+          includesNormalized(id, search)
         );
       });
     },

@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import Avatar from 'next/avatar/Avatar.vue';
 import { ref, computed, watch, nextTick } from 'vue';
 import { useKeyboardNavigableList } from 'dashboard/composables/useKeyboardNavigableList';
@@ -43,7 +44,7 @@ const items = computed(() => {
 
       return [item.displayName, item.displayInfo]
         .filter(Boolean)
-        .some(value => value.toLowerCase().includes(search));
+        .some(value => includesNormalized(value, search));
     });
 });
 

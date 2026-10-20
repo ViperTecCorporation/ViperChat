@@ -1,4 +1,5 @@
 <script>
+import { includesNormalized } from 'shared/helpers/search';
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
 import Avatar from 'next/avatar/Avatar.vue';
@@ -53,7 +54,7 @@ export default {
   computed: {
     filteredOptions() {
       return this.options.filter(option => {
-        return option.name.toLowerCase().includes(this.search.toLowerCase());
+        return includesNormalized(option.name, this.search);
       });
     },
     noResult() {

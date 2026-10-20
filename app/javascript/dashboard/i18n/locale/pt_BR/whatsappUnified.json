@@ -1,5 +1,7 @@
 {
   "WHATSAPP_UNIFIED": {
+    "SAVED": "Preferências do vínculo salvas com sucesso.",
+    "SAVE_REVIEW_REQUIRED": "Confira os dados do vínculo e gere a prévia para confirmar a alteração antes de atualizar. A opção de priorizar a Meta pode ser salva diretamente em um vínculo já ativo.",
     "COMPOSE_TRANSPORT_HELP": "A caixa mantém o histórico da conversa. Escolha o provedor de envio separadamente; a Meta exige um modelo aprovado para uma nova conversa.",
     "META_INITIAL_MESSAGES": {
       "TITLE": "Mensagens iniciais pela Meta",

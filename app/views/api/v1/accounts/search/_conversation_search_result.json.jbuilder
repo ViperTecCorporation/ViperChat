@@ -6,7 +6,8 @@ json.group_title conversation.group_title
 json.group_picture conversation.group_avatar_url if conversation.group?
 json.group_source_id conversation.group_source_id
 json.message do
-  json.partial! 'message', formats: [:json], message: conversation.messages.try(:first)
+  message = conversation.messages.first
+  json.partial! 'message', formats: [:json], message: message if message
 end
 json.contact do
   json.partial! 'contact', formats: [:json], contact: conversation.contact if conversation.try(:contact).present?

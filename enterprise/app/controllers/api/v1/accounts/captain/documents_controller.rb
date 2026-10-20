@@ -105,8 +105,7 @@ class Api::V1::Accounts::Captain::DocumentsController < Api::V1::Accounts::BaseC
   def apply_search(scope, search_key)
     return scope if search_key.blank?
 
-    query = "%#{ActiveRecord::Base.sanitize_sql_like(search_key)}%"
-    scope.where('captain_documents.name ILIKE :query OR captain_documents.external_link ILIKE :query', query: query)
+    Search::TextQuery.apply(scope, %w[captain_documents.name captain_documents.external_link], search_key)
   end
 
   def apply_sort(scope, sort)

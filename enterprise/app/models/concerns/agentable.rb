@@ -10,7 +10,8 @@ module Concerns::Agentable
       tools: agent_tools,
       model: agent_model,
       temperature: temperature.presence&.to_f || DEFAULT_TEMPERATURE,
-      response_schema: agent_response_schema
+      response_schema: agent_response_schema,
+      **Llm::Endpoint.chat_options
     )
   end
 
@@ -33,6 +34,7 @@ module Concerns::Agentable
 
   def agent_model
     route = Llm::FeatureRouter.resolve(feature: 'assistant', account: account)
+    return route[:model] if route[:source] == :installation
     return route[:model] if route[:source] == :account_override || account&.feature_enabled?('captain_integration_v2')
 
     installation_model.presence || route[:model]

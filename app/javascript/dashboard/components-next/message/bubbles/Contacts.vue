@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageContext } from '../provider';
@@ -45,9 +46,10 @@ const title = computed(() =>
 );
 const filteredContacts = computed(() =>
   contacts.value.filter(contact =>
-    `${name(contact)} ${contact.fallbackTitle} ${contact.meta?.email || ''}`
-      .toLocaleLowerCase()
-      .includes(search.value.trim().toLocaleLowerCase())
+    includesNormalized(
+      `${name(contact)} ${contact.fallbackTitle} ${contact.meta?.email || ''}`,
+      search.value.trim()
+    )
   )
 );
 const action = computed(() => ({

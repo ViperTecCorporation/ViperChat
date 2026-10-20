@@ -1,11 +1,5 @@
 class Api::V1::Accounts::Companies::ContactsController < Api::V1::Accounts::Companies::BaseController
   RESULTS_PER_PAGE = 15
-  CONTACT_SEARCH_QUERY = [
-    'contacts.name ILIKE :search',
-    'contacts.email ILIKE :search',
-    'contacts.phone_number ILIKE :search',
-    'contacts.identifier ILIKE :search'
-  ].join(' OR ')
 
   before_action :authorize_company_read!, only: [:index, :search]
   before_action :authorize_company_update!, only: [:create, :destroy]
@@ -55,10 +49,9 @@ class Api::V1::Accounts::Companies::ContactsController < Api::V1::Accounts::Comp
   end
 
   def contact_search_scope
-    Current.account.contacts
-           .where('contacts.company_id IS NULL OR contacts.company_id != ?', @company.id)
-           .where(CONTACT_SEARCH_QUERY, search: "%#{params[:q].strip}%")
-           .order(:name, :id)
+    scope = Current.account.contacts.where('contacts.company_id IS NULL OR contacts.company_id != ?', @company.id)
+    Search::TextQuery.apply(scope, %w[contacts.name contacts.email contacts.phone_number contacts.identifier], params[:q].strip)
+                     .order(:name, :id)
   end
 
   def membership_service

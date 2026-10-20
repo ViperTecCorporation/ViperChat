@@ -65,10 +65,36 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
     put path, headers: headers, params: attributes.merge(meta_initial_messages_enabled: true, meta_initial_messages_limit: 10), as: :json
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body['link']).to include('meta_initial_messages_enabled' => true, 'meta_initial_messages_limit' => 10)
+    get path, headers: headers
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['link']).to include('meta_initial_messages_enabled' => true, 'meta_initial_messages_limit' => 10)
     put path, headers: headers, params: attributes.merge(default_provider: 'unoapi'), as: :json
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body['link']).to include('meta_initial_messages_enabled' => true, 'meta_initial_messages_limit' => 10)
     expect(WhatsappMetaCycleSlot.count).to eq(0)
+  end
+
+  it 'updates policy on an active link despite historical conflicts and reads it back from either inbox' do
+    put path, headers: headers, params: attributes.merge(enabled: true), as: :json
+    expect(response).to have_http_status(:ok)
+    link = WhatsappInboxLink.find(response.parsed_body.dig('link', 'id'))
+    cutoff = link.activated_at
+    contact = create(:contact, account: account)
+    create(:conversation, account: account, inbox: uno, contact: contact, status: :open)
+    create(:conversation, account: account, inbox: meta, contact: contact, status: :pending)
+
+    put path, headers: headers,
+              params: attributes.merge(enabled: true, meta_initial_messages_enabled: true, meta_initial_messages_limit: 5), as: :json
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('preview', 'conflicts')).not_to be_empty
+    expect(link.reload.activated_at).to eq(cutoff)
+    expect(link).to have_attributes(primary_inbox_id: uno.id, secondary_inbox_id: meta.id)
+    [uno, meta].each do |inbox|
+      get "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}/whatsapp_link", headers: headers
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['link']).to include('id' => link.id, 'meta_initial_messages_enabled' => true,
+                                                   'meta_initial_messages_limit' => 5)
+    end
   end
 
   [-1, 1001, 1.5, 'invalid'].each do |limit|

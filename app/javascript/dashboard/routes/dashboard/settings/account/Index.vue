@@ -21,6 +21,7 @@ import DeletedMessageContent from './components/DeletedMessageContent.vue';
 import LegacyMessageComposer from './components/LegacyMessageComposer.vue';
 import TeamConversationsInMine from './components/TeamConversationsInMine.vue';
 import LastAssigneeAsParticipant from './components/LastAssigneeAsParticipant.vue';
+import AgentLabelCreation from './components/AgentLabelCreation.vue';
 import SectionLayout from './components/SectionLayout.vue';
 
 export default {
@@ -35,6 +36,7 @@ export default {
     LegacyMessageComposer,
     TeamConversationsInMine,
     LastAssigneeAsParticipant,
+    AgentLabelCreation,
     SectionLayout,
     SwitchControl,
     WithLabel,
@@ -280,6 +282,7 @@ export default {
     <DeletedMessageContent />
     <TeamConversationsInMine />
     <LastAssigneeAsParticipant />
+    <AgentLabelCreation />
     <LegacyMessageComposer />
     <SectionLayout
       with-border

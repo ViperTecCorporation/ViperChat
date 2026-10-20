@@ -47,7 +47,7 @@ class Whatsapp::UnifiedEventService
       process
     end
   rescue ArgumentError
-    @event.update!(state: 'review', reason: 'identity_conflict', next_attempt_at: nil)
+    @event.reload.update!(state: 'review', reason: 'identity_conflict', next_attempt_at: nil, attempts: @event.attempts + 1)
   rescue StandardError => e
     Rails.logger.warn({ event: 'whatsapp_unified_event_retry', event_id: @event.id, error_class: e.class.name }.to_json)
     @event.reload.with_lock do
@@ -66,16 +66,28 @@ class Whatsapp::UnifiedEventService
   end
 
   def process
+    if Whatsapp::UnifiedEventResolutionService.new(event: @event).perform
+      @event.update!(attempts: @event.attempts + 1)
+      return
+    end
+
     identity = @event.whatsapp_message_identity
     service = identity.provider == 'unoapi' ? Whatsapp::IncomingMessageUnoapiService : Whatsapp::IncomingMessageWhatsappCloudService
     value = @event.payload.with_indifferent_access
     params = { entry: [{ changes: [{ value: value }] }] }.with_indifferent_access
     service.new(inbox: identity.inbox, params: params, outgoing_echo: value[:message_echoes].present?).perform
-    return unless @event.reload.state == 'pending'
+    finish_replay(identity)
+  end
+
+  def finish_replay(identity)
+    unless @event.reload.state == 'pending'
+      @event.update!(attempts: @event.attempts + 1)
+      return
+    end
 
     message = Whatsapp::UnifiedMessageIngestionService.message_for(identity)
     if message&.persisted?
-      @event.update!(state: 'completed', reason: 'correlated', payload: {}, next_attempt_at: nil)
+      @event.update!(state: 'completed', reason: 'correlated', payload: {}, next_attempt_at: nil, attempts: @event.attempts + 1)
     else
       retry_later
     end

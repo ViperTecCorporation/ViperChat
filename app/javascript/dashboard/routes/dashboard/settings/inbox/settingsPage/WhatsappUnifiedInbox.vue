@@ -19,6 +19,8 @@ const confirmed = ref(false);
 const busy = ref(false);
 const loaded = ref(false);
 const error = ref('');
+const saved = ref(false);
+const savedPayload = ref('');
 const payload = computed(() => ({
   partner_inbox_id: Number(partnerInboxId.value),
   primary_inbox_id: Number(primaryInboxId.value),
@@ -51,6 +53,29 @@ const metaInitialMessagesId = computed(
 );
 const hasConflicts = computed(() => Boolean(preview.value?.conflicts?.length));
 const locked = computed(() => Boolean(link.value?.activated_at));
+const hasChanges = computed(
+  () => loaded.value && JSON.stringify(payload.value) !== savedPayload.value
+);
+const settingsOnlyChange = computed(
+  () =>
+    hasChanges.value &&
+    locked.value &&
+    enabled.value === link.value.enabled &&
+    Number(primaryInboxId.value) === link.value.primary_inbox_id &&
+    Number(partnerInboxId.value) ===
+      [link.value.primary_inbox_id, link.value.secondary_inbox_id].find(
+        id => id !== props.inbox.id
+      )
+);
+const canSave = computed(
+  () =>
+    valid.value &&
+    !busy.value &&
+    (settingsOnlyChange.value ||
+      (preview.value &&
+        !(enabled.value && hasConflicts.value) &&
+        confirmed.value))
+);
 const noCandidates = computed(
   () => loaded.value && !locked.value && candidates.value.length === 0
 );
@@ -75,11 +100,13 @@ function applyResponse(data) {
   metaInitialMessagesLimit.value = current?.meta_initial_messages_limit ?? 5;
   preview.value = null;
   confirmed.value = false;
+  savedPayload.value = JSON.stringify(payload.value);
 }
 
-async function run(action) {
+async function run(action, propagate = false) {
   busy.value = true;
   error.value = '';
+  saved.value = false;
   try {
     await action();
   } catch (exception) {
@@ -88,6 +115,7 @@ async function run(action) {
       preview.value = exception.response.data.preview;
       confirmed.value = false;
     }
+    if (propagate) throw exception;
   } finally {
     busy.value = false;
   }
@@ -122,18 +150,30 @@ function inspect() {
     preview.value = data.preview;
   });
 }
+async function persist() {
+  const { data } = await Inboxes.updateWhatsappLink(props.inbox.id, {
+    ...payload.value,
+    ...(preview.value?.confirmation
+      ? { confirmation: preview.value.confirmation }
+      : {}),
+  });
+  applyResponse(data);
+  saved.value = true;
+}
 function save() {
   if (!valid.value) return undefined;
-  return run(async () => {
-    const { data } = await Inboxes.updateWhatsappLink(props.inbox.id, {
-      ...payload.value,
-      ...(preview.value?.confirmation
-        ? { confirmation: preview.value.confirmation }
-        : {}),
-    });
-    applyResponse(data);
-  });
+  return run(persist);
 }
+async function savePendingChanges() {
+  if (!hasChanges.value) return;
+  if (!canSave.value) {
+    const exception = new Error('whatsapp_link_review_required');
+    exception.code = 'whatsapp_link_review_required';
+    throw exception;
+  }
+  await run(persist, true);
+}
+defineExpose({ savePendingChanges });
 function remove() {
   return run(async () => {
     await Inboxes.deleteWhatsappLink(props.inbox.id);
@@ -155,6 +195,9 @@ function remove() {
     <p class="text-sm text-n-slate-11">{{ $t('WHATSAPP_UNIFIED.HELP') }}</p>
     <p v-if="error" role="alert" class="text-sm text-n-ruby-11 break-words">
       {{ error }}
+    </p>
+    <p v-if="saved && !hasChanges" role="status" class="text-sm text-n-teal-11">
+      {{ $t('WHATSAPP_UNIFIED.SAVED') }}
     </p>
     <fieldset v-if="loaded" :disabled="busy" class="min-w-0 w-full">
       <label class="flex items-center gap-2 py-3 text-sm">
@@ -325,13 +368,7 @@ function remove() {
       <div class="flex flex-col sm:flex-row flex-wrap gap-2">
         <NextButton
           :label="$t('WHATSAPP_UNIFIED.SAVE')"
-          :disabled="
-            !valid ||
-            !preview ||
-            (enabled && hasConflicts) ||
-            !confirmed ||
-            busy
-          "
+          :disabled="!canSave"
           @click="save"
         />
         <NextButton

@@ -10,6 +10,7 @@ import {
 } from 'dashboard/composables/useWhatsappTransport';
 import WhatsappTransportSelector from 'dashboard/components/widgets/WootWriter/WhatsappTransportSelector.vue';
 import { useAlert } from 'dashboard/composables';
+import { useLabelCreation } from 'dashboard/composables/useLabelCreation';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useTrack } from 'dashboard/composables';
 import keyboardEventListenerMixins from 'shared/mixins/keyboardEventListenerMixins';
@@ -158,6 +159,7 @@ export default {
   emits: ['update:popOutReplyBox', 'toggleEditorSize', 'setReplyMode'],
   setup() {
     const store = useStore();
+    const { canCreateLabels } = useLabelCreation();
     const whatsappTransport = useWhatsappTransport(
       computed(() => store.getters.getSelectedChat),
       computed(() => store.getters.getCurrentUser?.id)
@@ -179,6 +181,7 @@ export default {
 
     return {
       whatsappTransport,
+      canCreateLabels,
       uiSettings,
       isEditorHotKeyEnabled,
       fetchSignatureFlagFromUISettings,
@@ -2741,7 +2744,7 @@ export default {
                 :selected-labels="
                   selectedScheduleLabel ? [selectedScheduleLabel.title] : []
                 "
-                :allow-creation="isAdministrator"
+                :allow-creation="canCreateLabels"
                 @add="selectScheduleLabel"
                 @remove="scheduledLabelId = ''"
               />

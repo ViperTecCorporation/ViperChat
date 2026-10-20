@@ -127,7 +127,7 @@ class Api::V1::AccountsController < Api::BaseController
   def permitted_settings_attributes
     [:auto_resolve_after, :auto_resolve_message, :auto_resolve_ignore_waiting, :audio_transcriptions,
      :show_deleted_message_content, :include_team_conversations_in_mine, :last_assignee_as_participant,
-     :auto_resolve_label, :use_legacy_message_composer]
+     :auto_resolve_label, :use_legacy_message_composer, :allow_agents_to_create_labels]
   end
 
   def check_signup_enabled

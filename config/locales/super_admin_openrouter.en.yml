@@ -1,0 +1,6 @@
+en:
+  super_admin:
+    openrouter:
+      catalog_unavailable: 'The OpenRouter catalog is unavailable. Your saved model has been preserved. Try again later.'
+      invalid_model: 'Choose an OpenRouter model compatible with this feature.'
+      capability_notice: 'Live provider catalog, cached for one hour. Audio lists speech-to-text models only. Chat models vary in tool and structured-output support; selection does not guarantee those capabilities or availability. Save the OpenRouter endpoint first to enable these lists. Model changes may require an application restart.'
