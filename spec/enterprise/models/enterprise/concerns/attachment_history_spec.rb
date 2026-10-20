@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe Enterprise::Concerns::Attachment do
+RSpec.describe Enterprise::Concerns::Attachment, '#enqueue_audio_transcription' do
   let(:message) { build(:message, content_attributes: { 'whatsapp_history_import' => true }) }
   let(:attachment) { Attachment.new(message: message, file_type: :audio) }
 
