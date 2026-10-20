@@ -17,7 +17,7 @@ RSpec.describe 'Meta management webhook signature', type: :request do
     signature = "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', secret, payload)}"
     expect do
       post "/webhooks/whatsapp/#{channel.phone_number}", params: payload,
-           headers: { 'CONTENT_TYPE' => 'application/json', 'X-Hub-Signature-256' => signature }
+                                                         headers: { 'CONTENT_TYPE' => 'application/json', 'X-Hub-Signature-256' => signature }
     end.to have_enqueued_job(Webhooks::WhatsappEventsJob)
     expect(response).to have_http_status(:ok)
   end

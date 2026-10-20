@@ -28,7 +28,7 @@ RSpec.describe 'Search', type: :request do
                                       group_title: 'Câmeras — Manutenção Cláudia', group_source_id: '120363000000111@g.us')
         hidden = create(:conversation, group: true, group_title: group.group_title)
         get "/api/v1/accounts/#{account.id}/#{endpoint}", headers: agent.create_new_auth_token,
-                                                        params: { q: 'claudia cameras' }, as: :json
+                                                          params: { q: 'claudia cameras' }, as: :json
         expect(response).to have_http_status(:ok)
         rows = response.parsed_body.dig('payload', 'conversations')
         expect(rows.map { |row| row['id'] }).to include(group.display_id)

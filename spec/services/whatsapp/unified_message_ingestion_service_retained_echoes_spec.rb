@@ -2,7 +2,7 @@ require 'rails_helper'
 require 'base64'
 require 'tmpdir'
 
-RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'retained production echoes' do
+RSpec.describe Whatsapp::UnifiedMessageIngestionService do
   let(:account) { create(:account) }
   let(:meta) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '+556696222471',
@@ -47,7 +47,7 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'retained production ec
     [370, 'BR.966391289854585', '5549991851558', '3EB0E9A0EFDE63B40BF48D', 'text']
   ]
   cases.each do |event_number, bsuid, phone, original, kind|
-    it "completes event-#{event_number} without moving its legacy contact alias or downloading media" do
+    it "completes event-#{event_number} without moving its legacy contact alias or downloading media", :aggregate_failures do
       old = create(:contact, account: account, phone_number: "+#{phone}", name: 'Preserved human', created_at: 2.years.ago)
       old_alias = create(:contact_inbox, inbox: uno.inbox, contact: old, source_id: phone)
       legacy = create(:contact, account: account, name: bsuid, bsuid: bsuid, phone_number: nil, created_at: 4.days.ago)
@@ -62,10 +62,11 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'retained production ec
       ledger = WhatsappUnifiedMessage.create!(whatsapp_inbox_link: link, message: stored, original_id: original,
                                               direction: 'outgoing', participant_key: phone, message_kind: kind, state: 'ready')
       uno_identity = WhatsappMessageIdentity.create!(account: account, inbox: uno.inbox, channel: uno, provider: 'unoapi',
-        external_id: stored.source_id, provider_message_id: original, observations: {
-          business_number: uno.phone_number, direction: 'outgoing', message_type: kind, timestamp: Time.current.to_i.to_s,
-          participants: { from: '5566996222471', to: phone }
-        })
+                                                     external_id: stored.source_id, provider_message_id: original, observations: {
+                                                       business_number: uno.phone_number, direction: 'outgoing', message_type: kind,
+                                                       timestamp: Time.current.to_i.to_s,
+                                                       participants: { from: '5566996222471', to: phone }
+                                                     })
       ledger.aliases.create!(whatsapp_message_identity: uno_identity)
       envelope = "\x1c\x18".b + bsuid.bytesize.chr + bsuid + "\x15\x14\x00\x11\x18".b + original.bytesize.chr + original + "\x00".b
       value = { metadata: { display_phone_number: '556696222471' }, message_echoes: [{
@@ -75,13 +76,14 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'retained production ec
       Whatsapp::MessageIdentityObservationService.new(inbox: meta.inbox, value: value, outgoing_echo: true).perform
       identity = WhatsappMessageIdentity.find_by!(inbox: meta.inbox, provider_message_id: original)
       event = WhatsappUnifiedEvent.create!(whatsapp_inbox_link: link, whatsapp_message_identity: identity, payload: value,
-                                           reason: 'identity_conflict', activation_cutoff: link.activated_at, state: 'pending', next_attempt_at: Time.current)
+                                           reason: 'identity_conflict', activation_cutoff: link.activated_at,
+                                           state: 'pending', next_attempt_at: Time.current)
       before = [old.reload.attributes, legacy.reload.attributes, alias_row.reload.attributes, stored.reload.attributes,
                 Attachment.order(:id).pluck(:id), ActiveStorage::Blob.order(:id).pluck(:id)]
       expect(Down).not_to receive(:download)
       2.times { Whatsapp::ProcessUnifiedEventJob.perform_now(event.id) }
       expect(event.reload.state).to eq('completed')
-      expect(Whatsapp::UnifiedMessageIngestionService.message_for(identity).id).to eq(stored.id)
+      expect(described_class.message_for(identity).id).to eq(stored.id)
       expect([old.reload.attributes, legacy.reload.attributes, alias_row.reload.attributes, stored.reload.attributes,
               Attachment.order(:id).pluck(:id), ActiveStorage::Blob.order(:id).pluck(:id)]).to eq(before)
       expect(account.messages.where(message_type: :outgoing).pluck(:id)).to eq([stored.id])
@@ -98,11 +100,12 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'retained production ec
     end
   end
 
+  variants = %w[text audio document].map { |kind| [kind, nil] } +
+             %w[generation unacknowledged wrong_inbox contact source].map { |fault| ['text', fault] }
   [[372, '5566999636712', 'CE032B726F50E9E671A0'], [373, '5566996029356', 'CE920A3A5540883F2CCD']].each do |number, phone, original|
-    variants = %w[text audio document].map { |kind| [kind, nil] } +
-               %w[generation unacknowledged wrong_inbox contact source].map { |fault| ['text', fault] }
     variants.each do |kind, fault|
-      it "checks event-#{number}'s Meta #{kind} echo, fault=#{fault || 'none'}, preserving source ID and files" do
+      # The same snapshot must survive both retries and each real fault variant.
+      it "checks event-#{number}'s Meta #{kind} echo, fault=#{fault || 'none'}, preserving source ID and files" do # rubocop:disable RSpec/ExampleLength
         contact = create(:contact, account: account, phone_number: "+#{phone}")
         ci = create(:contact_inbox, inbox: uno.inbox, contact: contact, source_id: phone)
         conversation = create(:conversation, account: account, inbox: uno.inbox, contact: contact, contact_inbox: ci)
@@ -115,15 +118,18 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'retained production ec
                                   source_id: external, content_attributes: { whatsapp_transport: transport })
         if kind != 'text'
           attachment = stored.attachments.build(account: account, file_type: kind == 'audio' ? :audio : :file)
-          attachment.file.attach(io: StringIO.new('synthetic existing bytes'), filename: 'keep.bin', content_type: 'application/octet-stream', identify: false)
+          attachment.file.attach(io: StringIO.new('synthetic existing bytes'), filename: 'keep.bin', content_type: 'application/octet-stream',
+                                 identify: false)
           attachment.save!
         end
         meta_identity = WhatsappMessageIdentity.create!(account: account, inbox: meta.inbox, channel: meta, provider: 'whatsapp_cloud',
-          external_id: external, provider_message_id: original, observations: {
-            business_number: meta.phone_number, direction: 'outgoing', message_type: kind, timestamp: Time.current.to_i.to_s,
-            participants: { from: meta.phone_number, to: raw_phone },
-            meta_id_adapter: { status: 'recognized', direction: 'outgoing', participant: raw_phone, participant_type: 'phone' }
-          })
+                                                        external_id: external, provider_message_id: original, observations: {
+                                                          business_number: meta.phone_number, direction: 'outgoing', message_type: kind,
+                                                          timestamp: Time.current.to_i.to_s,
+                                                          participants: { from: meta.phone_number, to: raw_phone },
+                                                          meta_id_adapter: { status: 'recognized', direction: 'outgoing',
+                                                                             participant: raw_phone, participant_type: 'phone' }
+                                                        })
         WhatsappUnifiedMessageAlias.create!(whatsapp_message_identity: meta_identity, message: stored)
         if fault
           attrs = stored.content_attributes.deep_dup
@@ -134,21 +140,24 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'retained production ec
           stored.update!(source_id: 'different-public-id') if fault == 'source'
           conversation.update!(contact: create(:contact, account: account, phone_number: '+5511987654321')) if fault == 'contact'
         end
-        value = { metadata: { display_phone_number: '5566996222471' }, message_echoes: [{ id: SecureRandom.uuid,
-          provider_message_id: original, from: '5566996222471', type: kind, text: { body: 'Synthetic echo' }, timestamp: Time.current.to_i.to_s }] }.with_indifferent_access
+        value = { metadata: { display_phone_number: '5566996222471' }, message_echoes: [{
+          id: SecureRandom.uuid, provider_message_id: original, from: '5566996222471', type: kind,
+          text: { body: 'Synthetic echo' }, timestamp: Time.current.to_i.to_s
+        }] }.with_indifferent_access
         Whatsapp::MessageIdentityObservationService.new(inbox: uno.inbox, value: value, outgoing_echo: true).perform
         identity = WhatsappMessageIdentity.find_by!(inbox: uno.inbox, provider_message_id: original)
         event = WhatsappUnifiedEvent.create!(whatsapp_inbox_link: link, whatsapp_message_identity: identity, payload: value,
-          reason: 'correlation_conflict', activation_cutoff: link.activated_at, state: 'pending', next_attempt_at: Time.current)
+                                             reason: 'correlation_conflict', activation_cutoff: link.activated_at,
+                                             state: 'pending', next_attempt_at: Time.current)
         snapshot = [stored.reload.attributes, account.contacts.pluck(:id), Attachment.pluck(:id), ActiveStorage::Blob.pluck(:id)]
         expect(Down).not_to receive(:download)
         2.times { Whatsapp::ProcessUnifiedEventJob.perform_now(event.id) }
         if fault
           expect(event.reload.state).not_to eq('completed')
-          expect(Whatsapp::UnifiedMessageIngestionService.message_for(identity)).to be_nil
+          expect(described_class.message_for(identity)).to be_nil
         else
           expect(event.reload.state).to eq('completed')
-          expect(Whatsapp::UnifiedMessageIngestionService.message_for(identity).id).to eq(stored.id)
+          expect(described_class.message_for(identity).id).to eq(stored.id)
         end
         expect([stored.reload.attributes, account.contacts.pluck(:id), Attachment.pluck(:id), ActiveStorage::Blob.pluck(:id)]).to eq(snapshot)
         expect(Whatsapp::PurgeUnifiedMediaBlobJob).not_to have_been_enqueued

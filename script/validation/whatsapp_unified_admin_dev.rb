@@ -46,7 +46,7 @@ if ARGV.first == 'cleanup'
     user.destroy!
   end
   drain_cleanup.call
-  puts({ cleaned_account_id: account.id }.to_json) # rubocop:disable Rails/Output
+  puts({ cleaned_account_id: account.id }.to_json)
 else
   raise 'Specify seed, seed_schedule, seed_compose or cleanup' unless %w[seed seed_schedule seed_compose].include?(ARGV.first)
 
@@ -93,5 +93,5 @@ else
   result = { account_id: account.id, inbox_id: uno.inbox.id, email: admin.email, password: password,
              schedule_id: scheduled&.id, scheduled_at: scheduled&.scheduled_at,
              source_conversation_id: conversation.display_id, target_contact_id: target_contact&.id, meta_inbox_id: meta.inbox.id }
-  puts(result.to_json) # rubocop:disable Rails/Output
+  puts(result.to_json)
 end

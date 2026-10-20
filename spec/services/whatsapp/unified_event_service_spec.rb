@@ -3,6 +3,9 @@ require 'rails_helper'
 # Real persisted scopes and identities parsed from provider fixtures. No fabricated
 # identity observations or mocked ingestion/replay; only media HTTP is a boundary.
 RSpec.describe Whatsapp::UnifiedEventService do
+  directions = %w[incoming echo].freeze
+  terminal_states = %w[completed disabled review].freeze
+  recheck_states = %w[completed disabled pending].freeze
   let(:account) { create(:account) }
   let(:suffix) { SecureRandom.random_number(10**7).to_s.rjust(7, '0') }
   let(:meta) do
@@ -27,7 +30,7 @@ RSpec.describe Whatsapp::UnifiedEventService do
   end
   let(:identity) do
     Whatsapp::MessageIdentityObservationService.new(inbox: channel.inbox, value: value,
-                                                   outgoing_echo: value[:message_echoes].present?).perform
+                                                    outgoing_echo: value[:message_echoes].present?).perform
     external_id = Array(value[:messages] || value[:message_echoes]).first.fetch(:id)
     WhatsappMessageIdentity.find_by!(inbox: channel.inbox, external_id: external_id)
   end
@@ -53,8 +56,8 @@ RSpec.describe Whatsapp::UnifiedEventService do
       end
 
       %i[meta uno].each do |observed_provider|
-        %w[incoming echo].each do |direction|
-          context "for a real #{observed_provider} #{direction} identity" do
+        directions.each do |direction|
+          context "with a real #{observed_provider} #{direction} identity" do
             let(:provider) { observed_provider }
             let(:fixture_name) { "phone_#{direction}" }
 
@@ -100,7 +103,7 @@ RSpec.describe Whatsapp::UnifiedEventService do
               expect(account.messages.where(message_type: %i[incoming outgoing]).pluck(:id)).to eq([message.id])
             end
 
-            %w[completed disabled review].each do |terminal_state|
+            terminal_states.each do |terminal_state|
               it "does not replay a #{terminal_state} row even when explicitly invoked repeatedly" do
                 stored = event
                 stored.update!(state: terminal_state, next_attempt_at: nil)
@@ -230,7 +233,7 @@ RSpec.describe Whatsapp::UnifiedEventService do
       context 'with a conflicting correlation requiring human review' do
         let(:reason) { 'correlation_conflict' }
 
-        it 'rechecks retained evidence after five minutes and completes safely through normal ingestion' do
+        it 'rechecks retained evidence after five minutes and completes safely through normal ingestion', :aggregate_failures do
           contact = create(:contact, account: account, phone_number: '+5565987654321')
           create(:contact_inbox, inbox: meta.inbox, contact: contact, source_id: '556587654321')
           create(:contact_inbox, inbox: uno.inbox, contact: contact, source_id: '5565987654321')
@@ -252,7 +255,7 @@ RSpec.describe Whatsapp::UnifiedEventService do
           expect(message.attachments).to be_empty
         end
 
-        %w[completed disabled pending].each do |state|
+        recheck_states.each do |state|
           it "never automatically reopens a #{state} event" do
             stored = event
             stored.update!(state: state)
@@ -330,7 +333,7 @@ RSpec.describe Whatsapp::UnifiedEventService do
             .to_return(status: 200, body: { url: 'https://media.invalid/unavailable.png' }.to_json,
                        headers: { 'Content-Type' => 'application/json' })
           allow(Down).to receive(:download).with('https://media.invalid/unavailable.png', headers: anything)
-                                         .and_raise(IOError, 'synthetic external download failure')
+                                           .and_raise(IOError, 'synthetic external download failure')
           stored = event
           raw = stored.payload.deep_dup
           12.times do
@@ -342,7 +345,7 @@ RSpec.describe Whatsapp::UnifiedEventService do
           expect(stored.reload).to have_attributes(state: 'review', attempts: 12, next_attempt_at: nil, payload: raw)
           expect(account.messages.where(message_type: %i[incoming outgoing])).to be_empty
           expect(account.contacts.pluck(:id)).to eq([contact.id])
-          expect { Whatsapp::ProcessUnifiedEventJob.perform_now(stored.id) }.not_to change { stored.reload.attempts }
+          expect { Whatsapp::ProcessUnifiedEventJob.perform_now(stored.id) }.not_to(change { stored.reload.attempts })
         end
       end
     end

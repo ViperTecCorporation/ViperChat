@@ -1,3 +1,5 @@
+# Standalone diagnostic CLI: retain machine-readable stdout, exit status and atomic fixture scenarios.
+# rubocop:disable Metrics/BlockLength
 # Fresh disposable database only; no provider calls or live queues are allowed.
 unless Rails.env.test? && ActiveRecord::Base.connection_db_config.database == 'viperchat_unified_compose_concurrency_test'
   raise 'Wrong database: refusing unified compose concurrency validation'
@@ -18,7 +20,7 @@ checks = %w[unoapi whatsapp_cloud].flat_map do |principal|
   channels = %w[unoapi whatsapp_cloud].index_with do |provider|
     phone = provider == 'unoapi' ? "+556599#{suffix}" : "+55659#{suffix}"
     FactoryBot.create(:channel_whatsapp, account: account, provider: provider, phone_number: phone,
-                                        sync_templates: false, validate_provider_config: false)
+                                         sync_templates: false, validate_provider_config: false)
   end
   link = WhatsappInboxLink.create!(account: account, primary_inbox: channels.fetch(principal).inbox,
                                    secondary_inbox: channels.except(principal).values.sole.inbox,
@@ -52,12 +54,14 @@ checks = %w[unoapi whatsapp_cloud].flat_map do |principal|
     threads.each { |thread| raise 'Compose workers did not finish' unless thread.join(15) }
     raise errors.pop unless errors.empty?
 
-    rows = 4.times.map { results.pop }
+    rows = Array.new(4) { results.pop }
     raise 'Connections were not independent' unless rows.pluck(:connection).uniq.size == 4
     raise 'Duplicate conversations' unless rows.pluck(:conversation_id).uniq.one?
     raise 'Duplicate contact inboxes' unless contact.contact_inboxes.where(inbox_id: link.primary_inbox_id).count == 1
+
     conversation = Conversation.find(rows.first.fetch(:conversation_id))
     raise 'Wrong principal or message count' unless conversation.inbox_id == link.primary_inbox_id && conversation.messages.count == 4
+
     rows.each do |row|
       message = Message.find(row.fetch(:message_id))
       raise 'Transport was lost' unless message.content_attributes.dig('whatsapp_transport', 'requested_provider') == row.fetch(:provider)
@@ -73,4 +77,6 @@ checks = %w[unoapi whatsapp_cloud].flat_map do |principal|
     { principal: principal, unique: unique, independent_connections: 4, intended_messages: 4, conversations_during_race: 1 }
   end
 end
-puts({ result: 'PASS', synthetic_contacts: checks.size, scenarios: checks }.to_json) # rubocop:disable Rails/Output
+puts({ result: 'PASS', synthetic_contacts: checks.size, scenarios: checks }.to_json)
+
+# rubocop:enable Metrics/BlockLength

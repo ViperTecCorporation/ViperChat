@@ -21,8 +21,8 @@ RSpec.describe Whatsapp::UnifiedReviewService do
   end
   let!(:event) do
     WhatsappUnifiedEvent.create!(whatsapp_inbox_link: link, whatsapp_message_identity: identity,
-                                activation_cutoff: link.activated_at, state: 'review', reason: 'identity_pending',
-                                payload: { secret: 'never expose payload' })
+                                 activation_cutoff: link.activated_at, state: 'review', reason: 'identity_pending',
+                                 payload: { secret: 'never expose payload' })
   end
   let(:service) { described_class.new(link: link, actor: actor) }
   let(:item) { service.list[:items].find { |row| row[:id] == "event-#{event.id}" } }
@@ -109,7 +109,7 @@ RSpec.describe Whatsapp::UnifiedReviewService do
       another.external_id = "wamid.test-#{index}"
       another.save!
       WhatsappUnifiedEvent.create!(whatsapp_inbox_link: link, whatsapp_message_identity: another,
-                                  activation_cutoff: link.activated_at, state: 'review', reason: 'identity_pending')
+                                   activation_cutoff: link.activated_at, state: 'review', reason: 'identity_pending')
     end
     first = service.list
     second = service.list(page: 2)
@@ -124,7 +124,7 @@ RSpec.describe Whatsapp::UnifiedReviewService do
     let!(:message) do
       create(:message, account: account, inbox: uno.inbox, conversation: conversation, message_type: :outgoing,
                        content_attributes: { whatsapp_transport: { link_id: link.id, provider: 'unoapi',
-                                                                  delivery_attempt_id: 'claimed', delivery_state: 'uncertain' } })
+                                                                   delivery_attempt_id: 'claimed', delivery_state: 'uncertain' } })
     end
 
     it 'never offers retry or fabricates a receipt' do
@@ -166,7 +166,7 @@ RSpec.describe Whatsapp::UnifiedReviewService do
 
   it 'keeps an unmaterialized historical reservation visible and quarantined after acknowledgement' do
     reservation = WhatsappUnifiedMessage.create!(whatsapp_inbox_link: link, original_id: 'held-original',
-                                                participant_key: '5565987654321', direction: 'incoming', message_kind: 'text', state: 'review')
+                                                 participant_key: '5565987654321', direction: 'incoming', message_kind: 'text', state: 'review')
     row = service.list(kind: 'reservation')[:items].sole
     expect(row).to include(id: "reservation-#{reservation.id}", reason: 'reservation_without_message')
     expect(row[:actions]).to eq(recheck: false, acknowledge: true)

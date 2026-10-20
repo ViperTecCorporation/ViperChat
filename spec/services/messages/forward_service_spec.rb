@@ -3,6 +3,7 @@ require 'rails_helper'
 RSpec.describe Messages::ForwardService do
   media_cases = [['sample.png', 'image/png', 'image'], ['sample.mp3', 'audio/mpeg', 'audio'], ['sample.pdf', 'application/pdf', 'file']].freeze
   provider_selections = [nil, 'unoapi', 'whatsapp_cloud'].freeze
+  resumable_statuses = %w[pending snoozed].freeze
 
   subject(:service) do
     described_class.new(
@@ -230,7 +231,7 @@ RSpec.describe Messages::ForwardService do
         expect(legacy_conversation.reload.inbox_id).to eq(link.secondary_inbox_id)
       end
 
-      %w[pending snoozed].each do |status|
+      resumable_statuses.each do |status|
         it "preserves the principal #{status} status during an intentional forward" do
           primary_conversation.update!(status: status)
           forwarding = described_class.new(account: account, user: user, source_messages: [source_message],

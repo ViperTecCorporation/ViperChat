@@ -322,3 +322,21 @@ Nesta etapa somente documentação foi criada/atualizada. Não alterados pacotes
 Antes de iniciar a etapa 1A, o administrador autorizou commitar as alterações pendentes do ViperChat, publicar a branch e integrá-la por pull request em `4.16.0`, preservando os commits da API de contatos já presentes no destino. Esta autorização não inclui implantação na VPS nem implementação antecipada do VoIP.
 
 A revalidação focada da consolidação aprovou 156 exemplos backend e 55 testes frontend. São verificações dos recursos existentes (pesquisa, etiquetas, OpenRouter e unificação), não testes do VoIP planejado. Não houve novo teste físico Android/iOS ou Archive nesta consolidação; permanecem as limitações nativas registradas na auditoria de pesquisas. APKs, capturas, snapshots e arquivos temporários locais ficam fora dos commits.
+
+### Correção do CI e validação ampliada em 20/10/2026
+
+Antes da implementação VoIP, foram corrigidas as falhas da consolidação: os mocks do editor incluem suas referências; os testes Meta usam a versão configurada; os casos exclusivos Enterprise ficam na árvore Enterprise; os exemplos e scripts respeitam o lint sem relaxar a configuração global. Os cenários e suas asserções foram preservados. O teste de notificação usa uma instância explícita de mailer para não depender da ordem de carregamento das subclasses.
+
+No código funcional, a filtragem de credenciais também protege os binds SQL de `provider_config`, mesmo quando Active Record é carregado antes do inicializador; o envio MMS mantém os anexos ordenados por ID, com regressão que inverte a associação em memória. Não foram alteradas as regras de transporte/unificação nem implementado o VoIP nesta correção.
+
+Validação local em infraestrutura Docker descartável, com recursos limitados e banco/Redis separados do dev:
+
+- Backend CE completo: 8.204 exemplos, zero falhas; 97 pendências preexistentes do ambiente/suíte. As 27 verificações de migração incluídas nessas pendências foram executadas separadamente no banco mínimo exigido: 27 exemplos, zero falhas. As demais pendências não equivalem a testes aprovados.
+- Compatibilidade Enterprise e LLM: 39 exemplos, zero falhas, incluindo ações de chamada versionadas e transcrição de áudio histórico. Isso não representa a suíte Enterprise completa.
+- Frontend completo com cobertura: 515 arquivos e 4.855 testes aprovados.
+- RuboCop completo: 3.192 arquivos, zero infrações; sem modificar `.rubocop.yml`, `.rubocop_todo.yml`, `.rspec` ou desativar testes.
+- ESLint completo de JavaScript/Vue: aprovado, sem alterar suas regras.
+
+Na primeira execução remota do PR de correção, o lint detectou oito comentários redundantes `Rails/Output`. A investigação identificou uma diferença de caminho: o padrão `**/app/**/*.rb` também inclui scripts quando o checkout inteiro está em `/app`, mas não na raiz usada pelo GitHub. A correção remove esses comentários sem mudar o comportamento dos scripts; a revalidação usa uma exportação limpa do commit fora de `/app`, evitando essa divergência entre fonte enviada e runtime de teste.
+
+O reinício local do Docker Desktop foi autorizado após sobrecarga; os serviços dev voltaram e o endpoint `/api` respondeu HTTP 200. Nenhuma VPS foi acessada/alterada. Nesta correção o frontend funcional, as dependências e os bundles nativos não mudaram; não foram gerados APK/Archive nem feitos novos testes em aparelhos. A integração em `4.16.0` depende ainda da confirmação dos checks desta correção no GitHub.

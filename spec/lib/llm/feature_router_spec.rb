@@ -4,6 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Llm::FeatureRouter do
   let(:account) { create(:account) }
+
   before do
     allow(Llm::Endpoint).to receive(:openrouter?).and_return(false)
     allow(InstallationConfig).to receive(:find_by).and_call_original

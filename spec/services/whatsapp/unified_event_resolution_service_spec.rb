@@ -2,13 +2,24 @@ require 'rails_helper'
 
 RSpec.describe Whatsapp::UnifiedEventResolutionService do
   let(:account) { create(:account) }
-  let(:uno) { create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: '+5566996222471', sync_templates: false, validate_provider_config: false) }
-  let(:meta) { create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '+556696222471', sync_templates: false, validate_provider_config: false) }
-  let!(:link) { WhatsappInboxLink.create!(account: account, primary_inbox: uno.inbox, secondary_inbox: meta.inbox, default_provider: 'unoapi', enabled: true) }
+  let(:uno) do
+    create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: '+5566996222471', sync_templates: false,
+                              validate_provider_config: false)
+  end
+  let(:meta) do
+    create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '+556696222471', sync_templates: false,
+                              validate_provider_config: false)
+  end
+  let!(:link) do
+    WhatsappInboxLink.create!(account: account, primary_inbox: uno.inbox, secondary_inbox: meta.inbox, default_provider: 'unoapi', enabled: true)
+  end
   let(:contact) { create(:contact, account: account, phone_number: '+5566996269251') }
   let(:conversation) { create(:conversation, account: account, inbox: uno.inbox, contact: contact) }
   let!(:stored) { create(:message, :incoming, account: account, inbox: uno.inbox, conversation: conversation, source_id: 'legacy-uno-public-id') }
-  let!(:record) { WhatsappUnifiedMessage.create!(whatsapp_inbox_link: link, message: stored, original_id: '3A004C30BA8EF3C134BF', direction: 'incoming', participant_key: '5566996269251', message_kind: 'audio', state: 'ready') }
+  let!(:record) do
+    WhatsappUnifiedMessage.create!(whatsapp_inbox_link: link, message: stored, original_id: '3A004C30BA8EF3C134BF', direction: 'incoming',
+                                   participant_key: '5566996269251', message_kind: 'audio', state: 'ready')
+  end
   let!(:uno_identity) do
     WhatsappMessageIdentity.create!(account: account, inbox: uno.inbox, channel: uno, provider: 'unoapi', external_id: stored.source_id,
                                     provider_message_id: record.original_id, observations: {
@@ -27,8 +38,8 @@ RSpec.describe Whatsapp::UnifiedEventResolutionService do
   end
   let!(:event) do
     WhatsappUnifiedEvent.create!(whatsapp_inbox_link: link, whatsapp_message_identity: identity, activation_cutoff: link.activated_at,
-                                reason: 'correlation_conflict', state: 'pending', next_attempt_at: Time.current,
-                                payload: { messages: [{ id: public_id, from: '556696269251', type: 'audio' }] })
+                                 reason: 'correlation_conflict', state: 'pending', next_attempt_at: Time.current,
+                                 payload: { messages: [{ id: public_id, from: '556696269251', type: 'audio' }] })
   end
   let(:service) { described_class.new(event: event) }
 
@@ -42,7 +53,7 @@ RSpec.describe Whatsapp::UnifiedEventResolutionService do
                                file: { io: File.open(Rails.root.join('spec/assets/sample.ogg')), filename: 'sample.ogg', content_type: 'audio/ogg' })
     original_observations = uno_identity.observations.deep_dup
     snapshot = [Message.count, Contact.count, Attachment.count, ActiveStorage::Blob.count, stored.reload.attributes]
-    expect_any_instance_of(Whatsapp::IncomingMessageWhatsappCloudService).not_to receive(:perform)
+    expect(Whatsapp::IncomingMessageWhatsappCloudService).not_to receive(:new)
     event.update!(state: 'review', next_attempt_at: nil, updated_at: 6.minutes.ago)
     Whatsapp::RecheckUnifiedEventsJob.perform_now
     expect(event.reload.state).to eq('pending')
@@ -72,8 +83,12 @@ RSpec.describe Whatsapp::UnifiedEventResolutionService do
       when 'payload' then event.update!(payload: { messages: [{ id: 'other', from: '556696269251', type: 'audio' }] })
       when 'generation' then event.update!(activation_cutoff: link.activated_at - 1.second)
       when 'original_id' then uno_identity.update!(provider_message_id: 'other-original')
-      when 'extra_conflict' then uno_identity.update!(observations: uno_identity.observations.deep_merge('conflicting_observations' => { 'message_type' => %w[audio image] }))
-      when 'recipient' then uno_identity.update!(observations: uno_identity.observations.deep_merge('participants' => { 'recipient_id' => '5566991111111' }))
+      when 'extra_conflict'
+        observations = uno_identity.observations.deep_merge('conflicting_observations' => { 'message_type' => %w[audio image] })
+        uno_identity.update!(observations: observations)
+      when 'recipient'
+        observations = uno_identity.observations.deep_merge('participants' => { 'recipient_id' => '5566991111111' })
+        uno_identity.update!(observations: observations)
       when 'missing_receipt' then uno_identity.update!(observations: uno_identity.observations.except('statuses'))
       end
       expect(service.message).to be_nil

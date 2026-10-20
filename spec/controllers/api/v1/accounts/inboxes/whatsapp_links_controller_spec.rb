@@ -6,11 +6,11 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
   let(:agent) { create(:user, account: account, role: :agent) }
   let(:uno) do
     create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: '+556696222471',
-                             sync_templates: false, validate_provider_config: false).inbox
+                              sync_templates: false, validate_provider_config: false).inbox
   end
   let(:meta) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '5566996222471',
-                             sync_templates: false, validate_provider_config: false).inbox
+                              sync_templates: false, validate_provider_config: false).inbox
   end
   let(:path) { "/api/v1/accounts/#{account.id}/inboxes/#{uno.id}/whatsapp_link" }
   let(:headers) { admin.create_new_auth_token }
@@ -44,9 +44,9 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
   it 'only returns matching same-account candidates and never credentials' do
     meta
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '+5566991111111',
-                             sync_templates: false, validate_provider_config: false)
+                              sync_templates: false, validate_provider_config: false)
     create(:channel_whatsapp, provider: 'whatsapp_cloud', phone_number: '556696222471',
-                             sync_templates: false, validate_provider_config: false)
+                              sync_templates: false, validate_provider_config: false)
     get path, headers: headers
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body['link']).to be_nil
@@ -58,7 +58,7 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
     put path, headers: headers, params: attributes.merge(primary_inbox_id: meta.id, default_provider: 'unoapi'), as: :json
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body['link']).to include('enabled' => false, 'activated_at' => nil,
-                                                 'primary_inbox_id' => meta.id, 'secondary_inbox_id' => uno.id, 'default_provider' => 'unoapi')
+                                                    'primary_inbox_id' => meta.id, 'secondary_inbox_id' => uno.id, 'default_provider' => 'unoapi')
   end
 
   it 'persists the optional initial Meta rule and preserves it when an older client omits the fields' do
@@ -93,7 +93,7 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
       get "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}/whatsapp_link", headers: headers
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body['link']).to include('id' => link.id, 'meta_initial_messages_enabled' => true,
-                                                   'meta_initial_messages_limit' => 5)
+                                                      'meta_initial_messages_limit' => 5)
     end
   end
 
@@ -135,7 +135,7 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
     expect(response.parsed_body.dig('link', 'activated_at')).to be_present
   end
 
-  it 'previews conflicts, requires the unchanged preview token and never merges historical conversations' do
+  it 'previews conflicts, requires the unchanged preview token and never merges historical conversations', :aggregate_failures do
     contact = create(:contact, account: account)
     first = create(:conversation, account: account, inbox: uno, contact: contact, status: :open)
     second = create(:conversation, account: account, inbox: meta, contact: contact, status: :pending)
@@ -144,7 +144,7 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
     expect(response).to have_http_status(:ok)
     preview = response.parsed_body['preview']
     expect(preview['conflicts']).to eq([{ 'contact_id' => contact.id, 'conversation_ids' => [first.id, second.id],
-                                        'resolution' => 'manual_review_required' }])
+                                          'resolution' => 'manual_review_required' }])
     expect(WhatsappInboxLink.count).to eq(0)
     put path, headers: headers, params: params.merge(confirmation: true), as: :json
     expect(response).to have_http_status(:conflict)
@@ -183,16 +183,19 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
   it 'rejects a second enabled pairing in reverse order' do
     WhatsappInboxLink.create!(account: account, primary_inbox: uno, secondary_inbox: meta, default_provider: 'unoapi', enabled: true)
     other = create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: '+5566996222471',
-                                     sync_templates: false, validate_provider_config: false).inbox
-    put "/api/v1/accounts/#{account.id}/inboxes/#{other.id}/whatsapp_link", headers: headers,
-        params: { partner_inbox_id: meta.id, primary_inbox_id: meta.id, enabled: true }, as: :json
+                                      sync_templates: false, validate_provider_config: false).inbox
+    put(
+      "/api/v1/accounts/#{account.id}/inboxes/#{other.id}/whatsapp_link",
+      headers: headers,
+      params: { partner_inbox_id: meta.id, primary_inbox_id: meta.id, enabled: true }, as: :json
+    )
     expect(response).to have_http_status(:unprocessable_entity)
     expect(WhatsappInboxLink.where(enabled: true).count).to eq(1)
   end
 
   it 'serializes transport options for an administrator without exposing provider credentials' do
     link = WhatsappInboxLink.create!(account: account, primary_inbox: uno, secondary_inbox: meta,
-                                    default_provider: 'unoapi', enabled: true)
+                                     default_provider: 'unoapi', enabled: true)
     conversation = create(:conversation, account: account, inbox: uno)
     get "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}", headers: headers
     expect(response).to have_http_status(:ok)
@@ -202,7 +205,7 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
 
   it 'shows both transports to a principal-only agent without granting access to secondary history or candidates' do
     link = WhatsappInboxLink.create!(account: account, primary_inbox: uno, secondary_inbox: meta,
-                                    default_provider: 'unoapi', enabled: true)
+                                     default_provider: 'unoapi', enabled: true)
     create(:inbox_member, inbox: uno, user: agent)
     conversation = create(:conversation, account: account, inbox: uno, assignee: agent)
     historical = create(:conversation, account: account, inbox: meta)
@@ -222,7 +225,7 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
 
   it 'omits options for a secondary-only agent viewing their historical conversation' do
     WhatsappInboxLink.create!(account: account, primary_inbox: uno, secondary_inbox: meta,
-                             default_provider: 'unoapi', enabled: true)
+                              default_provider: 'unoapi', enabled: true)
     create(:inbox_member, inbox: meta, user: agent)
     historical = create(:conversation, account: account, inbox: meta, assignee: agent)
     get "/api/v1/accounts/#{account.id}/conversations/#{historical.display_id}", headers: agent.create_new_auth_token

@@ -3,8 +3,27 @@ require 'rails_helper'
 # Run against the main agent's isolated test DB with the existing unified-inbox
 # schema. Exercise both real provider entry points; do not mock ingestion,
 # identity correlation, contact attachment building or persistence.
-RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'shared contacts' do
+RSpec.describe Whatsapp::UnifiedMessageIngestionService do
+  arrival_orders = [%i[meta uno], %i[uno meta]].freeze
+  card_counts = [1, 3].freeze
+  expected_cards = {
+    1 => { phones: ['+5565987654321'], names: ['Primeiro Cartão'] },
+    3 => { phones: ['+5565987654321', '+5511987654321', '+551132345678', 'Phone number is not available'],
+           names: ['Primeiro Cartão', 'Segundo Cartão', 'Segundo Cartão', 'Sem Telefone'] }
+  }.freeze
   let(:account) { create(:account) }
+  let(:cards) do
+    [
+      { name: { formatted_name: 'Primeiro Cartão', first_name: 'Primeiro', last_name: 'Cartão' },
+        phones: [{ phone: '+5565987654321', type: 'CELL' }] },
+      { name: { formatted_name: 'Segundo Cartão', first_name: 'Segundo', last_name: 'Cartão' },
+        phones: [{ phone: '+5511987654321', type: 'CELL' }, { phone: '+551132345678', type: 'WORK' }] },
+      { name: { formatted_name: 'Sem Telefone', first_name: 'Sem', last_name: 'Telefone' } }
+    ]
+  end
+  let(:card_count) { 3 }
+  let(:event_timestamp) { Time.current.to_i.to_s }
+  let(:public_messages) { account.messages.where(message_type: %i[incoming outgoing], private: false) }
   let(:meta_channel) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '+556696222471',
                               sync_templates: false, validate_provider_config: false)
@@ -26,21 +45,16 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'shared contacts' do
   end
   let!(:meta_alias) { create(:contact_inbox, inbox: meta_channel.inbox, contact: known_contact, source_id: participants[:meta]) }
   let!(:uno_alias) { create(:contact_inbox, inbox: uno_channel.inbox, contact: known_contact, source_id: participants[:uno]) }
-  let!(:shared_contact) do
+
+  before do
     create(:contact, account: account, name: 'Cadastro humano existente', phone_number: '+5565987654321')
+    # All cases must forbid media IO, including fixture setup and retries.
+    # rubocop:disable RSpec/ExpectInHook
+    expect(Down).not_to receive(:download)
+    expect(ActiveStorage::Blob.service).not_to receive(:upload)
+    expect(ActiveStorage::Blob.service).not_to receive(:delete)
+    # rubocop:enable RSpec/ExpectInHook
   end
-  let(:cards) do
-    [
-      { name: { formatted_name: 'Primeiro Cartão', first_name: 'Primeiro', last_name: 'Cartão' },
-        phones: [{ phone: '+5565987654321', type: 'CELL' }] },
-      { name: { formatted_name: 'Segundo Cartão', first_name: 'Segundo', last_name: 'Cartão' },
-        phones: [{ phone: '+5511987654321', type: 'CELL' }, { phone: '+551132345678', type: 'WORK' }] },
-      { name: { formatted_name: 'Sem Telefone', first_name: 'Sem', last_name: 'Telefone' } }
-    ]
-  end
-  let(:card_count) { 3 }
-  let(:event_timestamp) { Time.current.to_i.to_s }
-  let(:public_messages) { account.messages.where(message_type: %i[incoming outgoing], private: false) }
 
   around do |example|
     previous_network_configuration = WebMock::Config.instance.allow_net_connect
@@ -50,12 +64,6 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'shared contacts' do
   ensure
     WebMock::Config.instance.allow_net_connect = previous_network_configuration
     WebMock::Config.instance.allow_localhost = previous_localhost_configuration
-  end
-
-  before do
-    expect(Down).not_to receive(:download)
-    expect(ActiveStorage::Blob.service).not_to receive(:upload)
-    expect(ActiveStorage::Blob.service).not_to receive(:delete)
   end
 
   # These helpers share only the provider envelope and dispatch. All domain
@@ -92,12 +100,12 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'shared contacts' do
                                   default_provider: 'whatsapp_cloud', enabled: true, activated_at: 1.day.ago)
       end
 
-      [%i[meta uno], %i[uno meta]].each do |arrival_order|
-        [1, 3].each do |size|
+      arrival_orders.each do |arrival_order|
+        card_counts.each do |size|
           context "with #{size} cards arriving #{arrival_order.join(' then ')}" do
             let(:card_count) { size }
 
-            it 'keeps one canonical bubble, every card and all existing public IDs through retries' do
+            it 'keeps one canonical bubble, every card and all existing public IDs through retries', :aggregate_failures do
               allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
               contact_keys = %w[id name phone_number additional_attributes created_at]
               contacts_before = account.contacts.order(:id).map { |contact| contact.attributes.slice(*contact_keys) }
@@ -122,16 +130,8 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'shared contacts' do
               expect(conversation.contact_id).to eq(known_contact.id)
               expect(canonical.content).to eq('Primeiro Cartão')
               expect(canonical.attachments.order(:id).map(&:attributes)).to eq(attachment_snapshots)
-              expected_phones = if size == 1
-                                  ['+5565987654321']
-                                else
-                                  ['+5565987654321', '+5511987654321', '+551132345678', 'Phone number is not available']
-                                end
-              expected_names = if size == 1
-                                 ['Primeiro Cartão']
-                               else
-                                 ['Primeiro Cartão', 'Segundo Cartão', 'Segundo Cartão', 'Sem Telefone']
-                               end
+              expected_phones = expected_cards.fetch(size).fetch(:phones)
+              expected_names = expected_cards.fetch(size).fetch(:names)
               expect(canonical.attachments.order(:id).pluck(:fallback_title)).to eq(expected_phones)
               expect(canonical.attachments.order(:id).map { |attachment| attachment.meta['formattedName'] }).to eq(expected_names)
               serialized_cards = canonical.attachments.order(:id).map(&:push_event_data)
@@ -214,7 +214,7 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'shared contacts' do
     end
   end
 
-  context 'outside active unified ingestion' do
+  context 'without active unified ingestion' do
     [false, true].each do |disabled_link|
       it "preserves one legacy bubble per card #{disabled_link ? 'with a disabled link' : 'without a link'}" do
         if disabled_link
@@ -222,7 +222,7 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'shared contacts' do
                                     default_provider: 'whatsapp_cloud', enabled: false)
         end
 
-        2.times { %i[meta uno].each { |provider| ingest(provider) } }
+        2.times { channels.each_key { |provider| ingest(provider) } }
 
         expect(public_messages.count).to eq(6)
         channels.each do |provider, channel|

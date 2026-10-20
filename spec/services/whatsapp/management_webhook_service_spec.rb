@@ -15,7 +15,7 @@ describe Whatsapp::ManagementWebhookService do
 
   before do
     channel
-    allow_any_instance_of(Channel::Whatsapp).to receive(:reauthorization_required?).and_return(false)
+    Redis::Alfred.delete(channel.send(:reauthorization_required_key))
   end
 
   it 'records a WABA-scoped event without phone metadata for only the URL anchor' do
@@ -24,7 +24,7 @@ describe Whatsapp::ManagementWebhookService do
 
     expect(events.length).to eq(1)
     expect(events.first).to have_attributes(account_id: channel.account_id, channel_id: channel.id, inbox_id: channel.inbox.id,
-                                          state: 'recorded', truncated: false)
+                                            state: 'recorded', truncated: false)
     expect(WhatsappManagementEvent.where(channel_id: other.id)).to be_empty
     expect(events.first.details).to eq(value)
     expect(events.first.expires_at).to be_within(5.seconds).of(7.days.from_now)
@@ -56,7 +56,7 @@ describe Whatsapp::ManagementWebhookService do
 
   it 'rejects foreign phone metadata without rerouting to another channel' do
     other = create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
-    other.update_column(:provider_config, other.provider_config.merge('phone_number_id' => 'other-phone'))
+    other.update!(provider_config: other.provider_config.merge('phone_number_id' => 'other-phone'))
     value['metadata'] = { 'phone_number_id' => 'other-phone' }
     expect { expect(service.perform).to eq([]) }.not_to change(WhatsappManagementEvent, :count)
   end
@@ -97,12 +97,12 @@ describe Whatsapp::ManagementWebhookService do
   end
 
   it 'rejects non-cloud channels' do
-    channel.update_column(:provider, 'unoapi')
+    channel.update!(provider: 'unoapi')
     expect(service.perform).to eq([])
   end
 
   it 'rejects an anchor without configured WABA identity' do
-    channel.update_column(:provider_config, channel.provider_config.except('business_account_id'))
+    channel.update!(provider_config: channel.provider_config.except('business_account_id'))
     expect(service.perform).to eq([])
   end
 
@@ -113,7 +113,7 @@ describe Whatsapp::ManagementWebhookService do
   end
 
   it 'continues to audit security and account alerts on channels requiring reauthorization' do
-    allow_any_instance_of(Channel::Whatsapp).to receive(:reauthorization_required?).and_return(true)
+    Redis::Alfred.set(channel.send(:reauthorization_required_key), true)
     %w[security account_alerts].each do |audit_field|
       entry['changes'].first['field'] = audit_field
       expect(described_class.new(params: params).perform.first).to have_attributes(field: audit_field, state: 'recorded')
@@ -121,7 +121,7 @@ describe Whatsapp::ManagementWebhookService do
   end
 
   it 'records template events for review without invalidation or sync while reauthorization is required' do
-    allow_any_instance_of(Channel::Whatsapp).to receive(:reauthorization_required?).and_return(true)
+    Redis::Alfred.set(channel.send(:reauthorization_required_key), true)
     entry['changes'].first['field'] = 'message_template_status_update'
     original_timestamp = channel.reload.message_templates_last_updated
     expect do
@@ -167,7 +167,7 @@ describe Whatsapp::ManagementWebhookService do
 
   it 'retains bounded sanitized app contact state for user review regardless of message history settings' do
     entry['changes'].first['field'] = 'smb_app_state_sync'
-    value.merge!('contacts' => [{ 'name' => 'Private Name', 'access_token' => 'secret-token' }])
+    value['contacts'] = [{ 'name' => 'Private Name', 'access_token' => 'secret-token' }]
     counts = [Contact.count, Message.count, Attachment.count, Conversation.count]
     expect do
       event = service.perform.first
@@ -201,9 +201,9 @@ describe Whatsapp::ManagementWebhookService do
 
   it 'records official history refusal as lifecycle control regardless of the import setting' do
     entry['changes'].first['field'] = 'history'
-    value.replace('history' => [{ 'errors' => [{ 'code' => 2593109, 'title' => 'History sync is turned off' }] }])
+    value.replace('history' => [{ 'errors' => [{ 'code' => 2_593_109, 'title' => 'History sync is turned off' }] }])
     [true, false].each do |ignored|
-      channel.update_column(:provider_config, channel.provider_config.merge('ignore_history_messages' => ignored))
+      channel.update!(provider_config: channel.provider_config.merge('ignore_history_messages' => ignored))
       entry['time'] += 1
       expect do
         event = described_class.new(params: params).perform.sole
@@ -216,7 +216,7 @@ describe Whatsapp::ManagementWebhookService do
   it 'keeps history ignored unless the setting is explicitly Boolean false' do
     entry['changes'].first['field'] = 'history'
     [nil, 'false', 0, 'malformed', true].each do |setting|
-      channel.update_column(:provider_config, channel.provider_config.merge('ignore_history_messages' => setting))
+      channel.update!(provider_config: channel.provider_config.merge('ignore_history_messages' => setting))
       entry['time'] += 1
       event = described_class.new(params: params).perform.first
       expect(event).to have_attributes(state: 'recorded', reason: 'history_ignored', payload: {})
@@ -243,7 +243,7 @@ describe Whatsapp::ManagementWebhookService do
     end
 
     before do
-      channel.update_column(:provider_config, channel.provider_config.merge('ignore_history_messages' => false))
+      channel.update!(provider_config: channel.provider_config.merge('ignore_history_messages' => false))
     end
 
     it 'filters before persistence using the received time and queues automatic seven-day import' do
@@ -264,7 +264,7 @@ describe Whatsapp::ManagementWebhookService do
     end
 
     it 'clamps the configured age to at least one day' do
-      channel.update_column(:provider_config, channel.provider_config.merge('history_max_age_days' => 0))
+      channel.update!(provider_config: channel.provider_config.merge('history_max_age_days' => 0))
       travel_to(now) do
         event = service.perform.first
         expect(event.details['kept_messages_count']).to eq(1)
@@ -284,7 +284,7 @@ describe Whatsapp::ManagementWebhookService do
     end
 
     it 'clamps the configured age to at most 3650 days' do
-      channel.update_column(:provider_config, channel.provider_config.merge('history_max_age_days' => 99_999))
+      channel.update!(provider_config: channel.provider_config.merge('history_max_age_days' => 99_999))
       messages.replace([{ 'timestamp' => (now - 3650.days).to_i.to_s, 'text' => { 'body' => 'kept-decade' } },
                         { 'timestamp' => (now - 3651.days).to_i.to_s, 'text' => { 'body' => 'old-decade' } }])
       travel_to(now) do
@@ -333,7 +333,7 @@ describe Whatsapp::ManagementWebhookService do
     expect(channel.provider_config).to eq(original_config)
     expect(WhatsappManagementEvent.last.state).to eq('processed')
 
-    channel.update_column(:message_templates_last_updated, Time.current)
+    channel.update!(message_templates_last_updated: Time.current)
     expect { service.perform }.not_to have_enqueued_job(Channels::Whatsapp::TemplatesSyncJob)
     expect(channel.reload.message_templates_last_updated).to be_present
   end

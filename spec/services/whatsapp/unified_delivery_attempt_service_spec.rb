@@ -16,7 +16,7 @@ RSpec.describe Whatsapp::UnifiedDeliveryAttemptService do
                      content: 'Synthetic delivery', content_attributes: { 'whatsapp_transport' => metadata, 'synthetic_marker' => 'keep' })
   end
 
-  it 'persists the claim before yielding and blocks a second job using a separately loaded instance' do
+  it 'persists the claim before yielding and blocks a second job using a separately loaded instance', :aggregate_failures do
     first_job = described_class.new(message: message)
     second_job = described_class.new(message: Message.find(message.id))
     external_calls = 0
@@ -42,7 +42,7 @@ RSpec.describe Whatsapp::UnifiedDeliveryAttemptService do
   end
 
   [Net::ReadTimeout, RuntimeError].each do |error_class|
-    it "preserves the original #{error_class.name} and never resends an uncertain attempt" do
+    it "preserves the original #{error_class.name} and never resends an uncertain attempt", :aggregate_failures do
       original_error = error_class.new('synthetic private payload must not be persisted')
       external_calls = 0
       expect do
@@ -50,15 +50,14 @@ RSpec.describe Whatsapp::UnifiedDeliveryAttemptService do
           external_calls += 1
           raise original_error
         end
-      end.to raise_error { |error| expect(error).to equal(original_error) }
+      end.to(raise_error { |error| expect(error).to equal(original_error) })
 
       persisted = message.reload.content_attributes.deep_dup
       expect(persisted.dig('whatsapp_transport', 'delivery_state')).to eq('uncertain')
       expect(message.external_error).to eq(described_class::REVIEW_ERROR)
       expect(persisted.to_json).not_to include(original_error.message)
-      expect do
-        described_class.new(message: Message.find(message.id)).perform { external_calls += 1 }
-      end.to raise_error do |error|
+      retry_attempt = -> { described_class.new(message: Message.find(message.id)).perform { external_calls += 1 } }
+      expect(&retry_attempt).to raise_error do |error|
         expect(error.class.name).to eq('Whatsapp::UnifiedDeliveryAttemptService::UncertainDelivery')
       end
       expect(message.reload.content_attributes).to eq(persisted)
@@ -66,7 +65,7 @@ RSpec.describe Whatsapp::UnifiedDeliveryAttemptService do
     end
   end
 
-  it 'acknowledges a persisted source ID, preserves metadata and makes subsequent jobs idempotent' do
+  it 'acknowledges a persisted source ID, preserves metadata and makes subsequent jobs idempotent', :aggregate_failures do
     external_calls = 0
     result = described_class.new(message: message).perform do
       external_calls += 1
@@ -120,7 +119,10 @@ RSpec.describe Whatsapp::UnifiedDeliveryAttemptService do
     calls = 0
 
     2.times do
-      expect(described_class.new(message: Message.find(message.id)).perform { calls += 1; :legacy_result }).to eq(:legacy_result)
+      expect(described_class.new(message: Message.find(message.id)).perform do
+        calls += 1
+        :legacy_result
+      end).to eq(:legacy_result)
     end
 
     expect(calls).to eq(2)
@@ -133,7 +135,7 @@ RSpec.describe Whatsapp::UnifiedDeliveryAttemptService do
     error = ArgumentError.new('synthetic private preparation details')
     expect do
       described_class.new(message: message).perform(preflight: -> { raise error }) { calls += 1 }
-    end.to raise_error { |raised| expect(raised).to equal(error) }
+    end.to(raise_error { |raised| expect(raised).to equal(error) })
 
     expect(calls).to eq(0)
     expect(message.reload).to have_attributes(status: 'failed', external_error: described_class::PREFLIGHT_ERROR)

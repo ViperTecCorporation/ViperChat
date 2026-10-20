@@ -24,10 +24,16 @@ RSpec.describe Whatsapp::MessageIdentityCorrelationService do
     let!(:bare) do
       uno = channels.fetch('unoapi')
       WhatsappMessageIdentity.create!(account: account, inbox: uno.inbox, channel: uno, provider: 'unoapi',
-        external_id: 'original-id', provider_message_id: 'original-id', observations: {
-          'origin' => 'webhook', 'business_number' => uno.phone_number, 'contract_version' => 1,
-          'statuses' => { 'delivered' => nil }, 'participants' => {}
-        })
+                                      external_id: 'original-id', provider_message_id: 'original-id', observations: {
+                                        'origin' => 'webhook', 'business_number' => uno.phone_number, 'contract_version' => 1,
+                                        'statuses' => { 'delivered' => nil }, 'participants' => {}
+                                      })
+    end
+
+    let(:additional_evidence) do
+      { 'participants' => { 'recipient_id' => '5511987654321' },
+        'conflicting_observations' => { 'direction' => %w[incoming outgoing] },
+        'direction' => 'incoming', 'unknown' => 'unrecognized-evidence' }
     end
 
     it 'ignores only the evidence-free unlinked receipt, preserving the row and its ID' do
@@ -40,9 +46,7 @@ RSpec.describe Whatsapp::MessageIdentityCorrelationService do
 
     %w[participants conflicting_observations direction unknown].each do |field|
       it "keeps additional #{field} evidence ambiguous rather than choosing a message" do
-        value = { 'participants' => { 'recipient_id' => '5511987654321' },
-                  'conflicting_observations' => { 'direction' => %w[incoming outgoing] },
-                  'direction' => 'incoming', 'unknown' => 'unrecognized-evidence' }.fetch(field)
+        value = additional_evidence.fetch(field)
         bare.update!(observations: bare.observations.merge(field => value))
         expect(described_class.new(identity: meta_identity, partner_inbox: channels.fetch('unoapi').inbox).perform[:status]).to eq('ambiguous')
       end
@@ -136,7 +140,8 @@ RSpec.describe Whatsapp::MessageIdentityCorrelationService do
           other = create(:contact, account: account, phone_number: '+5511987654321')
           legacy_alias = create(:contact_inbox, inbox: identity.inbox, contact: other, source_id: '5511987654321')
           # Existing installations contain LID aliases predating today's validation.
-          legacy_alias.update_column(:source_id, '182222711709908@hosted.lid')
+          # This legacy row predates the current source-ID validation and must remain readable.
+          legacy_alias.update_column(:source_id, '182222711709908@hosted.lid') # rubocop:disable Rails/SkipsModelValidations
 
           expect(service.perform[:status]).to eq('conflicting_observations')
         end

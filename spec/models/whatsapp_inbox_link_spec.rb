@@ -4,11 +4,11 @@ RSpec.describe WhatsappInboxLink do
   let(:account) { create(:account) }
   let(:uno) do
     create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: '+556696222471',
-                             sync_templates: false, validate_provider_config: false).inbox
+                              sync_templates: false, validate_provider_config: false).inbox
   end
   let(:meta) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '5566996222471',
-                             sync_templates: false, validate_provider_config: false).inbox
+                              sync_templates: false, validate_provider_config: false).inbox
   end
   let(:link) { described_class.new(account: account, primary_inbox: uno, secondary_inbox: meta, default_provider: 'whatsapp_cloud') }
 
@@ -20,7 +20,7 @@ RSpec.describe WhatsappInboxLink do
     expect(described_class.for_inbox(uno)).to be_nil
   end
 
-  it 'supports either primary and a default provider independent of the primary' do
+  it 'supports either primary and a default provider independent of the primary', :aggregate_failures do
     link.assign_attributes(primary_inbox: meta, secondary_inbox: uno, enabled: true, default_provider: 'unoapi')
     link.save!
     expect(link.activated_at).to be_present
@@ -83,7 +83,7 @@ RSpec.describe WhatsappInboxLink do
   end
 
   it 'rejects genuinely different business numbers' do
-    meta.channel.update_column(:phone_number, '5566991111111')
+    meta.channel.update!(phone_number: '5566991111111')
     expect(link).not_to be_valid
     expect(link.errors.full_messages.join).to include('phone numbers must match')
   end

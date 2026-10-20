@@ -2,8 +2,14 @@ require 'rails_helper'
 
 # Production event-5: the hosted LID belongs to the business, NOT the recipient.
 # Keep this role distinction even though both providers deliver the same ID.
-RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'phone/LID receipts' do
+RSpec.describe Whatsapp::UnifiedMessageIngestionService do
+  receipt_orders = [false, true].freeze
   let(:account) { create(:account) }
+  let(:original_id) { '3EB0F3F5B37D5F6329094B' }
+  let(:external_ids) do
+    { uno: '3131aa00-ca0d-11f1-b3c4-63718cf5742f',
+      meta: 'wamid.HBgTQlIuMTk4NTM2MDExODgwMzQ0MBUUABEYFjNFQjBGM0Y1QjM3RDVGNjMyOTA5NEIA' }
+  end
   let(:meta_channel) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '+556696222471',
                               sync_templates: false, validate_provider_config: false)
@@ -15,13 +21,11 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'phone/LID receipts' do
   end
   let(:channels) { { meta: meta_channel, uno: uno_channel } }
   let!(:contact) { create(:contact, account: account, phone_number: '+5566996184404', bsuid: '112326346825774@lid') }
-  let!(:business_contact) { create(:contact, account: account, phone_number: '+5566996222471', bsuid: '182222711709908@lid') }
-  let!(:uno_alias) { create(:contact_inbox, inbox: uno_channel.inbox, contact: contact, source_id: '5566996184404') }
-  let!(:meta_alias) { create(:contact_inbox, inbox: meta_channel.inbox, contact: contact, source_id: '556696184404') }
-  let(:original_id) { '3EB0F3F5B37D5F6329094B' }
-  let(:external_ids) do
-    { uno: '3131aa00-ca0d-11f1-b3c4-63718cf5742f',
-      meta: 'wamid.HBgTQlIuMTk4NTM2MDExODgwMzQ0MBUUABEYFjNFQjBGM0Y1QjM3RDVGNjMyOTA5NEIA' }
+
+  before do
+    create(:contact, account: account, phone_number: '+5566996222471', bsuid: '182222711709908@lid')
+    create(:contact_inbox, inbox: uno_channel.inbox, contact: contact, source_id: '5566996184404')
+    create(:contact_inbox, inbox: meta_channel.inbox, contact: contact, source_id: '556696184404')
   end
 
   around do |example|
@@ -35,11 +39,9 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'phone/LID receipts' do
               text: { body: 'Conteúdo de teste anonimizado' }, timestamp: Time.current.to_i.to_s }
     event[:provider_message_id] = original_id if provider == :uno
     event[:to_user_id] = 'BR.1985360118803440' if provider == :meta
-    if receipt
-      event = event.slice(:id, :timestamp, :provider_message_id).merge(status: 'sent', recipient_id: '182222711709908@hosted.lid')
-    end
+    event = event.slice(:id, :timestamp, :provider_message_id).merge(status: 'sent', recipient_id: '182222711709908@hosted.lid') if receipt
     { entry: [{ changes: [{ field: receipt ? 'messages' : 'smb_message_echoes', value: {
-      metadata: { display_phone_number: channel.phone_number.delete_prefix('+') },
+      :metadata => { display_phone_number: channel.phone_number.delete_prefix('+') },
       (receipt ? :statuses : :message_echoes) => [event]
     } }] }] }.with_indifferent_access
   end
@@ -71,8 +73,8 @@ RSpec.describe Whatsapp::UnifiedMessageIngestionService, 'phone/LID receipts' do
         expect(uno_channel.inbox.contact_inboxes.where(source_id: %w[778899001100@hosted.lid 778899001100@lid])).to be_empty
       end
 
-      [false, true].each do |receipt_first|
-        it "correlates the real Meta BSUID echo after the Uno echo, receipt_first=#{receipt_first}" do
+      receipt_orders.each do |receipt_first|
+        it "correlates the real Meta BSUID echo after the Uno echo, receipt_first=#{receipt_first}", :aggregate_failures do
           expect(Down).not_to receive(:download)
           ingest(:uno)
           canonical = WhatsappUnifiedMessage.find_by!(whatsapp_inbox_link: link, original_id: original_id).message

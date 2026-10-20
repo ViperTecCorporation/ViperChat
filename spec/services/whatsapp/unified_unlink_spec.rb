@@ -4,8 +4,10 @@ require 'rails_helper'
 # provider ingestion, builder and send service; only external IO is instrumented.
 # Do not run alongside the main agent's specs: the main agent owns the test DB.
 # Gap examples are ordinary regressions, not pending/xfail assertions.
-# rubocop:disable RSpec/AnyInstance, RSpec/MultipleMemoizedHelpers, RSpec/SpecFilePathFormat
+# rubocop:disable RSpec/AnyInstance, RSpec/SpecFilePathFormat
 RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
+  receipt_states = [[:meta, 'read'], [:uno, 'sent']].freeze
+  reactivation_options = [false, true].freeze
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:suffix) { SecureRandom.random_number(10**7).to_s.rjust(7, '0') }
@@ -38,9 +40,9 @@ RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
   def webhook(provider, name)
     payload = JSON.parse(Rails.root.join('spec/fixtures/whatsapp_coexistence', "#{provider}_#{name}.json").read).with_indifferent_access
     channel = channels.fetch(provider)
-    value = payload[:entry].first[:changes].first[:value]
+    value = payload.dig(:entry, 0, :changes, 0, :value)
     value[:metadata].merge!(display_phone_number: channel.phone_number.delete_prefix('+'),
-                           phone_number_id: channel.provider_config['phone_number_id'])
+                            phone_number_id: channel.provider_config['phone_number_id'])
     Array(value[:message_echoes]).each { |event| event[:from] = channel.phone_number.delete_prefix('+') }
     payload[:phone_number] = channel.phone_number
     payload
@@ -71,12 +73,12 @@ RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
         note = create(:message, account: account, inbox: canonical.inbox, conversation: canonical.conversation,
                                 message_type: :outgoing, private: true, content: 'Nota interna preservada')
         legacy_conversation = create(:conversation, account: account, inbox: link.secondary_inbox, contact: contact,
-                                                   contact_inbox: principal == :meta ? uno_alias : meta_alias)
+                                                    contact_inbox: principal == :meta ? uno_alias : meta_alias)
         legacy = create(:message, account: account, inbox: link.secondary_inbox, conversation: legacy_conversation,
                                   source_id: 'legacy-public-id', created_at: 2.days.ago)
         allow(ActiveStorage::Blob.service).to receive(:upload)
         attachment = canonical.attachments.create!(account_id: account.id, file_type: :image,
-                                                  file: fixture_file_upload(Rails.root.join('spec/assets/avatar.png'), 'image/png'))
+                                                   file: fixture_file_upload(Rails.root.join('spec/assets/avatar.png'), 'image/png'))
         records = [canonical, note, legacy, canonical.conversation, legacy_conversation, contact, meta_alias, uno_alias, attachment,
                    attachment.file.attachment, attachment.file.blob,
                    *WhatsappUnifiedMessage.where(whatsapp_inbox_link: link),
@@ -110,7 +112,7 @@ RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
 
         channels.each do |provider, channel|
           independent = create(:conversation, account: account, inbox: channel.inbox, contact: contact,
-                                               contact_inbox: provider == :meta ? meta_alias : uno_alias)
+                                              contact_inbox: provider == :meta ? meta_alias : uno_alias)
           create(:message, account: account, inbox: channel.inbox, conversation: independent,
                            sender: contact, message_type: :incoming)
           outgoing = Messages::MessageBuilder.new(admin, independent,
@@ -171,16 +173,16 @@ RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
         original_source_id = canonical.source_id
         original_conversation_id = canonical.conversation_id
         alias_ids = WhatsappUnifiedMessageAlias.joins(:whatsapp_message_identity)
-                                              .where(whatsapp_message_identities: { account_id: account.id }).order(:id).pluck(:id)
+                                               .where(whatsapp_message_identities: { account_id: account.id }).order(:id).pluck(:id)
         link.update!(enabled: false)
 
-        [[:meta, 'read'], [:uno, 'sent']].each do |provider, status|
+        receipt_states.each do |provider, status|
           payload = payloads.fetch(provider).deep_dup
           change = payload[:entry].first[:changes].first
           echo = change[:value].delete(:message_echoes).first
           change[:field] = 'messages'
           change[:value][:statuses] = [{ id: echo[:id], provider_message_id: echo[:provider_message_id],
-                                        recipient_id: '5565987654321', status: status, timestamp: Time.current.to_i.to_s }.compact]
+                                         recipient_id: '5565987654321', status: status, timestamp: Time.current.to_i.to_s }.compact]
           ingest(provider, payload)
           ingest(provider, payloads.fetch(provider).deep_dup)
           expect(canonical.reload.status).to eq('read')
@@ -192,7 +194,7 @@ RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
         expect(account.conversations.pluck(:id)).to eq([original_conversation_id])
       end
 
-      [false, true].each do |reactivate|
+      reactivation_options.each do |reactivate|
         phase = reactivate ? 'after reactivation' : 'while disabled'
         it "does not duplicate a canonical echo with a previously unseen counterpart #{phase}" do
           ingest(principal, webhook(principal, 'phone_echo'))
@@ -213,17 +215,15 @@ RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
           expect(Whatsapp::UnifiedMessageIngestionService.message_for(identity)&.id).to eq(canonical.id)
           expect(account.conversations.pluck(:id)).to eq([canonical.conversation_id])
         end
-      end
 
-      [false, true].each do |reactivate|
         it "keeps an old pending reservation for review without a legacy bubble #{reactivate ? 'after reactivation' : 'while disabled'}" do
           payload = webhook(principal, 'phone_echo')
           value = payload[:entry].first[:changes].first[:value]
           Whatsapp::MessageIdentityObservationService.new(inbox: link.primary_inbox, value: value, outgoing_echo: true).perform
           identity = WhatsappMessageIdentity.find_by!(account: account, inbox: link.primary_inbox)
           pending_record = WhatsappUnifiedMessage.create!(whatsapp_inbox_link: link, original_id: identity.provider_message_id,
-                                                         direction: 'outgoing', participant_key: '5565987654321',
-                                                         message_kind: 'text', state: 'pending')
+                                                          direction: 'outgoing', participant_key: '5565987654321',
+                                                          message_kind: 'text', state: 'pending')
           pending_record.aliases.create!(whatsapp_message_identity: identity)
           link.update!(enabled: false)
           if reactivate
@@ -240,9 +240,7 @@ RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
           expect(pending_record.state).to eq('review')
           expect(pending_record.aliases.pluck(:whatsapp_message_identity_id)).to eq([identity.id])
         end
-      end
 
-      [false, true].each do |reactivate|
         phase = reactivate ? 'after reactivation' : 'while disabled'
         it "holds an old queued unified event for explicit review, not replay or an invisible disabled state #{phase}" do
           payload = webhook(principal, 'phone_echo')
@@ -267,11 +265,9 @@ RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
           expect(public_messages).to be_empty
           expect(account.conversations).to be_empty
         end
-      end
 
-      [false, true].each do |reactivate|
         phase = reactivate ? 'after reactivation' : 'while disabled'
-        it "rechecks a coordinator initialized before unlink and reviews the event without a legacy bubble #{phase}" do
+        it "rechecks a coordinator initialized before unlink and reviews the event without a legacy bubble #{phase}", :aggregate_failures do
           payload = webhook(principal, 'phone_echo')
           value = payload[:entry].first[:changes].first[:value]
           Whatsapp::MessageIdentityObservationService.new(inbox: link.primary_inbox, value: value, outgoing_echo: true).perform
@@ -337,4 +333,4 @@ RSpec.describe Whatsapp::UnifiedTransportService, type: :request do
     end
   end
 end
-# rubocop:enable RSpec/AnyInstance, RSpec/MultipleMemoizedHelpers, RSpec/SpecFilePathFormat
+# rubocop:enable RSpec/AnyInstance, RSpec/SpecFilePathFormat

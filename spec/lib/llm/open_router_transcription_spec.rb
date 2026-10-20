@@ -2,6 +2,7 @@ require 'rails_helper'
 
 RSpec.describe Llm::OpenRouterTranscription do
   let(:file_path) { Rails.root.join('spec/assets/sample.wav').to_s }
+
   before do
     InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_API_KEY').update!(value: 'synthetic-test-key')
     allow(File).to receive(:binread).with(file_path).and_return('synthetic-audio')
@@ -17,7 +18,8 @@ RSpec.describe Llm::OpenRouterTranscription do
   end
 
   it 'does not leak provider bodies or retry failed paid calls' do
-    request = stub_request(:post, 'https://openrouter.ai/api/v1/audio/transcriptions').to_return(status: 401, body: 'synthetic-test-key private details')
+    request = stub_request(:post, 'https://openrouter.ai/api/v1/audio/transcriptions').to_return(status: 401,
+                                                                                                 body: 'synthetic-test-key private details')
     expect { described_class.call(file_path: file_path, model: 'vendor/new-stt') }
       .to raise_error(described_class::Error, 'OpenRouter transcription failed (HTTP 401)')
     expect(request).to have_been_requested.once

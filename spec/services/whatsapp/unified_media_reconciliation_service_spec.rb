@@ -204,9 +204,10 @@ RSpec.describe Whatsapp::UnifiedMediaReconciliationService do
       messages.fetch('whatsapp_cloud').destroy!
       uno = channels.fetch('unoapi')
       receipt = WhatsappMessageIdentity.create!(account: account, inbox: uno.inbox, channel: uno, provider: 'unoapi',
-        external_id: original_id, provider_message_id: original_id, observations: {
-          origin: 'webhook', business_number: uno.phone_number, contract_version: 1, statuses: { delivered: nil }, participants: {}
-        })
+                                                external_id: original_id, provider_message_id: original_id, observations: {
+                                                  origin: 'webhook', business_number: uno.phone_number, contract_version: 1,
+                                                  statuses: { delivered: nil }, participants: {}
+                                                })
       before = [principal.file.blob_id, principal.file.attachment.id, receipt.reload.attributes]
       expect(Down).not_to receive(:download)
       expect(service.perform).to have_attributes(status: :unchanged, reason: :single_copy_retained)

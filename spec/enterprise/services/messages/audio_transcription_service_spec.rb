@@ -1,14 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe Messages::AudioTranscriptionService, type: :service do
-  before { allow(Llm::Endpoint).to receive(:openrouter?).and_return(false) }
-  let(:account) { create(:account, audio_transcriptions: true) }
-  let(:conversation) { create(:conversation, account: account) }
-  let(:message) { create(:message, account: account, conversation: conversation) }
-  let(:attachment) { message.attachments.create!(account: account, file_type: :audio) }
-
   before do
-    # Create required installation configs
+    allow(Llm::Endpoint).to receive(:openrouter?).and_return(false)
     InstallationConfig.find_or_create_by!(name: 'CAPTAIN_OPEN_AI_API_KEY') { |config| config.value = 'test-api-key' }
     InstallationConfig.find_or_create_by!(name: 'CAPTAIN_OPEN_AI_MODEL') { |config| config.value = 'gpt-4o-mini' }
 
@@ -21,6 +15,11 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
       }
     )
   end
+
+  let(:account) { create(:account, audio_transcriptions: true) }
+  let(:conversation) { create(:conversation, account: account) }
+  let(:message) { create(:message, account: account, conversation: conversation) }
+  let(:attachment) { message.attachments.create!(account: account, file_type: :audio) }
 
   describe '#perform' do
     let(:service) { described_class.new(attachment) }

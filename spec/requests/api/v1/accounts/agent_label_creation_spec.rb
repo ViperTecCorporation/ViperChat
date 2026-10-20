@@ -28,7 +28,7 @@ RSpec.describe 'Agent label creation', type: :request do
     account.update!(allow_agents_to_create_labels: true)
     label = create(:label, account: account)
     put "/api/v1/accounts/#{account.id}/labels/#{label.id}", params: { label: { title: 'changed' } },
-                                                           headers: agent.create_new_auth_token, as: :json
+                                                             headers: agent.create_new_auth_token, as: :json
     expect(response).to have_http_status(:unauthorized)
     expect(label.reload.title).not_to eq('changed')
     expect { delete "/api/v1/accounts/#{account.id}/labels/#{label.id}", headers: agent.create_new_auth_token, as: :json }
@@ -37,10 +37,10 @@ RSpec.describe 'Agent label creation', type: :request do
 
   it 'only allows administrators to change the preference' do
     patch "/api/v1/accounts/#{account.id}", params: { allow_agents_to_create_labels: true }, headers: agent.create_new_auth_token, as: :json
-    expect(account.reload.allow_agents_to_create_labels).not_to eq(true)
+    expect(account.reload.allow_agents_to_create_labels).not_to be(true)
     patch "/api/v1/accounts/#{account.id}", params: { allow_agents_to_create_labels: true }, headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:success)
-    expect(account.reload.allow_agents_to_create_labels).to eq(true)
+    expect(account.reload.allow_agents_to_create_labels).to be(true)
   end
 
   it 'does not grant creation in another account' do

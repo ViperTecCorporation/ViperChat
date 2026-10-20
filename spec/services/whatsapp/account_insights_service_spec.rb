@@ -11,7 +11,7 @@ RSpec.describe Whatsapp::AccountInsightsService do
 
   before { allow(Rails).to receive(:cache).and_return(cache) }
 
-  it 'queries only the configured number with bearer authentication, caches and preserves real zero values' do
+  it 'queries only the configured number with bearer authentication, caches and preserves real zero values', :aggregate_failures do
     requests = []
     stub_request(:get, url).with(headers: { 'Authorization' => 'Bearer synthetic-secret' }).to_return do |request|
       field = CGI.parse(request.uri.query)['fields'].sole
@@ -84,12 +84,12 @@ RSpec.describe Whatsapp::AccountInsightsService do
 
   it 'removes provider debug data and does not share cache entries between inboxes or periods' do
     stub_request(:get, url).to_return(status: 200, body: { analytics: { data_points: [{ sent: 2, token: 'private' }] } }.to_json,
-                                    headers: { 'Content-Type' => 'application/json' })
+                                      headers: { 'Content-Type' => 'application/json' })
     first = described_class.new(channel: channel).perform
     expect(first.dig(:sections, :messages, :data, 'data_points')).to eq([{ 'sent' => 2 }])
     expect(first.dig(:sections, :calls, :status)).to eq('unavailable')
     other = create(:channel_whatsapp, provider: 'whatsapp_cloud', account: channel.account,
-                                     sync_templates: false, validate_provider_config: false, provider_config: channel.provider_config)
+                                      sync_templates: false, validate_provider_config: false, provider_config: channel.provider_config)
     other.provider_config = channel.provider_config
     described_class.new(channel: other).perform
     described_class.new(channel: channel, days: 7).perform
