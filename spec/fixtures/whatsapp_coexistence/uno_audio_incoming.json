@@ -1,0 +1,42 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "200000000000000",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "5565991234567",
+              "phone_number_id": "100000000000000"
+            },
+            "contacts": [
+              {
+                "wa_id": "5565987654321",
+                "profile": {
+                  "name": "Contato Sintético"
+                }
+              }
+            ],
+            "messages": [
+              {
+                "id": "10000000-0000-4000-8000-000000000003",
+                "provider_message_id": "3EB0A0D123E91710CD383B",
+                "timestamp": "1792152000",
+                "type": "audio",
+                "from": "5565987654321",
+                "audio": {
+                  "id": "synthetic-session/synthetic-audio",
+                  "mime_type": "audio/x-wav",
+                  "filename": "synthetic.wav"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

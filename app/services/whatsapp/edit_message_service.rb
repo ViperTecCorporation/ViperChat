@@ -16,6 +16,10 @@ class Whatsapp::EditMessageService
 
   private
 
+  def transport
+    @transport ||= Whatsapp::UnifiedTransportService.new(message: message, operation: 'edit')
+  end
+
   def editable_message?
     message.outgoing? &&
       message.source_id.present? &&
@@ -25,17 +29,19 @@ class Whatsapp::EditMessageService
   end
 
   def channel
-    @channel ||= message.conversation.inbox.channel
+    @channel ||= transport.enabled? ? transport.channel : message.conversation.inbox.channel
   end
 
   def whatsapp_recipient
+    return transport.recipient if transport.enabled?
+
     return message.conversation.group_source_id if message.conversation.group?
 
     source_id = message.conversation.contact_inbox.source_id
     return source_id unless uuid_source_id?(source_id)
 
-    message.conversation.contact_inbox.contact.phone_number&.delete_prefix('+').presence ||
-      message.conversation.contact_inbox.contact.bsuid
+    contact = message.conversation.contact
+    contact.phone_number&.delete_prefix('+').presence || contact.bsuid
   end
 
   def uuid_source_id?(source_id)

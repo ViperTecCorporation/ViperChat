@@ -28,6 +28,11 @@ import InboxEmptyState from './InboxEmptyState.vue';
 import AttachmentPreviews from './AttachmentPreviews.vue';
 import CopilotReplyBottomPanel from 'dashboard/components/widgets/WootWriter/CopilotReplyBottomPanel.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import WhatsappTransportSelector from './WhatsappTransportSelector.vue';
+import {
+  getWhatsappInboxLink,
+  getWhatsappTransport,
+} from '../helpers/whatsappUnifiedInbox';
 
 const props = defineProps({
   contacts: { type: Array, default: () => [] },
@@ -67,6 +72,34 @@ const showContactsDropdown = ref(false);
 const showInboxesDropdown = ref(false);
 const showCcEmailsDropdown = ref(false);
 const showBccEmailsDropdown = ref(false);
+const whatsappTransport = ref('');
+const whatsappLink = computed(() =>
+  getWhatsappInboxLink(props.targetInbox, props.selectedContact)
+);
+watch(
+  () => [
+    whatsappLink.value?.linkId,
+    props.targetInbox?.id,
+    props.selectedContact,
+  ],
+  () => {
+    whatsappTransport.value = whatsappLink.value?.defaultProvider || '';
+  },
+  { immediate: true }
+);
+const selectedTransport = computed(() =>
+  getWhatsappTransport(
+    props.targetInbox,
+    whatsappTransport.value,
+    props.selectedContact
+  )
+);
+const transportUnavailable = computed(
+  () => !!whatsappLink.value && !selectedTransport.value
+);
+const effectiveInbox = computed(() =>
+  whatsappLink.value ? selectedTransport.value : props.targetInbox
+);
 
 const isCreating = computed(() => props.contactConversationsUiFlags.isCreating);
 
@@ -86,13 +119,13 @@ const toLower = value => (value || '').toString().toLowerCase();
 
 const targetInboxProvider = computed(() =>
   toLower(
-    props.targetInbox?.provider ||
+    effectiveInbox.value?.provider ||
       props.targetInbox?.providerName ||
       props.targetInbox?.provider_name ||
       props.targetInbox?.channel?.provider
   )
 );
-const isUnoapiProvider = computed(() => isUnoapiInbox(props.targetInbox));
+const isUnoapiProvider = computed(() => isUnoapiInbox(effectiveInbox.value));
 
 const targetInboxMedium = computed(() => toLower(props.targetInbox?.medium));
 const targetInboxChannelType = computed(() => toLower(inboxChannelType.value));
@@ -120,22 +153,9 @@ const inboxTypes = computed(() => ({
     props.targetInbox?.medium === 'whatsapp',
 }));
 
-if (import.meta.env.DEV) {
-  watch(
-    () => props.targetInbox,
-    inbox => {
-      // Log para inspecionar rapidamente o payload que vem do backend
-      // sem afetar builds de produção.
-      // eslint-disable-next-line no-console
-      console.info('[compose:new-conversation] targetInbox debug', inbox);
-    },
-    { deep: true }
-  );
-}
-
 const whatsappMessageTemplates = computed(() =>
-  Object.keys(props.targetInbox?.messageTemplates || {}).length
-    ? props.targetInbox.messageTemplates
+  Object.keys(effectiveInbox.value?.messageTemplates || {}).length
+    ? effectiveInbox.value.messageTemplates
     : []
 );
 
@@ -150,7 +170,9 @@ const validationRules = computed(() => ({
   targetInbox: { required },
   message: {
     required: requiredIf(
-      !inboxTypes.value.isWhatsapp || inboxTypes.value.isUnoapi
+      () =>
+        (!inboxTypes.value.isWhatsapp || inboxTypes.value.isUnoapi) &&
+        !state.attachedFiles.length
     ),
   },
   subject: { required: requiredIf(inboxTypes.value.isEmail) },
@@ -183,11 +205,15 @@ const newMessagePayload = () => {
     currentUser: props.currentUser,
     attachedFiles,
     directUploadsEnabled: props.isDirectUploadsEnabled,
+    whatsappTransport: whatsappTransport.value,
   });
 };
 
 const contactableInboxesList = computed(() => {
-  return buildContactableInboxesList(props.selectedContact?.contactInboxes);
+  return buildContactableInboxesList(
+    props.selectedContact?.contactInboxes,
+    props.selectedContact
+  );
 });
 
 const showNoInboxAlert = computed(() => {
@@ -333,6 +359,8 @@ const clearForm = () => {
 };
 
 const handleSendMessage = async () => {
+  if (transportUnavailable.value || isCreating.value) return;
+  if (inboxTypes.value.isWhatsapp && !inboxTypes.value.isUnoapi) return;
   const isValid = await v$.value.$validate();
   if (!isValid) return;
 
@@ -350,12 +378,15 @@ const handleSendMessage = async () => {
 };
 
 const handleSendWhatsappMessage = async ({ message, templateParams }) => {
+  if (transportUnavailable.value || isCreating.value) return;
+  if (inboxTypes.value.isUnoapi) return;
   const whatsappMessagePayload = prepareWhatsAppMessagePayload({
     targetInbox: props.targetInbox,
     selectedContact: props.selectedContact,
     message,
     templateParams,
     currentUser: props.currentUser,
+    whatsappTransport: whatsappTransport.value,
   });
   await emit('createConversation', {
     payload: whatsappMessagePayload,
@@ -406,7 +437,7 @@ useKeyboardEvents({
 
 <template>
   <div
-    class="w-full md:w-[42rem] divide-y divide-n-strong overflow-visible transition-all duration-300 ease-in-out top-full flex flex-col bg-n-alpha-3 border border-n-strong shadow-sm backdrop-blur-[100px] rounded-xl min-w-0 max-h-[calc(100vh-8rem)]"
+    class="w-full md:w-[42rem] max-w-full divide-y divide-n-strong overflow-visible transition-all duration-300 ease-in-out top-full flex flex-col bg-n-alpha-3 border border-n-strong shadow-sm backdrop-blur-[100px] rounded-xl min-w-0 max-h-[calc(100dvh-8rem-env(safe-area-inset-bottom))]"
   >
     <div class="flex-1 overflow-y-auto divide-y divide-n-strong">
       <ContactSelector
@@ -477,6 +508,24 @@ useKeyboardEvents({
         @update-dropdown="handleDropdownUpdate"
       />
 
+      <WhatsappTransportSelector
+        v-if="whatsappLink"
+        v-model="whatsappTransport"
+        :inbox="targetInbox"
+        :contact="selectedContact"
+        :disabled="isCreating"
+      />
+      <p
+        v-if="transportUnavailable"
+        role="alert"
+        class="px-4 text-sm text-n-ruby-11"
+      >
+        {{ $t('WHATSAPP_UNIFIED.CAPABILITY_UNAVAILABLE') }}
+      </p>
+      <p v-else-if="whatsappLink" class="px-4 text-xs text-n-slate-11">
+        {{ $t('WHATSAPP_UNIFIED.COMPOSE_TRANSPORT_HELP') }}
+      </p>
+
       <MessageEditor
         v-if="shouldShowMessageEditor"
         v-model="state.message"
@@ -506,16 +555,19 @@ useKeyboardEvents({
       v-else
       :attached-files="state.attachedFiles"
       :is-whatsapp-inbox="inboxTypes.isWhatsapp && !inboxTypes.isUnoapi"
-      :is-email-or-web-widget-inbox="inboxTypes.isEmailOrWebWidget"
+      :is-email-or-web-widget-inbox="
+        inboxTypes.isEmailOrWebWidget || inboxTypes.isUnoapi
+      "
       :is-twilio-sms-inbox="inboxTypes.isTwilioSMS"
       :is-twilio-whats-app-inbox="inboxTypes.isTwilioWhatsapp"
       :message-templates="whatsappMessageTemplates"
       :channel-type="inboxChannelType"
       :voice-enabled="voiceCallEnabled"
       :is-loading="isCreating"
-      :disable-send-button="isCreating"
+      :disable-send-button="isCreating || transportUnavailable"
       :has-selected-inbox="!!targetInbox"
-      :inbox-id="targetInbox?.id"
+      :inbox-id="selectedTransport?.inboxId || targetInbox?.id"
+      :use-transport-templates="!!whatsappLink"
       :has-no-inbox="showNoInboxAlert"
       :is-dropdown-active="isAnyDropdownActive"
       :message-signature="messageSignature"

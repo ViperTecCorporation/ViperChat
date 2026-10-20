@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
@@ -64,9 +65,7 @@ const unusedAttributes = computed(() =>
 
 const filteredUnusedAttributes = computed(() =>
   unusedAttributes.value.filter(attribute =>
-    attribute.attributeDisplayName
-      .toLowerCase()
-      .includes(searchQuery.value.toLowerCase())
+    includesNormalized(attribute.attributeDisplayName, searchQuery.value)
   )
 );
 

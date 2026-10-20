@@ -51,6 +51,9 @@ class Contact < ApplicationRecord
   include Labelable
   include LlmFormattable
 
+  # Insertion-only context supplied by the history importer; never persisted.
+  attr_accessor :historical_import
+
   validates :account_id, presence: true
   validates :email, allow_blank: true, uniqueness: { scope: [:account_id], case_sensitive: false }
   validate :email_format_with_lid
@@ -70,7 +73,7 @@ class Contact < ApplicationRecord
   has_many :messages, as: :sender, dependent: :destroy_async
   has_many :notes, dependent: :destroy_async
   before_validation :prepare_contact_attributes
-  after_create_commit :dispatch_create_event, :ip_lookup
+  after_create_commit :dispatch_create_event, :ip_lookup, unless: :historical_import
   after_update_commit :dispatch_update_event
   after_destroy_commit :dispatch_destroy_event
   before_save :sync_contact_attributes

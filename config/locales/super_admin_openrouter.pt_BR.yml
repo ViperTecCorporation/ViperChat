@@ -1,0 +1,6 @@
+pt_BR:
+  super_admin:
+    openrouter:
+      catalog_unavailable: 'O catálogo da OpenRouter está indisponível. Seu modelo salvo foi preservado. Tente novamente mais tarde.'
+      invalid_model: 'Escolha um modelo da OpenRouter compatível com este recurso.'
+      capability_notice: 'Catálogo do provedor com cache de uma hora. Áudio lista somente modelos de transcrição. Modelos de conversa variam no suporte a ferramentas e saída estruturada; a seleção não garante essas capacidades nem disponibilidade. Salve primeiro o endereço da OpenRouter para habilitar as listas. Alterações de modelo podem exigir reinício da aplicação.'

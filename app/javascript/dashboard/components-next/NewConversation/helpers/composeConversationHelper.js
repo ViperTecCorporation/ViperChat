@@ -2,6 +2,10 @@ import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { getInboxIconByType } from 'dashboard/helper/inbox';
 import camelcaseKeys from 'camelcase-keys';
 import ContactAPI from 'dashboard/api/contacts';
+import {
+  collapseWhatsappInboxes,
+  getWhatsappRouting,
+} from './whatsappUnifiedInbox';
 
 const CHANNEL_PRIORITY = {
   'Channel::Email': 1,
@@ -87,10 +91,35 @@ export const compareInboxes = (a, b) => {
   return nameA.localeCompare(nameB);
 };
 
-export const buildContactableInboxesList = contactInboxes => {
+export const buildContactableInboxesList = (contactInboxes, contact) => {
   if (!contactInboxes) return [];
 
-  return contactInboxes.map(transformInbox).sort(compareInboxes);
+  return collapseWhatsappInboxes(contactInboxes, contact)
+    .map(transformInbox)
+    .sort(compareInboxes);
+};
+
+export const getContactInboxes = (contact, inboxes = []) => {
+  const normalized = camelcaseKeys(contact || {}, { deep: true });
+  const base = normalized.contactInboxes || [];
+  const identifier =
+    normalized.phoneNumber ||
+    normalized.bsuid ||
+    normalized.groupSourceId ||
+    (normalized.email?.endsWith('@g.us') ? normalized.email : '');
+  if (!identifier && !normalized.recipient) return base;
+  const existing = new Set(base.map(inbox => String(inbox.id)));
+  const fallback = camelcaseKeys(inboxes, { deep: true })
+    .filter(
+      inbox =>
+        !existing.has(String(inbox.id)) &&
+        inbox.channelType === INBOX_TYPES.WHATSAPP &&
+        (normalized.recipient ||
+          (isUnoapiInbox(inbox) &&
+            (normalized.bsuid || identifier.endsWith('@g.us'))))
+    )
+    .map(inbox => ({ ...inbox, phoneNumber: identifier }));
+  return [...base, ...fallback];
 };
 
 export const getCapitalizedNameFromEmail = email => {
@@ -99,9 +128,9 @@ export const getCapitalizedNameFromEmail = email => {
 };
 
 export const processContactableInboxes = inboxes => {
-  return inboxes.map(inbox => ({
-    ...inbox.inbox,
-    sourceId: inbox.sourceId,
+  return camelcaseKeys(inboxes, { deep: true }).map(inbox => ({
+    ...(inbox.inbox || inbox),
+    sourceId: inbox.sourceId || inbox.inbox?.sourceId,
   }));
 };
 
@@ -115,7 +144,7 @@ export const mergeInboxDetails = (inboxesData, inboxesList = []) => {
       inboxesList.find(inbox => inbox.id === inboxData.id) || {};
     return {
       ...camelcaseKeys(matchingInbox, { deep: true }),
-      ...inboxData,
+      ...camelcaseKeys(inboxData, { deep: true }),
     };
   });
 };
@@ -145,17 +174,28 @@ export const prepareNewMessagePayload = ({
   currentUser,
   attachedFiles = [],
   directUploadsEnabled = false,
+  whatsappTransport,
 }) => {
+  const routing = getWhatsappRouting(
+    targetInbox,
+    whatsappTransport,
+    selectedContact
+  );
   const payload = {
-    inboxId: targetInbox.id,
-    sourceId: targetInbox.sourceId,
+    inboxId: routing.inboxId,
+    sourceId: targetInbox.sourceId || targetInbox.source_id,
     contactId: selectedContact.recipient
       ? undefined
       : Number(selectedContact.id),
     ...(selectedContact.recipient
       ? { recipient: selectedContact.recipient }
       : {}),
-    message: { content: message },
+    message: {
+      content: message,
+      ...(routing.whatsappTransport
+        ? { whatsapp_transport: routing.whatsappTransport }
+        : {}),
+    },
     assigneeId: currentUser.id,
   };
 
@@ -187,15 +227,27 @@ export const prepareWhatsAppMessagePayload = ({
   message,
   templateParams,
   currentUser,
+  whatsappTransport,
 }) => {
+  const routing = getWhatsappRouting(
+    targetInbox,
+    whatsappTransport,
+    selectedContact
+  );
   return {
-    inboxId: targetInbox.id,
-    sourceId: targetInbox.sourceId,
-    contactId: selectedContact.id,
+    inboxId: routing.inboxId,
+    sourceId: targetInbox.sourceId || targetInbox.source_id,
+    contactId: selectedContact.recipient ? undefined : selectedContact.id,
     ...(selectedContact.recipient
       ? { recipient: selectedContact.recipient }
       : {}),
-    message: { content: message, template_params: templateParams },
+    message: {
+      content: message,
+      template_params: templateParams,
+      ...(routing.whatsappTransport
+        ? { whatsapp_transport: routing.whatsappTransport }
+        : {}),
+    },
     assigneeId: currentUser.id,
   };
 };

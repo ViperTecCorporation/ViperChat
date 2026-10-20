@@ -228,7 +228,10 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def inbox
     return if params[:inbox_id].blank?
 
-    @inbox = Current.account.inboxes.find(params[:inbox_id])
+    @requested_inbox = Current.account.inboxes.find(params[:inbox_id])
+    recipient_contact = Current.account.contacts.find_by(id: params[:contact_id]) if params[:contact_id].present?
+    @inbox = Whatsapp::OperationalInboxService.canonical(inbox: @requested_inbox, contact: recipient_contact, source_id: params[:source_id])
+    Whatsapp::OperationalInboxService.authorize!(inbox: @inbox, user: Current.user) if WhatsappInboxLink.for_inbox(@inbox)
     authorize @inbox, :show?
   end
 
@@ -240,6 +243,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def contact_inbox
+    resolve_legacy_partner_contact
     @contact_inbox = build_contact_inbox
 
     # fallback for the old case where we do look up only using source id
@@ -255,12 +259,24 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def build_contact_inbox
     return if @inbox.blank? || @contact.blank?
 
+    if WhatsappInboxLink.for_inbox(@inbox) && !Whatsapp::OperationalInboxService.group?(@contact, params[:source_id])
+      return Whatsapp::OperationalInboxService.contact_inbox(contact: @contact, inbox: @inbox)
+    end
+
     ContactInboxBuilder.new(
       contact: @contact,
       inbox: @inbox,
       source_id: params[:source_id],
       hmac_verified: hmac_verified?
     ).perform
+  end
+
+  def resolve_legacy_partner_contact
+    return unless @requested_inbox && @inbox.id != @requested_inbox.id && @contact.blank?
+
+    original = @requested_inbox.contact_inboxes.find_by!(source_id: params[:source_id])
+    @contact = original.contact
+    authorize @contact, :show?
   end
 
   def resolve_direct_recipient

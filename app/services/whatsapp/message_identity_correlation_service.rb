@@ -1,6 +1,8 @@
 # Read-only observation for an explicitly selected pair, NOT message ingestion.
 # No inbox discovery, contact merge, message linking, sending or media download.
 class Whatsapp::MessageIdentityCorrelationService
+  PHONE_OBSERVATION_FIELDS = %w[business_number participants.from participants.to participants.recipient_id].freeze
+
   def initialize(identity:, partner_inbox:)
     @identity = identity
     @partner = partner_inbox
@@ -16,13 +18,42 @@ class Whatsapp::MessageIdentityCorrelationService
                                                channel_id: @partner.channel_id, provider: @partner.channel.provider,
                                                provider_message_id: @identity.provider_message_id).to_a
     return result('no_candidate') if candidates.empty?
+
+    # Uno can emit a bare status under the original ID as well as the real
+    # message UUID. An unlinked, evidence-free receipt is not a second message.
+    candidates = candidates.reject { |candidate| bare_unlinked_receipt?(candidate) } if candidates.many?
     # Never pick one apparently compatible row out of a reused/conflicting ID.
     return result('ambiguous', candidates) if candidates.size != 1
 
     result(compatibility_status(candidates.first), candidates)
   end
 
+  # Used only after an exact-message candidate has passed the scoped comparison.
+  def contact_matches_participant?(contact)
+    contact.account_id == @identity.account_id && phone(contact.phone_number).present? && phone(contact.phone_number) == peer(@identity)
+  end
+
+  def comparison_participant
+    peer(@identity)
+  end
+
+  def safe_for_unification?
+    scope_status.nil? && !observation_conflict?(@identity)
+  end
+
   private
+
+  def bare_unlinked_receipt?(candidate)
+    candidate.provider == 'unoapi' && candidate.external_id == candidate.provider_message_id &&
+      bare_receipt_observations?(candidate.observations) &&
+      observed_business?(candidate, business_number(@identity.inbox)) && !candidate.message_links.exists? &&
+      !WhatsappUnifiedMessageAlias.exists?(whatsapp_message_identity: candidate)
+  end
+
+  def bare_receipt_observations?(values)
+    values['statuses'].present? && (values['statuses'].keys - %w[sent delivered read]).empty? &&
+      (values.keys - %w[origin statuses participants business_number contract_version]).empty? && values['participants'].blank?
+  end
 
   def scope_status
     return 'invalid_scope' unless valid_scope?
@@ -38,7 +69,6 @@ class Whatsapp::MessageIdentityCorrelationService
     return pending if pending
     return 'incompatible' if known_incompatibility?(candidate)
     return 'participant_identity_pending' unless complete_participant?(@identity) && complete_participant?(candidate)
-    return 'participant_identity_pending' if brazilian_mobile_variant?(peer(@identity), peer(candidate))
     return 'incompatible' unless compatible?(candidate)
 
     'matched'
@@ -74,13 +104,18 @@ class Whatsapp::MessageIdentityCorrelationService
 
   def phone(value)
     normalized = value.to_s.delete_prefix('+')
-    normalized if normalized.match?(/\A[1-9][0-9]{6,14}\z/)
+    return unless normalized.match?(/\A[1-9][0-9]{6,14}\z/)
+
+    brazilian_mobile_comparison_phone(normalized)
   end
 
-  # Candidate evidence only. Never normalize or merge a contact by this variant.
-  def brazilian_mobile_variant?(left, right)
-    shorter, longer = [left, right].sort_by(&:length)
-    longer.match?(/\A55[1-9][0-9]9[6-9][0-9]{7}\z/) && shorter == longer[0, 4] + longer[5..]
+  # Comparison only: never save this key to channels, contacts or observations.
+  def brazilian_mobile_comparison_phone(number)
+    return number unless number.match?(/\A55[0-9]{2}[6-9][0-9]{7}\z/)
+
+    candidate = Whatsapp::PhoneNormalizers::BrazilPhoneNormalizer.new.normalize(number)
+    parsed = Phonelib.parse("+#{candidate}")
+    parsed.valid? && parsed.type == :mobile ? candidate : number
   end
 
   def direction(identity)
@@ -108,9 +143,19 @@ class Whatsapp::MessageIdentityCorrelationService
   def observation_conflict?(identity)
     observed_direction = direction(identity)
     envelope_direction = identity.observations.dig('meta_id_adapter', 'direction')
-    identity.observations['conflicting_observations'].present? ||
+    conflicting_observations?(identity) ||
       (observed_direction.present? && envelope_direction.present? && observed_direction != envelope_direction) ||
-      envelope_peer_conflict?(identity) || participant_role_conflict?(identity)
+      envelope_peer_conflict?(identity) || participant_role_conflict?(identity) || receipt_role_conflict?(identity)
+  end
+
+  def conflicting_observations?(identity)
+    identity.observations.fetch('conflicting_observations', {}).any? do |field, values|
+      next true unless PHONE_OBSERVATION_FIELDS.include?(field)
+      next false if field == 'participants.recipient_id' && participant_service(identity).receipt_recipient?(Array(values), peer: peer(identity))
+
+      keys = Array(values).map { |value| phone(value) }
+      keys.include?(nil) || keys.uniq.size != 1
+    end
   end
 
   def participant_role_conflict?(identity)
@@ -118,12 +163,27 @@ class Whatsapp::MessageIdentityCorrelationService
     to = phone(participants['to'])
     recipient = phone(participants['recipient_id'])
     (to.present? && recipient.present? && to != recipient) ||
-      (direction(identity) == 'incoming' && identity.observations['statuses'].present? && recipient.present?)
+      (direction(identity) == 'incoming' && recipient.present? && recipient != peer(identity)) || business_role_conflict?(identity)
+  end
+
+  def participant_service(identity)
+    Whatsapp::MessageIdentityParticipantService.new(identity: identity)
+  end
+
+  def receipt_role_conflict?(identity)
+    recipient = identity.observations.dig('receipt_participants', 'recipient_id')
+    recipient.present? && !participant_service(identity).receipt_recipient?([recipient], peer: peer(identity))
+  end
+
+  def business_role_conflict?(identity)
+    field = direction(identity) == 'outgoing' ? 'from' : 'to'
+    raw = identity.observations.dig('participants', field)
+    raw.present? && phone(raw) != phone(identity.observations['business_number'])
   end
 
   def envelope_peer_conflict?(identity)
     observed_peer = peer(identity)
-    envelope_peer = identity.observations.dig('meta_id_adapter', 'participant')
+    envelope_peer = phone(identity.observations.dig('meta_id_adapter', 'participant'))
     observed_peer.present? && envelope_peer.present? && observed_peer != envelope_peer
   end
 

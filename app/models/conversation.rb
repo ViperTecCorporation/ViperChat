@@ -62,6 +62,9 @@ class Conversation < ApplicationRecord
   include PushDataHelper
   include ConversationMuteHelpers
 
+  # Insertion-only context supplied by the history importer; never persisted.
+  attr_accessor :historical_import
+
   CONVERSATION_UPDATED_ADDITIONAL_ATTRIBUTE_KEYS = %w[conversation_language].freeze
   FILTERED_UNREAD_COUNT_ADDITIONAL_ATTRIBUTE_KEYS = %w[browser_language conversation_language mail_subject referer].freeze
   FILTERED_UNREAD_COUNT_UPDATE_KEYS = %w[
@@ -190,17 +193,19 @@ class Conversation < ApplicationRecord
       return unread_for_destination('web').or(unread_for_destination('channel'))
     end
 
-    agent_last_seen_at.present? ? messages.created_since(agent_last_seen_at) : messages
+    scope = messages.without_history_import
+    agent_last_seen_at.present? ? scope.created_since(agent_last_seen_at) : scope
   end
 
   def unread_for_destination(destination)
     seen_at = destination == 'web' ? web_agent_last_seen_at : (channel_agent_last_seen_at || agent_last_seen_at)
-    scope = messages.where(delivery_destination: destination)
+    scope = messages.without_history_import.where(delivery_destination: destination)
     seen_at ? scope.created_since(seen_at) : scope
   end
 
   def assignee_unread_messages
-    assignee_last_seen_at.present? ? messages.created_since(assignee_last_seen_at) : messages
+    scope = messages.without_history_import
+    assignee_last_seen_at.present? ? scope.created_since(assignee_last_seen_at) : scope
   end
 
   def unread_incoming_messages
@@ -285,6 +290,7 @@ class Conversation < ApplicationRecord
     messages[:conversation_id].eq(conversations[:id])
                               .and(messages[:account_id].eq(conversations[:account_id]))
                               .and(messages[:message_type].eq(Message.message_types[:incoming]))
+                              .and(Message.without_history_import.where_clause.ast)
                               .and(unread_last_seen_condition(messages, conversations))
   end
 
@@ -370,7 +376,7 @@ class Conversation < ApplicationRecord
   end
 
   def ensure_waiting_since
-    self.waiting_since = created_at
+    self.waiting_since = historical_import ? nil : created_at
   end
 
   def validate_additional_attributes
@@ -384,6 +390,8 @@ class Conversation < ApplicationRecord
   end
 
   def determine_conversation_status
+    return if historical_import
+
     self.status = :resolved and return if contact.blocked?
 
     return handle_campaign_status if campaign.present?
@@ -398,7 +406,27 @@ class Conversation < ApplicationRecord
   end
 
   def notify_conversation_creation
+    return if historical_import
+
     dispatcher_dispatch(CONVERSATION_CREATED)
+  end
+
+  def ensure_assignee_is_from_team
+    return if historical_import && new_record?
+
+    super
+  end
+
+  def notify_assignment_change
+    return if historical_import && saved_change_to_id?
+
+    super
+  end
+
+  def process_assignment_changes
+    return if historical_import && saved_change_to_id?
+
+    super
   end
 
   def notify_conversation_deletion

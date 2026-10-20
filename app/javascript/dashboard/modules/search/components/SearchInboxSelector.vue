@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
@@ -55,7 +56,7 @@ const inboxesSection = computed(() => {
   if (!searchQuery.value) return inboxes;
 
   return inboxes.filter(inbox =>
-    inbox.label.toLowerCase().includes(searchQuery.value.toLowerCase())
+    includesNormalized(inbox.label, searchQuery.value)
   );
 });
 

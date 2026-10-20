@@ -12,6 +12,8 @@ module Enterprise::Concerns::Attachment
   private
 
   def enqueue_audio_transcription
+    return if message.content_attributes['whatsapp_history_import'] == true
+
     return unless eligible_for_audio_transcription?
 
     Messages::AudioTranscriptionJob.perform_later(id)

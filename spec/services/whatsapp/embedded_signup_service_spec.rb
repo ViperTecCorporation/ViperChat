@@ -20,7 +20,7 @@ describe Whatsapp::EmbeddedSignupService do
       business_name: 'Test Business'
     }
   end
-  let(:channel) { instance_double(Channel::Whatsapp) }
+  let(:channel) { instance_double(Channel::Whatsapp, id: 42) }
 
   describe '#perform' do
     before do
@@ -118,9 +118,42 @@ describe Whatsapp::EmbeddedSignupService do
     end
 
     context 'when parameters are invalid' do
+      it 'still requires code and WABA without requiring business_id' do
+        invalid_service = described_class.new(account: account, params: {})
+        expect(Whatsapp::TokenExchangeService).not_to receive(:new)
+        expect { invalid_service.perform }.to raise_error(ArgumentError, 'Required parameters are missing: code, waba_id')
+      end
+
       it 'raises ArgumentError for missing parameters' do
         invalid_service = described_class.new(account: account, params: { code: '', business_id: '', waba_id: '' })
         expect { invalid_service.perform }.to raise_error(ArgumentError, /Required parameters are missing/)
+      end
+    end
+
+    context 'with WABA-only coexistence credentials' do
+      let(:params) { { code: 'test_authorization_code', waba_id: 'test_waba_id' } }
+      let(:phone_info) do
+        { phone_number_id: 'resolved_phone_id', phone_number: '+1234567890', verified: true, business_name: 'Test Business' }
+      end
+
+      it 'creates the channel using the safely resolved phone information' do
+        expect(Whatsapp::ChannelCreationService).to receive(:new)
+          .with(account, { waba_id: params[:waba_id], business_name: 'Test Business' }, phone_info, access_token)
+          .and_return(instance_double(Whatsapp::ChannelCreationService, perform: channel))
+
+        expect(service.perform).to eq(channel)
+      end
+
+      it 'does not create a channel or subscribe webhooks when phone resolution is ambiguous' do
+        allow(Whatsapp::PhoneInfoService).to receive(:new).and_return(
+          instance_double(Whatsapp::PhoneInfoService, perform: nil)
+        )
+        phone_service = Whatsapp::PhoneInfoService.new(params[:waba_id], nil, access_token)
+        allow(phone_service).to receive(:perform).and_raise('Cannot identify the signup phone number: multiple WABA phones')
+        expect(Whatsapp::ChannelCreationService).not_to receive(:new)
+        expect(channel).not_to receive(:setup_webhooks)
+
+        expect { service.perform }.to raise_error(/Cannot identify the signup phone number/)
       end
     end
 

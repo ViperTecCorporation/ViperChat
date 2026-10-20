@@ -1,0 +1,41 @@
+# Comparison only. A LID is never a phone number, and receipts may describe the
+# business device rather than the peer. Only established, account-scoped aliases
+# may prove either role; no identifiers or contact records are rewritten.
+class Whatsapp::MessageIdentityParticipantService
+  def initialize(identity:)
+    @identity = identity
+  end
+
+  def phone(value)
+    Whatsapp::InboxLinkPhoneService.normalize(value)
+  end
+
+  def equivalent?(values, expected:)
+    expected = phone(expected)
+    expected.present? && values.all? { |value| phone(value) == expected || lid_phone(value) == expected }
+  end
+
+  def receipt_recipient?(values, peer:)
+    return true if equivalent?(values, expected: peer)
+    return false unless @identity.provider == 'unoapi' && @identity.observations['statuses'].present?
+    return false if phone(peer).blank?
+
+    values.all? { |value| phone(value) == phone(peer) || business_device?(value) }
+  end
+
+  private
+
+  def business_device?(value)
+    business = phone(@identity.observations['business_number'])
+    business.present? && lid_phone(value) == business
+  end
+
+  def lid_phone(value)
+    return unless value.to_s.match?(/\A[1-9][0-9]*@(hosted\.)?lid\z/)
+
+    aliases = [value, value.sub('@hosted.lid', '@lid')].uniq
+    ids = @identity.inbox.contact_inboxes.where(source_id: aliases).pluck(:contact_id)
+    contacts = @identity.inbox.account.contacts.where(id: ids).or(@identity.inbox.account.contacts.where(bsuid: aliases)).to_a
+    phone(contacts.sole.phone_number) if contacts.one?
+  end
+end

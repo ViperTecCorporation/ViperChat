@@ -37,6 +37,7 @@ class Messages::MessageBuilder
       # When the message has no quoted content, it will just be rendered as a regular message
       # The frontend is equipped to handle this case
       process_email_content
+      Whatsapp::UnifiedTransportService.prepare!(message: @message, requested_provider: @params[:whatsapp_transport]) if @conversation.inbox.whatsapp?
       @message.save!
       update_sticker_last_used
       @message
@@ -155,6 +156,7 @@ class Messages::MessageBuilder
       process_emails
       process_email_content
 
+      Whatsapp::UnifiedTransportService.prepare!(message: @message, requested_provider: @params[:whatsapp_transport]) if @conversation.inbox.whatsapp?
       @message.save!
       update_sticker_last_used
       created_messages << @message

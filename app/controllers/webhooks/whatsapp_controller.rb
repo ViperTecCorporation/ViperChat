@@ -36,6 +36,9 @@ class Webhooks::WhatsappController < ActionController::API
   def meta_signature_verification_required?
     return true if whatsapp_channel.blank?
     return false unless whatsapp_channel.provider == 'whatsapp_cloud'
+    return true if Whatsapp::WebhookEnvelope.units(params.to_unsafe_h).any? do |unit|
+      Whatsapp::WebhookEnvelope.administrative?(unit.dig(:entry, 0, :changes, 0, :field))
+    end
     return true if channel_meta_app_secrets(whatsapp_channel).present?
 
     whatsapp_channel.provider_config['source'] == 'embedded_signup'

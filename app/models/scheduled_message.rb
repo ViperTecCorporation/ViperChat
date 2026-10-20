@@ -20,8 +20,20 @@ class ScheduledMessage < ApplicationRecord
   validate :account_consistency
   validate :items_count_within_limit
   validates_associated :items
+  validate :whatsapp_transport_is_an_object
 
   scope :due, -> { scheduled.where(scheduled_at: ..Time.current) }
+
+  def items_dispatched?
+    items.where.not(message_id: nil).or(items.where.not(dispatched_at: nil)).or(items.where(status: [:dispatching, :sent])).exists?
+  end
+
+  def ensure_transport_editable!
+    return if whatsapp_transport.blank? && !WhatsappInboxLink.for_inbox(inbox)
+    return unless items_dispatched?
+
+    raise ArgumentError, I18n.t('scheduled_messages.transport_errors.already_dispatched')
+  end
 
   def ensure_legacy_item!
     return if items.exists?
@@ -39,6 +51,10 @@ class ScheduledMessage < ApplicationRecord
   end
 
   private
+
+  def whatsapp_transport_is_an_object
+    errors.add(:whatsapp_transport, 'must be an object') unless whatsapp_transport.is_a?(Hash)
+  end
 
   def scheduled_at_must_be_in_the_future
     errors.add(:scheduled_at, 'must be in the future') if scheduled_at && scheduled_at <= Time.current

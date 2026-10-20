@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Virtualizer } from 'virtua/vue';
@@ -86,7 +87,9 @@ const filteredIcons = computed(() => {
   const term = iconSearch.value.trim().toLowerCase();
   if (!term) return CURATED_ICONS;
   return CURATED_ICONS.filter(
-    icon => icon.name.includes(term) || icon.keywords.includes(term)
+    icon =>
+      includesNormalized(icon.name, term) ||
+      includesNormalized(icon.keywords, term)
   );
 });
 

@@ -19,9 +19,10 @@ class CannedResponse < ApplicationRecord
   belongs_to :account
 
   scope :order_by_search, lambda { |search|
-    short_code_starts_with = sanitize_sql_array(['WHEN short_code ILIKE ? THEN 1', "#{search}%"])
-    short_code_like = sanitize_sql_array(['WHEN short_code ILIKE ? THEN 0.5', "%#{search}%"])
-    content_like = sanitize_sql_array(['WHEN content ILIKE ? THEN 0.2', "%#{search}%"])
+    pattern = Search::TextQuery.pattern(search)
+    short_code_starts_with = sanitize_sql_array(["WHEN #{Search::TextQuery.expression('short_code')} LIKE ? THEN 1", pattern.delete_prefix('%')])
+    short_code_like = sanitize_sql_array(["WHEN #{Search::TextQuery.expression('short_code')} LIKE ? THEN 0.5", pattern])
+    content_like = sanitize_sql_array(["WHEN #{Search::TextQuery.expression('content')} LIKE ? THEN 0.2", pattern])
 
     order_clause = "CASE #{short_code_starts_with} #{short_code_like} #{content_like} ELSE 0 END"
 

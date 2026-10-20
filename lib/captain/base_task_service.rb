@@ -30,7 +30,7 @@ class Captain::BaseTaskService
   def conversation = @conversation ||= account.conversations.find_by(display_id: conversation_display_id)
 
   def api_base
-    "#{(configured_openai_endpoint || 'https://api.openai.com/').chomp('/')}/v1"
+    Llm::Endpoint.api_base(configured_openai_endpoint)
   end
 
   def make_api_call(messages:, model: nil, feature: nil, schema: nil, tools: [])
@@ -79,7 +79,7 @@ class Captain::BaseTaskService
   end
 
   def build_chat(context, model:, messages:, schema: nil, tools: [])
-    chat = context.chat(model: model)
+    chat = context.chat(model: Llm::Endpoint.model_id(model), **Llm::Endpoint.chat_options)
     system_msg = messages.find { |m| m[:role] == 'system' }
     chat.with_instructions(system_msg[:content]) if system_msg
     chat.with_schema(schema) if schema

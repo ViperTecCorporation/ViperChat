@@ -16,7 +16,11 @@ class ScheduledMessages::DeliveryStatusService
   def failed(error)
     return unless @item
 
-    @item.with_lock { fail_schedule(error.message) }
+    @item.with_lock do
+      next if @item.sent? || @item.scheduled_message.sent? || @item.scheduled_message.cancelled?
+
+      fail_schedule(error.message)
+    end
   end
 
   private
@@ -25,7 +29,8 @@ class ScheduledMessages::DeliveryStatusService
     schedule = @item.scheduled_message
     return unless schedule.sending? && @item.dispatching?
 
-    return fail_schedule(@message.external_error.presence || 'Provider rejected the message') if @message.failed?
+    error = delivery_error(schedule)
+    return fail_schedule(error) if error
 
     @item.update!(status: :sent, sent_at: Time.current, error_message: nil)
     next_item = schedule.items.pending.where('position > ?', @item.position).first
@@ -33,6 +38,17 @@ class ScheduledMessages::DeliveryStatusService
 
     complete_schedule(schedule)
     nil
+  end
+
+  def uncertain_delivery?
+    @message.source_id.blank? || %w[attempting uncertain].include?(@message.content_attributes.dig('whatsapp_transport', 'delivery_state'))
+  end
+
+  def delivery_error(schedule)
+    return @message.external_error.presence || 'Provider rejected the message' if @message.failed?
+    return unless schedule.whatsapp_transport.present? && uncertain_delivery?
+
+    I18n.t('scheduled_messages.transport_errors.delivery_uncertain')
   end
 
   def complete_schedule(schedule)
@@ -43,5 +59,6 @@ class ScheduledMessages::DeliveryStatusService
   def fail_schedule(error_message)
     @item.update!(status: :failed, error_message: error_message)
     @item.scheduled_message.update!(status: :failed, error_message: error_message)
+    nil
   end
 end

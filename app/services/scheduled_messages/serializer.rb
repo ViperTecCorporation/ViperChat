@@ -17,7 +17,9 @@ class ScheduledMessages::Serializer
       attachment_count: serialized_items.sum { |item| item[:attachment_blob_ids].size },
       sender: sender,
       created_by_id: @message.created_by_id,
-      can_manage: can_manage?
+      can_manage: can_manage?,
+      whatsapp_transport: transport_snapshot,
+      whatsapp_transport_options: transport_options
     )
   end
 
@@ -26,7 +28,7 @@ class ScheduledMessages::Serializer
   def items
     @message.items.map do |item|
       item.as_json(only: [:id, :position, :status, :content, :content_type, :content_attributes, :voice_message,
-                          :error_message, :message_id]).merge(
+                          :error_message, :message_id, :whatsapp_transport]).merge(
                             attachment_blob_ids: item.signed_attachment_ids,
                             attachments: attachments(item)
                           )
@@ -42,6 +44,22 @@ class ScheduledMessages::Serializer
         url: Rails.application.routes.url_helpers.rails_blob_path(file, only_path: true)
       }
     end
+  end
+
+  def active_link
+    @active_link ||= WhatsappInboxLink.for_inbox(@message.inbox)
+  end
+
+  def transport_snapshot
+    return @message.whatsapp_transport if @message.whatsapp_transport.present? || active_link.nil?
+
+    { requested_provider: @message.inbox.channel.provider, selection_source: 'legacy_inbox', pending_capture: true }
+  end
+
+  def transport_options
+    return unless active_link
+
+    Whatsapp::InboxLinkTransportOptionsService.new(link: active_link, conversation: @message.conversation).perform
   end
 
   def base_attributes

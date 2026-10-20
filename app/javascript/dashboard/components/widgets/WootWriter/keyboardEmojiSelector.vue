@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { shallowRef, computed, onMounted } from 'vue';
 import emojiGroups from 'shared/components/emoji/emojisGroup.json';
 import MentionBox from '../mentions/MentionBox.vue';
@@ -18,7 +19,7 @@ const items = computed(() => {
   if (!props.searchKey) return [];
   const searchTerm = props.searchKey.toLowerCase();
   return allEmojis.value.filter(emoji =>
-    emoji.searchString.includes(searchTerm)
+    includesNormalized(emoji.searchString, searchTerm)
   );
 });
 

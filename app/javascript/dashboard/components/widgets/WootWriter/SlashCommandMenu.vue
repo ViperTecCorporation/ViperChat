@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useKeyboardNavigableList } from 'dashboard/composables/useKeyboardNavigableList';
@@ -100,7 +101,7 @@ const items = computed(() => {
   return EDITOR_ACTIONS.filter(action => {
     if (!props.enabledMenuOptions.includes(action.menuKey)) return false;
     if (!search) return true;
-    return t(action.labelKey).toLowerCase().includes(search);
+    return includesNormalized(t(action.labelKey), search);
   });
 });
 

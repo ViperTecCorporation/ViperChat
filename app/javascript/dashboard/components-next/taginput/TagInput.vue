@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, watch } from 'vue';
 import { vOnClickOutside } from '@vueuse/components';
 import { useVuelidate } from '@vuelidate/core';
@@ -98,7 +99,7 @@ const filteredMenuItems = computed(() => {
   if (props.type !== INPUT_TYPES.TEXT || !props.filterMenuItems) return items;
   const query = newTag.value?.trim()?.toLowerCase();
   if (!query) return items;
-  return items.filter(item => item.label?.toLowerCase().includes(query));
+  return items.filter(item => includesNormalized(item.label, query));
 });
 
 const emitDataOnAdd = value => {

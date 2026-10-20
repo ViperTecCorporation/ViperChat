@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { computed, ref, watch } from 'vue';
 import conversationApi from 'dashboard/api/inbox/conversation';
 import { useAlert } from 'dashboard/composables';
@@ -47,7 +48,7 @@ const matchesSearch = request => {
   if (!query) return true;
 
   return [requestName(request), requestSubtitle(request)].some(value =>
-    value?.toString().toLowerCase().includes(query)
+    includesNormalized(value?.toString(), query)
   );
 };
 

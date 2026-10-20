@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -76,7 +77,7 @@ const filteredMenuItems = computed(() => {
   if (!searchQuery.value) return flattenedMenuItems.value;
 
   return flattenedMenuItems.value.filter(item =>
-    item.label.toLowerCase().includes(searchQuery.value.toLowerCase())
+    includesNormalized(item.label, searchQuery.value)
   );
 });
 
@@ -94,7 +95,7 @@ const filteredMenuSections = computed(() => {
   return props.menuSections
     .map(section => {
       const filteredItems = (section.items || []).filter(item =>
-        item.label.toLowerCase().includes(query)
+        includesNormalized(item.label, query)
       );
 
       return {

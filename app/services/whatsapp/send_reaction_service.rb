@@ -7,15 +7,17 @@ class Whatsapp::SendReactionService
   end
 
   def perform
-    return false unless message&.conversation&.inbox&.whatsapp?
+    return false unless whatsapp_message?
     return false if message.source_id.blank?
 
     phone_number = reaction_recipient_phone_number
     return false if phone_number.blank?
 
-    message.conversation.inbox.channel.send_reaction(
+    transport = Whatsapp::UnifiedTransportService.new(message: message, operation: 'reaction')
+    target_channel = transport.enabled? ? transport.channel : message.conversation.inbox.channel
+    target_channel.send_reaction(
       phone_number,
-      message.source_id,
+      transport.reference_for(message),
       emoji,
       message
     )
@@ -23,7 +25,14 @@ class Whatsapp::SendReactionService
 
   private
 
+  def whatsapp_message?
+    message&.conversation&.inbox&.whatsapp?
+  end
+
   def reaction_recipient_phone_number
+    transport = Whatsapp::UnifiedTransportService.new(message: message, operation: 'reaction')
+    return transport.recipient if transport.enabled?
+
     contact_inbox = message.conversation.contact_inbox
     return if contact_inbox.blank?
 

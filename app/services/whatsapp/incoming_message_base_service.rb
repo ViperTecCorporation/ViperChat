@@ -4,11 +4,9 @@
 class Whatsapp::IncomingMessageBaseService
   include ::Whatsapp::IncomingMessageServiceHelpers
   include ::Whatsapp::IncomingMessageIdentifierHelper
+  include ::Whatsapp::AvatarMetadata
 
-  AVATAR_METADATA_KEYS = %i[
-    avatar_hash content_length content_md5 content_type etag file_hash file_size
-    hash last_modified picture_hash profile_picture_hash size updated_at
-  ].freeze
+  AVATAR_METADATA_KEYS = Whatsapp::AvatarMetadata::KEYS
 
   STATUS_ALIASES = {
     'received' => 'delivered'
@@ -31,7 +29,9 @@ class Whatsapp::IncomingMessageBaseService
     processed_params
 
     if processed_params.try(:[], :statuses).present?
-      sync_contacts if processed_params.try(:[], :contacts).present?
+      # Linked receipts update a proven message; their contacts can describe the
+      # business device and must not be imported as another customer.
+      sync_contacts if processed_params.try(:[], :contacts).present? && !WhatsappInboxLink.for_inbox(inbox)
       process_statuses
     elsif contact_sync_payload?
       sync_contacts
@@ -75,6 +75,7 @@ class Whatsapp::IncomingMessageBaseService
     ActiveRecord::Base.transaction do
       set_conversation
       create_messages
+      @unified_ingestion&.ensure_owned!
       @message_dedup_lock.ensure_owned!
     end
   ensure
@@ -165,21 +166,6 @@ class Whatsapp::IncomingMessageBaseService
     ).perform
   end
 
-  def avatar_metadata_from(*sources)
-    Array(sources).compact.each_with_object({}) do |source, result|
-      next unless source.respond_to?(:with_indifferent_access)
-
-      attrs = source.with_indifferent_access
-      [attrs[:picture_metadata], attrs[:profile_picture_metadata], attrs[:group_picture_metadata]].compact.each do |metadata|
-        result.merge!(avatar_metadata_from(metadata))
-      end
-      AVATAR_METADATA_KEYS.each do |key|
-        value = attrs[key].presence || attrs[:"picture_#{key}"].presence || attrs[:"profile_picture_#{key}"].presence
-        result[key] = value if value.present?
-      end
-    end
-  end
-
   def update_message_with_status(message, status)
     incoming_status = normalized_message_status(status[:status])
 
@@ -247,12 +233,22 @@ class Whatsapp::IncomingMessageBaseService
   end
 
   def create_contact_messages(message)
+    return create_unified_contact_message(message) if @unified_ingestion
+
     message['contacts'].each do |contact|
       # Pass source_id from parent message since contact objects don't have :id
       create_message(contact, source_id: message[:id], content_attributes_source: message)
       attach_contact(contact)
       @message.save!
     end
+  end
+
+  def create_unified_contact_message(message)
+    # Reserve one bubble for the whole provider event, not one per shared card.
+    # Keep the first card's legacy content; each attachment carries its own name.
+    create_message(message['contacts'].first, source_id: message[:id], content_attributes_source: message)
+    message['contacts'].each { |contact| attach_contact(contact) }
+    @message.save!
   end
 
   def create_regular_message(message)
@@ -527,7 +523,7 @@ class Whatsapp::IncomingMessageBaseService
     @message = @conversation.messages.build(
       content: message_content(message),
       account_id: @inbox.account_id,
-      inbox_id: @inbox.id,
+      inbox_id: @conversation.inbox_id,
       message_type: webhook_outgoing_message? ? :outgoing : @message_type,
       # Set status to :delivered for echo messages to prevent SendReplyJob from trying to send them
       status: webhook_outgoing_message? ? :delivered : :sent,
@@ -546,6 +542,7 @@ class Whatsapp::IncomingMessageBaseService
 
   def message_content_attributes(message)
     content_attrs = webhook_outgoing_message? ? { external_echo: true } : {}
+    content_attrs[:whatsapp_unified_message_id] = @unified_ingestion.record.id if @unified_ingestion
     content_attrs[:in_reply_to_external_id] = @in_reply_to_external_id if @in_reply_to_external_id.present?
     referral_content_attrs = referral_attributes(message)
     content_attrs[:referral] = referral_content_attrs if referral_content_attrs.present?

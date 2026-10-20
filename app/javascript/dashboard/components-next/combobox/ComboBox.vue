@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, watch, nextTick } from 'vue';
 import { OnClickOutside } from '@vueuse/components';
 import { useI18n } from 'vue-i18n';
@@ -45,7 +46,7 @@ const filteredOptions = computed(() => {
   // For local search, filter options based on search term
   const searchTerm = search.value.toLowerCase();
   return props.options.filter(option =>
-    option.label.toLowerCase().includes(searchTerm)
+    includesNormalized(option.label, searchTerm)
   );
 });
 const selectPlaceholder = computed(() => {

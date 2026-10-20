@@ -45,7 +45,7 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
       recipient_type: recipient_type_for(message),
       to: phone_number,
       type: 'message_edit',
-      context: { message_id: message.source_id },
+      context: { message_id: Whatsapp::UnifiedTransportService.new(message: message, operation: 'edit').reference_for(message) },
       text: { body: content.to_s }
     }
 
@@ -202,6 +202,14 @@ class Whatsapp::Providers::UnoapiService < Whatsapp::Providers::WhatsappCloudSer
 
   def api_base_path
     whatsapp_channel.unoapi_api_url
+  end
+
+  # UnoAPI's compatibility routes are independent of the Meta Graph API version.
+  def api_version(resource)
+    return 'v14.0' if resource == :business
+    return 'v24.0' if resource == :voice
+
+    'v13.0'
   end
 
   def pix_payment_request?(message)

@@ -4,8 +4,14 @@ import { useI18n } from 'vue-i18n';
 
 import ButtonV4 from 'next/button/Button.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import AccountInsights from './AccountInsights.vue';
+import MetaWebhookEvents from './MetaWebhookEvents.vue';
 
 const props = defineProps({
+  inboxId: {
+    type: [Number, String],
+    required: true,
+  },
   healthData: {
     type: Object,
     default: null,
@@ -18,7 +24,7 @@ const props = defineProps({
 
 const emit = defineEmits(['registerWebhook']);
 
-const { t } = useI18n();
+const { t, te, locale } = useI18n();
 
 const QUALITY_COLORS = {
   GREEN: 'text-n-teal-11',
@@ -92,7 +98,7 @@ const healthItems = computed(() => {
     {
       key: 'messagingLimitTier',
       label: t('INBOX_MGMT.ACCOUNT_HEALTH.FIELDS.MESSAGING_LIMIT_TIER.LABEL'),
-      value: messagingLimitTier || 'UNKNOWN',
+      value: messagingLimitTier ?? 'UNKNOWN',
       tooltip: t(
         'INBOX_MGMT.ACCOUNT_HEALTH.FIELDS.MESSAGING_LIMIT_TIER.TOOLTIP'
       ),
@@ -127,8 +133,26 @@ const handleGoToSettings = () => {
 const getQualityRatingTextColor = rating =>
   QUALITY_COLORS[rating] || QUALITY_COLORS.UNKNOWN;
 
-const formatTierDisplay = tier =>
-  t(`INBOX_MGMT.ACCOUNT_HEALTH.VALUES.TIERS.${tier}`) || tier;
+const formatTierDisplay = tier => {
+  const key = `INBOX_MGMT.ACCOUNT_HEALTH.VALUES.TIERS.${tier}`;
+  return te(key) ? t(key) : t('INBOX_MGMT.ACCOUNT_HEALTH.VALUES.TIERS.UNKNOWN');
+};
+
+const limitScope = computed(() =>
+  t(
+    props.healthData?.messaging_limit_scope === 'business_portfolio'
+      ? 'INBOX_MGMT.ACCOUNT_HEALTH.LIMIT_SCOPE.PORTFOLIO'
+      : 'INBOX_MGMT.ACCOUNT_HEALTH.LIMIT_SCOPE.UNKNOWN'
+  )
+);
+
+const fetchedAt = computed(() => {
+  if (!props.healthData?.fetched_at) return null;
+  const date = new Date(props.healthData?.fetched_at);
+  return Number.isNaN(date.getTime())
+    ? null
+    : date.toLocaleString(locale.value.replace('_', '-'));
+});
 
 const formatStatusDisplay = status =>
   t(`INBOX_MGMT.ACCOUNT_HEALTH.VALUES.STATUSES.${status}`) || status;
@@ -166,7 +190,7 @@ const handleRegisterWebhook = () => {
 </script>
 
 <template>
-  <div class="gap-4 mx-6">
+  <div class="min-w-0 mx-2 space-y-4 sm:mx-6">
     <div
       class="px-5 py-5 space-y-6 rounded-xl outline outline-1 -outline-offset-1 outline-n-weak bg-n-solid-2"
     >
@@ -192,11 +216,15 @@ const handleRegisterWebhook = () => {
         </ButtonV4>
       </div>
 
-      <div v-if="healthData" class="grid grid-cols-1 gap-4 xs:grid-cols-2">
+      <p v-if="fetchedAt" class="text-body-small text-n-slate-11">
+        {{ t('INBOX_MGMT.ACCOUNT_HEALTH.FETCHED_AT', { date: fetchedAt }) }}
+      </p>
+
+      <div v-if="healthData" class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div
           v-for="item in healthItems"
           :key="item.key"
-          class="flex flex-col gap-2 p-4 rounded-lg border border-n-weak bg-n-solid-1"
+          class="flex min-w-0 flex-col gap-2 p-4 rounded-lg border border-n-weak bg-n-solid-1 break-words"
         >
           <div class="flex gap-2 items-center">
             <span class="text-body-main font-medium text-n-slate-11">
@@ -208,6 +236,12 @@ const handleRegisterWebhook = () => {
               class="flex-shrink-0 w-4 h-4 cursor-help text-n-slate-9"
             />
           </div>
+          <p
+            v-if="item.type === 'tier'"
+            class="text-body-small text-n-slate-11"
+          >
+            {{ limitScope }}
+          </p>
           <div class="flex items-center">
             <span
               v-if="item.type === 'quality'"
@@ -257,7 +291,7 @@ const handleRegisterWebhook = () => {
               class="flex-shrink-0 w-4 h-4 cursor-help text-n-slate-9"
             />
           </div>
-          <div class="flex items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
             <span
               v-if="webhookConfigured && !webhookUrlMismatch"
               class="inline-flex items-center gap-1.5 px-2 py-0.5 min-h-6 text-label-small rounded-md bg-n-alpha-2 text-n-teal-11"
@@ -305,5 +339,7 @@ const handleRegisterWebhook = () => {
         </div>
       </div>
     </div>
+    <AccountInsights :inbox-id="inboxId" />
+    <MetaWebhookEvents :inbox-id="inboxId" />
   </div>
 </template>

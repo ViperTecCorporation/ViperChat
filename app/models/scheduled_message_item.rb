@@ -9,6 +9,7 @@ class ScheduledMessageItem < ApplicationRecord
   validates :position, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than: 5 }
   validates :content_type, presence: true
   validate :content_or_attachment
+  validate :whatsapp_transport_is_an_object
 
   def signed_attachment_ids
     return files.map { |attachment| attachment.blob.signed_id } if files.attached?
@@ -17,6 +18,10 @@ class ScheduledMessageItem < ApplicationRecord
   end
 
   private
+
+  def whatsapp_transport_is_an_object
+    errors.add(:whatsapp_transport, 'must be an object') unless whatsapp_transport.is_a?(Hash)
+  end
 
   def content_or_attachment
     return if content.present? || attachment_blob_ids.present? || files.attached?

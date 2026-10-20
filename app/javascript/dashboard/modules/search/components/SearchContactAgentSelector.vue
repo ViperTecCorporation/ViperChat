@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
@@ -64,9 +65,7 @@ const agentsSection = computed(() => {
       createMenuItem(agent, FROM_TYPE.AGENT, true)
     ) || [];
   return searchQuery.value
-    ? agents.filter(agent =>
-        agent.label.toLowerCase().includes(searchQuery.value.toLowerCase())
-      )
+    ? agents.filter(agent => includesNormalized(agent.label, searchQuery.value))
     : agents;
 });
 

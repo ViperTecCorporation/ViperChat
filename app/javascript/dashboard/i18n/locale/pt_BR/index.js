@@ -1,5 +1,6 @@
 import advancedFilters from './advancedFilters.json';
 import webAttendance from './webAttendance.json';
+import whatsappUnified from './whatsappUnified.json';
 import mediaEditor from './mediaEditor.json';
 import agentBots from './agentBots.json';
 import agentMgmt from './agentMgmt.json';
@@ -47,6 +48,7 @@ import whatsappTemplates from './whatsappTemplates.json';
 import yearInReview from './yearInReview.json';
 
 export default {
+  ...whatsappUnified,
   ...webAttendance,
   ...advancedFilters,
   ...mediaEditor,

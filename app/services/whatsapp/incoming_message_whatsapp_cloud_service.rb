@@ -5,15 +5,53 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   GROUP_PARTICIPANTS_SYNC_INTERVAL = 2.hours
 
   def perform
+    processed_params
+    return if processed_params.blank?
+
+    policy = Whatsapp::GroupEventPolicy.new(inbox: inbox)
+    return if policy.ignored?(processed_params, field: params.dig(:entry, 0, :changes, 0, :field))
+
+    @processed_params = policy.filter(processed_params)
     return process_group_settings_update if group_settings_update_event?
+
+    profile_sync = username_profile_sync
 
     Whatsapp::MessageIdentityObservationService.new(
       inbox: inbox, value: processed_params, outgoing_echo: outgoing_echo || (messages_data.present? && outgoing_message_type?)
     ).perform
-    super
+    sync_message_profile(profile_sync, receipt: true)
+    if group_message?
+      return Whatsapp::GroupMessageIngestionService.new(inbox: inbox, value: processed_params).perform do
+        super()
+        @message
+      end
+    end
+
+    result = Whatsapp::UnifiedMessageIngestionService.new(inbox: inbox, value: processed_params).perform do |ingestion|
+      @unified_ingestion = ingestion
+      super()
+      @message
+    end
+    sync_message_profile(profile_sync, receipt: false)
+    result
   end
 
   private
+
+  def sync_message_profile(service, receipt:)
+    service&.perform if processed_params[:statuses].present? == receipt
+  end
+
+  def username_profile_sync
+    return unless inbox.channel.provider == 'whatsapp_cloud'
+
+    service = Whatsapp::UsernameProfileSyncService.new(
+      inbox: inbox, value: processed_params, outgoing_echo: outgoing_echo || (messages_data.present? && outgoing_message_type?)
+    )
+    # Receipt profiles belong to the proven message recipient, not an address-book import.
+    @processed_params = processed_params.except(:contacts) if processed_params[:statuses].present?
+    service
+  end
 
   def group_settings_update_event?
     params.dig(:entry, 0, :changes, 0, :field).to_s == 'group_settings_update'
@@ -70,9 +108,9 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def set_contact
-    return if contact_params.blank? && !outgoing_echo
-
     return set_structured_group_contact if structured_group_message?
+    return if set_contact_from_message_identity
+    return if contact_params.blank? && !outgoing_echo
 
     super
 
@@ -94,6 +132,39 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
 
     @contact_inbox = contact_inbox
     @contact = contact_inbox.contact
+  end
+
+  def set_contact_from_message_identity
+    return false if group_message?
+    return true if set_canonical_unified_contact
+
+    link = @unified_ingestion&.resolved_contact_link || message_identity_contact_link
+    return false unless link
+
+    @contact_inbox = link
+    @contact = link.contact
+    @sender = @message_type == :outgoing ? nil : @contact
+    @contact_from_message_identity = true
+  end
+
+  def set_canonical_unified_contact
+    contact = @unified_ingestion&.canonical_contact
+    return false unless contact
+
+    @contact = contact
+    @sender = @message_type == :outgoing ? nil : @contact
+    @contact_from_message_identity = true
+  end
+
+  def message_identity_contact_link
+    resolver = Whatsapp::MessageIdentityContactResolver.new(inbox: inbox, message: messages_data.first)
+    resolver.perform || resolver.pending_contact
+  end
+
+  def merge_contact_conversation_aliases
+    return if @contact_from_message_identity
+
+    super
   end
 
   def set_contact_from_echo
@@ -206,6 +277,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def structured_group_message?
+    return group_payload[:group] if inbox.channel.provider == 'whatsapp_cloud'
     return false unless inbox.channel.provider == 'unoapi'
     return false unless ActiveModel::Type::Boolean.new.cast(inbox.channel.provider_config['use_group_conversation_schema'])
 
@@ -213,6 +285,16 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def set_conversation
+    if @unified_ingestion
+      @conversation = @unified_ingestion.conversation(@contact)
+      return
+    end
+    if @contact_from_message_identity
+      # Held until ingestion commits; a late repair cannot revive a placeholder.
+      @contact_inbox.lock!
+      @contact = @contact_inbox.reload.contact
+      @sender = @message_type == :outgoing ? nil : @contact
+    end
     return super unless structured_group_message?
 
     @conversation = Conversation.find_or_initialize_by(
@@ -335,18 +417,13 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
 
     merge_structured_group_sender_contact
 
-    sender_contact_inbox = ::ContactInboxWithContactBuilder.new(
-      source_id: structured_sender_source_id,
-      inbox: inbox,
-      contact_attributes: structured_sender_contact_attributes
-    ).perform
-    @sender = webhook_outgoing_message? ? nil : sender_contact_inbox.contact
+    @sender = structured_group_sender
 
     group_contact_inbox = ::ContactInboxWithContactBuilder.new(
       source_id: group_payload[:group_source_id],
       inbox: inbox,
       contact_attributes: {
-        email: group_payload[:group_source_id],
+        email: inbox.channel.provider == 'unoapi' ? group_payload[:group_source_id] : nil,
         name: group_payload[:group_title],
         avatar_url: group_payload[:group_picture].presence,
         avatar_picture_id: group_payload[:group_picture_id].presence,
@@ -356,6 +433,14 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
 
     @contact_inbox = group_contact_inbox
     @contact = group_contact_inbox.contact
+  end
+
+  def structured_group_sender
+    return if webhook_outgoing_message? || structured_sender_source_id.blank?
+
+    ::ContactInboxWithContactBuilder.new(
+      source_id: structured_sender_source_id, inbox: inbox, contact_attributes: structured_sender_contact_attributes
+    ).perform.contact
   end
 
   def structured_sender_source_id
@@ -379,6 +464,8 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def merge_structured_group_sender_contact
+    return unless inbox.channel.provider == 'unoapi'
+
     Whatsapp::Unoapi::GroupParticipantContactMerger.new(account: inbox.account, inbox: inbox).perform_from_group_payload(group_payload)
   end
 
@@ -416,6 +503,8 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def enqueue_group_participants_sync
+    return unless inbox.channel.provider == 'unoapi'
+
     return unless group_participants_sync_due?
 
     Whatsapp::Unoapi::GroupParticipantsSyncJob.perform_later(@conversation.id)
@@ -431,11 +520,9 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
 
   def process_group_status(status)
     Rails.logger.info("[WHATSAPP][GROUP] status received recipient_id=#{status[:recipient_id]} status=#{status[:status]}")
-    conversation = inbox.conversations.find_by(group: true, group_source_id: status[:recipient_id])
-    return if conversation.blank?
-
-    message = conversation.messages.find_by(source_id: status[:id])
-    return if message.blank?
+    message = find_message_by_source_id(status[:id])
+    return unless message && !message.private? && message.conversation.group? &&
+                  message.conversation.group_source_id == status[:recipient_id]
 
     update_message_with_status(message, status)
   end

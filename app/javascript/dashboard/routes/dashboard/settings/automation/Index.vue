@@ -7,7 +7,7 @@ import SettingsLayout from '../SettingsLayout.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
-import { picoSearch } from '@scmmishra/pico-search';
+import { picoSearch } from 'shared/helpers/search';
 import AutomationRuleRow from './AutomationRuleRow.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { BaseTable } from 'dashboard/components-next/table';

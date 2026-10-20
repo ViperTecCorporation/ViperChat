@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import Avatar from 'next/avatar/Avatar.vue';
 import { ref, computed, watch, nextTick } from 'vue';
 import { useStoreGetters, useMapGetter } from 'dashboard/composables/store';
@@ -34,7 +35,7 @@ const items = computed(() => {
         displayInfo: item[infoKey],
       }))
       .filter(item =>
-        search ? item.displayName.toLowerCase().includes(search) : true
+        search ? includesNormalized(item.displayName, search) : true
       );
 
   const categories = [

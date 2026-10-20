@@ -24,10 +24,9 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   def search
     render json: { error: 'Specify search string with parameter q' }, status: :unprocessable_entity if params[:q].blank? && return
 
-    contacts = Current.account.contacts.where(
-      'name ILIKE :search OR email ILIKE :search OR phone_number ILIKE :search OR contacts.identifier LIKE :search OR bsuid ILIKE :search OR whatsapp_username ILIKE :search',
-      search: "%#{params[:q].strip}%"
-    )
+    contacts = Search::TextQuery.apply(Current.account.contacts,
+                                       %w[contacts.name contacts.email contacts.phone_number contacts.identifier contacts.bsuid contacts.whatsapp_username],
+                                       params[:q].strip)
     @contacts = fetch_contacts_with_has_more(contacts)
   end
 
@@ -74,6 +73,8 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   def contactable_inboxes
     @all_contactable_inboxes = Contacts::ContactableInboxesService.new(contact: @contact).get
     @contactable_inboxes = @all_contactable_inboxes.select { |contactable_inbox| policy(contactable_inbox[:inbox]).show? }
+    @contactable_inboxes = @contactable_inboxes.filter_map { |entry| operational_contactable_inbox(entry) }
+    @contactable_inboxes.uniq! { |entry| entry[:inbox].id }
   end
 
   # TODO : refactor this method into dedicated contacts/custom_attributes controller class and routes
@@ -129,6 +130,17 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   end
 
   private
+
+  def operational_contactable_inbox(entry)
+    link = WhatsappInboxLink.for_inbox(entry[:inbox])
+    return entry if !link || Whatsapp::OperationalInboxService.group?(@contact, entry[:source_id])
+
+    principal = Whatsapp::OperationalInboxService.canonical(inbox: entry[:inbox], contact: @contact, source_id: entry[:source_id])
+    return unless policy(principal).show?
+
+    source = @contact.contact_inboxes.where(inbox: principal).order(:id).pick(:source_id)
+    entry.merge(inbox: principal, source_id: source.presence || entry[:source_id])
+  end
 
   # TODO: Move this to a finder class
   def resolved_contacts

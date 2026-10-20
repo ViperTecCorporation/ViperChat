@@ -1,0 +1,9 @@
+pt_BR:
+  scheduled_messages:
+    transport_errors:
+      invalid_provider: "Escolha um provedor WhatsApp válido para este agendamento."
+      link_changed: "O vínculo entre as caixas mudou ou foi desativado. Revise e selecione novamente o transporte do agendamento. Nenhuma mensagem foi enviada."
+      sender_unavailable: "O agente do agendamento não tem mais acesso à caixa principal. Revise o agendamento antes de enviar."
+      already_dispatched: "Esta sequência já tem mensagens despachadas ou incertas. Confira os recibos antes de criar outro agendamento; não há reenvio automático."
+      executor_changed: "O provedor efetivo ou a capacidade do agendamento mudou. Revise antes de enviar. Não houve tentativa pelo outro provedor."
+      delivery_uncertain: "A confirmação de entrega é incerta. Confira o recibo do provedor antes de outro envio intencional; a sequência foi interrompida sem trocar de canal."

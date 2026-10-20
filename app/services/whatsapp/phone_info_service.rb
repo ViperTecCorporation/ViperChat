@@ -22,6 +22,10 @@ class Whatsapp::PhoneInfoService
     response = @api_client.fetch_phone_numbers(@waba_id)
     phone_numbers = response['data']
 
+    if @phone_number_id.blank? && response.dig('paging', 'next').present?
+      raise 'Cannot identify the signup phone number: multiple WABA phones or additional pages; phone_number_id is required'
+    end
+
     phone_data = find_phone_data(phone_numbers)
     raise "No phone numbers found for WABA #{@waba_id}" if phone_data.nil?
 
@@ -32,10 +36,15 @@ class Whatsapp::PhoneInfoService
     return nil if phone_numbers.blank?
 
     if @phone_number_id.present?
-      phone_numbers.find { |phone| phone['id'] == @phone_number_id } || phone_numbers.first
-    else
-      phone_numbers.first
+      phone_data = phone_numbers.find { |phone| phone['id'] == @phone_number_id }
+      raise "Phone number #{@phone_number_id} not found for WABA #{@waba_id}" if phone_data.nil?
+
+      return phone_data
     end
+
+    raise 'Cannot identify the signup phone number: multiple WABA phones; phone_number_id is required' if phone_numbers.length > 1
+
+    phone_numbers.first
   end
 
   def build_phone_info(phone_data)

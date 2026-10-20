@@ -25,11 +25,13 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
     return { error: 'Audio too large for Whisper' } if audio_too_large?
 
     transcriptions = transcribe_audio
-    Rails.logger.info "Audio transcription successful: #{transcriptions}"
+    Rails.logger.info 'Audio transcription successful'
     { success: true, transcriptions: transcriptions }
   rescue Faraday::UnauthorizedError
     Rails.logger.warn('Skipping audio transcription: OpenAI configuration is invalid or disabled (401 Unauthorized).')
     { error: 'OpenAI configuration is invalid or disabled (401)' }
+  rescue Llm::OpenRouterTranscription::Error => e
+    { error: e.message }
   end
 
   private
@@ -75,8 +77,18 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
     return transcribed_text if transcribed_text.present?
 
     temp_file_path = fetch_audio_file
-    transcribed_text = nil
+    transcribed_text = if Llm::Endpoint.openrouter?
+                         Llm::OpenRouterTranscription.call(file_path: temp_file_path, model: transcription_model)
+                       else
+                         transcribe_openai_audio(temp_file_path)
+                       end
+    update_transcription(transcribed_text)
+    transcribed_text
+  ensure
+    FileUtils.rm_f(temp_file_path) if temp_file_path.present?
+  end
 
+  def transcribe_openai_audio(temp_file_path)
     File.open(temp_file_path, 'rb') do |file|
       # temperature: 0.0 minimises hallucinations on silence / near-silent
       # audio; non-zero values trigger spiraling repeats — well-documented
@@ -88,13 +100,8 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
           temperature: 0.0
         }
       )
-      transcribed_text = response['text']
+      response['text']
     end
-
-    update_transcription(transcribed_text)
-    transcribed_text
-  ensure
-    FileUtils.rm_f(temp_file_path) if temp_file_path.present?
   end
 
   def instrumentation_params(file_path)
@@ -110,7 +117,7 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
   def update_transcription(transcribed_text)
     return if transcribed_text.blank?
 
-    attachment.update!(meta: { transcribed_text: transcribed_text })
+    attachment.update!(meta: (attachment.meta || {}).merge('transcribed_text' => transcribed_text))
     message.reload.send_update_event
     message.account.increment_response_usage
 
@@ -125,6 +132,7 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
 
     {
       'x-m4a' => 'm4a',
+      'mpeg' => 'mp3',
       'x-wav' => 'wav',
       'x-mp3' => 'mp3'
     }.fetch(subtype, subtype)

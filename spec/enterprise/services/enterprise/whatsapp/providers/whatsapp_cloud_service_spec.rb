@@ -4,8 +4,8 @@ describe Whatsapp::Providers::WhatsappCloudService do
   subject(:service) { described_class.new(whatsapp_channel: whatsapp_channel) }
 
   let(:whatsapp_channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false) }
-  let(:calls_url) { 'https://graph.facebook.com/v13.0/123456789/calls' }
-  let(:messages_url) { 'https://graph.facebook.com/v13.0/123456789/messages' }
+  let(:calls_url) { 'https://graph.facebook.com/v26.0/123456789/calls' }
+  let(:messages_url) { 'https://graph.facebook.com/v26.0/123456789/messages' }
   let(:headers) { { 'Content-Type' => 'application/json' } }
 
   before { stub_request(:get, /message_templates/) }

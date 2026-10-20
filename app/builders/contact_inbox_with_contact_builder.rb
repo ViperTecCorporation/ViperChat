@@ -6,12 +6,10 @@ class ContactInboxWithContactBuilder
   pattr_initialize [:inbox!, :contact_attributes!, :source_id, :hmac_verified]
 
   def perform
-    merge_unoapi_duplicate_contact
-    find_or_create_contact_and_contact_inbox
-  # in case of race conditions where contact is created by another thread
-  # we will try to find the contact and create a contact inbox
-  rescue ActiveRecord::RecordNotUnique
-    find_or_create_contact_and_contact_inbox
+    return perform_without_contact_identity_lock unless inbox.whatsapp?
+
+    phone = contact_attributes[:phone_number].presence || source_id
+    Whatsapp::ContactIdentityLock.synchronize(account_id: inbox.account_id, phone: phone) { perform_without_contact_identity_lock }
   end
 
   def find_or_create_contact_and_contact_inbox
@@ -48,6 +46,13 @@ class ContactInboxWithContactBuilder
 
   private
 
+  def perform_without_contact_identity_lock
+    merge_unoapi_duplicate_contact
+    find_or_create_contact_and_contact_inbox
+  rescue ActiveRecord::RecordNotUnique
+    find_or_create_contact_and_contact_inbox
+  end
+
   def unoapi_participant_wa_id
     contact_attributes[:phone_number].to_s.gsub(/\D/, '').presence || source_id
   end
@@ -58,9 +63,7 @@ class ContactInboxWithContactBuilder
     @contact_inbox = create_contact_inbox
   end
 
-  def account
-    @account ||= inbox.account
-  end
+  def account = (@account ||= inbox.account)
 
   def create_contact_inbox
     ContactInboxBuilder.new(
@@ -219,6 +222,11 @@ class ContactInboxWithContactBuilder
 
   def find_contact_by_phone_number(phone_number)
     return if phone_number.blank?
+
+    if inbox.whatsapp?
+      variants = Whatsapp::ContactIdentityLock.phone_variants(phone_number).map { |number| "+#{number}" }
+      return account.contacts.where(phone_number: variants).order(:id).first
+    end
 
     account.contacts.find_by(phone_number: phone_number)
   end

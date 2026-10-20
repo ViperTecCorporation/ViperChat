@@ -1,4 +1,5 @@
 <script setup>
+import { includesNormalized } from 'shared/helpers/search';
 import { watch, ref, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
@@ -144,7 +145,7 @@ const filteredAgents = computed(() => {
   return assignableAgents.value.filter(agent => {
     if (agent.id === currentUserId) return false;
     if (!query) return true;
-    return agent.name.toLowerCase().includes(query);
+    return includesNormalized(agent.name, query);
   });
 });
 
