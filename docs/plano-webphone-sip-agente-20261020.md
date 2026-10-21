@@ -378,3 +378,11 @@ Validação da combinação nesta branch:
 - O junction de dependências do worktree exigiu configuração Vitest temporária permitindo apenas o worktree e o diretório de dependências compartilhado, sem desativar testes. O arquivo temporário, a exportação no container e os dois arquivos de transferência no Temp Windows foram removidos ao concluir.
 
 As três alterações locais preexistentes em `android/app/capacitor.build.gradle`, `android/capacitor.settings.gradle` e `ios/App/CapApp-SPM/Package.swift`, além de `.playwright-cli/` e `output/`, foram preservadas e não incluídas na integração. Não foi feita nova tentativa de contornar os bloqueios nativos documentados em `docs/correcao-seletor-transporte-sem-f5-20261021.md`: o aceite físico Android/iOS desta integração continua pendente. Webhooks/CDR do serviço VoIP continuam fora do escopo autorizado da implementação atual.
+
+### Integração das reações nas caixas parceiras — 21/10/2026
+
+O commit `ac141005be8363ae60a6bdae13408219771925f3`, publicado na `4.16.0`, foi incorporado por cherry-pick com referência de origem como `a954ccede`. Inclui serviço, regressões e o complemento do plano em `docs/correcao-edicao-exclusao-caixa-unificada-20261021.md`. Os três arquivos resultantes foram comparados com a origem e são idênticos, sem conflitos ou alterações no VoIP.
+
+Reações recebidas/echo de Meta e ViperConnect no par ativo atualizam somente a bolha original identificada, sem criar conversa ou reabrir atendimento; referências sem evidência ficam pendentes/revisão. IDs, histórico e mídias são preservados. A validação anterior do patch aprovou 376 exemplos backend e RuboCop nos dois arquivos Ruby; não é uma nova execução da suíte VoIP nem a suíte completa. Não houve alteração de frontend compartilhado ou código nativo nesta correção.
+
+Commit/push das duas branches autorizados pelo usuário. Trabalho retomado em `feat/agent-voip-webphone`; alterações nativas locais e arquivos não rastreados preexistentes continuam fora dos commits. Sem atualização do runtime da réplica, containers, imagem/tag ou VPS nesta integração.
