@@ -18,6 +18,7 @@ import ContactDeleteModal from 'dashboard/modules/contact/ContactDeleteModal.vue
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
+import VoipContactCallButton from 'dashboard/components/voip/VoipContactCallButton.vue';
 import InlineInput from 'dashboard/components-next/inline-input/InlineInput.vue';
 import FavoriteMessagesModal from 'dashboard/components-next/message/FavoriteMessagesModal.vue';
 
@@ -35,6 +36,7 @@ export default {
     ContactLabels,
     ContactDeleteModal,
     VoiceCallButton,
+    VoipContactCallButton,
     InlineInput,
   },
   props: {
@@ -381,6 +383,7 @@ export default {
             />
           </template>
         </ComposeConversation>
+        <VoipContactCallButton v-if="!currentChat.group" :contact="contact" />
         <VoiceCallButton
           :phone="contact.phone_number"
           :contact-id="contact.id"

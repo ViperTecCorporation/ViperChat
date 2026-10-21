@@ -8,6 +8,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
+import VoipContactCallButton from 'dashboard/components/voip/VoipContactCallButton.vue';
 
 const props = defineProps({
   selectedContact: {
@@ -102,6 +103,7 @@ const closeMobileSidebar = () => {
                 :disabled="isUpdating"
                 @click="toggleBlock"
               />
+              <VoipContactCallButton :contact="selectedContact" />
               <VoiceCallButton
                 v-if="contactId && selectedContact?.phoneNumber"
                 :phone="selectedContact?.phoneNumber"

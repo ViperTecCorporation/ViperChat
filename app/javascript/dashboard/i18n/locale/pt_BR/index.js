@@ -1,4 +1,5 @@
 import advancedFilters from './advancedFilters.json';
+import agentVoip from './agentVoip.json';
 import webAttendance from './webAttendance.json';
 import whatsappUnified from './whatsappUnified.json';
 import mediaEditor from './mediaEditor.json';
@@ -48,6 +49,7 @@ import whatsappTemplates from './whatsappTemplates.json';
 import yearInReview from './yearInReview.json';
 
 export default {
+  ...agentVoip,
   ...whatsappUnified,
   ...webAttendance,
   ...advancedFilters,

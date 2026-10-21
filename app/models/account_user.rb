@@ -36,6 +36,8 @@ class AccountUser < ApplicationRecord
 
   accepts_nested_attributes_for :account
 
+  before_destroy :revoke_voip_membership, prepend: true
+
   after_create_commit :notify_creation, :create_notification_setting
   after_destroy :notify_deletion, :remove_user_from_account
   after_save :update_presence_in_redis, if: :saved_change_to_availability?
@@ -69,6 +71,14 @@ class AccountUser < ApplicationRecord
   end
 
   private
+
+  def revoke_voip_membership
+    # Keep immutable call history while revoking registration and allowing the ramal to be reassigned.
+    VoipAgentExtension.where(account_user_id: id).find_each do |binding|
+      binding.update!(account_user: nil, active: false, encrypted_credentials: nil)
+    end
+    VoipFavorite.where(account_user_id: id).destroy_all
+  end
 
   def notify_creation
     Rails.configuration.dispatcher.dispatch(AGENT_ADDED, Time.zone.now, account: account)

@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { ref, nextTick } from 'vue';
 import ContactsDetailsLayout from './ContactsDetailsLayout.vue';
+import VoipContactCallButton from 'dashboard/components/voip/VoipContactCallButton.vue';
 
 const state = vi.hoisted(() => ({ desktop: null }));
 vi.mock('@vueuse/core', async importOriginal => ({
@@ -32,6 +33,7 @@ describe('ContactsDetailsLayout responsive panel', () => {
           Breadcrumb: true,
           ComposeConversation: true,
           VoiceCallButton: true,
+          VoipContactCallButton: true,
         },
       },
     });
@@ -58,5 +60,14 @@ describe('ContactsDetailsLayout responsive panel', () => {
     expect(wrapper.find('#contact-sidebar-content').exists()).toBe(false);
     expect(wrapper.findAll('[data-testid="history"]')).toHaveLength(1);
     expect(wrapper.get('[data-testid="details"]').isVisible()).toBe(true);
+  });
+
+  it('passes the selected contact to the global webphone shortcut', async () => {
+    const wrapper = render();
+    const contact = { id: 231, name: 'Contact', phoneNumber: '+5566996269251' };
+    await wrapper.setProps({ selectedContact: contact });
+    expect(
+      wrapper.findComponent(VoipContactCallButton).props('contact')
+    ).toEqual(contact);
   });
 });

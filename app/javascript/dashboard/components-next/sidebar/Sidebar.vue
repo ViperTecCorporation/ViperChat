@@ -496,6 +496,13 @@ const menuItems = computed(() => {
       ],
     },
     {
+      name: 'Agent Calls',
+      label: t('AGENT_VOIP.TITLE'),
+      icon: 'i-lucide-phone',
+      to: accountScopedRoute('agent_voip_calls'),
+      activeOn: ['agent_voip_calls'],
+    },
+    {
       name: 'Contacts',
       label: t('SIDEBAR.CONTACTS'),
       icon: 'i-lucide-contact',
@@ -741,6 +748,13 @@ const menuItems = computed(() => {
             'settings_inboxes_add_agents',
           ],
           to: accountScopedRoute('settings_inbox_list'),
+        },
+        {
+          name: 'Settings VoIP',
+          label: t('AGENT_VOIP.SERVICES'),
+          icon: 'i-lucide-phone',
+          to: accountScopedRoute('agent_voip_services'),
+          permissions: ['administrator'],
         },
         {
           name: 'Settings Labels',

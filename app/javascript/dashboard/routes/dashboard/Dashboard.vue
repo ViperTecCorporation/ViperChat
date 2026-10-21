@@ -19,14 +19,14 @@ const CommandBar = defineAsyncComponent(
 const FloatingCallWidget = defineAsyncComponent(
   () => import('dashboard/components/widgets/FloatingCallWidget.vue')
 );
-const VoiceDialerFab = defineAsyncComponent(
-  () => import('dashboard/components/widgets/VoiceDialerFab.vue')
-);
 const VoiceAudioPlaybackModal = defineAsyncComponent(
   () => import('dashboard/components/widgets/VoiceAudioPlaybackModal.vue')
 );
-const VoiceAutoRegister = defineAsyncComponent(
-  () => import('dashboard/components/widgets/VoiceAutoRegister.vue')
+const AgentWebphone = defineAsyncComponent(
+  () => import('dashboard/components/voip/AgentWebphone.vue')
+);
+const AgentDialer = defineAsyncComponent(
+  () => import('dashboard/components/voip/AgentDialer.vue')
 );
 
 import CopilotContainer from 'dashboard/components/copilot/CopilotContainer.vue';
@@ -43,9 +43,9 @@ export default {
     UpgradePage,
     CopilotContainer,
     FloatingCallWidget,
-    VoiceDialerFab,
     VoiceAudioPlaybackModal,
-    VoiceAutoRegister,
+    AgentWebphone,
+    AgentDialer,
     MobileSidebarLauncher,
   },
   setup() {
@@ -171,8 +171,6 @@ export default {
           @toggle="toggleMobileSidebar"
         />
         <CopilotContainer />
-        <VoiceAutoRegister />
-        <VoiceDialerFab />
         <VoiceAudioPlaybackModal />
         <FloatingCallWidget v-if="hasActiveCall || hasIncomingCall" />
       </template>
@@ -186,5 +184,7 @@ export default {
         @clickaway="closeKeyShortcutModal"
       />
     </main>
+    <AgentWebphone />
+    <AgentDialer />
   </div>
 </template>

@@ -10,14 +10,6 @@ class Api::V1::ProfilesController < Api::BaseController
       @user.update!(password_params.except(:current_password))
     end
 
-    Rails.logger.info(
-      "PROFILE_UPDATE " \
-      "user_id=#{@user.id} " \
-      "password_change=#{password_params[:password].present?} " \
-      "webrtc_username=#{custom_attributes_params[:webrtc_username].presence} " \
-      "webrtc_jwt_present=#{custom_attributes_params[:webrtc_jwt].present?} " \
-      "webrtc_password_present=#{custom_attributes_params[:webrtc_password].present?}"
-    )
     @user.with_lock do
       @user.assign_attributes(profile_attributes)
       @user.custom_attributes.merge!(custom_attributes_params)
@@ -90,7 +82,7 @@ class Api::V1::ProfilesController < Api::BaseController
   end
 
   def custom_attributes_params
-    params.require(:profile).permit(:phone_number, :webrtc_jwt, :webrtc_username, :webrtc_password)
+    params.require(:profile).permit(:phone_number)
   end
 
   def password_params

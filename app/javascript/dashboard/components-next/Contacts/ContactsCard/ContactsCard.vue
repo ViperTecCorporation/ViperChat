@@ -9,12 +9,14 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Flag from 'dashboard/components-next/flag/Flag.vue';
 import ContactDeleteSection from 'dashboard/components-next/Contacts/ContactsCard/ContactDeleteSection.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
+import VoipContactCallButton from 'dashboard/components/voip/VoipContactCallButton.vue';
 import countries from 'shared/constants/countries';
 
 const props = defineProps({
   id: { type: Number, required: true },
   name: { type: String, default: '' },
   email: { type: String, default: '' },
+  identifier: { type: String, default: '' },
   companyId: { type: [Number, String], default: '' },
   additionalAttributes: { type: Object, default: () => ({}) },
   phoneNumber: { type: String, default: '' },
@@ -193,6 +195,17 @@ const handleAvatarHover = isHovered => {
         </div>
       </div>
 
+      <VoipContactCallButton
+        :contact="{
+          id,
+          name,
+          phoneNumber,
+          thumbnail,
+          additionalAttributes,
+          email,
+          identifier,
+        }"
+      />
       <Button
         icon="i-lucide-chevron-down"
         variant="ghost"

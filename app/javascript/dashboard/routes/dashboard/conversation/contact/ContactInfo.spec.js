@@ -1,6 +1,7 @@
 import { shallowMount } from '@vue/test-utils';
 import ContactInfo from './ContactInfo.vue';
 import AvatarPreview from 'next/avatar/AvatarPreview.vue';
+import VoipContactCallButton from 'dashboard/components/voip/VoipContactCallButton.vue';
 
 vi.mock('dashboard/composables/useAdmin', () => ({
   useAdmin: () => ({ isAdmin: false }),
@@ -48,5 +49,17 @@ describe('contact sidebar avatar', () => {
     expect(
       mountPanel({ showAvatar: false }).findComponent(AvatarPreview).exists()
     ).toBe(false);
+  });
+
+  it('offers the global webphone shortcut with the current contact', () => {
+    const contact = {
+      id: 231,
+      name: 'Contact',
+      phone_number: '+5566996269251',
+    };
+    const wrapper = mountPanel({ contact });
+    expect(
+      wrapper.findComponent(VoipContactCallButton).props('contact')
+    ).toEqual(contact);
   });
 });

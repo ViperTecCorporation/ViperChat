@@ -229,6 +229,22 @@ Rails.application.routes.draw do
           resource :voice_call, only: [:create], module: :internal_conversations
         end
 
+          namespace :voip do
+            get :directory, to: 'directory#index'
+            get :identity, to: 'directory#identity'
+            resources :services, only: [:index, :create, :update, :destroy] do
+              get :agents, on: :collection
+            end
+            resource :profile, only: [:show, :update] do
+              post :activate
+            end
+            resource :registration, only: [:create]
+            resources :calls, only: [:index, :show, :create] do
+              post :observe, on: :member
+            end
+            resources :favorites, only: [:index, :create, :destroy]
+          end
+
           resources :search, only: [:index] do
             collection do
               get :conversations

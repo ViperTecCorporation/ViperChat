@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
+import { useAgentVoipStore } from 'dashboard/stores/agentVoip';
 
 const { clearCookiesOnLogout, deleteIndexedDBOnLogout } = vi.hoisted(() => ({
   clearCookiesOnLogout: vi.fn(),
@@ -21,8 +23,29 @@ describe('#AuthAPI', () => {
   });
 
   afterEach(() => {
+    setActivePinia(undefined);
+    vi.restoreAllMocks();
     window.axios = originalAxios;
     window.viperNativeAuth = originalNativeAuth;
+  });
+
+  it('stops SIP and persists teardown before invalidating the authenticated session', async () => {
+    setActivePinia(createPinia());
+    const calls = [];
+    vi.spyOn(useAgentVoipStore(), 'stop').mockImplementation(async () =>
+      calls.push('sip-stop')
+    );
+    window.viperNativeAuth = {
+      beforeLogout: vi.fn(async () => calls.push('push-cleanup')),
+    };
+    window.axios = {
+      delete: vi.fn(async () => {
+        calls.push('sign-out');
+        return { status: 200 };
+      }),
+    };
+    await AuthAPI.logout();
+    expect(calls).toEqual(['sip-stop', 'push-cleanup', 'sign-out']);
   });
 
   it('removes native push before ending the authenticated session', async () => {

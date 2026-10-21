@@ -1,6 +1,8 @@
 /* global axios */
 
 import Cookies from 'js-cookie';
+import { getActivePinia } from 'pinia';
+import { useAgentVoipStore } from 'dashboard/stores/agentVoip';
 import endPoints from './endPoints';
 import {
   clearCookiesOnLogout,
@@ -17,6 +19,8 @@ export default {
   },
   async logout() {
     const urlData = endPoints('logout');
+    const pinia = getActivePinia();
+    if (pinia) await useAgentVoipStore(pinia).stop();
     try {
       await window.viperNativeAuth?.beforeLogout?.();
     } catch (error) {

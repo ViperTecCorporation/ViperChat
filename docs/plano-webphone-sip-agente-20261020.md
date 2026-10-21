@@ -1,12 +1,14 @@
 # Plano: webphone SIP/WebRTC por agente e aba Chamadas
 
-Data: 20/10/2026 — America/Cuiaba. Estado: planejamento consolidado; implementação não iniciada nesta etapa.
+Plano inicial: 20/10/2026 — America/Cuiaba. Atualização: 21/10/2026. Estado: primeira entrega implementada e validada funcionalmente na réplica dev existente, sem publicação ou implantação na VPS. Limites de aceite nativo, hardware e transferência real estão explícitos no runbook.
+
+Execução e limites de aceite: [runbook da validação na réplica existente](validacao-webphone-sip-agente-20261021.md). Esta atualização separa recursos implementados de testes ainda pendentes. Os resultados das seções históricas ao final não substituem os testes desta implementação.
 
 Complementa o [levantamento do WhatsApp e do código atual](mapeamento-chamadas-whatsapp-webphone-20261019.md). As decisões abaixo substituem as propostas preliminares desse levantamento quando divergirem.
 
 Contrato do serviço/worker analisado em 20/10/2026: [auditoria de REST, eventos e CDR](auditoria-contrato-voip-cdr-20261020.md). Já existe histórico SQLite/JSON e REST paginado; faltam contrato incremental durável, participações e escopo específico de agente para o aceite completo. Não foi acessada a VPS.
 
-**Ordem definida pelo usuário em 20/10/2026:** implementar primeiro o mecanismo funcional e a interface no ViperChat em dev, usando SIP/WebRTC existente e eventos sintéticos para os contratos futuros. Depois incrementar serviço VoIP e ViperChat com **webhooks, fila persistente, retentativas e recuperação por REST incremental**. Esta atualização reorganiza o planejamento; não inicia a implementação.
+**Ordem definida pelo usuário:** implementar primeiro o mecanismo funcional e a interface no ViperChat em dev, usando SIP/WebRTC existente. Depois incrementar serviço VoIP e ViperChat com **webhooks, fila persistente, retentativas e recuperação por REST incremental**. A primeira entrega já possui código funcional e testes locais; a segunda permanece planejada, não ativada. Usar somente a réplica Docker existente, sem criar outros containers nem mexer na VPS. A limpeza dos dois resíduos bloqueados ficou pendente por orientação do usuário e não bloqueia a implementação.
 
 ## 1. Objetivo e decisões confirmadas
 
@@ -16,7 +18,7 @@ Contrato do serviço/worker analisado em 20/10/2026: [auditoria de REST, eventos
 - Acesso **Chamadas** na sidebar imediatamente abaixo de Conversas.
 - Estilo do webphone baseado nas referências extraídas do WhatsApp: controles agrupados/arredondados, contraste, estados de áudio, variantes compacta/completa e organização lista/detalhes. Traduzir isso para componentes Vue/Tailwind e identidade ViperChat, sem incorporar binários, fontes, sons ou SVGs proprietários.
 - Desktop: lista à esquerda e detalhes à direita. Mobile: lista em tela inteira → detalhes com Voltar, preservando busca, filtros e rolagem.
-- Preservar configurações antigas, histórico, IDs, contatos, mensagens e mídias. Não desligar fluxos legados antes de validar a substituição correspondente.
+- Preservar histórico, IDs, contatos, mensagens e mídias. O usuário dispensou preservar/migrar a configuração Voice/custom antiga, que nunca foi usada em produção; a interface antiga agora orienta a configurar Serviços VoIP e ramal no perfil. Essa dispensa não autoriza alterar outros provedores Voice/Twilio/Meta nem apagar dados legados.
 - Primeira entrega: áudio. Preparar contratos para integração nativa futura iOS/Android; não incluir vídeo, links, programação de chamadas ou promessa de segundo plano só por existirem no WhatsApp.
 - Duas entregas com aceite separado: (1) ViperChat funcional para sessões observadas pelo agente conectado; (2) histórico autoritativo sincronizado entre servidores, inclusive com navegador fechado. A segunda entrega não bloqueia o desenvolvimento da primeira, mas sua ausência deve ser visível e não pode ser declarada como cobertura completa.
 
@@ -164,7 +166,7 @@ Base visual: `WhatsApp.Design/Voip/CallControlsView.xaml`, `AudioCallView.xaml`,
 
 ### Mobile e acessibilidade
 
-- Mesmo padrão da lista de chats: lista em tela inteira; detalhe em rota/tela própria com Voltar, inclusive botão físico/gesto nativo. Preservar filtros, pesquisa, seleção e rolagem ao retornar.
+- Mesmo padrão da lista de chats: lista em tela inteira; detalhe em rota/tela própria com Voltar, inclusive botão físico/gesto nativo. Preservar filtros, pesquisa, seleção e rolagem ao retornar. A implementação reutiliza `BackButton.vue`: somente a seta, com rótulo acessível, à esquerda do título de detalhes, na mesma posição da navegação de conversas.
 - Webphone completo em apresentação adequada ao celular; compacto não cobre enviar, navegação ou outros controles críticos. Reservar safe areas.
 - Modal VoIP com rolagem e rodapé acessível quando o teclado abre; seleção de serviço antes dos campos do ramal. Sem overflow horizontal.
 - Validar 320, 360, 390, 412/430 px e desktop, retrato/paisagem, labels longas e foco de teclado. Os controles compactos de 32 px do WhatsApp desktop não determinam o alvo de toque mobile.
@@ -237,14 +239,15 @@ Inventário complementar do serviço, agora confirmado no código local: `viperc
 
 ## 9. Migração e compatibilidade
 
-1. Prévia somente leitura por conta: serviços inferidos das caixas, parâmetros comuns, bindings candidatos, fonte da credencial e conflitos. Nunca imprimir os valores dos segredos na prévia.
-2. Duas caixas com o mesmo domínio não são necessariamente o mesmo serviço; comparar configuração efetiva e exigir confirmação de conflitos. Preferir serviços separados quando a identidade não for inequívoca.
-3. Credencial de `InboxMember` é a precedência observada hoje; não ignorá-la em favor de um perfil mais recente sem decisão. Perfil global só é candidato quando a conta/central corretas forem demonstradas; jamais replicar esse segredo para todas as contas/serviços do agente.
-4. Migração aditiva e idempotente por conta, com origem legada registrada, dry-run e aprovação antes de escrita. Reexecução não duplica serviços, bindings ou chamadas. Não apagar caixas, usuários, contatos ou registros antigos.
-5. Não apagar configuração legada na primeira release. Ao ativar o novo binding, um único responsável registra o ramal; desligar o auto-register antigo apenas para esse vínculo migrado. Não manter dois clientes concorrentes usando as mesmas credenciais.
-6. Clientes antigos não devem atualizar/zerar os novos bindings por omissão de campos. Estabelecer versões mínimas e gate de migração para não habilitar registro legado e novo ao mesmo tempo. A tela antiga deve orientar a nova localização quando houver migração.
-7. Ativação por feature flag da conta e agente piloto; sem migrar contas sem opt-in. Rollback de UI/registro separado de rollback de dados; não restaurar banco automaticamente sobre tráfego novo. Preservar chamadas registradas após ativação.
-8. Histórico legado permanece na origem e pode ser lido sem acoplar nova sessão a inbox. Não alterar chamadas oficiais existentes ou fluxos de mensagem/coexistência como parte desta migração.
+O plano inicial previa importar configurações das caixas; essa parte foi dispensada explicitamente pelo usuário antes da implementação, pois Voice/custom nunca foi colocado em produção. Não há importador automático de credenciais antigas nem migração de chamadas legadas para as novas tabelas.
+
+1. As migrations `20261020230000`, `20261020230001` e `20261020230002` criam cinco tabelas VoIP e preservam ramal e ID do agente como snapshots da chamada. Não movem contatos, conversas, mensagens, mídias ou registros da tabela legada `Call`. Remover um agente da conta desativa seu binding, limpa a credencial e preserva o histórico, sem atribuí-lo a outro agente. A reversão da terceira migration é explicitamente irreversível: não fabricar proprietários para preencher vínculos removidos.
+2. Serviços e bindings são configurados explicitamente. O novo bootstrap não lê senha/JWT global do perfil nem escolhe a primeira inbox válida. O registro automático Voice/custom antigo foi substituído pelo gerenciador global do agente.
+3. A configuração antiga Voice/custom mostra orientação para a nova localização; Twilio e os demais canais mantêm seus fluxos. Os endpoints legados não foram removidos em massa.
+4. Listagens de usuário filtram os segredos WebRTC legados. O formulário básico deixa de editar essas credenciais; somente o novo vínculo por conta/serviço recebe credenciais novas.
+5. Um binding ativo por agente/conta, protegido também por índice único. Desativar serviço/binding preserva histórico. Troca durante chamada é bloqueada; alteração administrativa de configuração é refletida pelo cliente após encerrar a sessão ativa.
+6. Não há migração automática de contas, ativação por ordem da API ou fallback para outra central. Um agente sem binding ativo permanece desconectado.
+7. Rollback de código não implica restaurar o banco sobre chamadas novas. Eventual publicação exigirá autorização separada, backup e avaliação das migrations; esta execução permanece exclusivamente em dev.
 
 ## 10. Dependências e atualização
 
@@ -254,22 +257,22 @@ O guia oficial de [transferência](https://sipjs.com/guides/transfer/) é refer�
 
 Antes de mudar dependências: conferir versão resolvida/instalada e compatibilidade com Vite, Vue e Capacitor; revisar advisories e testes. Não executar upgrade global de pacote/lockfile. Uma atualização realmente necessária entra em mudança isolada, com justificativa e rollback. Preservar dependências de Twilio/Meta enquanto houver uso por fluxos legados; não removê-las pelo novo foco SIP.
 
-## 11. Contratos propostos de API (a criar, não existentes)
+## 11. Contratos implementados de API da primeira entrega
 
 Base account-scoped `/api/v1/accounts/:account_id`:
 
-| Recurso proposto | Operação |
+| Recurso | Operação implementada |
 | --- | --- |
-| `/voip/services` e `/:id` | CRUD administrativo, com desativação/arquivamento e metadados sem segredos. |
-| `/voip/profile` | Lista bindings do próprio agente e seleção ativa; salvar binding vinculado a serviço autorizado. |
-| `/voip/registrations/bootstrap` | Credencial efêmera/configuração efetiva do binding autorizado, sem cache. Não cria chamada. |
-| `/voip/calls` e `/:id` | Histórico, filtros, detalhe e intenção explícita de chamada, com idempotency key. Não prometer originação server-side se ela for feita no SIP.js. |
-| `/voip/calls/:id/actions` | Ações com escopo/estado/capacidade; ação deve ter um único executor de sinalização. Não duplicar BYE/INVITE no backend e no SIP.js. |
-| Ingestão de eventos do serviço | Contrato autenticado próprio, conta/serviço resolvidos por credencial confiável, não por `account_id` arbitrário do payload. |
+| `/voip/services` e `/:id` | GET/POST/PATCH/DELETE. Administrador configura serviços; DELETE desativa, não apaga histórico. GET retorna metadados disponíveis ao agente. |
+| `/voip/services/agents` | GET administrativo dos agentes elegíveis da conta. |
+| `/voip/profile` e `/voip/profile/activate` | GET/PATCH do próprio binding ou gestão administrativa autorizada; POST seleciona explicitamente o binding ativo. |
+| `/voip/registration` | POST do próprio agente. Retorna configuração e credencial SIP do binding autorizado, `Cache-Control: no-store, private`; não cria chamada. Não é um token efêmero quando o serviço usa senha Digest. |
+| `/voip/calls` e `/:id` | GET com paginação/filtros e detalhe; POST persiste intenção idempotente antes do INVITE do SIP.js. Agente vê suas chamadas; administrador pode consultar a conta. |
+| `/voip/calls/:id/observe` | POST autenticado do agente dono do binding. Sequência/evento idempotentes; conserva auditoria e não reabre chamada terminal por evento antigo. Não é webhook do serviço. |
+| `/voip/favorites` e `/:id` | GET/POST/DELETE dos favoritos do agente, escopados por serviço. |
+| Ingestão de eventos/CDR do serviço | Não implementada nesta entrega. Endpoint assinado, inbox durável, reconciliador autoritativo e cursor REST pertencem à seção 7.1, futura. |
 
-Na primeira entrega, preparar envelope/reconciliador e testes sintéticos, mantendo recepção externa/sincronização autoritativa desabilitadas enquanto não integradas. Persistir observações SIP autenticadas por agente em caminho distinto do webhook externo: relato do cliente não equivale a evento assinado do serviço. Na segunda, ativar recepção durável, processamento, checkpoint e recuperação REST conforme seção 7.1. Não exigir mudanças em produção para testar contratos sintéticos em dev.
-
-Os nomes finais dependem das convenções do projeto e do adaptador do serviço. Manter contratos antigos para consumidores existentes enquanto houver compatibilidade autorizada. Eventos realtime devem publicar mudanças de estado, nunca segredos.
+Mute, atender, encerrar, DTMF e REFER são executados uma vez no cliente SIP.js; não há segundo executor backend dessas ações. O backend persiste as observações sem emitir INVITE/BYE/REFER. As tentativas de salvar observações no navegador são limitadas e em memória: não equivalem a fila durável após fechar o navegador.
 
 ## 12. Fases e critérios de saída
 
@@ -284,7 +287,7 @@ Os nomes finais dependem das convenções do projeto e do adaptador do serviço.
 | 2C — Aceite integrado completo | Testar falhas/replay, múltiplos dispositivos e transferências ponta a ponta em dev. | Perdidas/atendimento/duração/participações corretos e mídia não duplicada. Testes bloqueados na auditoria anterior precisam ser efetivamente executados antes desse aceite. |
 | Publicação de cada entrega | Backup, prévia/aprovação, flag, imagem/builds e monitoramento/rollback. | Autorização separada do usuário; primeira entrega, se publicada antes da segunda, mantém aviso de cobertura parcial. Sem deploy automático por concluir o plano. |
 
-**Próxima implementação: 1A → 1B → 1C → 1D no ViperChat em dev.** As pendências do serviço não são pré-requisito para começar esse trabalho; são obrigatórias para o aceite 2C de histórico completo. Nenhuma etapa autoriza mexer na VPS por conta própria.
+**Execução atual:** 1A, 1B e 1C implementadas; 1D validada para o fluxo conectado na réplica dev, com 175 exemplos backend e 91 testes frontend aprovados, áudio sintético bidirecional e os limites discriminados no runbook. Não declarar 2A/2B/2C concluídos, nem chamada nativa/hardware ou REFER ponta a ponta aceitos. As pendências do serviço não bloqueiam o mecanismo conectado, mas são obrigatórias para histórico autoritativo com navegador fechado. Nenhuma etapa autoriza mexer na VPS por conta própria.
 
 ### Matriz de testes planejada
 
@@ -301,21 +304,36 @@ Os nomes finais dependem das convenções do projeto e do adaptador do serviço.
 - Primeira entrega: observação local sem confirmação do serviço; refresh/perda de rede não fabrica resultado/duração; fixtures de eventos externos não ativam conexão real nem registram chamada duplicada.
 - Segunda entrega: reinício com fila pendente, indisponibilidade HTTP/429/5xx, backoff, autenticação inválida/quarentena, mesmo eventId entregue repetidamente, crash após persistir inbox antes de enfileirar, cursor REST não avançado por webhook fora de ordem e recuperação após cursor expirado. Replay nunca dispara ações SIP.
 
-## 13. iOS/Android: preparação agora, implementação nativa depois
+Complemento de aceite em 21/10/2026: áudio físico do navegador confirmado pelo usuário nos dois sentidos (chamadas de laboratório 209/210 e 211/212), mute/unmute e liberação das tracks aprovados. A recusa real revelou falha de persistência/aviso, posteriormente corrigida em dev: `answer()` registra `failed / microphone_denied` antes de liberar a sessão, incluindo a corrida de término do SIP; o aviso específico permanece após o fim da chamada e a navegação, com fechamento explícito. Regressão controlada na réplica gravou a chamada sintética 219 sem atendimento/duração fictícios. A recusa física anterior e esta simulação controlada são evidências diferentes; não houve nova negação manual de permissão nesta rodada. Detalhes e limites nativos no runbook.
+
+## 13. iOS/Android: integração nativa obrigatória
 
 Compartilhar agora domínio de chamadas, ações idempotentes, IDs e estados. Separar motor de transporte da UI para um adaptador nativo futuro usar os mesmos registros sem abrir uma segunda ligação.
 
-Integração futura deve levantar CallKit/PushKit no iOS e Telecom/ConnectionService/Core-Telecom e notificações/execução em segundo plano no Android, conforme versões e arquitetura adotadas. Serviço precisa notificar/rotear ao dispositivo e coordenar atendimento único entre web e nativo. Isso não está implementado nem garantido pelo SIP.js/Capacitor atual.
+Requisito confirmado pelo usuário em 21/10/2026: chamadas nos apps devem integrar a telefonia nativa. No iOS, usar CallKit; no Android, Telecom/ConnectionService, equivalente do sistema Android — não existe CallKit Android. O painel em WebView sozinho não atende ao aceite nativo. A fase conectada web validada não significa entrega nativa concluída.
 
-Mudança futura de frontend compartilhado exige sync dos bundles Android e iOS e validação em aparelhos quando disponíveis, conforme AGENTS.md. Planejamento/documentação desta etapa não requer builds; não foi feita validação de chamada nativa ou segundo plano.
+- Criar bridge Capacitor de ações/estados: apresentar recebida, aceitar, rejeitar, iniciar saída, silenciar, encerrar, ativação/interrupção de áudio e finalização por erro. A interface do sistema e o webphone representam a mesma sessão; não discar novamente ao aceitar pelo sistema.
+- Correlacionar UUID nativo com a intenção existente e SIP Call-ID/ID autoritativo, mantendo agente/conta/serviço. Eventos repetidos ou atendimento em outro dispositivo não podem criar segunda chamada ou novo registro de histórico.
+- No iOS, coordenar sessão de áudio com a ativação/desativação do CallKit e as interrupções do sistema. No Android, integrar conexão e foco/rota de áudio e execução permitida pelo sistema. Não tratar apenas uma notificação comum como chamada nativa.
+- Logout/troca de conta, falha de autenticação e término remoto precisam limpar a chamada nativa e revogar sua elegibilidade, sem expor senha SIP em push/logs ou deixá-la em armazenamento público.
+- Recebimento com app suspenso/fechado depende também da sinalização e do push do serviço: PushKit/VoIP push no iOS e push/execução de chamada no Android. Isso exige implementação e configuração próprias, além do CallKit/Telecom. Webhooks de CDR não substituem push de chamada recebida.
+- O serviço deve coordenar atendimento único entre web e nativo. Manter a parte do serviço/push pendente conforme a restrição atual de não implementar seus eventos; não prometer recebimento em segundo plano antes desse contrato e do aceite em dispositivos reais.
+
+Aceite nativo obrigatório: entrada/saída, tela bloqueada, app em primeiro/segundo plano e encerrado, permissões negadas, atendimento remoto/duplicado, troca de rota de áudio, interrupção por outra chamada, reconexão e término, sem duplicar sessão ou histórico. A bridge nativa e esse aceite ainda não foram implementados; os builds atuais comprovam empacotamento/inicialização apenas.
+
+O frontend final foi sincronizado para Android e iOS e compilado em Debug nos dois. Android sem aparelho/emulador disponível; iOS instalado e iniciado no simulador iPad Pro 13 (M5) com identificador isolado. Somente a inicialização nativa foi verificada no iOS: esses builds não comprovam chamada nativa, áudio de hardware ou segundo plano. A central de laboratório usa sinalização/RTP em loopback Windows, que não é acessível do simulador Mac sem preparação adicional de rede; a instalação nativa exige servidor HTTPS. Não enfraquecer HTTPS/WSS de produção nem conectar produção para simular esse aceite. Artefatos e hashes constam no runbook.
 
 ## 14. O que está fechado e o que falta verificar
 
-Fechado para desenvolver: arquitetura sem inbox, ramal por agente/serviço/conta, cadastro administrativo múltiplo, modal de seleção, migração conservadora, sidebar e organização desktop/mobile, estilo-base extraído e testes de aceite.
+Refinamento visual solicitado em 21/10/2026: webphone global arrastável no desktop, tela cheia no mobile e barra recolhida reservando o launcher do menu; ações circulares por ícones com acessibilidade. Central compacta com favoritos paginados no topo, pesquisa entre favoritos e Recentes, filtros e nova chamada por ícones à direita de Recentes. Filtros abrem modal, não ocupam permanentemente a lista, e mantêm as seleções/contador. A paginação de histórico continua server-side. O aviso visual de histórico parcial foi removido a pedido; permanece obrigatório resolver a integração autoritativa antes da produção definitiva. Essas alterações não implementam CallKit/Telecom nem eventos do serviço e não autorizam implantação na VPS.
+
+Ampliação implementada em dev: favoritos em três cartões com avatar/nome por página, pino discreto e confirmação de remoção do atalho; Recentes com cinco chamadas por página. Diretório e identificação account-scoped por telefone completo/ramal exato do mesmo serviço, respeitando visibilidade e recusando ambiguidades/LID/grupos. Reutilizar nome/foto de contatos/agentes na lista, favoritos e webphone sem alterar os IDs/snapshots ou copiar mídias. Discador global com abas Contatos/Ramais/Manual, pesquisa/paginação e confirmação explícita; troca de serviço exige ativação pelo usuário. Atalhos na lista/detalhes/sidebar de contatos abrem o discador, não iniciam chamada automaticamente. Validação anterior: 167 testes frontend e 37 exemplos API/diretório, sem falhas. A correção posterior de microfone tem sua própria rodada registrada no runbook. Limitações de CallKit/Telecom e eventos do serviço continuam discriminadas; não chamar isso de aceite de produção concluído.
+
+Implementado em dev: arquitetura sem inbox, ramal por agente/serviço/conta, múltiplos serviços administrativos, modal de seleção/configuração, credenciais criptografadas, sidebar Chamadas, lista/favoritos/detalhes/discador, webphone global compacto/completo e observações autenticadas persistidas. A seta comum das conversas fica na mesma posição do cabeçalho mobile. Não foi necessário atualizar SIP.js além da versão fixada 0.21.2.
 
 Contrato atual de eventos/CDR e REST mapeado localmente na auditoria anexa; não é mais necessário investigar sua existência. A ordem agora é concluir primeiro o mecanismo ViperChat/SIP e a interface em dev, com histórico observado identificado como parcial; depois integrar os webhooks com fila persistente/retentativas e REST incremental. Gaps P0 do serviço permanecem obrigatórios para histórico autoritativo completo, mas não impedem iniciar a primeira entrega. Validar WSS/ICE e autorização antes de chamadas reais. Prints de discador/webphone/menu de áudio refinam aparência sem bloquear lista/detalhes. Uma conexão ativa por agente no ViperChat é o recorte proposto, preservando múltiplos registros autorizados na central.
 
-Nesta etapa somente documentação foi criada/atualizada. Não alterados pacotes, código funcional, credenciais, bancos, serviços, configurações da conta, dispositivos ou VPS; nenhuma ligação/registro real, commit/push ou build. Sem temporários de binários ou cópias volumosas.
+Nesta implementação houve alterações de código e migrations aditivas na réplica local, dados sintéticos isolados e chamadas internas controladas. O aceite funcional dev e suas limitações estão no runbook; não houve implantação/acesso à VPS nesta tarefa, publicação de imagem, commit/push ou envio às lojas. As seções abaixo documentam etapas históricas anteriores à implementação VoIP e não representam o aceite atual.
 
 ### Consolidação Git autorizada em 20/10/2026
 

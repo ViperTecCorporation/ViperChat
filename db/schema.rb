@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_20_160000) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_20_230002) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1704,6 +1704,90 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_20_160000) do
     t.index ["web_attendance_invitation_id"], name: "index_web_sessions_on_invitation"
   end
 
+  create_table "voip_agent_extensions", force: :cascade do |t|
+    t.bigint "account_user_id"
+    t.bigint "voip_service_id", null: false
+    t.string "extension", null: false
+    t.string "auth_username", null: false
+    t.text "encrypted_credentials"
+    t.boolean "active", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_user_id", "voip_service_id"], name: "uniq_voip_binding_per_service", unique: true
+    t.index ["account_user_id"], name: "index_voip_agent_extensions_on_account_user_id"
+    t.index ["account_user_id"], name: "uniq_active_voip_binding", unique: true, where: "(active = true)"
+    t.index ["voip_service_id", "extension"], name: "uniq_voip_extension_per_service", unique: true, where: "(account_user_id IS NOT NULL)"
+    t.index ["voip_service_id"], name: "index_voip_agent_extensions_on_voip_service_id"
+  end
+
+  create_table "voip_call_observations", force: :cascade do |t|
+    t.bigint "voip_call_id", null: false
+    t.string "event_id", null: false
+    t.integer "sequence", null: false
+    t.string "state", null: false
+    t.jsonb "details", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["voip_call_id", "event_id"], name: "uniq_voip_observation", unique: true
+    t.index ["voip_call_id", "sequence"], name: "uniq_voip_observation_sequence", unique: true
+    t.index ["voip_call_id"], name: "index_voip_call_observations_on_voip_call_id"
+  end
+
+  create_table "voip_calls", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "voip_agent_extension_id", null: false
+    t.string "client_call_id", null: false
+    t.string "sip_call_id"
+    t.string "direction", null: false
+    t.string "remote_address", null: false
+    t.string "remote_name"
+    t.string "state", default: "initiating", null: false
+    t.string "origin", default: "client_observed", null: false
+    t.integer "last_sequence", default: 0, null: false
+    t.integer "sip_code"
+    t.string "end_reason"
+    t.datetime "started_at", null: false
+    t.datetime "answered_at"
+    t.datetime "ended_at"
+    t.datetime "last_observed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "local_extension", null: false
+    t.bigint "local_agent_id", null: false
+    t.index ["account_id", "started_at"], name: "index_voip_calls_on_account_id_and_started_at"
+    t.index ["account_id"], name: "index_voip_calls_on_account_id"
+    t.index ["voip_agent_extension_id", "client_call_id"], name: "uniq_voip_client_call", unique: true
+    t.index ["voip_agent_extension_id"], name: "index_voip_calls_on_voip_agent_extension_id"
+  end
+
+  create_table "voip_favorites", force: :cascade do |t|
+    t.bigint "account_user_id", null: false
+    t.bigint "voip_service_id", null: false
+    t.string "name", null: false
+    t.string "address", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_user_id", "voip_service_id", "address"], name: "uniq_voip_favorite", unique: true
+    t.index ["account_user_id"], name: "index_voip_favorites_on_account_user_id"
+    t.index ["voip_service_id"], name: "index_voip_favorites_on_voip_service_id"
+  end
+
+  create_table "voip_services", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "wss_url", null: false
+    t.string "sip_domain", null: false
+    t.boolean "enabled", default: true, null: false
+    t.boolean "allow_self_configuration", default: true, null: false
+    t.boolean "transfer_enabled", default: false, null: false
+    t.integer "registration_expires", default: 300, null: false
+    t.jsonb "allowed_user_ids", default: [], null: false
+    t.text "encrypted_credentials"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_voip_services_on_account_id"
+  end
+
   create_table "webhooks", force: :cascade do |t|
     t.integer "account_id"
     t.integer "inbox_id"
@@ -2034,4 +2118,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_20_160000) do
     "NEW.display_id := nextval('camp_dpid_seq_' || NEW.account_id);"
   end
 
+  add_foreign_key "voip_agent_extensions", "account_users", on_delete: :nullify
+  add_foreign_key "voip_agent_extensions", "voip_services"
+  add_foreign_key "voip_call_observations", "voip_calls"
+  add_foreign_key "voip_calls", "accounts"
+  add_foreign_key "voip_calls", "voip_agent_extensions"
+  add_foreign_key "voip_favorites", "account_users"
+  add_foreign_key "voip_favorites", "voip_services"
+  add_foreign_key "voip_services", "accounts"
 end

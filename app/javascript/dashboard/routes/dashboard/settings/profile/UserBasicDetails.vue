@@ -1,198 +1,87 @@
-<script>
+<script setup>
+import { reactive, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useVuelidate } from '@vuelidate/core';
+import { required, minLength, email as emailRule } from '@vuelidate/validators';
 import { useAlert } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
-import { useVuelidate } from '@vuelidate/core';
-import { required, minLength, email } from '@vuelidate/validators';
-export default {
-  components: {
-    NextButton,
+
+const props = defineProps({
+  name: { type: String, default: '' },
+  displayName: { type: String, default: '' },
+  email: { type: String, default: '' },
+  emailEnabled: { type: Boolean, default: false },
+});
+const emit = defineEmits(['updateUser']);
+const { t } = useI18n();
+const form = reactive({
+  name: props.name,
+  displayName: props.displayName,
+  email: props.email,
+});
+watch(
+  () => [props.name, props.displayName, props.email],
+  ([name, displayName, email]) =>
+    Object.assign(form, { name, displayName, email })
+);
+const v$ = useVuelidate(
+  {
+    name: { required, minLength: minLength(1) },
+    email: { required, emailRule },
   },
-  props: {
-    name: {
-      type: String,
-      default: '',
-    },
-    email: {
-      type: String,
-      default: '',
-    },
-    displayName: {
-      type: String,
-      default: '',
-    },
-    emailEnabled: {
-      type: Boolean,
-      default: false,
-    },
-    webrtcJwt: {
-      type: String,
-      default: '',
-    },
-    webrtcUsername: {
-      type: String,
-      default: '',
-    },
-    webrtcPassword: {
-      type: String,
-      default: '',
-    },
-  },
-  emits: ['updateUser'],
-  setup() {
-    return { v$: useVuelidate() };
-  },
-  data() {
-    return {
-      userName: this.name,
-      userDisplayName: this.displayName,
-      userEmail: this.email,
-      userWebrtcUsername: this.webrtcUsername,
-      userWebrtcJwt: this.webrtcJwt,
-      userWebrtcPassword: this.webrtcPassword,
-      inputStyles: {
-        borderRadius: '0.75rem',
-        padding: '0.375rem 0.75rem',
-        fontSize: '0.875rem',
-        marginBottom: '0.125rem',
-      },
-    };
-  },
-  validations: {
-    userName: {
-      required,
-      minLength: minLength(1),
-    },
-    userDisplayName: {},
-    userEmail: {
-      required,
-      email,
-    },
-  },
-  watch: {
-    name: {
-      handler(value) {
-        this.userName = value;
-      },
-      immediate: true,
-    },
-    displayName: {
-      handler(value) {
-        this.userDisplayName = value;
-      },
-      immediate: true,
-    },
-    email: {
-      handler(value) {
-        this.userEmail = value;
-      },
-      immediate: true,
-    },
-    webrtcJwt: {
-      handler(value) {
-        this.userWebrtcJwt = value;
-      },
-      immediate: true,
-    },
-    webrtcUsername: {
-      handler(value) {
-        this.userWebrtcUsername = value;
-      },
-      immediate: true,
-    },
-    webrtcPassword: {
-      handler(value) {
-        this.userWebrtcPassword = value;
-      },
-      immediate: true,
-    },
-  },
-  methods: {
-    async updateUser() {
-      this.v$.$touch();
-      if (this.v$.$invalid) {
-        useAlert(this.$t('PROFILE_SETTINGS.FORM.ERROR'));
-        return;
-      }
-      this.$emit('updateUser', {
-        name: this.userName,
-        displayName: this.userDisplayName,
-        email: this.userEmail,
-        customAttributes: {
-          webrtc_username: this.userWebrtcUsername,
-          webrtc_jwt: this.userWebrtcJwt,
-          ...(this.userWebrtcPassword
-            ? { webrtc_password: this.userWebrtcPassword }
-            : {}),
-        },
-      });
-    },
-  },
-};
+  form
+);
+async function save() {
+  if (!(await v$.value.$validate())) {
+    useAlert(t('PROFILE_SETTINGS.FORM.ERROR'));
+    return;
+  }
+  emit('updateUser', {
+    name: form.name,
+    displayName: form.displayName,
+    email: form.email,
+  });
+}
 </script>
 
 <template>
-  <form class="flex flex-col gap-4" @submit.prevent="updateUser('profile')">
-    <woot-input
-      v-model="userName"
-      :styles="inputStyles"
-      :class="{ error: v$.userName.$error }"
-      :label="$t('PROFILE_SETTINGS.FORM.NAME.LABEL')"
-      :placeholder="$t('PROFILE_SETTINGS.FORM.NAME.PLACEHOLDER')"
-      :error="`${
-        v$.userName.$error ? $t('PROFILE_SETTINGS.FORM.NAME.ERROR') : ''
-      }`"
-      @input="v$.userName.$touch"
-      @blur="v$.userName.$touch"
-    />
-    <woot-input
-      v-model="userDisplayName"
-      :styles="inputStyles"
-      :class="{ error: v$.userDisplayName.$error }"
-      :label="$t('PROFILE_SETTINGS.FORM.DISPLAY_NAME.LABEL')"
-      :placeholder="$t('PROFILE_SETTINGS.FORM.DISPLAY_NAME.PLACEHOLDER')"
-      :error="`${
-        v$.userDisplayName.$error
-          ? $t('PROFILE_SETTINGS.FORM.DISPLAY_NAME.ERROR')
-          : ''
-      }`"
-      @input="v$.userDisplayName.$touch"
-      @blur="v$.userDisplayName.$touch"
-    />
-    <woot-input
-      v-if="emailEnabled"
-      v-model="userEmail"
-      :styles="inputStyles"
-      :class="{ error: v$.userEmail.$error }"
-      :label="$t('PROFILE_SETTINGS.FORM.EMAIL.LABEL')"
-      :placeholder="$t('PROFILE_SETTINGS.FORM.EMAIL.PLACEHOLDER')"
-      :error="`${
-        v$.userEmail.$error ? $t('PROFILE_SETTINGS.FORM.EMAIL.ERROR') : ''
-      }`"
-      @input="v$.userEmail.$touch"
-      @blur="v$.userEmail.$touch"
-    />
-    <woot-input
-      v-model="userWebrtcJwt"
-      type="password"
-      :styles="inputStyles"
-      :label="$t('PROFILE_SETTINGS.FORM.WEBRTC_JWT.LABEL')"
-      :placeholder="$t('PROFILE_SETTINGS.FORM.WEBRTC_JWT.PLACEHOLDER')"
-    />
-    <woot-input
-      v-model="userWebrtcUsername"
-      :styles="inputStyles"
-      :label="$t('PROFILE_SETTINGS.FORM.WEBRTC_USERNAME.LABEL')"
-      :placeholder="$t('PROFILE_SETTINGS.FORM.WEBRTC_USERNAME.PLACEHOLDER')"
-    />
-    <woot-input
-      v-model="userWebrtcPassword"
-      type="password"
-      :styles="inputStyles"
-      :label="$t('PROFILE_SETTINGS.FORM.WEBRTC_PASSWORD.LABEL')"
-      :placeholder="$t('PROFILE_SETTINGS.FORM.WEBRTC_PASSWORD.PLACEHOLDER')"
-    />
+  <form class="flex flex-col gap-4" @submit.prevent="save">
+    <label class="flex flex-col gap-1 text-sm">
+      {{ t('PROFILE_SETTINGS.FORM.NAME.LABEL') }}
+      <input
+        v-model="form.name"
+        required
+        class="rounded-xl border border-n-weak bg-n-surface-1 px-3 py-2"
+        :aria-invalid="v$.name.$error"
+        @blur="v$.name.$touch"
+      />
+    </label>
+    <p v-if="v$.name.$error" class="text-sm text-n-ruby-11">
+      {{ t('PROFILE_SETTINGS.FORM.NAME.ERROR') }}
+    </p>
+    <label class="flex flex-col gap-1 text-sm">
+      {{ t('PROFILE_SETTINGS.FORM.DISPLAY_NAME.LABEL') }}
+      <input
+        v-model="form.displayName"
+        class="rounded-xl border border-n-weak bg-n-surface-1 px-3 py-2"
+      />
+    </label>
+    <label v-if="emailEnabled" class="flex flex-col gap-1 text-sm">
+      {{ t('PROFILE_SETTINGS.FORM.EMAIL.LABEL') }}
+      <input
+        v-model="form.email"
+        type="email"
+        required
+        class="rounded-xl border border-n-weak bg-n-surface-1 px-3 py-2"
+        :aria-invalid="v$.email.$error"
+        @blur="v$.email.$touch"
+      />
+    </label>
+    <p v-if="v$.email.$error" class="text-sm text-n-ruby-11">
+      {{ t('PROFILE_SETTINGS.FORM.EMAIL.ERROR') }}
+    </p>
     <div>
-      <NextButton type="submit" :label="$t('PROFILE_SETTINGS.BTN_TEXT')" />
+      <NextButton type="submit" :label="t('PROFILE_SETTINGS.BTN_TEXT')" />
     </div>
   </form>
 </template>

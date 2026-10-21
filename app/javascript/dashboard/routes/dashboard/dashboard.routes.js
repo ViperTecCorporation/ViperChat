@@ -1,4 +1,5 @@
 import settings from './settings/settings.routes';
+import { routes as agentVoipRoutes } from './voip/routes';
 import conversation from './conversation/conversation.routes';
 import { routes as searchRoutes } from '../../modules/search/search.routes';
 import { routes as contactRoutes } from './contacts/routes';
@@ -21,6 +22,7 @@ export default {
       path: frontendURL('accounts/:accountId'),
       component: AppContainer,
       children: [
+        ...agentVoipRoutes,
         ...captainRoutes,
         ...inboxRoutes,
         ...conversation.routes,
