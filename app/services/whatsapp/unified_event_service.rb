@@ -66,7 +66,8 @@ class Whatsapp::UnifiedEventService
   end
 
   def process
-    if Whatsapp::RetainedOutgoingEchoResolutionService.new(event: @event).perform ||
+    if Whatsapp::AcknowledgedUnoEchoResolutionService.new(event: @event).perform ||
+       Whatsapp::RetainedOutgoingEchoResolutionService.new(event: @event).perform ||
        Whatsapp::UnifiedEventResolutionService.new(event: @event).perform
       @event.update!(attempts: @event.attempts + 1)
       return

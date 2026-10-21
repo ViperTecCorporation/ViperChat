@@ -1,0 +1,22 @@
+[
+  {
+    "path": "app/services/whatsapp/unified_message_alias_service.rb",
+    "base_sha256": "a44580f8adf44a02615015085c60d81b5f12a0cf08747ab4cc3393e4f7346f88",
+    "sha256": "d391c3a18429aff95304dd330d13b5859ea1344f061330cd89fb3943862cad53"
+  },
+  {
+    "path": "app/services/whatsapp/acknowledged_uno_echo_resolution_service.rb",
+    "base_sha256": null,
+    "sha256": "77dd7c30b5b0faec9bde99452bdc558cfbd2d986e70691b1b47783595e00c4c4"
+  },
+  {
+    "path": "app/services/whatsapp/unified_event_service.rb",
+    "base_sha256": "a63a2f8e8a299232746922463e4f55e0870f5deb6ce51e7c15a6a3a35c7779b1",
+    "sha256": "2fbf1890862eec347e083519c29622c2e4949cbd241fdc2f92e4976600c5a3cc"
+  },
+  {
+    "path": "app/services/whatsapp/unified_review_service.rb",
+    "base_sha256": "654d59fc4aa3fa52d4e3dd0e56d29751c75f742abdeca8645733d13b23e2b62a",
+    "sha256": "0b13abb89aa8470690a3668fae2c5ded3347bd293c9cd74975521082e66cefed"
+  }
+]

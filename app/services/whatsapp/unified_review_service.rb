@@ -137,11 +137,7 @@ class Whatsapp::UnifiedReviewService
 
   def serialize(kind, record)
     message = kind == 'delivery' ? record : record.try(:message)
-    if kind == 'event'
-      message = Whatsapp::UnifiedMessageIngestionService.message_for(record.whatsapp_message_identity) ||
-                Whatsapp::UnifiedEventResolutionService.new(event: record).message ||
-                Whatsapp::RetainedOutgoingEchoResolutionService.new(event: record).message
-    end
+    message = event_message(record) if kind == 'event'
     reviewed = acknowledged_action(kind, record)
     {
       id: "#{kind}-#{record.id}", kind: kind, state: state(kind, record), reason: reason(kind, record),
@@ -149,6 +145,13 @@ class Whatsapp::UnifiedReviewService
       next_attempt_at: record.try(:next_attempt_at), reviewed_at: reviewed&.created_at, reviewed_by_id: reviewed&.actor_id,
       actions: actions(kind, record), version: revision(kind, record)
     }.merge(identity_fields(kind, record)).merge(message_fields(message))
+  end
+
+  def event_message(record)
+    Whatsapp::UnifiedMessageIngestionService.message_for(record.whatsapp_message_identity) ||
+      Whatsapp::UnifiedEventResolutionService.new(event: record).message ||
+      Whatsapp::RetainedOutgoingEchoResolutionService.new(event: record).message ||
+      Whatsapp::AcknowledgedUnoEchoResolutionService.new(event: record).message
   end
 
   def identity_fields(kind, record)

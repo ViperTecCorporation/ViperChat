@@ -81,7 +81,17 @@ class Whatsapp::UnifiedMessageAliasService
   def compatible_outbound_comparison?
     return true if @comparison[:status] == 'matched'
 
-    @comparison[:status] == 'participant_identity_pending' && recipientless_uno?
+    @comparison[:status] == 'participant_identity_pending' && (recipientless_uno? || receipted_uno_counterpart?)
+  end
+
+  def receipted_uno_counterpart?
+    return false unless @identity.provider == 'whatsapp_cloud' && @record.direction == 'outgoing' && outbound_counterparts.one?
+
+    counterpart = outbound_counterparts.sole.whatsapp_message_identity
+    peer = Whatsapp::MessageIdentityCorrelationService.new(identity: @identity, partner_inbox: counterpart.inbox).comparison_participant
+    recipient = counterpart.observations.dig('receipt_participants', 'recipient_id')
+    counterpart.provider == 'unoapi' && counterpart.observations['direction'] == 'outgoing' && recipient.present? &&
+      Whatsapp::MessageIdentityParticipantService.new(identity: counterpart).equivalent?([recipient], expected: peer)
   end
 
   def recipientless_uno?
@@ -110,7 +120,17 @@ class Whatsapp::UnifiedMessageAliasService
     identity = row.whatsapp_message_identity
     (row.whatsapp_unified_message_id.nil? || row.whatsapp_unified_message_id == @record.id) &&
       verified_outbound_message?(message) && same_outbound_transport?(message, identity) &&
-      Whatsapp::MessageIdentityCorrelationService.new(identity: identity, partner_inbox: @inbox)
+      verified_outbound_contact?(message, identity)
+  end
+
+  def verified_outbound_contact?(message, identity)
+    verifier = Whatsapp::MessageIdentityCorrelationService.new(identity: identity, partner_inbox: @inbox)
+    return true if verifier.contact_matches_participant?(message.conversation.contact)
+    return false unless receipted_uno_counterpart?
+
+    metadata = message.content_attributes['whatsapp_transport'].to_h
+    metadata['delivery_state'] == 'acknowledged' &&
+      Whatsapp::MessageIdentityCorrelationService.new(identity: @identity, partner_inbox: identity.inbox)
                                                  .contact_matches_participant?(message.conversation.contact)
   end
 
