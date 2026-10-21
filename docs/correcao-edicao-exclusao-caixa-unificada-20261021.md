@@ -45,3 +45,24 @@ Temporários descartáveis removidos após concluir os testes: `/tmp/viperchat-m
 ## Próximo aceite
 
 Após autorização de publicação/deploy, confirmar com tráfego legítimo que edição e exclusão de uma mensagem existente mantêm o mesmo ID de bolha e conversa. Sem disparos reais nesta tarefa. Eventuais conversas vazias antigas exigem inventário e autorização próprios; este patch não apaga nem mescla registros históricos.
+
+## Reações nas caixas parceiras — complemento em dev, 21/10/2026
+
+Relato: conversa 18271 contendo somente uma reação após recebimento pelo ViperConnect. O print fornece o endereço da conversa, não o payload nem a versão implantada. A inspeção local encontrou que `reaction` não era uma mutação unificada e não integrava os tipos suportados pela ingestão canônica. O fallback Cloud convertia o emoji em texto e podia criar uma conversa ou reabrir um atendimento. A causa no runtime dessa conversa ainda não foi comprovada; nenhum acesso à VPS foi realizado nesta implementação.
+
+- Interceptar `type: reaction` de Meta e UnoAPI, tanto recebido quanto echo, antes da sincronização de perfis e da ingestão normal, somente para vínculo ativo.
+- Resolver `reaction.message_id` por referência exata/alias ou envelope reconhecido dentro do par e da conta. A direção da reação pode ser diferente da mensagem original. Para referências Meta, confirmar separadamente o participante do alvo: telefone normalizado ou alias BSUID ativo e sem ambiguidade. Manter a validação de identidade/participante do próprio evento.
+- Atualizar apenas os atributos de reação da bolha existente, sob lock. Não criar mensagem/contato/conversa, não reabrir atendimento, não reatribuir IDs nem alterar conteúdo ou mídias. Alvos privados, grupos e mensagens Web não entram nesse tratamento individual.
+- Guardar estado e relógio de reações por direção em `whatsapp_reactions`; manter `reaction.emoji` compatível com o componente atual. Emoji vazio remove a reação daquele sentido; eventos atrasados não restauram uma reação já removida. O relógio é separado do de edição/exclusão, e conteúdo excluído não é restaurado.
+- Referência ausente ou timestamp inválido exige revisão. Alvo ainda não provado permanece pendente com o mecanismo persistente de retentativas existente, sem escolher outra mensagem por texto ou horário. O replay também passa pelo interceptor de mutações.
+- Sem alteração de comportamento legado em caixas sem vínculo ativo. Não foi feita reconciliação, remoção ou mesclagem das conversas históricas já existentes.
+
+Validação: matriz com principal Meta/UnoAPI, recebimento/echo e ambos os provedores; reação recebida a mensagem enviada em conversa resolvida; anexos preservados; repetição pelos dois provedores; remoção e evento atrasado; alvo desconhecido com evidência posterior/replay; remetente incompatível; referência/timestamp ausentes; alvos privados/grupos. Inventários conferem contatos, conversas/status, IDs/source IDs e datas das bolhas, anexos e blobs. Rodada com as regressões de mutações e os serviços Cloud/UnoAPI: **122 exemplos, zero falhas**. RuboCop nos dois arquivos Ruby e `git diff --check` aprovados.
+
+Rodada ampliada incluindo identidade/observação, correlação, ingestão canônica e replay: **376 exemplos, zero falhas**. Não corresponde à suíte completa do projeto. Permanecem avisos preexistentes de depreciação Rails e shebang CRLF; nenhum teste foi desativado.
+
+Os intermediários próprios desta rodada foram removidos após a validação: `/tmp/viperchat-reactions.FFgpmj` e a pasta `viperchat-reactions-20261021` no Temp Windows. São cópias regeneráveis; os fontes, testes e evidências nesta documentação permanecem no checkout.
+
+Testes executados no container existente `viperchat-replica-web-1`, usando `viperchat_voip_test` e carregamento isolado do serviço em processo de teste; na rodada ampliada, Redis 15. A aplicação VoIP em `/app` não foi substituída nem reiniciada e responde HTTP 200 após a validação. Nenhum container novo, chamada real, envio de mensagem, migração, build nativo ou alteração na VPS. Somente backend/testes/documentação alterados; sem mudança de frontend compartilhado ou código nativo.
+
+Após a validação, o usuário autorizou commit e push desta correção e do plano na `4.16.0`, com incorporação por cherry-pick e push em `feat/agent-voip-webphone`, retornando ao worktree do VoIP. Isso não autoriza publicação de imagem nem implantação: o runtime da réplica e a VPS permanecem inalterados nesta etapa. As alterações locais preexistentes de configuração Android/iOS no worktree do VoIP não fazem parte deste commit.
