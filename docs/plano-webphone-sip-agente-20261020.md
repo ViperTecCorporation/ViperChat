@@ -359,3 +359,22 @@ Validação local em infraestrutura Docker descartável, com recursos limitados 
 Na primeira execução remota do PR de correção, o lint detectou oito comentários redundantes `Rails/Output`. A investigação identificou uma diferença de caminho: o padrão `**/app/**/*.rb` também inclui scripts quando o checkout inteiro está em `/app`, mas não na raiz usada pelo GitHub. A correção remove esses comentários sem mudar o comportamento dos scripts; a revalidação usa uma exportação limpa do commit fora de `/app`, evitando essa divergência entre fonte enviada e runtime de teste.
 
 O reinício local do Docker Desktop foi autorizado após sobrecarga; os serviços dev voltaram e o endpoint `/api` respondeu HTTP 200. Nenhuma VPS foi acessada/alterada. Nesta correção o frontend funcional, as dependências e os bundles nativos não mudaram; não foram gerados APK/Archive nem feitos novos testes em aparelhos. A integração em `4.16.0` depende ainda da confirmação dos checks desta correção no GitHub.
+
+### Retomada da branch VoIP e integração dos hotfixes — 21/10/2026
+
+Retomado o checkout `C:/Users/caita/.codex/worktrees/viperchat-voip`, branch `feat/agent-voip-webphone`. A branch já continha as correções até `e246c3570`. Foram integrados, em ordem e sem conflitos, os três commits restantes da `4.16.0`, preservando autoria e os commits de implementação VoIP:
+
+- `f8b372d80` → `c06fe42eb`: autenticação UnoAPI por token com variações de `+`/nono dígito, preservando assinatura Meta.
+- `f30427ccf` → `390943148`: fixtures legadas de vínculos sem relaxar a unicidade de produção.
+- `c0d137c5b` → `6b9cd9192`: edição/exclusão na bolha canônica, fila para referências pendentes e seletor de transporte hidratado sem F5, incluindo os dois planos e as regressões.
+
+`git cherry` confirmou equivalência de todos os patches restantes da `4.16.0`. Nenhuma versão/tag foi movida e não houve deploy, restart, sincronização do runtime ativo ou envio de chamadas/mensagens reais.
+
+Validação da combinação nesta branch:
+
+- Frontend: 197 testes, 18 arquivos, zero falhas, incluindo SIP.js, store VoIP, webphone, central de chamadas, configuração, contatos, ReplyBox, seletor e editor compacto.
+- Backend: 229 exemplos, zero falhas, incluindo APIs VoIP/diretório, vínculos, autenticação UnoAPI/Meta e mutações da caixa unificada.
+- Executado no container já existente, com exportação descartável do código e banco `viperchat_voip_test`/Redis 15, sem criar containers nem substituir `/app`.
+- O junction de dependências do worktree exigiu configuração Vitest temporária permitindo apenas o worktree e o diretório de dependências compartilhado, sem desativar testes. O arquivo temporário, a exportação no container e os dois arquivos de transferência no Temp Windows foram removidos ao concluir.
+
+As três alterações locais preexistentes em `android/app/capacitor.build.gradle`, `android/capacitor.settings.gradle` e `ios/App/CapApp-SPM/Package.swift`, além de `.playwright-cli/` e `output/`, foram preservadas e não incluídas na integração. Não foi feita nova tentativa de contornar os bloqueios nativos documentados em `docs/correcao-seletor-transporte-sem-f5-20261021.md`: o aceite físico Android/iOS desta integração continua pendente. Webhooks/CDR do serviço VoIP continuam fora do escopo autorizado da implementação atual.
