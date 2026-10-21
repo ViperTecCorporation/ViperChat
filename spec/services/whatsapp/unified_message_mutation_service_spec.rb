@@ -18,7 +18,10 @@ RSpec.describe Whatsapp::UnifiedMessageMutationService do
     else
       event[:from] = '5581981829525'
     end
-    if operation == 'revoke'
+    if operation == 'reaction'
+      event[:type] = 'reaction'
+      event[:reaction] = { message_id: target, emoji: '👍' }
+    elsif operation == 'revoke'
       event[:type] = 'revoke'
       event[:revoke] = { original_message_id: target }
     elsif provider == 'unoapi'
@@ -100,12 +103,13 @@ RSpec.describe Whatsapp::UnifiedMessageMutationService do
   end
 
   def ingest(payload = value)
-    params = { entry: [{ changes: [{ field: direction == 'outgoing' ? 'smb_message_echoes' : 'messages', value: payload }] }] }
+    echo = payload[:message_echoes].present?
+    params = { entry: [{ changes: [{ field: echo ? 'smb_message_echoes' : 'messages', value: payload }] }] }
     service = provider == 'unoapi' ? Whatsapp::IncomingMessageUnoapiService : Whatsapp::IncomingMessageWhatsappCloudService
-    service.new(inbox: channel.inbox, params: params.with_indifferent_access, outgoing_echo: direction == 'outgoing').perform
+    service.new(inbox: channel.inbox, params: params.with_indifferent_access, outgoing_echo: echo).perform
   end
 
-  %w[uno meta].product(%w[unoapi whatsapp_cloud], %w[incoming outgoing], %w[edit revoke]).each do |principal, transport, flow, mutation|
+  %w[uno meta].product(%w[unoapi whatsapp_cloud], %w[incoming outgoing], %w[edit revoke reaction]).each do |principal, transport, flow, mutation|
     context "with #{mutation} via #{transport}, #{flow}, primary #{principal}" do
       let(:primary) { principal == 'uno' ? uno.inbox : meta.inbox }
       let(:provider) { transport }
@@ -122,10 +126,150 @@ RSpec.describe Whatsapp::UnifiedMessageMutationService do
         if mutation == 'edit'
           expect(stored.content).to eq('Texto editado sintético')
           expect(stored.content_attributes).to include('edited' => true, 'previous_content' => 'Texto original')
-        else
+        elsif mutation == 'revoke'
           expect(stored.content_attributes).to include('deleted' => true)
+        else
+          expect(stored).to have_attributes(content: 'Texto original', content_attributes: include('reaction' => { 'emoji' => '👍' }))
         end
         expect(WhatsappUnifiedEvent.last).to have_attributes(state: 'completed', reason: 'mutation_applied', payload: {})
+      end
+    end
+  end
+
+  %w[unoapi whatsapp_cloud].each do |transport|
+    context "when a customer reacts to an outgoing message via #{transport}" do
+      let(:provider) { transport }
+      let(:operation) { 'reaction' }
+      let(:value) do
+        payload = event.except(:to, :to_user_id).merge(from: '5581981829525')
+        { messages: [payload] }.with_indifferent_access
+      end
+
+      def event_meta_id
+        'wamid.HBgMNTU4MTgxODI5NTI1FQIAEhgUM0E0RUQxQ0FCRDRCRTI1NkU1MEMA'
+      end
+
+      it 'keeps a resolved conversation closed, including attachments and the original bubble on duplicate delivery' do
+        conversation.update!(status: :resolved)
+        stored.attachments.create!(account: account, file_type: :image,
+                                   file: { io: File.open(Rails.root.join('spec/assets/avatar.png')), filename: 'preservado.png' })
+        snapshot = inventory
+        2.times { ingest }
+        expect(inventory).to eq(snapshot)
+        expect(stored.reload.content_attributes.dig('reaction', 'emoji')).to eq('👍')
+        expect(stored.content).to eq('Texto original')
+        expect(conversation.reload).to be_resolved
+        expect(WhatsappUnifiedEvent.last.state).to eq('completed')
+      end
+
+      it 'holds an unknown reference and replays it only after the exact original becomes available' do
+        value[:messages].first[:reaction][:message_id] = 'unknown-reaction-target'
+        snapshot = inventory
+        ingest
+        pending = WhatsappUnifiedEvent.last
+        expect(pending.state).to eq('pending')
+        expect(inventory).to eq(snapshot)
+        identity = WhatsappMessageIdentity.create!(account: account, inbox: channel.inbox, channel: channel, provider: provider,
+                                                   external_id: 'unknown-reaction-target', provider_message_id: record.original_id,
+                                                   observations: { 'business_number' => channel.phone_number, 'direction' => 'outgoing',
+                                                                   'participants' => { 'to' => contact.phone_number.delete_prefix('+') } })
+        record.aliases.create!(whatsapp_message_identity: identity)
+        pending.update!(next_attempt_at: Time.current)
+        Whatsapp::UnifiedEventService.new(event: pending).perform
+        expect(pending.reload.state).to eq('completed')
+        expect(stored.reload.content_attributes.dig('reaction', 'emoji')).to eq('👍')
+        expect(inventory).to eq(snapshot)
+      end
+
+      it 'removes the reaction without creating a bubble and ignores a late older reaction' do
+        ingest
+        removal = value.deep_dup
+        removal[:messages].first.merge!(id: 'wamid.HBgMNTU4MTgxODI5NTI1FQIAEhgUM0FFQkJCM0M3ODY2MTI5QTI0OUEA',
+                                        timestamp: (Time.current.to_i + 1).to_s)
+        removal[:messages].first[:reaction][:emoji] = ''
+        removal[:messages].first[:provider_message_id] = 'REACTIONREMOVAL123456'
+        snapshot = inventory
+        2.times { ingest(removal) }
+        late = value.deep_dup
+        late[:messages].first[:id] = 'wamid.HBgMNTU4MTgxODI5NTI1FQIAEhgUM0FDODVDMzg5NDk5NkU3M0UxOUMA'
+        late[:messages].first[:provider_message_id] = 'LATEREACTION12345678'
+        ingest(late)
+        expect(stored.reload.content_attributes['reaction']).to be_nil
+        expect(inventory).to eq(snapshot)
+      end
+
+      it 'does not apply reactions from another contact' do
+        payload = value.deep_dup
+        payload[:messages].first[:from] = '5566991111111'
+        snapshot = inventory
+        ingest(payload)
+        expect(stored.reload.content_attributes['reaction']).to be_nil
+        expect(inventory).to eq(snapshot)
+      end
+
+      it 'keeps a missing target ID for review without creating contacts, conversations or messages' do
+        value[:messages].first[:reaction].delete(:message_id)
+        snapshot = inventory
+        ingest
+        expect(inventory).to eq(snapshot)
+        expect(stored.reload.content_attributes['reaction']).to be_nil
+        expect(WhatsappUnifiedEvent.last).to have_attributes(state: 'review', reason: 'mutation_target_missing')
+      end
+
+      it 'preserves a local operator reaction when an incoming removal arrives' do
+        stored.update!(content_attributes: stored.content_attributes.merge('reaction' => { 'emoji' => '❤️' }))
+        payload = value.deep_dup
+        payload[:messages].first[:reaction][:emoji] = ''
+        ingest(payload)
+        expect(stored.reload.content_attributes.dig('reaction', 'emoji')).to eq('❤️')
+      end
+
+      it 'does not let an edit timestamp suppress a later received reaction and keeps the edit clock unchanged' do
+        stored.update!(content_attributes: stored.content_attributes.merge('whatsapp_mutation_timestamp' => mutation_clock = 9_999_999_999_999))
+        ingest
+        expect(stored.reload.content_attributes).to include('reaction' => { 'emoji' => '👍' }, 'whatsapp_mutation_timestamp' => mutation_clock)
+      end
+
+      it 'does not react to a private message' do
+        stored.update!(private: true)
+        snapshot = inventory
+        ingest
+        expect(stored.reload.content_attributes['reaction']).to be_nil
+        expect(inventory).to eq(snapshot)
+      end
+
+      it 'does not react to a group conversation via the direct-contact mutation path' do
+        conversation.update!(group: true, group_source_id: '123456789@g.us')
+        snapshot = inventory
+        ingest
+        expect(stored.reload.content_attributes['reaction']).to be_nil
+        expect(inventory).to eq(snapshot)
+      end
+
+      it 'keeps a single annotation when the same customer reaction also arrives through the partner' do
+        conversation.update!(status: :resolved)
+        snapshot = inventory
+        ingest
+        partner = provider == 'unoapi' ? meta : uno
+        payload = value.deep_dup
+        payload[:messages].first.merge!(id: provider == 'unoapi' ? event_meta_id : 'uno-partner-reaction',
+                                        provider_message_id: '3A4ED1CABD4BE256E51C')
+        payload[:messages].first[:reaction][:message_id] = provider == 'unoapi' ? original_meta_id : stored.source_id
+        service = provider == 'unoapi' ? Whatsapp::IncomingMessageWhatsappCloudService : Whatsapp::IncomingMessageUnoapiService
+        params = { entry: [{ changes: [{ field: 'messages', value: payload }] }] }.with_indifferent_access
+        2.times { service.new(inbox: partner.inbox, params: params).perform }
+        expect(inventory).to eq(snapshot)
+        expect(stored.reload.content_attributes.dig('reaction', 'emoji')).to eq('👍')
+        expect(WhatsappUnifiedEvent.where(state: 'completed').count).to eq(2)
+        expect(conversation.reload).to be_resolved
+      end
+
+      it 'requires a reliable event timestamp and keeps the unresolved reaction for review' do
+        value[:messages].first.delete(:timestamp)
+        snapshot = inventory
+        ingest
+        expect(inventory).to eq(snapshot)
+        expect(WhatsappUnifiedEvent.last).to have_attributes(state: 'review', reason: 'reaction_timestamp_missing')
       end
     end
   end
