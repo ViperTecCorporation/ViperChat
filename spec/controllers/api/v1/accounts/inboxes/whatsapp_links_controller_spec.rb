@@ -42,11 +42,17 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
   end
 
   it 'only returns matching same-account candidates and never credentials' do
+    uno
     meta
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', phone_number: '+5566991111111',
                               sync_templates: false, validate_provider_config: false)
-    create(:channel_whatsapp, provider: 'whatsapp_cloud', phone_number: '556696222471',
-                              sync_templates: false, validate_provider_config: false)
+    foreign = create(:channel_whatsapp, provider: 'whatsapp_cloud', phone_number: '+5566993333333',
+                                        sync_templates: false, validate_provider_config: false)
+    foreign.phone_number = '556696222471'
+    expect(foreign).not_to be_valid
+    expect(foreign.errors[:phone_number]).to include(I18n.t('errors.messages.taken'))
+    # Legacy rows may predate phone ownership checks; keep testing account isolation for those rows.
+    foreign.update_columns(phone_number: foreign.phone_number) # rubocop:disable Rails/SkipsModelValidations
     get path, headers: headers
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body['link']).to be_nil
@@ -181,16 +187,24 @@ RSpec.describe 'WhatsApp inbox links API', type: :request do
   end
 
   it 'rejects a second enabled pairing in reverse order' do
-    WhatsappInboxLink.create!(account: account, primary_inbox: uno, secondary_inbox: meta, default_provider: 'unoapi', enabled: true)
-    other = create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: '+5566996222471',
-                                      sync_templates: false, validate_provider_config: false).inbox
+    link = WhatsappInboxLink.create!(account: account, primary_inbox: uno, secondary_inbox: meta, default_provider: 'unoapi', enabled: true)
+    other_channel = create(:channel_whatsapp, account: account, provider: 'unoapi', phone_number: '+5566993333333',
+                                              sync_templates: false, validate_provider_config: false)
+    other_channel.phone_number = '+5566996222471'
+    expect(other_channel).not_to be_valid
+    expect(other_channel.errors[:phone_number]).to include(I18n.t('errors.messages.taken'))
+    # A legacy duplicate must not bypass the separate one-enabled-pair rule.
+    other_channel.update_columns(phone_number: other_channel.phone_number) # rubocop:disable Rails/SkipsModelValidations
+    other = other_channel.inbox
     put(
       "/api/v1/accounts/#{account.id}/inboxes/#{other.id}/whatsapp_link",
       headers: headers,
       params: { partner_inbox_id: meta.id, primary_inbox_id: meta.id, enabled: true }, as: :json
     )
     expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.body).to include('An inbox already belongs to an enabled pair')
     expect(WhatsappInboxLink.where(enabled: true).count).to eq(1)
+    expect(link.reload).to have_attributes(primary_inbox_id: uno.id, secondary_inbox_id: meta.id, enabled: true)
   end
 
   it 'serializes transport options for an administrator without exposing provider credentials' do
