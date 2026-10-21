@@ -19,6 +19,8 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     Whatsapp::MessageIdentityObservationService.new(
       inbox: inbox, value: processed_params, outgoing_echo: outgoing_echo || (messages_data.present? && outgoing_message_type?)
     ).perform
+    return if process_unified_message_mutation
+
     sync_message_profile(profile_sync, receipt: true)
     if group_message?
       return Whatsapp::GroupMessageIngestionService.new(inbox: inbox, value: processed_params).perform do
@@ -37,6 +39,16 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   private
+
+  def process_unified_message_mutation
+    Whatsapp::UnifiedMessageMutationService.new(inbox: inbox, value: processed_params).perform do |target, event|
+      if event[:type] == 'revoke'
+        update_message_with_status(target, status: 'deleted')
+      else
+        apply_message_edit(target, event)
+      end
+    end
+  end
 
   def sync_message_profile(service, receipt:)
     service&.perform if processed_params[:statuses].present? == receipt
