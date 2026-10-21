@@ -23,7 +23,26 @@ class Whatsapp::MessageIdentityParticipantService
     values.all? { |value| phone(value) == phone(peer) || business_device?(value) }
   end
 
+  def outgoing_bsuid_phone
+    source = confirmed_outgoing_bsuid
+    return if source.blank?
+
+    ids = @identity.inbox.contact_inboxes.active_whatsapp_identity.where(source_id: source).pluck(:contact_id)
+    contacts = @identity.inbox.account.contacts.where(id: ids).to_a
+    phone(contacts.sole.phone_number) if contacts.one?
+  end
+
   private
+
+  def confirmed_outgoing_bsuid
+    adapter = @identity.observations.fetch('meta_id_adapter', {})
+    return unless @identity.provider == 'whatsapp_cloud' && @identity.observations['direction'] == 'outgoing'
+    return unless adapter.values_at('status', 'direction', 'participant_type') == %w[recognized outgoing bsuid]
+
+    source = adapter['participant']
+    observed = @identity.observations.fetch('participants', {}).values_at('to_user_id', 'to_parent_user_id').find(&:present?)
+    source if source.to_s.match?(/\A[A-Z]{2}\.\d{8,32}\z/) && observed == source
+  end
 
   def business_device?(value)
     business = phone(@identity.observations['business_number'])

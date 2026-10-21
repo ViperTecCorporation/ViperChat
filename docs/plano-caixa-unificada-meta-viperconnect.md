@@ -1625,3 +1625,12 @@ Validação do ajuste de 19/10/2026 em dev: **174 exemplos Ruby aprovados** (pol
 - Evento 486 contém destinatários realmente divergentes. Arquivar o conflito revisado como `disabled / retired_recipient_after_phone_change`, sem inventar deduplicação, reescrever o payload ou alterar as identidades capturadas. Uma mensagem histórica enviada com identificação errada não comprova entrega ao número novo.
 - Aceite dev: 600 exemplos Ruby sem falhas nos fluxos relacionados, mais um teste específico do executor com conversa, mensagem e mídia preservadas. RuboCop dos 18 arquivos de aplicação/spec sem infrações. Sem alteração de frontend ou necessidade de novos pacotes móveis neste hotfix.
 - Implantação autorizada via hostpath depois do aceite; status operacional, backup e limitações em [runbook da troca de telefone](hostpath-contact-phone-change-20261020.md). Não confundir patch em runtime com nova imagem ou commit publicado.
+
+## 46. Recibos de echo sem destinatário explícito e BSUID (20/10/2026)
+
+- Distinguir ausência de destinatário de contradição: não comparar um recibo conhecido com peer nulo como se fosse divergência. Validar o recibo também contra a contraparte exata, sem aceitar destinatário de outra pessoa.
+- BSUID de saída só pode revelar telefone por alias ativo da própria caixa/conta e papel confirmado no envelope. Nunca restaurar alias retirado pela troca de telefone.
+- Nos eventos 463/468, há envio API e echo já persistidos. Resolver o evento por prova de ID original/transporte/contato, preservando ambas as bolhas e seus IDs, contatos, payload, observações e mídias. Não retroagir exclusão ou ocultação de bolhas.
+- Para novos ecos equivalentes, reutilizar a bolha API pelo fluxo existente de ingestão única; não criar terceira mensagem nem contato especulativo.
+- Aceite dev: 726 exemplos sem falhas, incluindo 14 casos novos e os fluxos anteriores. Aplicação autorizada via hostpath com backup, sem nova imagem ou apps; registrar resultado no [runbook dos eventos 463/468](hostpath-sparse-echo-events-463-468-20261020.md).
+- Aplicado em 20/10/2026 às 20:31 de Cuiabá; eventos 463/468 concluídos com os quatro IDs de mensagem e ambas as bolhas preservados. Inventários dos contatos 231/62583, aliases, conversa, mensagens e evidências idênticos após a operação. Workers ativos e HTTP 200. Publicação posterior desta etapa na `4.16.0` autorizada pelo administrador, sem nova execução na VPS.

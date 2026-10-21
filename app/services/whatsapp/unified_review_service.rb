@@ -139,7 +139,8 @@ class Whatsapp::UnifiedReviewService
     message = kind == 'delivery' ? record : record.try(:message)
     if kind == 'event'
       message = Whatsapp::UnifiedMessageIngestionService.message_for(record.whatsapp_message_identity) ||
-                Whatsapp::UnifiedEventResolutionService.new(event: record).message
+                Whatsapp::UnifiedEventResolutionService.new(event: record).message ||
+                Whatsapp::RetainedOutgoingEchoResolutionService.new(event: record).message
     end
     reviewed = acknowledged_action(kind, record)
     {

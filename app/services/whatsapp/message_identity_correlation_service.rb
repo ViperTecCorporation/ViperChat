@@ -67,7 +67,7 @@ class Whatsapp::MessageIdentityCorrelationService
   def compatibility_status(candidate)
     pending = evidence_status(candidate)
     return pending if pending
-    return 'incompatible' if known_incompatibility?(candidate)
+    return 'incompatible' if incompatible_evidence?(candidate)
     return 'participant_identity_pending' unless complete_participant?(@identity) && complete_participant?(candidate)
     return 'incompatible' unless compatible?(candidate)
 
@@ -132,7 +132,15 @@ class Whatsapp::MessageIdentityCorrelationService
           elsif direction(identity) == 'outgoing'
             participants['to'] || participants['recipient_id']
           end
-    phone(raw)
+    peer_address(identity, raw)
+  end
+
+  def peer_address(identity, raw)
+    phone(raw) || participant_service(identity).outgoing_bsuid_phone
+  end
+
+  def incompatible_evidence?(candidate)
+    known_incompatibility?(candidate) || receipt_role_conflict?(@identity, peer(candidate)) || receipt_role_conflict?(candidate, peer(@identity))
   end
 
   def conflicting?(identity)
@@ -170,9 +178,9 @@ class Whatsapp::MessageIdentityCorrelationService
     Whatsapp::MessageIdentityParticipantService.new(identity: identity)
   end
 
-  def receipt_role_conflict?(identity)
+  def receipt_role_conflict?(identity, expected_peer = peer(identity))
     recipient = identity.observations.dig('receipt_participants', 'recipient_id')
-    recipient.present? && !participant_service(identity).receipt_recipient?([recipient], peer: peer(identity))
+    recipient.present? && expected_peer.present? && !participant_service(identity).receipt_recipient?([recipient], peer: expected_peer)
   end
 
   def business_role_conflict?(identity)
@@ -183,7 +191,7 @@ class Whatsapp::MessageIdentityCorrelationService
 
   def envelope_peer_conflict?(identity)
     observed_peer = peer(identity)
-    envelope_peer = phone(identity.observations.dig('meta_id_adapter', 'participant'))
+    envelope_peer = phone(identity.observations.dig('meta_id_adapter', 'participant')) || participant_service(identity).outgoing_bsuid_phone
     observed_peer.present? && envelope_peer.present? && observed_peer != envelope_peer
   end
 

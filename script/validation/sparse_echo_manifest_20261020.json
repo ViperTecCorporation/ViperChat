@@ -1,0 +1,7 @@
+[
+  {"path":"app/services/whatsapp/message_identity_correlation_service.rb","base_sha256":"d7ba012897cdc5a334a4dc2342a4360028ee7ede910f9a3b558592682edfbc97","sha256":"c235bd90e905da462a11be8ff6d73e9e971c1abb8c33f71088ec9769acce72ff"},
+  {"path":"app/services/whatsapp/message_identity_participant_service.rb","base_sha256":"caff324510a2abe5e3df967ff8cf82030d689b23079c0f396011c2f3d08c815a","sha256":"bb3924713e9f886c006ce28cd193b5e63b6a14dee2fcd1f568edb4a37fc217ea"},
+  {"path":"app/services/whatsapp/unified_event_service.rb","base_sha256":"c6a52308129945ebc7c168e6ee3dbd03664b6934c5417c20d10ac138990dc761","sha256":"a63a2f8e8a299232746922463e4f55e0870f5deb6ce51e7c15a6a3a35c7779b1"},
+  {"path":"app/services/whatsapp/unified_review_service.rb","base_sha256":"b2371efb5649ce3a707e862e9780128592c884557f4edf8846e85494934fedab","sha256":"654d59fc4aa3fa52d4e3dd0e56d29751c75f742abdeca8645733d13b23e2b62a"},
+  {"path":"app/services/whatsapp/retained_outgoing_echo_resolution_service.rb","base_sha256":null,"sha256":"6f0fc5815185d9da8c3b463df60bb08284126656e771b162017e67e731ed24d9"}
+]
