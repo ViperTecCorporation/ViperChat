@@ -82,6 +82,8 @@ class Whatsapp::MessageIdentityObservationService
   end
 
   def legacy_unobserved_event?(event, scope)
+    return false if Whatsapp::UnifiedMessageMutationService.mutation?(@value)
+
     @inbox.channel.provider == 'unoapi' && event[:provider_message_id].blank? && !scope.exists? && !group_event?(event)
   end
 
@@ -154,7 +156,7 @@ class Whatsapp::MessageIdentityObservationService
     track_conflicts(result, result, current.slice('direction', 'message_type', 'event_type'))
     result.merge!(current.compact_blank)
     result['timestamp'] = event[:timestamp] if event.key?(:timestamp)
-    %w[context reaction revoke].each do |reference|
+    %w[context reaction revoke edit].each do |reference|
       next unless event[reference].is_a?(Hash)
 
       result[reference] = result.fetch(reference, {}).merge(event[reference].slice(*REFERENCE_KEYS).stringify_keys)

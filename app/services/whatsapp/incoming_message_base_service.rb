@@ -274,6 +274,11 @@ class Whatsapp::IncomingMessageBaseService
       return true
     end
 
+    apply_message_edit(original_message, message)
+    true
+  end
+
+  def apply_message_edit(original_message, message)
     edited_content = message_content(edited_message_payload(message))
     content_attrs = original_message.content_attributes || {}
     content_attrs = content_attrs.merge(

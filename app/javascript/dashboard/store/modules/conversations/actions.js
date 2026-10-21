@@ -71,6 +71,19 @@ const actions = {
     }
   },
 
+  async refreshWhatsappTransport({ commit }, conversationId) {
+    try {
+      const { data } = await ConversationApi.show(conversationId);
+      commit('hydrateWhatsappTransport', {
+        conversationId: data.id,
+        accountId: data.account_id,
+        options: data.whatsapp_transport_options ?? null,
+      });
+    } catch {
+      // A failed refresh does not change the operator's selection or enable a provider.
+    }
+  },
+
   fetchAllConversations: async (
     { commit, state, dispatch },
     { refresh = false } = {}
@@ -391,6 +404,10 @@ const actions = {
   async setActiveChat({ commit, dispatch }, { data, after }) {
     commit(types.SET_CURRENT_CHAT_WINDOW, data);
     commit(types.CLEAR_ALL_MESSAGES_LOADED, data.id);
+    const transportRefresh =
+      data.meta?.channel === 'Channel::Whatsapp' && !data.group
+        ? dispatch('refreshWhatsappTransport', data.id)
+        : Promise.resolve();
     if (data.dataFetched === undefined) {
       try {
         await dispatch('fetchPreviousMessages', {
@@ -403,6 +420,7 @@ const actions = {
         // Ignore error
       }
     }
+    await transportRefresh;
   },
 
   assignAgent: async (

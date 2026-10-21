@@ -35,6 +35,14 @@ const getConversationById = _state => conversationId => {
 
 // mutations
 export const mutations = {
+  hydrateWhatsappTransport(_state, { conversationId, accountId, options }) {
+    const chat = getConversationById(_state)(conversationId);
+    if (chat && chat.account_id === accountId) {
+      // HTTP detail is permission-scoped, unlike a partial cable/list snapshot.
+      // Do not discard it merely because a newer message changed updated_at.
+      chat.whatsapp_transport_options = options;
+    }
+  },
   reconcileConversationSnapshot(_state, ids) {
     const visible = new Set(ids);
     _state.allConversations = _state.allConversations.filter(
