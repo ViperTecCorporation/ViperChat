@@ -227,9 +227,13 @@ RSpec.describe 'Paired WhatsApp ten-conversation load', type: :request do
 
       def deliver(provider, rows = cases, url_provider: provider)
         body = batch(provider, rows)
-        # The production Uno endpoint intentionally bypasses Meta HMAC validation;
-        # Meta requests here exercise the actual HMAC verifier, not a stub.
-        headers = { 'CONTENT_TYPE' => 'application/json', 'X-Hub-Signature-256' => "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', secret, body)}" }
+        # Exercise each provider's actual authentication, without bypassing the controller.
+        headers = { 'CONTENT_TYPE' => 'application/json' }
+        if provider == :uno
+          headers['Authorization'] = uno_channel.provider_config.fetch('webhook_verify_token')
+        else
+          headers['X-Hub-Signature-256'] = "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', secret, body)}"
+        end
         perform_enqueued_jobs(only: [Webhooks::WhatsappEventsJob]) do
           post "/webhooks/whatsapp/#{channels.fetch(url_provider).phone_number}", params: body, headers: headers
         end
@@ -355,6 +359,20 @@ RSpec.describe 'Paired WhatsApp ten-conversation load', type: :request do
         expect(downloads.size).to eq(expected_media * 2)
         expect(uploads.size).to eq(expected_media * 2)
         expect(performed_jobs.map { |job| job[:job] }.uniq).to eq([Webhooks::WhatsappEventsJob])
+      end
+
+      [nil, 'synthetic-invalid-token'].each do |token|
+        it "rejects a #{token.nil? ? 'missing' : 'bad'} UnoAPI token before any inbound job or download" do
+          headers = { 'CONTENT_TYPE' => 'application/json', 'Authorization' => token }.compact
+          expect do
+            post "/webhooks/whatsapp/#{uno_channel.phone_number}", params: batch(:uno), headers: headers
+          end.not_to have_enqueued_job(Webhooks::WhatsappEventsJob)
+          expect(response).to have_http_status(:unauthorized)
+          expect(public_messages).to be_empty
+          expect(account.conversations).to be_empty
+          expect(downloads).to be_empty
+          expect(uploads).to be_empty
+        end
       end
     end
   end
