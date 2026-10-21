@@ -1,7 +1,7 @@
 class Webhooks::WhatsappController < ActionController::API
   include MetaTokenVerifyConcern
 
-  before_action :verify_meta_signature!, only: :process_payload
+  before_action :verify_webhook_authentication!, only: :process_payload
 
   def process_payload
     return head :unauthorized if whatsapp_channel.blank? && url_channels.many?
@@ -22,6 +22,14 @@ class Webhooks::WhatsappController < ActionController::API
   end
 
   private
+
+  def verify_webhook_authentication!
+    # An UnoAPI URL fallback is routing evidence, not proof of authentication.
+    unoapi_route = whatsapp_channel&.provider == 'unoapi' || (whatsapp_channel.blank? && url_channels.any? { |channel| channel.provider == 'unoapi' })
+    return head :unauthorized if unoapi_route && authenticated_unoapi_channel.blank?
+
+    verify_meta_signature!
+  end
 
   def valid_token?(token)
     return false if token.blank?
@@ -45,23 +53,25 @@ class Webhooks::WhatsappController < ActionController::API
 
   def url_channel
     return url_channels.first if url_channels.one?
+    return if params.dig(:entry, 0, :changes, 0, :value, :metadata).present?
     return unless params[:object] == 'whatsapp_business_account' && request.headers[META_SIGNATURE_HEADER].present?
 
     url_channels.find { |channel| channel.provider == 'whatsapp_cloud' }
   end
 
   def url_channels
-    @url_channels ||= Channel::Whatsapp.where(phone_number: params[:phone_number]).to_a
+    @url_channels ||= Whatsapp::ChannelPhoneIdentity.channels(params[:phone_number]).to_a
   end
 
   def authenticated_unoapi_channel
     authorization = request.headers['Authorization'].to_s.delete_prefix('Bearer ')
     return if authorization.blank?
 
-    url_channels.find do |channel|
+    matches = url_channels.select do |channel|
       expected = channel.provider_config['webhook_verify_token']
       channel.provider == 'unoapi' && expected.present? && ActiveSupport::SecurityUtils.secure_compare(expected, authorization)
     end
+    matches.first if matches.one?
   end
 
   def meta_signature_verification_required?

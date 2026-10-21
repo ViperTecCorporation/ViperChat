@@ -131,7 +131,7 @@ RSpec.describe 'Private real paired coexistence HTTP replay', type: :request do
     channels.fetch(captured.fetch('inbox_id'))
   end
 
-  # Keep the complete signed transport and private assertions together for review.
+  # Keep authenticated transport and private assertions together for review.
   # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
   def deliver_real_event(row)
     channel = replay_channel(row)
@@ -146,8 +146,12 @@ RSpec.describe 'Private real paired coexistence HTTP replay', type: :request do
       end
     end
     body = payload.to_json
-    headers = { 'CONTENT_TYPE' => 'application/json',
-                'X-Hub-Signature-256' => "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', secret, body)}" }
+    headers = { 'CONTENT_TYPE' => 'application/json' }
+    if channel.provider == 'unoapi'
+      headers['Authorization'] = channel.provider_config.fetch('webhook_verify_token')
+    else
+      headers['X-Hub-Signature-256'] = "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', secret, body)}"
+    end
     contacts_before = account.contacts.count
     perform_enqueued_jobs(only: [Webhooks::WhatsappEventsJob]) do
       post "/webhooks/whatsapp/#{channel.phone_number}", params: body, headers: headers
