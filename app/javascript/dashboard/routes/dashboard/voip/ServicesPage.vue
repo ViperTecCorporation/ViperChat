@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { VoipAPI } from 'dashboard/api/voip';
 import AgentVoipCard from 'dashboard/components/voip/AgentVoipCard.vue';
+import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
 
 const { t } = useI18n();
 const { accountId } = useAccount();
@@ -14,7 +15,30 @@ const memberId = ref('');
 const dialog = ref(null);
 const editing = ref(null);
 const form = ref({});
-const allowedUsers = ref('');
+const allowedUsers = ref([]);
+const selectedAgentNames = computed(() =>
+  allowedUsers.value.map(
+    id =>
+      agents.value.find(agent => agent.user_id === id)?.name ||
+      t('AGENT_VOIP.UNAVAILABLE_AGENT', { id })
+  )
+);
+const agentMenuItems = computed(() =>
+  agents.value
+    .filter(agent => !allowedUsers.value.includes(agent.user_id))
+    .map(agent => ({
+      label: agent.name,
+      value: agent.user_id,
+      action: 'select',
+      thumbnail: { name: agent.name, src: agent.thumbnail || '' },
+    }))
+);
+function addAllowedAgent({ value }) {
+  if (!allowedUsers.value.includes(value)) allowedUsers.value.push(value);
+}
+function removeAllowedAgent(index) {
+  allowedUsers.value.splice(index, 1);
+}
 const error = ref('');
 const busy = ref(false);
 let contextVersion = 0;
@@ -45,7 +69,7 @@ function open(row) {
         registration_expires: 300,
         turn_password: '',
       };
-  allowedUsers.value = (row?.allowed_user_ids || []).join(',');
+  allowedUsers.value = [...(row?.allowed_user_ids || [])];
   error.value = '';
   dialog.value.showModal();
 }
@@ -56,11 +80,7 @@ async function save() {
   try {
     await api.value.saveService(editing.value, {
       ...form.value,
-      allowed_user_ids: allowedUsers.value
-        .split(',')
-        .map(value => value.trim())
-        .filter(Boolean)
-        .map(Number),
+      allowed_user_ids: [...allowedUsers.value],
     });
     if (version !== contextVersion) return;
     form.value.turn_password = '';
@@ -92,7 +112,7 @@ watch(
     memberId.value = '';
     editing.value = null;
     form.value = {};
-    allowedUsers.value = '';
+    allowedUsers.value = [];
     error.value = '';
     busy.value = false;
     const currentApi = api.value;
@@ -250,13 +270,25 @@ watch(
             />
           </label>
         </div>
-        <label class="flex flex-col gap-1 text-sm">
-          {{ t('AGENT_VOIP.ALLOWED_USERS') }}
-          <input
-            v-model="allowedUsers"
-            class="min-w-0 rounded-lg border border-n-weak bg-n-surface-2 p-2"
-          />
-        </label>
+        <div class="flex min-w-0 flex-col gap-2 text-sm">
+          <label>{{ t('AGENT_VOIP.ALLOWED_USERS') }}</label>
+          <div class="min-w-0 rounded-xl border border-n-weak p-2">
+            <TagInput
+              :model-value="selectedAgentNames"
+              :placeholder="t('AGENT_VOIP.PICK_AGENTS')"
+              :menu-items="agentMenuItems"
+              :auto-open-dropdown="false"
+              :disabled="busy"
+              show-dropdown
+              skip-label-dedup
+              @add="addAllowedAgent"
+              @remove="removeAllowedAgent"
+            />
+          </div>
+          <p class="text-xs text-n-slate-11">
+            {{ t('AGENT_VOIP.ALLOWED_USERS_HELP') }}
+          </p>
+        </div>
         <label
           v-for="[field, label] in [
             ['enabled', 'ENABLED'],

@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import AgentVoipCard from 'dashboard/components/voip/AgentVoipCard.vue';
 import ServicesPage from '../ServicesPage.vue';
+import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
 
 const mocks = vi.hoisted(() => ({
   accountId: null,
@@ -135,5 +136,61 @@ describe('VoIP configuration account isolation', () => {
     expect(wrapper.text()).not.toContain('Old central');
     expect(wrapper.find('dialog').attributes()).not.toHaveProperty('open');
     expect(wrapper.find('input[type="password"]').element.value).toBe('');
+  });
+
+  it('selects same-name agents independently and saves user IDs, not membership IDs', async () => {
+    mocks.agents.mockResolvedValue({
+      data: [
+        { id: 50, user_id: 101, name: 'José' },
+        { id: 51, user_id: 102, name: 'José' },
+      ],
+    });
+    mocks.saveService.mockResolvedValue({ data: {} });
+    wrapper = mount(ServicesPage);
+    await flushPromises();
+    await wrapper.find('header button').trigger('click');
+    const selector = wrapper.findComponent(TagInput);
+    expect(selector.props('skipLabelDedup')).toBe(true);
+    selector.vm.$emit('add', { value: 101 });
+    await flushPromises();
+    expect(selector.props('menuItems').map(item => item.value)).toEqual([102]);
+    selector.vm.$emit('add', { value: 102 });
+    selector.vm.$emit('add', { value: 101 });
+    await flushPromises();
+    expect(selector.props('modelValue')).toEqual(['José', 'José']);
+    await wrapper.find('dialog form').trigger('submit');
+    expect(mocks.saveService).toHaveBeenLastCalledWith(
+      1,
+      null,
+      expect.objectContaining({ allowed_user_ids: [101, 102] })
+    );
+  });
+
+  it('preserves unavailable agents on edit and only allows all after explicit removal', async () => {
+    mocks.services.mockResolvedValue({
+      data: [{ id: 10, name: 'Central', allowed_user_ids: [999] }],
+    });
+    mocks.saveService.mockResolvedValue({ data: {} });
+    wrapper = mount(ServicesPage);
+    await flushPromises();
+    await wrapper.find('article button').trigger('click');
+    const selector = wrapper.findComponent(TagInput);
+    expect(selector.props('modelValue')).toEqual([
+      'AGENT_VOIP.UNAVAILABLE_AGENT',
+    ]);
+    await wrapper.find('dialog form').trigger('submit');
+    expect(mocks.saveService).toHaveBeenLastCalledWith(
+      1,
+      10,
+      expect.objectContaining({ allowed_user_ids: [999] })
+    );
+    await wrapper.find('article button').trigger('click');
+    selector.vm.$emit('remove', 0);
+    await wrapper.find('dialog form').trigger('submit');
+    expect(mocks.saveService).toHaveBeenLastCalledWith(
+      1,
+      10,
+      expect.objectContaining({ allowed_user_ids: [] })
+    );
   });
 });

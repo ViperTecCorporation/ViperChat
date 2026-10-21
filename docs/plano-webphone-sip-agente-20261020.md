@@ -58,6 +58,7 @@ Nova seção **Configurações → VoIP → Serviços**, separada de Caixas de e
 - Arquivar serviço referenciado, não fazer cascade de chamadas/ramais. Troca para outra central nunca é fallback silencioso.
 - Serviços e ramais isolados por conta; uma conta não pode consultar, configurar ou autenticar usando o ID de outra.
 - Administrador controla os serviços compartilhados e quais agentes podem configurar o próprio ramal. Agente não edita URLs, chaves do serviço ou credenciais de colegas.
+- Agentes autorizados são escolhidos pelo nome no mesmo `TagInput` utilizado ao vincular agentes à caixa de entrada: pesquisa, seleção por clique e remoção individual. A interface envia IDs de usuário (não de membership), aceita nomes repetidos sem confundi-los e preserva vínculos indisponíveis ao editar. Nenhuma seleção mantém a política existente de permitir todos os agentes da conta; administradores conservam seu acesso.
 
 ## 4. Perfil do agente: modal Configurar VoIP
 
