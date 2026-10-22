@@ -15,6 +15,7 @@ vi.mock('sip.js', () => {
       options,
       delegate: options.delegate,
       start: vi.fn().mockResolvedValue(),
+      reconnect: vi.fn().mockResolvedValue(),
       stop: vi.fn().mockResolvedValue(),
     };
   });
@@ -65,10 +66,20 @@ vi.mock('sip.js', () => {
     };
   }
   return {
+    Grammar: {
+      nameAddrHeaderParse: vi.fn(value => {
+        const number = value.match(/sip:([+0-9]+)@/);
+        return number ? { uri: { user: number[1] } } : undefined;
+      }),
+    },
     UserAgent: Agent,
     Registerer: Registrar,
     Inviter: Call,
-    RegistererState: { Registered: 'Registered' },
+    RegistererState: {
+      Registered: 'Registered',
+      Unregistered: 'Unregistered',
+      Terminated: 'Terminated',
+    },
     SessionState: { Established: 'Established', Terminated: 'Terminated' },
   };
 });
@@ -125,6 +136,33 @@ describe('AgentSipClient', () => {
     Registerer.latest.stateChange.emit('Registered');
     await promise;
   }
+
+  it('reports the service-confirmed destination while preserving the originally dialed local number', async () => {
+    await connect();
+    await client.dial('997195718');
+    const { onProgress } =
+      Inviter.latest.invite.mock.calls[0][0].requestDelegate;
+    onProgress({
+      message: {
+        statusCode: 180,
+        getHeader: () => '<sip:+5566997195718@sip.example.test>',
+      },
+    });
+    expect(onCall).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        remote_address: '997195718',
+        resolved_address: '+5566997195718',
+        state: 'ringing',
+      })
+    );
+  });
+
+  it('does not infer a DDD when SIP returns only the short destination', async () => {
+    await connect();
+    await client.dial('997195718');
+    client.confirmRemoteAddress({ to: { uri: { user: '997195718' } } });
+    expect(client.context.resolved_address).toBeUndefined();
+  });
 
   it.each([false, true])(
     'persists incoming microphone denial even when SIP terminates first: %s',
@@ -268,6 +306,53 @@ describe('AgentSipClient', () => {
     });
   });
 
+  it('plays outgoing ringback without waiting for 180, keeps its cadence and stops on answer', async () => {
+    await connect();
+    await client.dial('0020');
+    const tone = client.ringtone;
+    expect(tone.src).toContain('calling.mp3');
+    expect(tone.loop).toBe(true);
+    expect(tone.muted).toBe(false);
+    tone.currentTime = 2;
+    const delegate = Inviter.latest.invite.mock.calls[0][0].requestDelegate;
+    delegate.onProgress({ message: { statusCode: 180 } });
+    delegate.onProgress({ message: { statusCode: 180 } });
+    expect(client.ringtone).toBe(tone);
+    expect(tone.currentTime).toBe(2);
+    delegate.onAccept({ message: {} });
+    expect(client.ringtone).toBeNull();
+    expect(tone.paused).toBe(true);
+  });
+
+  it('keeps an incoming ring blocked alert and retries after a real page interaction', async () => {
+    await connect();
+    const denied = Object.assign(new Error('blocked'), {
+      name: 'NotAllowedError',
+    });
+    HTMLMediaElement.prototype.play.mockRejectedValueOnce(denied);
+    client.incoming(new Inviter());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(client.ringtone.src).toContain('ring.mp3');
+    expect(onError).toHaveBeenLastCalledWith('audio_blocked');
+    window.dispatchEvent(new Event('pointerdown'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(client.audioBlocked).toBe(false);
+    expect(client.ringtone).not.toBeNull();
+  });
+
+  it('routes incoming/outgoing tones to the same selected speaker as the call', async () => {
+    await connect();
+    client.audio.setSinkId = vi.fn().mockResolvedValue();
+    client.toneAudio.setSinkId = vi.fn().mockResolvedValue();
+    await client.speaker('test-headset');
+    client.incoming(new Inviter());
+    expect(client.ringtone).toBe(client.toneAudio);
+    expect(client.audio.setSinkId).toHaveBeenCalledWith('test-headset');
+    expect(client.ringtone.setSinkId).toHaveBeenCalledWith('test-headset');
+    Inviter.latest.stateChange.emit('Terminated');
+    expect(client.ringtone).toBeNull();
+  });
+
   it('distinguishes a call answered elsewhere from a missed call', async () => {
     await connect();
     const invitation = new Inviter();
@@ -328,13 +413,70 @@ describe('AgentSipClient', () => {
     await client.dial('0020');
     client.context.answered = true;
     const call = client.session;
+    const id = client.context.client_call_id;
     await client.transfer('0030');
     expect(onTransfer).toHaveBeenLastCalledWith('pending');
     call.refer.mock.calls[0][1].onNotify({
       request: { body: 'SIP/2.0 200 OK' },
-      accept: vi.fn(),
+      accept: vi.fn().mockResolvedValue(),
     });
     expect(onTransfer).toHaveBeenLastCalledWith('completed');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(call.bye).toHaveBeenCalledOnce();
+    expect(client.session).toBeNull();
+    expect(onCall).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        client_call_id: id,
+        state: 'ended',
+        end_reason: 'transferred',
+        finished: true,
+      })
+    );
+    expect(() => call.delegate.onBye()).not.toThrow();
+  });
+
+  it.each(['SIP/2.0 100 Trying', 'SIP/2.0 486 Busy Here', 'invalid'])(
+    'does not end the original dialog for %s',
+    async body => {
+      await connect();
+      await client.dial('0020');
+      client.context.answered = true;
+      const call = client.session;
+      await client.transfer('0030');
+      call.refer.mock.calls[0][1].onNotify({
+        request: { body },
+        accept: vi.fn().mockResolvedValue(),
+      });
+      expect(call.bye).not.toHaveBeenCalled();
+      expect(client.session).toBe(call);
+    }
+  );
+
+  it('keeps watching registration loss and recovery after initial REGISTER succeeds', async () => {
+    await connect();
+    Registerer.latest.retryAfter = 5;
+    Registerer.latest.stateChange.emit('Unregistered');
+    expect(onRegistration).toHaveBeenLastCalledWith('reconnecting', 5);
+    Registerer.latest.stateChange.emit('Registered');
+    expect(onRegistration).toHaveBeenLastCalledWith('registered');
+    await client.disconnect();
+    Registerer.latest.stateChange.emit('Unregistered');
+    expect(onRegistration).toHaveBeenLastCalledWith('disconnected');
+  });
+
+  it('renews registration without replacing the live dialog or stopping audio', async () => {
+    await connect();
+    await client.dial('0020');
+    const session = client.session;
+    const agent = client.agent;
+    const recovery = client.recoverRegistration();
+    await vi.advanceTimersByTimeAsync(0);
+    Registerer.latest.register.mock.calls.at(-1)[0].requestDelegate.onAccept();
+    await recovery;
+    expect(client.session).toBe(session);
+    expect(agent.reconnect).toHaveBeenCalledOnce();
+    expect(agent.stop).not.toHaveBeenCalled();
+    expect(session.bye).not.toHaveBeenCalled();
   });
 
   it('sends only a valid DTMF digit for an established session', async () => {

@@ -27,7 +27,7 @@ class Voip::ObserveCallService
   private
 
   def details
-    @attributes.slice(:sip_code, :end_reason).compact
+    @attributes.slice(:sip_code, :end_reason, :resolved_address).compact
   end
 
   def apply(state, sequence)
@@ -37,7 +37,7 @@ class Voip::ObserveCallService
     values = { state: state, last_sequence: sequence, last_observed_at: Time.current }
     values[:answered_at] = @call.answered_at || Time.current if state == 'active'
     values[:ended_at] = Time.current if VoipCall::TERMINAL_STATES.include?(state)
-    values.merge!(details)
+    values.merge!(details.slice(:sip_code, :end_reason))
     @call.update!(values)
   end
 end

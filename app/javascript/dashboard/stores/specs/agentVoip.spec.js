@@ -51,6 +51,7 @@ vi.mock('dashboard/lib/voip/AgentSipClient', () => {
         .fn()
         .mockImplementation(async () => callbacks.onRegistration('registered')),
       disconnect: vi.fn().mockResolvedValue(),
+      recoverRegistration: vi.fn().mockResolvedValue(),
       dial: vi.fn().mockResolvedValue(),
       report: vi.fn().mockResolvedValue(),
     };
@@ -103,6 +104,91 @@ describe('agent VoIP coordination and persistence', () => {
     expect(phone.registration).toBe('disconnected');
     expect(AgentSipClient.instances).toHaveLength(0);
     expect(VoipAPI.instances[0].bootstrap).not.toHaveBeenCalled();
+  });
+
+  it('keeps audio blocking visible across registration refresh and clears only after audio plays', async () => {
+    await phone.prepare(1);
+    const callbacks = AgentSipClient.instances[0].callbacks;
+    callbacks.onError('audio_blocked');
+    callbacks.onRegistration('registered');
+    expect(phone.error).toBe('audio_blocked');
+    callbacks.onAudioReady();
+    expect(phone.error).toBe('');
+    callbacks.onError('microphone_denied');
+    callbacks.onAudioReady();
+    expect(phone.error).toBe('microphone_denied');
+  });
+
+  it('keeps retrying failed registrations without F5 and stops after registration succeeds', async () => {
+    await phone.prepare(1);
+    const api = VoipAPI.instances[0];
+    api.bootstrap
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'));
+    AgentSipClient.instances[0].callbacks.onRegistration('reconnecting');
+    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(phone.connected).toBe(true);
+    expect(api.bootstrap).toHaveBeenCalledTimes(4);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(api.bootstrap).toHaveBeenCalledTimes(4);
+  });
+
+  it('recovers signaling in-place during a live call and retries failures without tearing it down', async () => {
+    await phone.prepare(1);
+    const client = AgentSipClient.instances[0];
+    phone.call = { state: 'active' };
+    client.recoverRegistration.mockRejectedValue(new Error('offline'));
+    client.callbacks.onRegistration('reconnecting');
+    await vi.advanceTimersByTimeAsync(7000);
+    expect(client.disconnect).not.toHaveBeenCalled();
+    expect(client.recoverRegistration).toHaveBeenCalledTimes(3);
+    phone.call = null;
+    await vi.advanceTimersByTimeAsync(8000);
+    expect(phone.connected).toBe(true);
+    expect(VoipAPI.instances[0].bootstrap).toHaveBeenCalledTimes(2);
+  });
+
+  it('recovers a disconnected existing runtime on the periodic configuration refresh', async () => {
+    await phone.prepare(1);
+    AgentSipClient.instances[0].callbacks.onRegistration('disconnected');
+    await phone.refreshConfiguration();
+    expect(phone.connected).toBe(true);
+    expect(VoipAPI.instances[0].bootstrap).toHaveBeenCalledTimes(2);
+  });
+
+  it('cancels retry on stop and does not duplicate simultaneous connection attempts', async () => {
+    await phone.prepare(1);
+    AgentSipClient.instances[0].callbacks.onRegistration('reconnecting');
+    await phone.stop();
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(AgentSipClient.instances).toHaveLength(1);
+    await phone.prepare(1);
+    const api = VoipAPI.instances.at(-1);
+    await Promise.all([phone.connect(), phone.connect()]);
+    expect(api.bootstrap).toHaveBeenCalledTimes(2);
+  });
+
+  it('automatically connects when the active extension becomes available after startup', async () => {
+    VoipAPI.emptyProfile = true;
+    await phone.prepare(1);
+    VoipAPI.emptyProfile = false;
+    await phone.refreshConfiguration();
+    await phone.refreshConfiguration();
+    expect(phone.registration).toBe('registered');
+    expect(AgentSipClient.instances).toHaveLength(1);
+    expect(VoipAPI.instances[0].bootstrap).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries the profile automatically after a transient request failure', async () => {
+    VoipAPI.emptyProfile = true;
+    await phone.prepare(1);
+    VoipAPI.instances[0].profile.mockRejectedValueOnce(new Error('network'));
+    await phone.refreshConfiguration();
+    VoipAPI.emptyProfile = false;
+    await phone.refreshConfiguration();
+    expect(phone.connected).toBe(true);
   });
 
   it('does not register if another tab owns the account/agent lock', async () => {

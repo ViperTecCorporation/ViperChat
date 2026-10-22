@@ -1,5 +1,10 @@
 {
   "AGENT_VOIP": {
+    "CONFIGURED_EXTENSIONS": "Configured extensions",
+    "NO_EXTENSIONS": "No extensions configured in this account.",
+    "DEFAULT_EXTENSION": "Agent's default extension",
+    "WSS_REQUIRED": "Use a valid wss:// address for the SIP service. ws:// is allowed only on localhost in development; a LAN IP also requires WSS.",
+    "INVALID_FIELDS": "Check these fields: {fields}.",
     "FILTER_STATE": "Status",
     "FILTER_DIRECTION": "Direction",
     "CONFIRM_REMOVE_FAVORITE": "Remove {name} from favorites?",
@@ -35,6 +40,7 @@
     "CANCEL": "Cancel",
     "CLOSE": "Close",
     "BACK": "Back to call list",
+    "BACK_TO_CONVERSATIONS": "Back to all conversations",
     "TEST": "Test registration (no call)",
     "TEST_OK": "SIP registration confirmed. No call was started.",
     "ACTIVATE": "Use this service",

@@ -1,12 +1,12 @@
 class Api::V1::Accounts::Voip::CallsController < Api::V1::Accounts::Voip::BaseController
   def index
-    scope = visible_calls.includes(voip_agent_extension: [:voip_service, :account_user])
+    scope = visible_calls.includes(:voip_call_observations, voip_agent_extension: [:voip_service, :account_user])
     scope = filtered(scope)
     page = [params[:page].to_i, 1].max
     rows = scope.order(started_at: :desc, id: :desc).limit(5).offset((page - 1) * 5).to_a
     identities = remote_identities(rows)
     render json: { items: rows.map do |row|
-      row.public_payload(remote_identity: identities.dig(row.voip_agent_extension.voip_service_id, row.remote_address))
+      row.public_payload(remote_identity: identities.dig(row.voip_agent_extension.voip_service_id, row.identity_address))
     end,
                    total: scope.count, page: page, coverage: 'client_observed' }
   end
@@ -26,18 +26,25 @@ class Api::V1::Accounts::Voip::CallsController < Api::V1::Accounts::Voip::BaseCo
 
   def observe
     call = own_calls.find(params[:id])
-    attributes = params.require(:observation).permit(:event_id, :sequence, :state, :sip_code, :end_reason)
-    raise ArgumentError, 'invalid_sip_code' if attributes[:sip_code].present? && !(100..699).cover?(attributes[:sip_code].to_i)
-    raise ArgumentError, 'invalid_reason' if attributes[:end_reason].to_s.length > 128
-
-    ::Voip::ObserveCallService.new(call: call, attributes: attributes).perform
+    ::Voip::ObserveCallService.new(call: call, attributes: observation_params).perform
     render_call(call.reload)
   end
 
   private
 
+  def observation_params
+    attributes = params.require(:observation).permit(:event_id, :sequence, :state, :sip_code, :end_reason, :resolved_address)
+    raise ArgumentError, 'invalid_sip_code' if attributes[:sip_code].present? && !(100..699).cover?(attributes[:sip_code].to_i)
+    raise ArgumentError, 'invalid_reason' if attributes[:end_reason].to_s.length > 128
+    if attributes[:resolved_address].present? && !attributes[:resolved_address].match?(/\A\+?\d{10,15}\z/)
+      raise ArgumentError, 'invalid_resolved_address'
+    end
+
+    attributes
+  end
+
   def render_call(call, status: :ok)
-    identity = remote_identities([call]).dig(call.voip_agent_extension.voip_service_id, call.remote_address)
+    identity = remote_identities([call]).dig(call.voip_agent_extension.voip_service_id, call.identity_address)
     render json: call.public_payload(remote_identity: identity), status: status
   end
 

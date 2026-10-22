@@ -6,6 +6,7 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { useAgentVoipStore } from 'dashboard/stores/agentVoip';
 import { useFloatingWebphone } from 'dashboard/composables/useFloatingWebphone';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+import AgentTransferPicker from './AgentTransferPicker.vue';
 
 const { accountId } = useAccount();
 const phone = useAgentVoipStore();
@@ -15,7 +16,6 @@ const devices = ref([]);
 const keypad = ref(false);
 const audioMenu = ref(false);
 const transferMenu = ref(false);
-const transferTo = ref('');
 const actionBusy = ref(false);
 const panel = ref(null);
 const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -143,7 +143,7 @@ async function listDevices() {
           <div v-else class="flex min-w-0 flex-1 items-center gap-3">
             <span
               v-if="!phone.expanded"
-              class="i-lucide-phone block size-5 shrink-0 text-n-teal-11"
+              class="i-lucide-phone block size-5 shrink-0 text-n-brand"
               aria-hidden="true"
             />
             <span class="min-w-0">
@@ -227,7 +227,7 @@ async function listDevices() {
               type="button"
               :aria-label="t('AGENT_VOIP.ANSWER')"
               :title="t('AGENT_VOIP.ANSWER')"
-              class="flex size-14 items-center justify-center rounded-full bg-green-700 text-white disabled:opacity-50"
+              class="flex size-14 items-center justify-center rounded-full bg-n-brand text-white hover:enabled:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand disabled:opacity-50"
               @click="action(() => phone.answer())"
             >
               <span class="i-lucide-phone block size-6" aria-hidden="true" />
@@ -413,34 +413,16 @@ async function listDevices() {
               {{ t('AGENT_VOIP.OUTPUT_LIMIT') }}
             </p>
           </div>
-          <form
+          <AgentTransferPicker
             v-if="
               phone.activeService?.transfer_enabled &&
               phone.call.state === 'active' &&
               transferMenu
             "
-            class="mt-3 flex min-w-0 gap-2"
-            @submit.prevent="action(() => phone.transfer(transferTo))"
-          >
-            <input
-              v-model="transferTo"
-              :aria-label="t('AGENT_VOIP.EXTENSION')"
-              class="min-w-0 flex-1 rounded-lg border border-n-weak bg-n-surface-2 p-2"
-              required
-            />
-            <button
-              type="submit"
-              :disabled="actionBusy"
-              :aria-label="t('AGENT_VOIP.TRANSFER')"
-              :title="t('AGENT_VOIP.TRANSFER')"
-              class="flex size-11 shrink-0 items-center justify-center rounded-full bg-n-alpha-2 disabled:opacity-50"
-            >
-              <span
-                class="i-lucide-phone-forwarded block size-5"
-                aria-hidden="true"
-              />
-            </button>
-          </form>
+            :key="phone.call.client_call_id"
+            :busy="actionBusy || phone.transferState === 'pending'"
+            @transfer="address => action(() => phone.transfer(address))"
+          />
           <p v-if="phone.transferState" role="status" class="mt-2 text-sm">
             {{
               t('AGENT_VOIP.TRANSFER_STATUS', { status: phone.transferState })

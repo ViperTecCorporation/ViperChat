@@ -256,6 +256,12 @@ useIntervalFn(() => {
     <header
       class="flex items-center justify-between gap-3 border-b border-n-weak px-4 py-3 md:px-5 md:py-4"
     >
+      <BackButton
+        :back-url="accountScopedRoute('home')"
+        :accessible-label="t('AGENT_VOIP.BACK_TO_CONVERSATIONS')"
+        icon-only
+        class="min-h-11 min-w-11 shrink-0"
+      />
       <div class="min-w-0 flex-1">
         <h1 class="text-xl font-semibold">
           {{ t('AGENT_VOIP.TITLE') }}
@@ -279,212 +285,217 @@ useIntervalFn(() => {
         ref="list"
         :aria-label="t('AGENT_VOIP.RECENT')"
         :class="route.params.callId ? 'hidden md:block' : 'block'"
-        class="min-h-0 w-full shrink-0 overflow-y-auto border-r border-n-weak p-4 md:w-80 lg:w-96"
+        class="min-h-0 w-full shrink-0 overflow-y-auto border-n-weak p-4 md:w-80 md:border-r lg:w-96"
       >
-        <h2
-          v-if="favorites.length"
-          class="mb-2 flex items-center gap-2 font-semibold"
-        >
-          <span
-            aria-hidden="true"
-            class="i-lucide-star size-4 text-n-slate-11"
-          />
-          {{ t('AGENT_VOIP.FAVORITES') }}
-        </h2>
-        <div class="grid grid-cols-3 gap-2">
-          <div
-            v-for="row in visibleFavorites"
-            :key="row.id"
-            class="relative flex min-w-0 flex-col items-center rounded-xl bg-n-alpha-1 px-1 py-2"
+        <div class="mx-auto w-full max-w-sm md:max-w-none">
+          <h2
+            v-if="favorites.length"
+            class="mb-2 flex items-center gap-2 font-semibold"
           >
-            <button
-              type="button"
-              :title="displayName(row)"
-              class="flex w-full min-w-0 flex-col items-center gap-1 rounded-lg text-center"
-              @click="openDialer(row.address, row.voip_service_id)"
-            >
-              <Avatar
-                :name="displayName(row)"
-                :src="row.remote_identity?.avatar_url || ''"
-                :size="40"
-                rounded-full
-              />
-              <span class="block w-full truncate text-xs font-medium">{{
-                displayName(row)
-              }}</span>
-            </button>
-            <button
-              type="button"
-              :aria-label="t('AGENT_VOIP.REMOVE_FAVORITE')"
-              :title="t('AGENT_VOIP.REMOVE_FAVORITE')"
-              class="absolute -right-2 -top-2 flex size-11 items-center justify-center rounded-full text-n-slate-10 hover:text-n-ruby-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-              @click="requestRemoveFavorite(row)"
-            >
-              <span
-                aria-hidden="true"
-                class="flex size-6 items-center justify-center rounded-full border border-n-weak bg-n-solid-2 shadow-sm"
-                ><span class="i-lucide-pin-off block size-4 text-n-slate-11"
-              /></span>
-            </button>
-          </div>
-        </div>
-        <nav
-          v-if="favoritePages > 1"
-          :aria-label="t('AGENT_VOIP.FAVORITES')"
-          class="flex items-center justify-end gap-2 text-xs text-n-slate-11"
-        >
-          <button
-            type="button"
-            :disabled="favoritePage === 1"
-            :aria-label="t('AGENT_VOIP.PREVIOUS')"
-            class="flex size-11 items-center justify-center rounded-full hover:bg-n-alpha-1 disabled:opacity-40"
-            @click="favoritePage -= 1"
-          >
-            <span aria-hidden="true" class="i-lucide-chevron-left size-5" />
-          </button>
-          <span>{{ favoritePage }} / {{ favoritePages }}</span>
-          <button
-            type="button"
-            :disabled="favoritePage === favoritePages"
-            :aria-label="t('AGENT_VOIP.NEXT')"
-            class="flex size-11 items-center justify-center rounded-full hover:bg-n-alpha-1 disabled:opacity-40"
-            @click="favoritePage += 1"
-          >
-            <span aria-hidden="true" class="i-lucide-chevron-right size-5" />
-          </button>
-        </nav>
-        <div class="mt-4 flex flex-col gap-2">
-          <label class="relative block">
             <span
               aria-hidden="true"
-              class="i-lucide-search pointer-events-none absolute left-4 top-3 size-5 text-n-slate-11"
+              class="i-lucide-star size-4 text-n-slate-11"
             />
-            <input
-              v-model="search"
-              type="search"
-              :aria-label="t('AGENT_VOIP.SEARCH')"
-              :placeholder="t('AGENT_VOIP.SEARCH')"
-              class="min-h-11 w-full rounded-full border border-n-weak bg-n-surface-2 !pl-11 !pr-4"
-            />
-          </label>
-        </div>
-        <div class="mb-2 mt-5 flex items-center justify-between gap-2">
-          <h2 class="flex items-center gap-2 font-semibold">
-            <span
-              aria-hidden="true"
-              class="i-lucide-history size-4 text-n-slate-11"
-            />
-            {{ t('AGENT_VOIP.RECENT') }}
+            {{ t('AGENT_VOIP.FAVORITES') }}
           </h2>
-          <div class="flex items-center gap-2">
+          <div class="grid grid-cols-3 gap-2">
+            <div
+              v-for="row in visibleFavorites"
+              :key="row.id"
+              class="relative flex min-w-0 flex-col items-center rounded-xl bg-n-alpha-1 px-1 py-2"
+            >
+              <button
+                type="button"
+                :title="displayName(row)"
+                class="flex w-full min-w-0 flex-col items-center gap-1 rounded-lg text-center"
+                @click="openDialer(row.address, row.voip_service_id)"
+              >
+                <Avatar
+                  :name="displayName(row)"
+                  :src="row.remote_identity?.avatar_url || ''"
+                  :size="40"
+                  rounded-full
+                />
+                <span class="block w-full truncate text-xs font-medium">{{
+                  displayName(row)
+                }}</span>
+              </button>
+              <button
+                type="button"
+                :aria-label="t('AGENT_VOIP.REMOVE_FAVORITE')"
+                :title="t('AGENT_VOIP.REMOVE_FAVORITE')"
+                class="absolute -right-2 -top-2 flex size-11 items-center justify-center rounded-full text-n-slate-10 hover:text-n-ruby-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+                @click="requestRemoveFavorite(row)"
+              >
+                <span
+                  aria-hidden="true"
+                  class="flex size-6 items-center justify-center rounded-full border border-n-weak bg-n-solid-2 shadow-sm"
+                  ><span class="i-lucide-pin-off block size-4 text-n-slate-11"
+                /></span>
+              </button>
+            </div>
+          </div>
+          <nav
+            v-if="favoritePages > 1"
+            :aria-label="t('AGENT_VOIP.FAVORITES')"
+            class="flex items-center justify-end gap-2 text-xs text-n-slate-11"
+          >
             <button
               type="button"
-              :aria-label="t('AGENT_VOIP.FILTERS')"
-              :title="t('AGENT_VOIP.FILTERS')"
-              :aria-expanded="filtersOpen"
-              aria-controls="voip-call-filters"
-              aria-haspopup="dialog"
-              class="relative flex size-11 shrink-0 items-center justify-center rounded-full border border-n-weak text-n-slate-11"
-              @click="
-                filtersOpen = true;
-                filtersDialog.showModal();
-              "
+              :disabled="favoritePage === 1"
+              :aria-label="t('AGENT_VOIP.PREVIOUS')"
+              class="flex size-11 items-center justify-center rounded-full hover:bg-n-alpha-1 disabled:opacity-40"
+              @click="favoritePage -= 1"
             >
-              <span
-                aria-hidden="true"
-                class="i-lucide-list-filter size-5"
-              /><span
-                v-if="activeFilters"
-                class="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-n-brand text-xs text-white"
-                >{{ activeFilters }}</span
-              ></button
-            ><button
-              type="button"
-              :aria-label="t('AGENT_VOIP.NEW_CALL')"
-              :title="t('AGENT_VOIP.NEW_CALL')"
-              :disabled="!phone.connected || !!phone.call"
-              class="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-full bg-n-brand text-white disabled:opacity-50"
-              @click="openDialer()"
-            >
-              <span
-                aria-hidden="true"
-                class="i-lucide-phone-call size-5 shrink-0"
-              />
+              <span aria-hidden="true" class="i-lucide-chevron-left size-5" />
             </button>
-          </div>
-        </div>
-        <p
-          v-if="!items.length && !loading"
-          class="my-4 text-sm text-n-slate-11"
-        >
-          {{ t('AGENT_VOIP.EMPTY') }}
-        </p>
-        <button
-          v-for="row in items"
-          :key="row.id"
-          type="button"
-          class="mb-1 flex w-full min-w-0 items-center gap-3 rounded-xl p-3 text-left hover:bg-n-alpha-1"
-          :class="{ 'bg-n-alpha-2': String(row.id) === route.params.callId }"
-          @click="select(row)"
-        >
-          <Avatar
-            :name="displayName(row)"
-            :src="row.remote_identity?.avatar_url || ''"
-            :size="40"
-            rounded-full
-          />
-          <span class="min-w-0 flex-1">
-            <span class="block truncate font-medium">
-              {{ displayName(row) }}
-            </span>
-            <span
-              class="flex items-center gap-1 text-xs"
-              :class="
-                row.state === 'missed' ? 'text-red-600' : 'text-n-slate-11'
-              "
+            <span>{{ favoritePage }} / {{ favoritePages }}</span>
+            <button
+              type="button"
+              :disabled="favoritePage === favoritePages"
+              :aria-label="t('AGENT_VOIP.NEXT')"
+              class="flex size-11 items-center justify-center rounded-full hover:bg-n-alpha-1 disabled:opacity-40"
+              @click="favoritePage += 1"
             >
+              <span aria-hidden="true" class="i-lucide-chevron-right size-5" />
+            </button>
+          </nav>
+          <div
+            class="flex flex-col gap-2"
+            :class="favorites.length ? 'mt-4' : 'mt-0'"
+          >
+            <label class="relative block">
               <span
                 aria-hidden="true"
-                :class="callIcon(row)"
-                class="size-4 shrink-0"
+                class="i-lucide-search pointer-events-none absolute left-4 top-3 size-5 text-n-slate-11"
               />
-              <span class="truncate"
-                >{{ t(`AGENT_VOIP.DIRECTION.${row.direction}`) }} ·
-                {{ t(`AGENT_VOIP.STATE.${row.state}`) }}
+              <input
+                v-model="search"
+                type="search"
+                :aria-label="t('AGENT_VOIP.SEARCH')"
+                :placeholder="t('AGENT_VOIP.SEARCH')"
+                class="min-h-11 w-full rounded-full border border-n-weak bg-n-surface-2 !pl-11 !pr-4"
+              />
+            </label>
+          </div>
+          <div class="mb-2 mt-5 flex items-center justify-between gap-2">
+            <h2 class="flex items-center gap-2 font-semibold">
+              <span
+                aria-hidden="true"
+                class="i-lucide-history size-4 text-n-slate-11"
+              />
+              {{ t('AGENT_VOIP.RECENT') }}
+            </h2>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                :aria-label="t('AGENT_VOIP.FILTERS')"
+                :title="t('AGENT_VOIP.FILTERS')"
+                :aria-expanded="filtersOpen"
+                aria-controls="voip-call-filters"
+                aria-haspopup="dialog"
+                class="relative flex size-11 shrink-0 items-center justify-center rounded-full border border-n-weak text-n-slate-11"
+                @click="
+                  filtersOpen = true;
+                  filtersDialog.showModal();
+                "
+              >
+                <span
+                  aria-hidden="true"
+                  class="i-lucide-list-filter size-5"
+                /><span
+                  v-if="activeFilters"
+                  class="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-n-brand text-xs text-white"
+                  >{{ activeFilters }}</span
+                ></button
+              ><button
+                type="button"
+                :aria-label="t('AGENT_VOIP.NEW_CALL')"
+                :title="t('AGENT_VOIP.NEW_CALL')"
+                :disabled="!phone.connected || !!phone.call"
+                class="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-full bg-n-brand text-white disabled:opacity-50"
+                @click="openDialer()"
+              >
+                <span
+                  aria-hidden="true"
+                  class="i-lucide-phone-call size-5 shrink-0"
+                />
+              </button>
+            </div>
+          </div>
+          <p
+            v-if="!items.length && !loading"
+            class="my-4 text-sm text-n-slate-11"
+          >
+            {{ t('AGENT_VOIP.EMPTY') }}
+          </p>
+          <button
+            v-for="row in items"
+            :key="row.id"
+            type="button"
+            class="mb-1 flex w-full min-w-0 items-center gap-3 rounded-xl p-3 text-left hover:bg-n-alpha-1"
+            :class="{ 'bg-n-alpha-2': String(row.id) === route.params.callId }"
+            @click="select(row)"
+          >
+            <Avatar
+              :name="displayName(row)"
+              :src="row.remote_identity?.avatar_url || ''"
+              :size="40"
+              rounded-full
+            />
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-medium">
+                {{ displayName(row) }}
+              </span>
+              <span
+                class="flex items-center gap-1 text-xs"
+                :class="
+                  row.state === 'missed' ? 'text-red-600' : 'text-n-slate-11'
+                "
+              >
+                <span
+                  aria-hidden="true"
+                  :class="callIcon(row)"
+                  class="size-4 shrink-0"
+                />
+                <span class="truncate"
+                  >{{ t(`AGENT_VOIP.DIRECTION.${row.direction}`) }} ·
+                  {{ t(`AGENT_VOIP.STATE.${row.state}`) }}
+                </span>
+              </span>
+              <span class="block truncate text-xs text-n-slate-11">
+                {{ row.service_name }} · {{ date(row.started_at) }}
               </span>
             </span>
-            <span class="block truncate text-xs text-n-slate-11">
-              {{ row.service_name }} · {{ date(row.started_at) }}
-            </span>
-          </span>
-        </button>
-        <nav
-          v-if="pages > 1"
-          :aria-label="t('AGENT_VOIP.RECENT')"
-          class="my-3 flex items-center justify-center gap-3 text-sm text-n-slate-11"
-        >
-          <button
-            type="button"
-            :disabled="loading || page === 1"
-            :aria-label="t('AGENT_VOIP.PREVIOUS')"
-            class="flex size-11 items-center justify-center rounded-full border border-n-weak disabled:opacity-40"
-            @click="changePage(page - 1)"
-          >
-            <span aria-hidden="true" class="i-lucide-chevron-left size-5" />
           </button>
-          <span>{{ page }} / {{ pages }}</span>
-          <button
-            type="button"
-            :disabled="loading || page === pages"
-            :aria-label="t('AGENT_VOIP.NEXT')"
-            class="flex size-11 items-center justify-center rounded-full border border-n-weak disabled:opacity-40"
-            @click="changePage(page + 1)"
+          <nav
+            v-if="pages > 1"
+            :aria-label="t('AGENT_VOIP.RECENT')"
+            class="my-3 flex items-center justify-center gap-3 text-sm text-n-slate-11"
           >
-            <span aria-hidden="true" class="i-lucide-chevron-right size-5" />
-          </button>
-        </nav>
-        <div class="my-3 md:hidden">
-          <AgentVoipCard compact />
+            <button
+              type="button"
+              :disabled="loading || page === 1"
+              :aria-label="t('AGENT_VOIP.PREVIOUS')"
+              class="flex size-11 items-center justify-center rounded-full border border-n-weak disabled:opacity-40"
+              @click="changePage(page - 1)"
+            >
+              <span aria-hidden="true" class="i-lucide-chevron-left size-5" />
+            </button>
+            <span>{{ page }} / {{ pages }}</span>
+            <button
+              type="button"
+              :disabled="loading || page === pages"
+              :aria-label="t('AGENT_VOIP.NEXT')"
+              class="flex size-11 items-center justify-center rounded-full border border-n-weak disabled:opacity-40"
+              @click="changePage(page + 1)"
+            >
+              <span aria-hidden="true" class="i-lucide-chevron-right size-5" />
+            </button>
+          </nav>
+          <div class="my-3 md:hidden">
+            <AgentVoipCard compact />
+          </div>
         </div>
       </section>
       <section

@@ -64,6 +64,36 @@ const global = {
 };
 
 describe('sidebar search navigation', () => {
+  it.each([320, 360, 390, 430])(
+    'reveals the compact rail only after opening the menu and toggles above notifications at %s px',
+    async width => {
+      state.width = width;
+      state.collapsed = false;
+      const wrapper = shallowMount(Sidebar, { global });
+      expect(wrapper.classes()).toContain('ltr:-translate-x-full');
+      await wrapper.setProps({ isMobileSidebarOpen: true });
+      expect(wrapper.classes()).toContain('w-14');
+      expect(wrapper.classes()).not.toContain('ltr:-translate-x-full');
+      const toggle = wrapper.get('[aria-label="SIDEBAR.EXPAND_SIDEBAR"]');
+      const notifications = wrapper.get('sidebar-notification-bell-stub');
+      expect(
+        toggle.element.compareDocumentPosition(notifications.element)
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      await toggle.trigger('click');
+      expect(wrapper.classes()).toContain('w-[200px]');
+      expect(wrapper.emitted('mobileSidebarExpandedChange').at(-1)).toEqual([
+        true,
+      ]);
+      await wrapper
+        .get('[aria-label="SIDEBAR.COLLAPSE_SIDEBAR"]')
+        .trigger('click');
+      expect(wrapper.classes()).toContain('w-14');
+      await wrapper.setProps({ isMobileSidebarOpen: false });
+      expect(wrapper.classes()).toContain('ltr:-translate-x-full');
+      wrapper.unmount();
+    }
+  );
+
   it.each([320, 360, 390, 412, 430])(
     'closes the mobile menu when search is selected at %s px',
     async width => {

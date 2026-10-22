@@ -9,6 +9,7 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  isSidebarExpanded: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['toggle']);
@@ -42,7 +43,10 @@ const toggleSidebar = () => {
     class="fixed bottom-4 ltr:left-4 rtl:right-4 z-40 transition-transform duration-200 ease-out block md:hidden"
     :class="[
       {
-        'ltr:translate-x-48 rtl:-translate-x-48': isMobileSidebarOpen,
+        'ltr:translate-x-48 rtl:-translate-x-48':
+          isMobileSidebarOpen && isSidebarExpanded,
+        'ltr:translate-x-12 rtl:-translate-x-12':
+          isMobileSidebarOpen && !isSidebarExpanded,
       },
     ]"
   >

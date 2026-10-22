@@ -16,6 +16,15 @@ class VoipCall < ApplicationRecord
   validates :origin, inclusion: { in: ['client_observed'] }
   validate :account_scope
 
+  def identity_address
+    return remote_address unless direction == 'outgoing'
+
+    evidence = voip_call_observations.select do |row|
+      row.sequence <= last_sequence && row.details['resolved_address'].to_s.match?(/\A\+?\d{10,15}\z/)
+    end.max_by(&:sequence)
+    evidence ? evidence.details.fetch('resolved_address') : remote_address
+  end
+
   def public_payload(remote_identity: nil)
     effective = LIVE_STATES.include?(state) && last_observed_at < 90.seconds.ago ? 'awaiting_confirmation' : state
     slice(:id, :client_call_id, :sip_call_id, :direction, :remote_address, :remote_name, :origin, :started_at,

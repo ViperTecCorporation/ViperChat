@@ -25,6 +25,28 @@ RSpec.describe 'Agent VoIP API', type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
+  it 'lists configured extensions for administrators without exposing credentials or foreign bindings' do
+    get "#{base}/services", headers: admin.create_new_auth_token
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.sole['bindings'].sole).to include('id' => binding.id, 'agent_name' => agent.name, 'extension' => '0010')
+    expect(response.body).not_to include('synthetic-sip-secret', 'encrypted_credentials', 'auth_username')
+    get "#{base}/services", headers: headers
+    expect(response).to have_http_status(:unauthorized)
+  end
+
+  it 'allows an administrator to edit WSS while rejecting insecure LAN WS without changing credentials' do
+    secret = binding.encrypted_credentials
+    patch "#{base}/services/#{service.id}", params: { service: { wss_url: 'ws://192.168.0.143:3097/sip/ws' } },
+                                            headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['attributes']).to include('wss_url')
+    patch "#{base}/services/#{service.id}", params: { service: { name: 'Updated', wss_url: 'wss://sip.lan.test/sip/ws' } },
+                                            headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(service.reload.name).to eq('Updated')
+    expect(binding.reload.encrypted_credentials).to eq(secret)
+  end
+
   it 'revokes removed agents without losing history or allowing bootstrap of their detached binding' do
     service.update!(allowed_user_ids: [agent.id])
     VoipFavorite.create!(account_user: member, voip_service: service, name: 'Test favorite', address: '0020')

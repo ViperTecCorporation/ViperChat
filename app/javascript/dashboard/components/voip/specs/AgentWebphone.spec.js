@@ -7,6 +7,16 @@ const mocks = vi.hoisted(() => ({ phone: null, resize: null, desktop: null }));
 vi.mock('dashboard/stores/agentVoip', () => ({
   useAgentVoipStore: () => mocks.phone,
 }));
+vi.mock('dashboard/api/voip', () => ({
+  VoipAPI: class {
+    directory = vi.fn().mockResolvedValue({
+      data: {
+        items: [{ id: 2, name: 'Test operator', address: '1002' }],
+        total: 1,
+      },
+    });
+  },
+}));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({ accountId: ref(1) }),
 }));
@@ -57,7 +67,7 @@ describe('Global draggable agent webphone', () => {
     mocks.phone = reactive({
       call: { state: 'active', direction: 'outgoing', remote_address: '1002' },
       activeBinding: { service_name: 'Central', extension: '1001' },
-      activeService: { transfer_enabled: true },
+      activeService: { id: 1, transfer_enabled: true },
       expanded: true,
       muted: false,
       error: '',
@@ -67,6 +77,7 @@ describe('Global draggable agent webphone', () => {
       stop: vi.fn(),
       toggleMute: vi.fn(),
       hangup: vi.fn(),
+      transfer: vi.fn().mockResolvedValue(),
     });
   });
 
@@ -106,6 +117,24 @@ describe('Global draggable agent webphone', () => {
     );
     expect(mocks.phone.stop).not.toHaveBeenCalled();
     expect(mocks.phone.prepare).toHaveBeenCalledOnce();
+  });
+
+  it('selects another operator in the full-screen mobile webphone and requires explicit transfer', async () => {
+    mocks.desktop.value = false;
+    wrapper = mount(AgentWebphone);
+    await flushPromises();
+    const panel = document.body.querySelector('aside');
+    panel.querySelector('button[aria-label="Transfer to extension"]').click();
+    await flushPromises();
+    panel.querySelector('li button').click();
+    await flushPromises();
+    expect(mocks.phone.transfer).not.toHaveBeenCalled();
+    panel
+      .querySelector('form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flushPromises();
+    expect(mocks.phone.transfer).toHaveBeenCalledWith('1002');
+    expect(panel.classList.contains('inset-0')).toBe(true);
   });
 
   it('drags only from the header and clamps the window inside the viewport', async () => {

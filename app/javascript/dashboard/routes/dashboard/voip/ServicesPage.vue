@@ -16,6 +16,14 @@ const dialog = ref(null);
 const editing = ref(null);
 const form = ref({});
 const allowedUsers = ref([]);
+const configuredExtensions = computed(() =>
+  rows.value.flatMap(row =>
+    (row.bindings || []).map(binding => ({
+      ...binding,
+      serviceName: row.name,
+    }))
+  )
+);
 const selectedAgentNames = computed(() =>
   allowedUsers.value.map(
     id =>
@@ -86,8 +94,20 @@ async function save() {
     form.value.turn_password = '';
     dialog.value.close();
     await load();
-  } catch {
-    if (version === contextVersion) error.value = t('AGENT_VOIP.ERROR');
+  } catch (failure) {
+    if (version === contextVersion) {
+      const attributes = failure.response?.data?.attributes || [];
+      if (attributes.includes('wss_url')) {
+        error.value = t('AGENT_VOIP.WSS_REQUIRED');
+      } else {
+        const fields = textFields
+          .filter(([field]) => attributes.includes(field))
+          .map(([, label]) => t(`AGENT_VOIP.${label}`));
+        error.value = fields.length
+          ? t('AGENT_VOIP.INVALID_FIELDS', { fields: fields.join(', ') })
+          : t('AGENT_VOIP.ERROR');
+      }
+    }
   } finally {
     if (version === contextVersion) busy.value = false;
   }
@@ -204,6 +224,35 @@ watch(
         </div>
       </article>
     </div>
+    <section class="mt-8 flex min-w-0 flex-col gap-3">
+      <h2 class="text-lg font-semibold">
+        {{ t('AGENT_VOIP.CONFIGURED_EXTENSIONS') }}
+      </h2>
+      <p v-if="!configuredExtensions.length" class="text-sm text-n-slate-11">
+        {{ t('AGENT_VOIP.NO_EXTENSIONS') }}
+      </p>
+      <ul class="m-0 grid list-none grid-cols-1 gap-3 p-0 lg:grid-cols-2">
+        <li
+          v-for="binding in configuredExtensions"
+          :key="binding.id"
+          class="flex min-w-0 items-center gap-3 rounded-xl border border-n-weak p-3"
+        >
+          <span
+            class="i-lucide-phone shrink-0 text-xl text-n-slate-11"
+            aria-hidden="true"
+          />
+          <div class="min-w-0 flex-1">
+            <p class="m-0 break-words font-medium">{{ binding.agent_name }}</p>
+            <p class="m-0 break-words text-sm text-n-slate-11">
+              {{ binding.serviceName }} · {{ binding.extension }}
+            </p>
+            <span v-if="binding.active" class="text-xs text-n-teal-11">
+              {{ t('AGENT_VOIP.DEFAULT_EXTENSION') }}
+            </span>
+          </div>
+        </li>
+      </ul>
+    </section>
     <section class="mt-8 flex flex-col gap-4">
       <label class="flex max-w-lg flex-col gap-2 text-sm">
         {{ t('AGENT_VOIP.PROFILE') }}

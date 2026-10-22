@@ -38,6 +38,34 @@ RSpec.describe 'VoIP contact and extension directory', type: :request do
     end
   end
 
+  it 'identifies a short outgoing destination only after a service-confirmed full number is observed' do
+    call = binding.voip_calls.create!(account: account, client_call_id: 'short-dial', direction: 'outgoing', remote_address: '991234567',
+                                      started_at: Time.current, last_observed_at: Time.current)
+    get "#{base}/calls/#{call.id}", headers: headers
+    expect(response.parsed_body['remote_identity']).to be_nil
+    snapshot = contact.reload.attributes
+    post "#{base}/calls/#{call.id}/observe", params: {
+      observation: { event_id: 'normalized-peer', sequence: 1, state: 'ringing', resolved_address: contact.phone_number }
+    }, headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['remote_identity']).to include('contact_id' => contact.id, 'name' => contact.name)
+    expect(call.reload.remote_address).to eq('991234567')
+    expect(contact.reload.attributes).to eq(snapshot)
+    get "#{base}/calls", headers: headers
+    expect(response.parsed_body['items'].sole['remote_identity']).to include('contact_id' => contact.id)
+  end
+
+  it 'rejects an unconfirmed local suffix as a resolved destination' do
+    call = binding.voip_calls.create!(account: account, client_call_id: 'short-invalid', direction: 'outgoing', remote_address: '991234567',
+                                      started_at: Time.current, last_observed_at: Time.current)
+    post "#{base}/calls/#{call.id}/observe", params: {
+      observation: { event_id: 'invalid-peer', sequence: 1, state: 'ringing', resolved_address: '991234567' }
+    }, headers: headers, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(call.voip_call_observations).to be_empty
+    expect(call.reload.identity_address).to eq('991234567')
+  end
+
   it 'returns only same-service agents and no authentication fields or secrets' do
     second = VoipService.create!(account: account, name: 'Other', wss_url: 'wss://other.example.test/ws', sip_domain: 'other.example.test')
     other = create(:user, account: account)

@@ -4,6 +4,7 @@ import {
   RegistererState,
   Inviter,
   SessionState,
+  Grammar,
 } from 'sip.js';
 import incomingTone from 'dashboard/assets/audio/ring.mp3';
 import outgoingTone from 'dashboard/assets/audio/calling.mp3';
@@ -17,8 +18,20 @@ export const rejectedCallState = code => {
 
 // Independent from inboxes and conversations. Credentials live only inside SIP.js.
 export class AgentSipClient {
-  constructor({ onRegistration, onCall, onError, onTransfer }) {
-    Object.assign(this, { onRegistration, onCall, onError, onTransfer });
+  constructor({
+    onRegistration,
+    onCall,
+    onError,
+    onTransfer,
+    onAudioReady = () => {},
+  }) {
+    Object.assign(this, {
+      onRegistration,
+      onCall,
+      onError,
+      onTransfer,
+      onAudioReady,
+    });
     this.session = null;
     this.agent = null;
     this.registerer = null;
@@ -38,6 +51,35 @@ export class AgentSipClient {
     this.canTransfer = config.transfer_enabled;
     this.audio = document.createElement('audio');
     this.audio.autoplay = true;
+    this.toneAudio = document.createElement('audio');
+    this.toneAudio.src = incomingTone;
+    this.toneAudio.preload = 'auto';
+    this.toneUnlocked = false;
+    this.audioInteraction = () => {
+      if (this.ringtone) {
+        if (this.audioBlocked) this.resumeAudio();
+        return;
+      }
+      if (this.toneUnlocked) return;
+      const tone = this.toneAudio;
+      tone.muted = true;
+      tone
+        .play()
+        .then(() => {
+          if (this.toneAudio !== tone) return;
+          this.toneUnlocked = true;
+          if (this.ringtone !== tone) {
+            tone.pause();
+            tone.currentTime = 0;
+          }
+          tone.muted = false;
+        })
+        .catch(() => {
+          tone.muted = false;
+        });
+    };
+    window.addEventListener('pointerdown', this.audioInteraction);
+    window.addEventListener('keydown', this.audioInteraction);
     this.onRegistration('connecting');
     this.agent = new UserAgent({
       uri: UserAgent.makeURI(`sip:${config.extension}@${config.sip_domain}`),
@@ -70,6 +112,17 @@ export class AgentSipClient {
         expires: config.registration_expires,
         logConfiguration: false,
       });
+      const registerer = this.registerer;
+      registerer.stateChange.addListener(state => {
+        if (this.stopping || this.registerer !== registerer) return;
+        if (state === RegistererState.Registered)
+          this.onRegistration('registered');
+        if (
+          state === RegistererState.Unregistered ||
+          state === RegistererState.Terminated
+        )
+          this.onRegistration('reconnecting', registerer.retryAfter);
+      });
       await this.waitForRegistration();
     } catch (error) {
       const state =
@@ -95,7 +148,6 @@ export class AgentSipClient {
       };
       listener = state => {
         if (state === RegistererState.Registered) {
-          this.onRegistration('registered');
           finish();
         }
       };
@@ -107,6 +159,10 @@ export class AgentSipClient {
       this.registerer
         .register({
           requestDelegate: {
+            onAccept: () => {
+              this.onRegistration('registered');
+              finish();
+            },
             onReject: response => {
               const code = response.message.statusCode;
               finish(
@@ -119,6 +175,13 @@ export class AgentSipClient {
         })
         .catch(() => finish(new Error('unavailable')));
     });
+  }
+
+  async recoverRegistration() {
+    if (this.stopping || !this.agent || !this.registerer) return;
+    // Keep the existing dialog and media while recovering WSS/REGISTER.
+    await this.agent.reconnect();
+    await this.waitForRegistration();
   }
 
   constraints() {
@@ -148,16 +211,27 @@ export class AgentSipClient {
     this.track(session, 'outgoing', address);
     try {
       await this.report('initiating');
-      await session.invite({
+      const invitation = session.invite({
         requestDelegate: {
           onProgress: response => {
             if (this.session !== session) return;
+            this.confirmRemoteAddress(response.message);
             this.report('ringing').catch(() =>
               this.onError('history_unavailable')
             );
             if (response.message.statusCode === 180) this.startRingtone(false);
           },
+          onAccept: response => {
+            if (this.session !== session) return;
+            this.stopRingtone();
+            this.confirmRemoteAddress(response.message);
+            this.report('active').catch(() =>
+              this.onError('history_unavailable')
+            );
+          },
           onReject: response => {
+            if (this.session !== session || !this.context) return;
+            this.stopRingtone();
             this.context.outcome = rejectedCallState(
               response.message.statusCode
             );
@@ -165,6 +239,9 @@ export class AgentSipClient {
           },
         },
       });
+      if (this.session === session && !this.context?.answered)
+        this.startRingtone(false);
+      await invitation;
     } catch (error) {
       this.context.outcome = 'failed';
       this.context.end_reason =
@@ -193,6 +270,16 @@ export class AgentSipClient {
     this.startRingtone(true);
   }
 
+  confirmRemoteAddress(message) {
+    // Only the connected SIP service can expand a local dial string; never guess a DDD.
+    const asserted = message.getHeader?.('P-Asserted-Identity');
+    const identity = asserted ? Grammar.nameAddrHeaderParse(asserted) : null;
+    const address = identity?.uri?.user || message.to?.uri?.user;
+    if (/^\+?\d{10,15}$/.test(address || '')) {
+      this.context.resolved_address = address;
+    }
+  }
+
   track(session, direction, address) {
     this.session = session;
     this.muted = false;
@@ -207,6 +294,7 @@ export class AgentSipClient {
     };
     session.delegate = {
       onBye: () => {
+        if (this.session !== session || !this.context) return;
         this.context.end_reason = 'remote_hangup';
       },
       onCancel: cancel => {
@@ -226,6 +314,7 @@ export class AgentSipClient {
         this.report('active').catch(() => this.onError('history_unavailable'));
       }
       if (state === SessionState.Terminated) {
+        this.stopRingtone();
         // accept() can terminate before rejecting with the media permission error.
         if (this.answering === session) return;
         setTimeout(() => {
@@ -334,8 +423,11 @@ export class AgentSipClient {
   async resumeAudio() {
     try {
       if (this.ringtone) await this.ringtone.play();
-      await this.audio?.play();
+      if (this.audio?.srcObject) await this.audio.play();
+      this.audioBlocked = false;
+      this.onAudioReady();
     } catch {
+      this.audioBlocked = true;
       this.onError('audio_blocked');
     }
   }
@@ -374,6 +466,7 @@ export class AgentSipClient {
   async speaker(deviceId) {
     if (!this.audio?.setSinkId) throw new Error('output_unsupported');
     await this.audio.setSinkId(deviceId);
+    await this.toneAudio?.setSinkId(deviceId);
   }
 
   async dtmf(digit) {
@@ -399,19 +492,41 @@ export class AgentSipClient {
       !/^[a-zA-Z0-9_.+*-]{1,64}$/.test(address)
     )
       throw new Error('transfer_unavailable');
+    const session = this.session;
+    let completed = false;
     this.onTransfer('pending');
-    await this.session.refer(
-      UserAgent.makeURI(`sip:${address}@${this.domain}`),
-      {
-        requestDelegate: { onReject: () => this.onTransfer('failed') },
-        onNotify: notification => {
-          const match = notification.request.body.match(/SIP\/2.0\s+(\d{3})/);
-          notification.accept();
-          if (match && Number(match[1]) >= 200)
-            this.onTransfer(Number(match[1]) < 300 ? 'completed' : 'failed');
+    try {
+      await session.refer(UserAgent.makeURI(`sip:${address}@${this.domain}`), {
+        requestDelegate: {
+          onReject: () => {
+            if (this.session === session) this.onTransfer('failed');
+          },
         },
-      }
-    );
+        onNotify: notification => {
+          const match = (notification.request.body || '').match(
+            /^SIP\/2.0\s+(\d{3})\b/m
+          );
+          notification.accept().catch(() => this.onError('signaling_failed'));
+          if (this.session !== session || completed || !match) return;
+          const code = Number(match[1]);
+          if (code < 200) return;
+          if (code >= 300) {
+            this.onTransfer('failed');
+            return;
+          }
+          completed = true;
+          this.onTransfer('completed');
+          this.context.end_reason = 'transferred';
+          // A successful sipfrag, not REFER's 202, confirms the new leg.
+          // Release only our dialog; do not wait forever for the peer's BYE.
+          session.bye().catch(() => this.onError('signaling_failed'));
+          this.finish().catch(() => this.onError('history_unavailable'));
+        },
+      });
+    } catch (error) {
+      if (this.session === session) this.onTransfer('failed');
+      throw error;
+    }
   }
 
   releaseMedia() {
@@ -426,20 +541,41 @@ export class AgentSipClient {
   }
 
   startRingtone(incoming) {
+    const src = incoming ? incomingTone : outgoingTone;
+    if (this.ringtone && this.toneSource === src) return;
     this.stopRingtone();
-    this.ringtone = document.createElement('audio');
-    this.ringtone.src = incoming ? incomingTone : outgoingTone;
+    this.ringtone = this.toneAudio;
+    this.toneSource = src;
+    this.ringtone.src = src;
+    this.ringtone.muted = false;
+    this.ringtone.volume = 1;
     this.ringtone.loop = true;
-    this.ringtone.play().catch(() => this.onError('audio_blocked'));
+    const tone = this.ringtone;
+    tone
+      .play()
+      .then(() => {
+        if (this.ringtone !== tone) return;
+        this.audioBlocked = false;
+        this.onAudioReady();
+      })
+      .catch(error => {
+        if (this.ringtone !== tone || error.name === 'AbortError') return;
+        this.audioBlocked = true;
+        this.onError('audio_blocked');
+      });
   }
 
   stopRingtone() {
     this.ringtone?.pause();
+    if (this.ringtone) this.ringtone.currentTime = 0;
     this.ringtone = null;
+    this.toneSource = null;
   }
 
   async disconnect() {
     this.stopping = true;
+    window.removeEventListener('pointerdown', this.audioInteraction);
+    window.removeEventListener('keydown', this.audioInteraction);
     if (this.session) await this.end().catch(() => {});
     await this.finish().catch(() => {});
     this.releaseMedia();
@@ -448,6 +584,8 @@ export class AgentSipClient {
     this.registerer = null;
     this.agent = null;
     this.audio = null;
+    this.toneAudio?.pause();
+    this.toneAudio = null;
     this.context = null;
     this.session = null;
     this.onRegistration('disconnected');

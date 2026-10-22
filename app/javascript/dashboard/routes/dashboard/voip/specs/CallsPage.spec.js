@@ -121,6 +121,22 @@ describe('Calls page service-safe dialing', () => {
     expect(mocks.dial).not.toHaveBeenCalled();
   });
 
+  it('returns from the top arrow to all conversations without changing a call', async () => {
+    wrapper = mount(CallsPage);
+    await flushPromises();
+    const back = wrapper.get(
+      'header button[aria-label="AGENT_VOIP.BACK_TO_CONVERSATIONS"]'
+    );
+    expect(back.find('.i-lucide-chevron-left').exists()).toBe(true);
+    expect(back.text()).toBe('');
+    await back.trigger('click');
+    expect(mocks.push).toHaveBeenCalledWith({
+      name: 'home',
+      params: undefined,
+    });
+    expect(mocks.dial).not.toHaveBeenCalled();
+  });
+
   it('uses the conversation back arrow before the detail title and returns to the calls list', async () => {
     mocks.call.mockResolvedValue({
       data: {

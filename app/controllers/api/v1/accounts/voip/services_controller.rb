@@ -2,7 +2,16 @@ class Api::V1::Accounts::Voip::ServicesController < Api::V1::Accounts::Voip::Bas
   before_action :check_admin_authorization?
 
   def index
-    render json: services.order(:name).map(&:admin_payload)
+    rows = services.includes(voip_agent_extensions: { account_user: :user }).order(:name).map do |service|
+      bindings = service.voip_agent_extensions.filter_map do |binding|
+        next unless binding.account_user
+
+        { id: binding.id, account_user_id: binding.account_user_id, extension: binding.extension,
+          agent_name: binding.account_user.user.name, active: binding.active }
+      end
+      service.admin_payload.merge(bindings: bindings)
+    end
+    render json: rows
   end
 
   def agents

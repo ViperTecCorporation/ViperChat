@@ -21,6 +21,7 @@ const busy = ref(false);
 const error = ref('');
 let requestVersion = 0;
 let contextVersion = 0;
+let dialingVersion = null;
 const tabs = [
   { id: 'contacts', label: 'CONTACTS', icon: 'i-lucide-contact-round' },
   { id: 'extensions', label: 'EXTENSIONS', icon: 'i-lucide-users-round' },
@@ -107,11 +108,22 @@ async function activate() {
 async function dial() {
   if (!canDial.value) return;
   const version = contextVersion;
-  await perform(async () => {
-    await phone.dial(normalizedAddress.value);
-    if (version === contextVersion) close();
-  });
+  dialingVersion = version;
+  try {
+    await perform(async () => {
+      await phone.dial(normalizedAddress.value);
+      if (version === contextVersion) close();
+    });
+  } finally {
+    if (dialingVersion === version) dialingVersion = null;
+  }
 }
+watch(
+  () => phone.call?.client_call_id,
+  id => {
+    if (id && phone.dialer.open && dialingVersion === contextVersion) close();
+  }
+);
 watch([kind, search, serviceId], () => {
   page.value = 1;
   loadDirectory();
@@ -128,6 +140,7 @@ watch(
   () => phone.dialer.open,
   async open => {
     contextVersion += 1;
+    dialingVersion = null;
     requestVersion += 1;
     busy.value = false;
     error.value = '';
@@ -349,7 +362,7 @@ watch(
         <button
           type="submit"
           :disabled="!canDial"
-          class="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-green-600 px-4 py-2 font-medium text-white disabled:opacity-40"
+          class="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-n-brand px-4 py-2 font-medium text-white hover:enabled:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand disabled:opacity-40"
         >
           <span class="i-lucide-phone size-5" aria-hidden="true" />{{
             t('AGENT_VOIP.CALL')

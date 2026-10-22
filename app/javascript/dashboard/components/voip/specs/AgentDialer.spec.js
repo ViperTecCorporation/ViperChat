@@ -97,6 +97,67 @@ describe('AgentDialer explicit global calling', () => {
     );
   });
 
+  it('uses the primary theme token instead of a hardcoded green call action', async () => {
+    mocks.phone.dialer = {
+      open: true,
+      address: '1002',
+      serviceId: 1,
+      kind: 'manual',
+    };
+    await flushPromises();
+    const call = document.querySelector('button[type="submit"]');
+    expect(call.classList.contains('bg-n-brand')).toBe(true);
+    expect(call.className).not.toMatch(/bg-green-/);
+  });
+
+  it('closes as soon as the webphone owns the new call while the SIP promise is still pending', async () => {
+    let finishDial;
+    mocks.phone.dial.mockImplementation(
+      () =>
+        new Promise(resolve => {
+          finishDial = resolve;
+        })
+    );
+    mocks.phone.dialer = {
+      open: true,
+      address: '1002',
+      serviceId: 1,
+      kind: 'manual',
+    };
+    await flushPromises();
+    document
+      .querySelector('form')
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+    await flushPromises();
+    expect(mocks.phone.closeDialer).not.toHaveBeenCalled();
+    mocks.phone.call = { client_call_id: 'new-call', state: 'initiating' };
+    await flushPromises();
+    expect(mocks.phone.closeDialer).toHaveBeenCalledOnce();
+    expect(HTMLDialogElement.prototype.close).toHaveBeenCalled();
+    finishDial();
+    await flushPromises();
+    expect(mocks.phone.closeDialer).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the dialog open when dialing fails before a call is created', async () => {
+    mocks.phone.dial.mockRejectedValueOnce(new Error('offline'));
+    mocks.phone.dialer = {
+      open: true,
+      address: '1002',
+      serviceId: 1,
+      kind: 'manual',
+    };
+    await flushPromises();
+    document
+      .querySelector('form')
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+    await flushPromises();
+    expect(mocks.phone.closeDialer).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="alert"]').textContent).toBe(
+      'AGENT_VOIP.ERROR'
+    );
+  });
+
   it('requires explicit service activation and a separate confirmed call', async () => {
     mocks.phone.dialer = {
       open: true,

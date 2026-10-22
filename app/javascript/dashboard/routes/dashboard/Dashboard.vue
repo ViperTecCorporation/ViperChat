@@ -71,6 +71,7 @@ export default {
       showCreateAccountModal: false,
       showShortcutModal: false,
       isMobileSidebarOpen: false,
+      isMobileSidebarExpanded: false,
     };
   },
   computed: {
@@ -148,6 +149,7 @@ export default {
       @close-key-shortcut-modal="closeKeyShortcutModal"
       @show-create-account-modal="openCreateAccountModal"
       @close-mobile-sidebar="closeMobileSidebar"
+      @mobile-sidebar-expanded-change="isMobileSidebarExpanded = $event"
     />
 
     <main
@@ -160,6 +162,7 @@ export default {
       >
         <MobileSidebarLauncher
           :is-mobile-sidebar-open="isMobileSidebarOpen"
+          :is-sidebar-expanded="isMobileSidebarExpanded"
           @toggle="toggleMobileSidebar"
         />
       </UpgradePage>
@@ -168,6 +171,7 @@ export default {
         <CommandBar />
         <MobileSidebarLauncher
           :is-mobile-sidebar-open="isMobileSidebarOpen"
+          :is-sidebar-expanded="isMobileSidebarExpanded"
           @toggle="toggleMobileSidebar"
         />
         <CopilotContainer />

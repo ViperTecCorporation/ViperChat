@@ -101,7 +101,7 @@ async function save() {
     form.value.password = '';
     form.value.clear_password = false;
     if (!(await load())) return;
-    if (!props.accountUserId) await phone.reloadProfile();
+    if (!props.accountUserId) await phone.refreshConfiguration();
   });
 }
 async function activate() {

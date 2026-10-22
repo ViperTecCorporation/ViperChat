@@ -10,6 +10,7 @@ let heartbeatTimer;
 let generation = 0;
 let retry = 0;
 let connectedRevision = '';
+let connectionAttempt;
 const observations = new Map();
 
 export const useAgentVoipStore = defineStore('agentVoip', {
@@ -104,9 +105,20 @@ export const useAgentVoipStore = defineStore('agentVoip', {
       });
     },
     async connect(bindingId, { registrationOnly = false } = {}) {
+      if (connectionAttempt) return connectionAttempt;
+      const attempt = this.connectOnce(bindingId, { registrationOnly });
+      connectionAttempt = attempt;
+      try {
+        return await attempt;
+      } finally {
+        if (connectionAttempt === attempt) connectionAttempt = null;
+      }
+    },
+    async connectOnce(bindingId, { registrationOnly = false } = {}) {
       if (this.call) throw new Error('voip_call_in_progress');
       if (!(await this.claimTab())) throw new Error('other_tab');
       clearTimeout(reconnectTimer);
+      reconnectTimer = null;
       generation += 1;
       const currentGeneration = generation;
       const original = api;
@@ -115,14 +127,21 @@ export const useAgentVoipStore = defineStore('agentVoip', {
         if (currentGeneration !== generation || original !== api) return;
         await runtime?.disconnect();
         const client = new AgentSipClient({
-          onRegistration: status => {
+          onRegistration: (status, retryAfter) => {
             if (currentGeneration !== generation) return;
             this.registration = status;
             if (status === 'registered') {
+              clearTimeout(reconnectTimer);
+              reconnectTimer = null;
               retry = 0;
-              this.error = '';
+              if (
+                ['registration_failed', 'configuration_unavailable'].includes(
+                  this.error
+                )
+              )
+                this.error = '';
             }
-            if (status === 'reconnecting') this.scheduleReconnect();
+            if (status === 'reconnecting') this.scheduleReconnect(retryAfter);
           },
           onCall: value =>
             this.recordObservation(
@@ -135,18 +154,25 @@ export const useAgentVoipStore = defineStore('agentVoip', {
             if (currentGeneration !== generation) return;
             this.error = code;
           },
+          onAudioReady: () => {
+            if (
+              currentGeneration === generation &&
+              this.error === 'audio_blocked'
+            )
+              this.error = '';
+          },
           onTransfer: state => {
             if (currentGeneration !== generation) return;
             this.transferState = state;
           },
         });
         runtime = client;
+        connectedRevision = this.configurationRevision();
         await client.connect(data, { registrationOnly });
         if (currentGeneration !== generation) {
           await client.disconnect();
           return;
         }
-        connectedRevision = this.configurationRevision();
         clearInterval(heartbeatTimer);
         heartbeatTimer = setInterval(() => {
           if (this.call && runtime?.context)
@@ -156,16 +182,28 @@ export const useAgentVoipStore = defineStore('agentVoip', {
       } catch (error) {
         if (currentGeneration !== generation) return;
         this.error = 'registration_failed';
-        if (this.registration !== 'auth_error') this.scheduleReconnect();
+        this.scheduleReconnect();
         throw error;
       }
     },
-    scheduleReconnect() {
+    scheduleReconnect(retryAfter = 0) {
       clearTimeout(reconnectTimer);
-      if (!this.activeBinding || !this.activeService || this.call) return;
-      const delay = Math.min(1000 * 2 ** retry, 30000);
-      retry += 1;
-      reconnectTimer = setTimeout(() => this.connect().catch(() => {}), delay);
+      if (!this.activeBinding || !this.activeService) return;
+      const delay = Math.max(
+        Math.min(1000 * 2 ** Math.min(retry, 5), 30000),
+        Number(retryAfter || 0) * 1000
+      );
+      retry = Math.min(retry + 1, 5);
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        // Recover signaling in-place during a call; never disconnect its media.
+        if (this.call && runtime) {
+          const currentGeneration = generation;
+          runtime.recoverRegistration().catch(() => {
+            if (currentGeneration === generation) this.scheduleReconnect();
+          });
+        } else this.connect().catch(() => {});
+      }, delay);
     },
     async testBinding(bindingId) {
       if (this.call) throw new Error('voip_call_in_progress');
@@ -205,7 +243,11 @@ export const useAgentVoipStore = defineStore('agentVoip', {
           if (runtime) await this.stopConnection();
           return;
         }
-        if (runtime && connectedRevision !== this.configurationRevision())
+        if (
+          !runtime ||
+          connectedRevision !== this.configurationRevision() ||
+          (!this.connected && !connectionAttempt && !reconnectTimer)
+        )
           await this.connect();
       } catch {
         this.error = 'configuration_unavailable';
@@ -251,6 +293,7 @@ export const useAgentVoipStore = defineStore('agentVoip', {
         state: value.state,
         sip_code: value.sip_code,
         end_reason: value.end_reason,
+        resolved_address: value.resolved_address,
       });
       const terminal = ![
         'initiating',
@@ -316,7 +359,20 @@ export const useAgentVoipStore = defineStore('agentVoip', {
     },
     async flushQueue(pending) {
       if (!pending.queue.length) return;
-      await pending.api.observe(pending.row.id, pending.queue[0]);
+      const { data } = await pending.api.observe(
+        pending.row.id,
+        pending.queue[0]
+      );
+      if (data) {
+        pending.row = { ...pending.row, ...data };
+        if (
+          pending.api === api &&
+          pending.ownerGeneration === generation &&
+          this.call?.client_call_id === pending.call.client_call_id
+        ) {
+          this.call.remote_identity = pending.row.remote_identity || null;
+        }
+      }
       pending.queue.shift();
       await this.flushQueue(pending);
     },
@@ -356,7 +412,9 @@ export const useAgentVoipStore = defineStore('agentVoip', {
     },
     async stopConnection() {
       generation += 1;
+      connectionAttempt = null;
       clearTimeout(reconnectTimer);
+      reconnectTimer = null;
       clearInterval(heartbeatTimer);
       await runtime?.disconnect();
       runtime = null;

@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   saveBinding: vi.fn(),
   saveService: vi.fn(),
   reloadProfile: vi.fn(),
+  refreshConfiguration: vi.fn(),
 }));
 vi.mock('dashboard/composables/useAccount', async () => {
   const { ref } = await import('vue');
@@ -40,6 +41,7 @@ vi.mock('dashboard/stores/agentVoip', () => ({
   useAgentVoipStore: () => ({
     call: null,
     reloadProfile: mocks.reloadProfile,
+    refreshConfiguration: mocks.refreshConfiguration,
   }),
 }));
 
@@ -87,6 +89,43 @@ describe('VoIP configuration account isolation', () => {
     await wrapper.find('button').trigger('click');
     await flushPromises();
     expect(wrapper.find('input[maxlength="64"]').element.value).toBe('1001');
+  });
+
+  it('shows the WSS validation failure instead of suggesting the administrator has no permissions', async () => {
+    mocks.saveService.mockRejectedValueOnce({
+      response: { status: 422, data: { attributes: ['wss_url'] } },
+    });
+    wrapper = mount(ServicesPage);
+    await flushPromises();
+    await wrapper.find('article button').trigger('click');
+    await wrapper.find('dialog form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.find('dialog [role="alert"]').text()).toBe(
+      'AGENT_VOIP.WSS_REQUIRED'
+    );
+    expect(wrapper.find('dialog').attributes()).toHaveProperty('open');
+  });
+
+  it('lists configured extensions by agent and service without presenting the default as a live registration', async () => {
+    mocks.services.mockResolvedValue({
+      data: [
+        {
+          id: 10,
+          name: 'Central',
+          bindings: [
+            { id: 21, agent_name: 'José', extension: '1001', active: true },
+            { id: 22, agent_name: 'Maria', extension: '1002', active: false },
+          ],
+        },
+      ],
+    });
+    wrapper = mount(ServicesPage);
+    await flushPromises();
+    const extensions = wrapper.findAll('li');
+    expect(extensions).toHaveLength(2);
+    expect(extensions[0].text()).toContain('1001');
+    expect(extensions[0].text()).toContain('AGENT_VOIP.DEFAULT_EXTENSION');
+    expect(extensions[1].text()).not.toContain('AGENT_VOIP.DEFAULT_EXTENSION');
   });
 
   it('clears credentials and ignores a pending old-account profile on account switch', async () => {

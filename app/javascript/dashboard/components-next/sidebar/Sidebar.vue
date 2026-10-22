@@ -40,6 +40,7 @@ const emit = defineEmits([
   'openKeyShortcutModal',
   'showCreateAccountModal',
   'closeMobileSidebar',
+  'mobileSidebarExpandedChange',
 ]);
 
 const { accountScopedRoute, isOnChatwootCloud } = useAccount();
@@ -135,9 +136,19 @@ const {
   COLLAPSED_THRESHOLD,
 } = useSidebarResize();
 
-// On mobile, sidebar is always expanded (flyout mode)
-const isEffectivelyCollapsed = computed(
-  () => !isMobile.value && isCollapsed.value
+const mobileExpanded = ref(false);
+// Opening the mobile menu reveals an icon rail; expanding it is a separate action.
+const isEffectivelyCollapsed = computed(() =>
+  isMobile.value ? !mobileExpanded.value : isCollapsed.value
+);
+watch(
+  () => props.isMobileSidebarOpen,
+  open => {
+    if (!open) mobileExpanded.value = false;
+  }
+);
+watch(mobileExpanded, expanded =>
+  emit('mobileSidebarExpandedChange', expanded)
 );
 const sidebarToggleLabel = computed(() =>
   isEffectivelyCollapsed.value
@@ -151,6 +162,10 @@ const sidebarToggleIcon = computed(() =>
 );
 
 const toggleSidebarWidth = () => {
+  if (isMobile.value) {
+    mobileExpanded.value = !mobileExpanded.value;
+    return;
+  }
   if (isEffectivelyCollapsed.value) snapToExpanded();
   else snapToCollapsed();
 };
@@ -862,8 +877,9 @@ const menuItems = computed(() => {
         ],
       },
     ]"
-    class="bg-n-background flex flex-col text-sm pb-px fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 w-[200px] md:w-auto md:relative md:flex-shrink-0 md:ltr:translate-x-0 md:rtl:translate-x-0 ltr:border-r rtl:border-l border-n-weak"
+    class="bg-n-background flex flex-col text-sm pb-px fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 md:w-auto md:relative md:flex-shrink-0 md:ltr:translate-x-0 md:rtl:translate-x-0 ltr:border-r rtl:border-l border-n-weak"
     :class="[
+      isEffectivelyCollapsed ? 'w-14' : 'w-[200px]',
       {
         'shadow-lg md:shadow-none': isMobileSidebarOpen,
         'ltr:-translate-x-full rtl:translate-x-full': !isMobileSidebarOpen,
@@ -989,7 +1005,7 @@ const menuItems = computed(() => {
         class="px-1 py-1.5 flex-shrink-0 flex flex-col w-full z-50 gap-1 border-t border-n-weak shadow-[0px_-2px_4px_0px_rgba(27,28,29,0.02)]"
       >
         <div
-          class="hidden md:flex w-full"
+          class="flex w-full"
           :class="isEffectivelyCollapsed ? 'justify-center' : 'justify-end'"
         >
           <Button

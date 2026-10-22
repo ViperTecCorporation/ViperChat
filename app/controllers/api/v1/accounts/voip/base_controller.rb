@@ -24,7 +24,7 @@ class Api::V1::Accounts::Voip::BaseController < Api::V1::Accounts::BaseControlle
     groups.each_with_object({}) do |(service, group), result|
       next unless service.available_to?(Current.account_user)
 
-      addresses = group.map { |row| row.is_a?(VoipCall) ? row.remote_address : row.address }
+      addresses = group.map { |row| row.is_a?(VoipCall) ? row.identity_address : row.address }
       result[service.id] = directory_resolver(service).identities(addresses)
     end
   end

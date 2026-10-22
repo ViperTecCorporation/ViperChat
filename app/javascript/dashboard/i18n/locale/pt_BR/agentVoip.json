@@ -1,5 +1,10 @@
 {
   "AGENT_VOIP": {
+    "CONFIGURED_EXTENSIONS": "Ramais configurados",
+    "NO_EXTENSIONS": "Nenhum ramal configurado nesta conta.",
+    "DEFAULT_EXTENSION": "Ramal padrão do agente",
+    "WSS_REQUIRED": "Use um endereço wss:// válido para o serviço SIP. ws:// é permitido somente em localhost no desenvolvimento; um IP da rede local também precisa de WSS.",
+    "INVALID_FIELDS": "Confira os campos: {fields}.",
     "FILTER_STATE": "Situação",
     "FILTER_DIRECTION": "Direção",
     "CONFIRM_REMOVE_FAVORITE": "Remover {name} dos favoritos?",
@@ -35,6 +40,7 @@
     "CANCEL": "Cancelar",
     "CLOSE": "Fechar",
     "BACK": "Voltar à lista de chamadas",
+    "BACK_TO_CONVERSATIONS": "Voltar para todas as conversas",
     "TEST": "Testar registro (sem ligar)",
     "TEST_OK": "Registro SIP confirmado. Nenhuma chamada foi iniciada.",
     "ACTIVATE": "Usar este serviço",
