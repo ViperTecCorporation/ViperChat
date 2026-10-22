@@ -21,8 +21,10 @@ module Whatsapp::Unoapi::StatusWarnings
   def update_message_with_status(message, status)
     message.with_lock do
       merge_unoapi_warnings(message, status)
+      # Persist under this lock before the provider-state service reacquires it.
+      # This also retains warnings when the base service ignores a lower status.
+      message.save! if message.changed? && Whatsapp::UnifiedDeliveryFallbackService.link_for(message, inbox: inbox)
       super
-      # A lower status is ignored by the base service, but its warning is not.
       message.save! if message.changed?
     end
   end

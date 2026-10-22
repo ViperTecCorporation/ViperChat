@@ -1,6 +1,7 @@
 <script>
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import BubbleActions from './bubble/Actions.vue';
+import WhatsappDeliveryStatus from 'dashboard/components-next/message/WhatsappDeliveryStatus.vue';
 import BubbleContact from './bubble/Contact.vue';
 import BubbleFile from './bubble/File.vue';
 import BubbleImageAudioVideo from './bubble/ImageAudioVideo.vue';
@@ -32,6 +33,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 export default {
   components: {
     BubbleActions,
+    WhatsappDeliveryStatus,
     BubbleContact,
     BubbleFile,
     BubbleImageAudioVideo,
@@ -775,6 +777,10 @@ export default {
             <BubbleFile v-else :url="attachment.data_url" />
           </div>
         </div>
+        <WhatsappDeliveryStatus
+          :attributes="contentAttributes"
+          class="px-3 pb-1"
+        />
         <BubbleActions
           :id="data.id"
           :message-id="data.id"

@@ -73,6 +73,9 @@ class Whatsapp::Providers::BaseService
     error_message = error_message(response)
     return if error_message.blank?
 
+    state = Whatsapp::UnifiedDeliveryStateService.new(message: message, inbox: whatsapp_channel.inbox)
+    return if state.api_failure(response: response, error: error_message)
+
     message.external_error = error_message
     message.status = :failed
     message.save!

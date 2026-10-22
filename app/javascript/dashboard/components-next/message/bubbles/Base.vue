@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 
 import MessageMeta from '../MessageMeta.vue';
+import WhatsappDeliveryStatus from '../WhatsappDeliveryStatus.vue';
 import FavoriteIndicator from '../FavoriteIndicator.vue';
 
 import { emitter } from 'shared/helpers/mitt';
@@ -135,6 +136,7 @@ const replyToPreview = computed(() => {
       />
     </div>
     <slot />
+    <WhatsappDeliveryStatus :attributes="contentAttributes" />
     <FavoriteIndicator
       v-if="!shouldShowMeta && variant !== MESSAGE_VARIANTS.ACTIVITY"
       :message-id="id"
