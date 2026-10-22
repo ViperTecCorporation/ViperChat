@@ -168,6 +168,13 @@ class Whatsapp::IncomingMessageBaseService
 
   def update_message_with_status(message, status)
     incoming_status = normalized_message_status(status[:status])
+    if incoming_status != 'deleted'
+      error = Array(status[:errors]).first.to_h.with_indifferent_access
+      detail = error.present? ? "#{error[:code]}: #{error[:title]}" : nil
+      state = Whatsapp::UnifiedDeliveryStateService.new(message: message, inbox: inbox)
+      return if state.record(state: incoming_status, source_id: status[:id], error: detail, code: error[:code],
+                             confirmed_failure: incoming_status == 'failed' && error.present?, origin: outgoing_echo ? 'echo' : 'webhook')
+    end
 
     if incoming_status == 'deleted'
       content_attributes = (message.content_attributes || {}).merge(

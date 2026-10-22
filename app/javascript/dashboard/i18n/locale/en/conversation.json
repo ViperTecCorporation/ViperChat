@@ -1,5 +1,25 @@
 {
   "CONVERSATION": {
+    "PROVIDER_DELIVERY": {
+      "TITLE": "Delivery by provider",
+      "PROVIDER": { "unoapi": "ViperConnect", "whatsapp_cloud": "Meta" },
+      "STATE": {
+        "progress": "Trying to send",
+        "sent": "Accepted for sending",
+        "delivered": "Delivered",
+        "read": "Read",
+        "failed": "Sending failed",
+        "uncertain": "Confirmation unavailable; review before retrying",
+        "skipped": "Not sent: delivery already confirmed",
+        "observed": "Message observed in this channel"
+      },
+      "BLOCKED": {
+        "provider_unavailable": "The alternate provider is unavailable.",
+        "unsupported": "The alternate provider does not support this message type.",
+        "template_required": "Sending via Meta requires an approved template outside the reply window.",
+        "recipient_unavailable": "No safe recipient identity is available for the alternate provider."
+      }
+    },
     "LOCATION_PICKER": {
       "TITLE": "Send location",
       "HELP": "When opened, we request your location with your permission. You can also search for a business or choose a point on the map.",

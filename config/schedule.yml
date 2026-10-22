@@ -116,3 +116,9 @@ whatsapp_import_history_job:
   class: 'Whatsapp::ImportHistoryJob'
   active_job: true
   queue: low
+
+whatsapp_recover_pending_fallbacks_job:
+  cron: '* * * * *'
+  class: 'Whatsapp::RecoverPendingFallbacksJob'
+  active_job: true
+  queue: low

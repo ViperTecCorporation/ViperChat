@@ -35,7 +35,7 @@ class Whatsapp::InitialMetaMessagesService
   def decide
     policy = @message.content_attributes.to_h[KEY].to_h
     metadata = @message.content_attributes.to_h['whatsapp_transport'].to_h
-    return if policy['decision'].present? || @message.source_id.present? || metadata['delivery_attempt_id'].present?
+    return if decision_started?(policy, metadata)
 
     @link = WhatsappInboxLink.for_inbox(@message.inbox)
     reason = ineligible_reason(policy, metadata)
@@ -46,6 +46,10 @@ class Whatsapp::InitialMetaMessagesService
     return record_decision(policy, reason) if reason
 
     apply_meta(policy, metadata)
+  end
+
+  def decision_started?(policy, metadata)
+    policy['decision'].present? || @message.source_id.present? || metadata['delivery_attempt_id'].present? || metadata['fallback_from'].present?
   end
 
   def ineligible_reason(policy, metadata)

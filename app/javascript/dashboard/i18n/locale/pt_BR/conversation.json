@@ -1,5 +1,25 @@
 {
   "CONVERSATION": {
+    "PROVIDER_DELIVERY": {
+      "TITLE": "Envio por provedor",
+      "PROVIDER": { "unoapi": "ViperConnect", "whatsapp_cloud": "Meta" },
+      "STATE": {
+        "progress": "Tentando enviar",
+        "sent": "Aceita para envio",
+        "delivered": "Entregue",
+        "read": "Lida",
+        "failed": "Falha no envio",
+        "uncertain": "Sem confirmação; revise antes de tentar novamente",
+        "skipped": "Não enviada: entrega já confirmada",
+        "observed": "Mensagem observada neste canal"
+      },
+      "BLOCKED": {
+        "provider_unavailable": "O provedor alternativo está indisponível.",
+        "unsupported": "O provedor alternativo não suporta este tipo de mensagem.",
+        "template_required": "O envio pela Meta exige um modelo aprovado fora da janela de resposta.",
+        "recipient_unavailable": "Não há identificação segura do destinatário para o provedor alternativo."
+      }
+    },
     "LOCATION_PICKER": {
       "TITLE": "Enviar localização",
       "HELP": "Ao abrir, buscamos sua localização com sua permissão. Você também pode pesquisar uma empresa ou escolher um ponto no mapa.",

@@ -5,6 +5,12 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
     @unified_transport ||= Whatsapp::UnifiedTransportService.new(message: message)
   end
 
+  def outgoing_message_originated_from_channel?
+    return false if message.content_attributes.to_h.dig('whatsapp_transport', 'fallback_pending')
+
+    super
+  end
+
   def inbox
     unified_transport.enabled? ? unified_transport.inbox : super
   end
@@ -25,8 +31,6 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
       return
     end
     return send_web_invitation if message.content_attributes['web_attendance_invitation_id'].present?
-
-    return if message.message_type == :outgoing && message.source_id&.is_present? # is message send by own
 
     if should_send_template_message?
       send_template_message
@@ -65,6 +69,7 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
       message.update!(status: :failed, external_error: 'Template not found or invalid template name')
       return
     end
+    message.save! if unified_transport.enabled? && message.changed?
 
     recipient = nil
     Whatsapp::UnifiedDeliveryAttemptService.new(message: message).perform(preflight: -> { recipient = whatsapp_recipient }) do
@@ -102,12 +107,28 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
 
     dedup_lock = Whatsapp::MessageDedupLock.new("#{inbox.id}:#{message_id}")
     dedup_lock.acquire!
-    Message.transaction do
+    if unified_transport.enabled?
+      persist_unified_source_id(message_id)
+    else
       message.update!(source_id: message_id)
-      unified_transport.register_source_id!(message_id)
     end
   ensure
     dedup_lock&.release!
+  end
+
+  def persist_unified_source_id(message_id)
+    message.with_lock do
+      attributes = source_id_attributes(message_id)
+      message.update!(source_id: message.source_id.presence || message_id, content_attributes: attributes)
+      unified_transport.register_source_id!(message_id)
+    end
+    Whatsapp::UnifiedDeliveryStateService.new(message: message, inbox: inbox).record(state: 'sent', source_id: message_id, origin: 'api')
+  end
+
+  def source_id_attributes(message_id)
+    attributes = message.content_attributes.deep_dup
+    attributes['whatsapp_transport'] = attributes.fetch('whatsapp_transport').merge('provider_source_id' => message_id)
+    attributes
   end
 
   def whatsapp_recipient

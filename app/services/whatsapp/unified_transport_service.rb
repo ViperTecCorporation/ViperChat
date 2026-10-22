@@ -90,7 +90,9 @@ class Whatsapp::UnifiedTransportService
     raise ArgumentError, 'Message reference is not available in this conversation' unless reference_allowed?(message)
 
     return message.source_id unless enabled?
-    return message.source_id if message.content_attributes.dig('whatsapp_transport', 'inbox_id') == inbox.id
+    if message.content_attributes.dig('whatsapp_transport', 'inbox_id') == inbox.id
+      return message.content_attributes.dig('whatsapp_transport', 'provider_source_id').presence || message.source_id
+    end
 
     provider_reference(message) || raise(UnavailableReference, 'Message reference is not available in the selected provider')
   end
