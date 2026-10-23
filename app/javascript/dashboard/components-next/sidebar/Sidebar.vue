@@ -381,6 +381,11 @@ const newReportRoutes = () => [
     label: t('PARTNER_REPORT.TITLE'),
     to: accountScopedRoute('partner_inbox_reports'),
   },
+  {
+    name: 'Reports Ad Leads',
+    label: t('PARTNER_REPORT.AD_REPORT_TITLE'),
+    to: accountScopedRoute('ad_leads_reports'),
+  },
 ];
 
 const reportRoutes = computed(() => newReportRoutes());

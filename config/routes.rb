@@ -624,6 +624,9 @@ Rails.application.routes.draw do
               get :first_response_time_distribution
               get :outgoing_messages_count
               get :partner_inboxes, to: 'partner_inbox_reports#show'
+              get :partner_ad_leads, to: 'partner_inbox_reports#ad_leads'
+              get 'partner_inboxes/settings', to: 'partner_inbox_reports#settings'
+              patch 'partner_inboxes/settings', to: 'partner_inbox_reports#update_settings'
             end
           end
           resource :year_in_review, only: [:show]

@@ -17,7 +17,10 @@ publicação, migração de banco ou implantação na VPS nesta tarefa.
 
 ## Funcionalidade
 
-- Últimos 30 dias inicialmente; alternativas de 21, 14 e 7 dias ou datas personalizadas.
+Atualização de 23/10: gráficos comparativos, padrões Brasil editáveis, regra de utilidade corrigida para outubro, detalhamento de contatos/anúncios/janelas e relatório independente de Leads de anúncios (inclui caixas sem parceira). Demonstração e validação completas em [Leads e simulação de 6.000 mensagens](relatorio-leads-anuncios-simulacao-6000-20261023.md). Dentro da janela estimada de anúncio, todas as categorias são isentas sem consumir a franquia de 1.000 serviços.
+
+- **Mês atual** inicialmente, do dia 1º até hoje no fuso do relatório; alternativas de 30, 21, 14 e 7 dias ou datas personalizadas.
+- Fuso em dropdown de zonas IANA. Padrão **Usar fuso da conta**, derivado de `reporting_timezone` (ou fuso do sistema se não configurado). Escolher outro fuso não modifica a configuração da conta; pode ser salvo como preferência do simulador. Não se utiliza o fuso do navegador.
 - Todas as caixas parceiras ou um vínculo específico. Vínculos desativados ficam identificados.
 - Mensagens públicas de canal, com recebimentos por Meta/ViperConnect e saídas pelo transporte efetivo registrado.
 - Entregas confirmadas separadas das saídas/tentativas. Tentativas sem confirmação não entram na estimativa de cobrança.
@@ -29,7 +32,8 @@ publicação, migração de banco ou implantação na VPS nesta tarefa.
   não geram um novo envio. Histórico importado não consome a estimativa de franquia.
 - Tarifas manuais não negativas por categoria: serviço, utilidade, marketing e autenticação. Campo vazio é desconhecido;
   zero é um valor informado. Sem preços oficiais fixos, conversão de moeda ou alteração de roteamento. Moeda BRL ou USD dos valores inseridos.
-- Os filtros e as tarifas são parâmetros desta consulta, não novas configurações persistidas da caixa ou da WABA.
+- Tarifas, moeda, fuso e janela de anúncio podem ser salvos pelo botão **Salvar configurações**, no escopo da conta, e continuam editáveis. São preferências do simulador, não configurações reais da caixa ou da WABA. Período e filtro de caixas permanecem parâmetros de cada consulta.
+- A página recupera os valores salvos antes do relatório inicial; **Atualizar relatório** não salva configurações implicitamente. Zero e branco continuam distintos. Detalhes e validação: [Configurações salvas](partner-inbox-report-settings-20261023.md).
 
 ## Premissas de simulação, não promessa de faturamento
 
@@ -46,10 +50,10 @@ não uma alteração silenciosa de segurança ou uma garantia de preço da Meta.
 ### Franquia
 
 1. Agrupada pelo número comercial normalizado, não pelo contato ou pelo provedor principal.
-2. Renovação no primeiro dia do mês às 00:00 no fuso IANA da WABA informado pelo operador; sem acumular saldo.
+2. Renovação simulada no primeiro dia do mês às 00:00 no fuso selecionado para o relatório; sem acumular saldo. Para comparação com faturamento, conferir se corresponde ao fuso efetivo da WABA.
 3. Lê desde o começo do primeiro mês do intervalo, mesmo se o relatório começar depois.
 4. Cada mês tem sua própria franquia. Mensagens na janela gratuita de anúncio não consomem novamente a franquia de serviço.
-5. Sem fuso confirmado, as contagens usam UTC e a simulação fica desabilitada, sem presumir o fuso do navegador ou do servidor.
+5. Sem escolha explícita no relatório, os cálculos seguem o fuso da conta ou o padrão do sistema. Essa preferência não comprova o fuso de faturamento da WABA nem seus preços reais.
 
 ### Entrada de anúncio
 
@@ -87,6 +91,8 @@ Foram consultados apenas campos técnicos e agregados, sem imprimir tokens, nome
 ## API e autorização
 
 `GET /api/v2/accounts/:account_id/reports/partner_inboxes`
+
+Preferências: `GET` / `PATCH /api/v2/accounts/:account_id/reports/partner_inboxes/settings`, sob a mesma autorização e isolamento de conta. Campos permitidos: `timezone`, `currency` (BRL/USD), `ad_window_days` e as quatro tarifas. Persistência em `accounts.settings.partner_inbox_report`; merge sob lock preserva os demais settings. Entrada inválida retorna 422 sem sobrescrever a configuração anterior.
 
 Parâmetros: `from`, `to` (datas ISO; final inclusivo na UI), `link_id` opcional, `timezone` opcional,
 `ad_window_days` (7 ou 3), `service_rate`, `utility_rate`, `marketing_rate`, `authentication_rate` opcionais.

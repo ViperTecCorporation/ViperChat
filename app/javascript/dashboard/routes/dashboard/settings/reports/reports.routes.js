@@ -158,6 +158,13 @@ export default {
           component: PartnerInboxReports,
         },
         {
+          path: 'ad_leads',
+          name: 'ad_leads_reports',
+          meta,
+          component: PartnerInboxReports,
+          props: { leadsOnly: true },
+        },
+        {
           path: 'sla',
           name: 'sla_reports',
           meta,

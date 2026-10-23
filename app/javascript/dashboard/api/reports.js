@@ -12,6 +12,18 @@ class ReportsAPI extends ApiClient {
     return axios.get(`${this.url}/partner_inboxes`, { params });
   }
 
+  getAdLeads(params) {
+    return axios.get(`${this.url}/partner_ad_leads`, { params });
+  }
+
+  getPartnerInboxSettings() {
+    return axios.get(`${this.url}/partner_inboxes/settings`);
+  }
+
+  savePartnerInboxSettings(settings) {
+    return axios.patch(`${this.url}/partner_inboxes/settings`, settings);
+  }
+
   getReports({
     metric,
     from,

@@ -1,27 +1,69 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ReportsAPI from 'dashboard/api/reports';
 import ReportHeader from './components/ReportHeader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import timeZoneData from '../inbox/helpers/timezones.json';
+import BarChart from 'shared/components/charts/BarChart.vue';
+import AdLeadsTable from './components/AdLeadsTable.vue';
 
+const props = defineProps({ leadsOnly: { type: Boolean, default: false } });
 const { t } = useI18n();
-const period = ref('30');
+const chartBrand = ref('rgb(39 129 246)');
+const period = ref('current_month');
 const from = ref('');
 const to = ref('');
 const timezone = ref('');
+const accountTimezone = ref('UTC');
+const effectiveTimezone = computed(
+  () => timezone.value || accountTimezone.value
+);
+const timezones = computed(() =>
+  [
+    ...new Set([
+      ...(Intl.supportedValuesOf
+        ? Intl.supportedValuesOf('timeZone')
+        : Object.values(timeZoneData)),
+      'UTC',
+      'America/Cuiaba',
+      accountTimezone.value,
+      timezone.value,
+    ]),
+  ]
+    .filter(Boolean)
+    .sort()
+);
 const linkId = ref('');
 const currency = ref('BRL');
 const adDays = ref('7');
+const settingsMessage = ref('');
 const rates = ref({
   service: '',
   utility: '',
   marketing: '',
   authentication: '',
 });
+function applyBrazilRates() {
+  currency.value = 'BRL';
+  Object.assign(rates.value, {
+    service: '0.035',
+    utility: '0.035',
+    authentication: '0.035',
+    marketing: '0.3217',
+  });
+  settingsMessage.value = '';
+}
 const result = ref(null);
 const busy = ref(false);
 const error = ref('');
+const saving = ref(false);
+const loadingSettings = ref(true);
+const settingsLoadFailed = ref(false);
+const settingsError = ref('');
+const disabled = computed(
+  () => busy.value || saving.value || loadingSettings.value
+);
 const providers = ['whatsapp_cloud', 'unoapi', 'unknown'];
 const metrics = [
   'free_allowance',
@@ -41,12 +83,40 @@ const cost = computed(() => {
   }).format(Number(result.value.simulation.estimated_cost));
 });
 
+const formatMoney = value =>
+  new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: currency.value,
+    maximumFractionDigits: 4,
+  }).format(Number(value));
+const dailyChart = computed(() => ({
+  labels: (result.value?.daily || []).map(day => day.date),
+  datasets: providers.map((provider, index) => ({
+    label: t(`PARTNER_REPORT.PROVIDERS.${provider}`),
+    backgroundColor: [chartBrand.value, '#8b5cf6', '#94a3b8'][index],
+    data: (result.value?.daily || []).map(day => day.counts[provider].outgoing),
+  })),
+}));
+const costChart = computed(() => ({
+  labels: [t('PARTNER_REPORT.CURRENT_COST'), t('PARTNER_REPORT.ALL_META_COST')],
+  datasets: [
+    {
+      label: currency.value,
+      backgroundColor: [chartBrand.value, '#8b5cf6'],
+      data: [
+        Number(result.value?.simulation?.estimated_cost || 0),
+        Number(result.value?.simulation?.comparison?.all_meta_cost || 0),
+      ],
+    },
+  ],
+}));
+
 function setDates() {
   if (period.value === 'custom') return;
   let date;
   try {
     date = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone.value || 'UTC',
+      timeZone: effectiveTimezone.value,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -55,6 +125,10 @@ function setDates() {
     return;
   }
   to.value = date;
+  if (period.value === 'current_month') {
+    from.value = `${date.slice(0, 7)}-01`;
+    return;
+  }
   const start = new Date(`${date}T00:00:00Z`);
   start.setUTCDate(start.getUTCDate() - Number(period.value) + 1);
   from.value = start.toISOString().slice(0, 10);
@@ -67,10 +141,10 @@ async function update() {
   error.value = '';
   result.value = null;
   try {
-    const { data } = await ReportsAPI.getPartnerInboxes({
+    const query = {
       from: from.value,
       to: to.value,
-      timezone: timezone.value || undefined,
+      timezone: effectiveTimezone.value,
       link_id: linkId.value || undefined,
       ad_window_days: adDays.value,
       ...Object.fromEntries(
@@ -79,7 +153,10 @@ async function update() {
           value,
         ])
       ),
-    });
+    };
+    const { data } = await (props.leadsOnly
+      ? ReportsAPI.getAdLeads(query)
+      : ReportsAPI.getPartnerInboxes(query));
     result.value = data;
   } catch (exception) {
     const code = exception.response?.data?.error;
@@ -101,22 +178,87 @@ async function update() {
   }
 }
 
-onMounted(update);
+async function saveSettings() {
+  if (disabled.value || settingsLoadFailed.value) return;
+  saving.value = true;
+  settingsMessage.value = '';
+  settingsError.value = '';
+  try {
+    await ReportsAPI.savePartnerInboxSettings({
+      timezone: timezone.value,
+      currency: currency.value,
+      ad_window_days: adDays.value,
+      ...Object.fromEntries(
+        Object.entries(rates.value).map(([key, value]) => [
+          `${key}_rate`,
+          value,
+        ])
+      ),
+    });
+    settingsMessage.value = t('PARTNER_REPORT.SETTINGS_SAVED');
+  } catch {
+    settingsError.value = t('PARTNER_REPORT.SETTINGS_SAVE_ERROR');
+  } finally {
+    saving.value = false;
+  }
+}
+
+watch(
+  () => props.leadsOnly,
+  () => {
+    linkId.value = '';
+    update();
+  }
+);
+
+onMounted(async () => {
+  const brand = getComputedStyle(document.documentElement)
+    .getPropertyValue('--brand-color')
+    .trim();
+  if (brand) chartBrand.value = `rgb(${brand})`;
+  try {
+    const { data } = await ReportsAPI.getPartnerInboxSettings();
+    accountTimezone.value = data.account_timezone ?? 'UTC';
+    timezone.value = data.timezone ?? '';
+    currency.value = data.currency ?? 'BRL';
+    adDays.value = String(data.ad_window_days ?? 7);
+    Object.keys(rates.value).forEach(key => {
+      rates.value[key] = data[`${key}_rate`] ?? '';
+    });
+  } catch {
+    settingsLoadFailed.value = true;
+    settingsError.value = t('PARTNER_REPORT.SETTINGS_LOAD_ERROR');
+  } finally {
+    loadingSettings.value = false;
+  }
+  await update();
+});
 </script>
 
 <template>
   <ReportHeader
-    :header-title="$t('PARTNER_REPORT.TITLE')"
-    :header-description="$t('PARTNER_REPORT.DESCRIPTION')"
+    :header-title="
+      $t(leadsOnly ? 'PARTNER_REPORT.AD_REPORT_TITLE' : 'PARTNER_REPORT.TITLE')
+    "
+    :header-description="
+      $t(
+        leadsOnly
+          ? 'PARTNER_REPORT.AD_REPORT_DESCRIPTION'
+          : 'PARTNER_REPORT.DESCRIPTION'
+      )
+    "
   />
   <form class="flex flex-col gap-4 min-w-0" @submit.prevent="update">
     <fieldset
-      :disabled="busy"
+      :disabled="disabled"
       class="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
     >
       <label class="min-w-0 text-sm">
         {{ $t('PARTNER_REPORT.PERIOD') }}
         <select v-model="period" :class="fieldsClass" @change="setDates">
+          <option value="current_month">
+            {{ $t('PARTNER_REPORT.CURRENT_MONTH') }}
+          </option>
           <option
             v-for="days in [30, 21, 14, 7]"
             :key="days"
@@ -148,7 +290,7 @@ onMounted(update);
           :class="fieldsClass"
         />
       </label>
-      <label class="min-w-0 text-sm">
+      <label v-if="!leadsOnly" class="min-w-0 text-sm">
         {{ $t('PARTNER_REPORT.PAIR') }}
         <select v-model="linkId" :class="fieldsClass">
           <option value="">{{ $t('PARTNER_REPORT.ALL') }}</option>
@@ -168,19 +310,31 @@ onMounted(update);
       </label>
       <label class="min-w-0 text-sm sm:col-span-2">
         {{ $t('PARTNER_REPORT.TIMEZONE') }}
-        <input
+        <select
           v-model="timezone"
-          type="text"
+          data-testid="report-timezone"
           :class="fieldsClass"
           @change="setDates"
-        />
+        >
+          <option value="">
+            {{
+              $t('PARTNER_REPORT.ACCOUNT_TIMEZONE', {
+                timezone: accountTimezone,
+              })
+            }}
+          </option>
+          <option v-for="zone in timezones" :key="zone" :value="zone">
+            {{ zone }}
+          </option>
+        </select>
         <span class="text-xs text-n-slate-11 block mt-1">{{
           $t('PARTNER_REPORT.TIMEZONE_HELP')
         }}</span>
       </label>
     </fieldset>
     <fieldset
-      :disabled="busy"
+      v-if="!leadsOnly"
+      :disabled="disabled"
       class="min-w-0 rounded-xl border border-n-weak p-4"
     >
       <legend class="px-1 text-sm font-medium">
@@ -224,13 +378,42 @@ onMounted(update);
         </label>
       </div>
     </fieldset>
-    <Button
-      type="submit"
-      :disabled="busy"
-      icon="i-lucide-chart-no-axes-combined"
-      :label="$t(busy ? 'PARTNER_REPORT.LOADING' : 'PARTNER_REPORT.UPDATE')"
-      class="self-start"
-    />
+    <div class="flex flex-wrap gap-3">
+      <Button
+        type="submit"
+        :disabled="disabled"
+        icon="i-lucide-chart-no-axes-combined"
+        :label="$t(busy ? 'PARTNER_REPORT.LOADING' : 'PARTNER_REPORT.UPDATE')"
+      />
+      <Button
+        v-if="!leadsOnly"
+        type="button"
+        :disabled="disabled || settingsLoadFailed"
+        icon="i-lucide-save"
+        :label="
+          $t(
+            saving
+              ? 'PARTNER_REPORT.SETTINGS_SAVING'
+              : 'PARTNER_REPORT.SETTINGS_SAVE'
+          )
+        "
+        @click="saveSettings"
+      />
+      <Button
+        v-if="!leadsOnly"
+        type="button"
+        :disabled="disabled"
+        icon="i-lucide-list-restart"
+        :label="$t('PARTNER_REPORT.BRAZIL_RATES')"
+        @click="applyBrazilRates"
+      />
+    </div>
+    <p v-if="settingsMessage" role="status" class="text-sm text-n-teal-11">
+      {{ settingsMessage }}
+    </p>
+    <p v-if="settingsError" role="alert" class="text-sm text-n-ruby-11">
+      {{ settingsError }}
+    </p>
   </form>
   <p v-if="error" role="alert" class="text-n-ruby-11 mt-4 break-words">
     {{ error }}
@@ -240,7 +423,10 @@ onMounted(update);
     class="flex flex-col gap-5 mt-6 min-w-0"
     aria-live="polite"
   >
-    <p v-if="!result.available_pairs.length" class="text-sm text-n-slate-11">
+    <p
+      v-if="!leadsOnly && !result.available_pairs.length"
+      class="text-sm text-n-slate-11"
+    >
       {{ $t('PARTNER_REPORT.EMPTY') }}
     </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -261,8 +447,38 @@ onMounted(update);
         <strong class="text-2xl">{{ result.totals[key] }}</strong>
       </div>
     </div>
+    <div class="rounded-xl border border-n-weak p-4 text-sm">
+      {{ $t('PARTNER_REPORT.AD_CONTACTS') }}:
+      <strong>{{ result.totals.ad_contacts || 0 }}</strong>
+    </div>
+    <AdLeadsTable
+      :leads="result.simulation?.ad_leads || []"
+      :timezone="result.timezone"
+    />
+    <section
+      v-if="!leadsOnly && result.daily?.length"
+      class="rounded-xl border border-n-weak p-4 min-w-0"
+    >
+      <h3 class="text-base">{{ $t('PARTNER_REPORT.DAILY_CHART') }}</h3>
+      <ul
+        class="flex flex-wrap gap-4 text-sm list-none p-0"
+        :aria-label="$t('PARTNER_REPORT.DAILY_CHART')"
+      >
+        <li
+          v-for="dataset in dailyChart.datasets"
+          :key="dataset.label"
+          class="flex items-center gap-2"
+        >
+          <svg width="12" height="12" aria-hidden="true">
+            <circle cx="6" cy="6" r="5" :fill="dataset.backgroundColor" />
+          </svg>
+          {{ dataset.label }}
+        </li>
+      </ul>
+      <div class="h-64"><BarChart :collection="dailyChart" /></div>
+    </section>
     <div
-      v-for="pair in result.pairs"
+      v-for="pair in leadsOnly ? [] : result.pairs"
       :key="pair.id"
       class="min-w-0 rounded-xl border border-n-weak p-3 sm:p-4"
     >
@@ -302,10 +518,13 @@ onMounted(update);
         </div>
       </div>
     </div>
-    <p class="text-xs text-n-slate-11">
+    <p v-if="!leadsOnly" class="text-xs text-n-slate-11">
       {{ $t('PARTNER_REPORT.COUNTS_HELP') }}
     </p>
-    <section class="rounded-xl border border-n-weak p-4 min-w-0">
+    <section
+      v-if="!leadsOnly"
+      class="rounded-xl border border-n-weak p-4 min-w-0"
+    >
       <h3 class="text-base">{{ $t('PARTNER_REPORT.SIMULATION') }}</h3>
       <p class="text-xs text-n-slate-11">
         {{ $t('PARTNER_REPORT.DISCLAIMER') }}
@@ -321,6 +540,49 @@ onMounted(update);
         {{ $t('PARTNER_REPORT.NO_TIMEZONE') }}
       </p>
       <template v-if="result.simulation">
+        <section v-if="result.simulation.comparison" class="mb-5 min-w-0">
+          <h4 class="text-base">{{ $t('PARTNER_REPORT.COMPARISON') }}</h4>
+          <div class="h-56">
+            <BarChart
+              :collection="costChart"
+              :chart-options="{ scales: { y: { beginAtZero: true } } }"
+            />
+          </div>
+          <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div>
+              <dt>{{ $t('PARTNER_REPORT.CURRENT_COST') }}</dt>
+              <dd>{{ formatMoney(result.simulation.estimated_cost) }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t('PARTNER_REPORT.ALL_META_COST') }}</dt>
+              <dd>
+                {{ formatMoney(result.simulation.comparison.all_meta_cost) }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ $t('PARTNER_REPORT.AVOIDED_COST') }}</dt>
+              <dd>
+                {{ formatMoney(result.simulation.comparison.avoided_meta_cost)
+                }}<span
+                  v-if="result.simulation.comparison.avoided_percent !== null"
+                >
+                  ({{ result.simulation.comparison.avoided_percent }}%)</span
+                >
+              </dd>
+            </div>
+          </dl>
+          <p class="text-xs text-n-slate-11">
+            {{ $t('PARTNER_REPORT.COMPARISON_HELP') }}
+          </p>
+          <p class="text-xs text-n-slate-11">
+            {{
+              $t('PARTNER_REPORT.COMPARISON_GAPS', {
+                categories: result.simulation.comparison.unclassified,
+                rates: result.simulation.comparison.unpriced,
+              })
+            }}
+          </p>
+        </section>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div
             v-for="metric in metrics"

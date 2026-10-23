@@ -7,7 +7,7 @@ class Whatsapp::PartnerInboxReportService
   def initialize(account:, params:)
     @account = account
     @params = params.to_h.stringify_keys
-    @timezone = @params['timezone'].presence
+    @timezone = @params['timezone'].presence || @account.reporting_timezone.presence || Time.zone.tzinfo.name
     @zone = ActiveSupport::TimeZone[@timezone || 'UTC']
     raise InvalidParameters, 'invalid_timezone' unless @zone
 
@@ -25,7 +25,8 @@ class Whatsapp::PartnerInboxReportService
     selected = rows.select { |row| row[:created_at] >= @since && row[:created_at] < @until }
     report_metadata.merge(
       available_pairs: available_pairs.map { |link| { id: link.id, name: link.primary_inbox.name, partner_name: link.secondary_inbox.name } },
-      pairs: pairs.map { |link| pair_summary(link, selected) }, totals: counters(selected), simulation: simulation(rows)
+      pairs: pairs.map { |link| pair_summary(link, selected) }, totals: counters(selected),
+      daily: daily_counts(selected), simulation: simulation(rows)
     )
   rescue ArgumentError
     raise InvalidParameters, 'invalid_parameters'
@@ -61,6 +62,13 @@ class Whatsapp::PartnerInboxReportService
     }
   end
 
+  def simulation(rows)
+    comparison = Whatsapp::PartnerCostComparisonService.new(timezone: @timezone, rates: @rates, ad_window_days: @ad_days)
+    comparison.perform(rows: rows, since: @since, until_time: @until).tap do |result|
+      result[:ad_leads] = Whatsapp::AdLeadPresenter.new(account: @account).perform(result[:ad_leads])
+    end
+  end
+
   def selected_pairs(pairs)
     return pairs if @params['link_id'].blank?
 
@@ -68,11 +76,8 @@ class Whatsapp::PartnerInboxReportService
     pairs.select { |link| link.id == id }
   end
 
-  def simulation(rows)
-    return if @timezone.blank?
-
-    Whatsapp::PartnerCostSimulationService.new(timezone: @timezone, rates: @rates, ad_window_days: @ad_days)
-                                          .perform(rows: rows, since: @since, until_time: @until)
+  def daily_counts(rows)
+    Whatsapp::PartnerInboxReportCountersService.daily(rows, zone: @zone, since: @since, until_time: @until)
   end
 
   def load_rows(pairs)
@@ -127,7 +132,8 @@ class Whatsapp::PartnerInboxReportService
       business_phone: @phones.fetch(message.inbox_id), contact_id: @contacts.fetch(message.conversation_id),
       provider: provider, received_providers: received, delivered: delivered?(message, attrs, provider),
       template: message.additional_attributes['template_params'].present?, category: template_category(message, provider),
-      ad_referral: attrs.dig('referral', 'source_type') == 'ad' && attrs.dig('referral', 'source_id').present? }
+      ad_referral: attrs.dig('referral', 'source_type') == 'ad' && attrs.dig('referral', 'source_id').present?,
+      ad_source_id: attrs.dig('referral', 'source_id'), has_click_id: attrs.dig('referral', 'ctwa_clid').present? }
   end
 
   def observations(ids)
@@ -192,16 +198,7 @@ class Whatsapp::PartnerInboxReportService
   end
 
   def counters(rows)
-    PROVIDERS.index_with do |provider|
-      matching = rows.select { |row| row[:provider] == provider }
-      { incoming: rows.count { |row| received_on?(row, provider) },
-        outgoing: matching.count { |row| row[:direction] == 'outgoing' },
-        delivered: matching.count { |row| row[:direction] == 'outgoing' && row[:delivered] } }
-    end.merge('unique_messages' => rows.size, 'ad_referrals' => rows.count { |row| row[:ad_referral] })
-  end
-
-  def received_on?(row, provider)
-    row[:direction] == 'incoming' && (row[:received_providers].include?(provider) || (provider == 'unknown' && row[:received_providers].empty?))
+    Whatsapp::PartnerInboxReportCountersService.count(rows)
   end
 
   def pair_summary(link, rows)

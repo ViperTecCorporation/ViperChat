@@ -1,6 +1,9 @@
 # Estimates only: this does not authorize sends, change transport, or represent a Meta invoice.
 class Whatsapp::PartnerCostSimulationService
   CATEGORIES = %w[service utility marketing authentication].freeze
+  BRL_DEFAULT_RATES = { 'service_rate' => '0.035', 'utility_rate' => '0.035',
+                        'authentication_rate' => '0.035', 'marketing_rate' => '0.3217' }.freeze
+  SERVICE_PRICING_START = Date.new(2026, 10, 1)
 
   def initialize(timezone:, rates:, ad_window_days: 7, monthly_allowance: 1000)
     @zone = ActiveSupport::TimeZone[timezone]
@@ -14,12 +17,12 @@ class Whatsapp::PartnerCostSimulationService
     @until = until_time
     @usage = Hash.new(0)
     @incoming = {}
-    @referrals = {}
-    @windows = {}
+    @ad_windows = Whatsapp::AdLeadWindowTracker.new(window: @ad_window)
     @result = { free_allowance: 0, free_ad: 0, free_customer_window: 0, chargeable: 0, unclassified: 0, unpriced: 0,
                 estimated_cost: BigDecimal(0) }
     rows.sort_by { |row| [row[:created_at], row[:id]] }.each { |row| process(row) }
-    @result.merge(months: months, estimated_cost: @result[:estimated_cost].to_s('F'))
+    @result.merge(months: months, estimated_cost: @result[:estimated_cost].to_s('F'),
+                  ad_leads: @ad_windows.entries(since: @since, until_time: @until))
   end
 
   private
@@ -28,7 +31,7 @@ class Whatsapp::PartnerCostSimulationService
     key = [row[:business_phone], row[:contact_id]]
     if row[:direction] == 'incoming'
       @incoming[key] = row[:created_at]
-      @referrals[key] = row[:created_at] if row[:ad_referral]
+      @ad_windows.receive(row, key) if row[:ad_referral]
     elsif row[:provider] == 'whatsapp_cloud' && row[:delivered]
       process_delivery(row, key)
     end
@@ -36,13 +39,14 @@ class Whatsapp::PartnerCostSimulationService
 
   def process_delivery(row, key)
     time = row[:created_at]
-    open_ad_window(key, time)
+    @ad_windows.open(key, time, row[:id])
     category = category_for(row, key)
     month = [row[:business_phone], time.in_time_zone(@zone).strftime('%Y-%m')]
     outcome = classify(key, time, category, month)
     return unless time >= @since && time < @until
 
     @result[outcome] += 1
+    @ad_windows.count(key) if outcome == :free_ad
     add_cost(category) if outcome == :chargeable
   end
 
@@ -50,13 +54,6 @@ class Whatsapp::PartnerCostSimulationService
     return row[:category] if row[:category].present? || row[:template]
 
     'service' if @incoming[key] && row[:created_at] - @incoming[key] <= 24.hours
-  end
-
-  def open_ad_window(key, time)
-    return unless @referrals[key] && time >= @referrals[key] && time - @referrals[key] <= 24.hours
-
-    @windows[key] = time + @ad_window
-    @referrals.delete(key)
   end
 
   def classify(key, time, category, month)
@@ -70,7 +67,9 @@ class Whatsapp::PartnerCostSimulationService
   end
 
   def free_window_outcome(key, time, category)
-    return :free_ad if @windows[key] && time < @windows[key]
+    return :free_ad if @ad_windows.free?(key, time)
+    return if time.in_time_zone(@zone).to_date >= SERVICE_PRICING_START
+    return :free_customer_window if category == 'service'
 
     :free_customer_window if category == 'utility' && customer_window?(key, time)
   end
