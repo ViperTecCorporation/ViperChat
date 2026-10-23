@@ -760,6 +760,24 @@ function handleForwardMessages() {
 }
 
 const avatarInfo = computed(() => {
+  if (
+    props.contentType === CONTENT_TYPES.VOICE_CALL &&
+    (props.contentAttributes?.voipExternalCallId ||
+      props.contentAttributes?.voip_external_call_id) &&
+    props.contentAttributes?.data?.direction === 'outbound'
+  ) {
+    const agentId =
+      props.contentAttributes.data.agentId ||
+      props.contentAttributes.data.agent_id;
+    if (
+      !agentId ||
+      props.sender?.type?.toLowerCase() !== SENDER_TYPES.USER.toLowerCase() ||
+      Number(props.sender?.id) !== Number(agentId)
+    ) {
+      return { name: '', src: '', iconName: 'i-lucide-user-round' };
+    }
+  }
+
   if (props.contentAttributes?.externalEcho) {
     const { name, avatar_url, channel_type, medium } = inbox.value;
     const iconName = avatar_url

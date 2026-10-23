@@ -154,6 +154,49 @@ const mountMessage = props =>
   });
 
 describe('Message', () => {
+  it('uses only the proven outbound agent photo and never falls back to the contact or logged-in agent', async () => {
+    const wrapper = mountMessage({
+      content: 'Voice Call',
+      contentType: CONTENT_TYPES.VOICE_CALL,
+      private: true,
+      currentUserId: 99,
+      sender: {
+        id: 42,
+        type: 'contact',
+        name: 'Contact',
+        thumbnail: '/contact.png',
+      },
+      contentAttributes: {
+        voipExternalCallId: 27,
+        data: { direction: 'outbound', state: 'completed', agentId: 7 },
+      },
+    });
+    const avatar = () => wrapper.findComponent({ name: 'Avatar' });
+    expect(avatar().props('src')).toBe('');
+    expect(avatar().props('iconName')).toBe('i-lucide-user-round');
+    await wrapper.setProps({
+      sender: {
+        id: 7,
+        type: 'User',
+        name: 'Origin agent',
+        thumbnail: '/agent.png',
+      },
+    });
+    expect(avatar().props('src')).toBe('/agent.png');
+    expect(avatar().props('name')).toBe('Origin agent');
+    await wrapper.setProps({
+      sender: {
+        id: 99,
+        type: 'User',
+        name: 'Logged in',
+        thumbnail: '/logged-in.png',
+      },
+    });
+    expect(avatar().props('src')).toBe('');
+    await wrapper.setProps({ contentType: CONTENT_TYPES.TEXT });
+    expect(avatar().props('src')).toBe('/logged-in.png');
+  });
+
   it('aligns private VoIP calls by call direction even when the sender is the contact', async () => {
     const wrapper = mountMessage({
       content: 'Voice Call',

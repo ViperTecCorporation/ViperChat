@@ -111,3 +111,5 @@ Procfile.worktree
 /.pnpm-store/
 /tmp/
 /secrets/
+/.playwright-cli/
+/output/

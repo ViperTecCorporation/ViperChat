@@ -16,7 +16,8 @@ class Voip::PublishConversationCallService
     conversation = @external.conversation || resolve_conversation(artifact, target, snapshot)
     return unless conversation
 
-    message = update_message(conversation, snapshot)
+    sender = snapshot['direction'] == 'outbound' ? outbound_sender(snapshot) : conversation.contact
+    message = update_message(conversation, snapshot, sender)
     @external.update!(conversation: conversation, call_message: message)
     link_artifact(artifact, conversation)
   end
@@ -45,14 +46,14 @@ class Voip::PublishConversationCallService
                                       .resolve(target, call_event: true, open_incoming: open_incoming)
   end
 
-  def update_message(conversation, snapshot)
+  def update_message(conversation, snapshot, sender)
     message = @external.call_message || @external.voip_call_artifact&.message || conversation.messages.new(
       account: @service.account, inbox: conversation.inbox, private: true,
       content_type: :voice_call, source_id: "voip-call:#{@external.id}"
     )
     message.assign_attributes(content: 'Voice Call', content_type: :voice_call, private: true,
                               message_type: snapshot['direction'] == 'inbound' ? :incoming : :outgoing,
-                              sender: conversation.contact, content_attributes: preserved_attributes(message).merge(attributes(snapshot)))
+                              sender: sender, content_attributes: preserved_attributes(message).merge(attributes(snapshot, sender)))
     message.save! if message.new_record? || message.changed?
     message
   end
@@ -63,16 +64,33 @@ class Voip::PublishConversationCallService
     message.content_attributes.merge('voip_legacy_content' => message.content)
   end
 
-  def attributes(snapshot)
-    answered = @external.voip_calls.where.not(answered_at: nil).order(:answered_at).first
+  def outbound_sender(snapshot)
+    calls = @external.voip_calls.where(direction: 'outgoing', account_id: @service.account_id,
+                                       voip_agent_extension_id: @service.voip_agent_extensions.select(:id))
+    origin = snapshot['from'] || {}
+    @outbound_extension = origin['kind'] == 'extension' ? origin['value'] : nil
+    calls = calls.where(local_extension: origin['value']) if origin['kind'] == 'extension'
+    ids = calls.distinct.pluck(:local_agent_id).compact
+    return unless ids.one?
+
+    @service.account.users.find_by(id: ids.first)
+  end
+
+  def attributes(snapshot, sender)
     duration = if snapshot['answered_at'] && snapshot['ended_at']
                  [(Time.iso8601(snapshot['ended_at']) - Time.iso8601(snapshot['answered_at'])).to_i, 0].max
                end
     { 'voip_external_call_id' => @external.id, 'data' => {
       'state' => snapshot['state'], 'direction' => snapshot['direction'], 'service_name' => @service.name,
-      'extension' => answered&.local_extension, 'agent_id' => answered&.local_agent_id,
       'started_at' => snapshot['started_at'], 'answered_at' => snapshot['answered_at'], 'ended_at' => snapshot['ended_at'],
       'duration_seconds' => duration, 'end_reason' => snapshot['end_reason']
-    }.compact }
+    }.merge(actor_attributes(snapshot, sender)).compact }
+  end
+
+  def actor_attributes(snapshot, sender)
+    return { 'extension' => @outbound_extension, 'agent_id' => sender&.id } if snapshot['direction'] == 'outbound'
+
+    answered = @external.voip_calls.where.not(answered_at: nil).order(:answered_at).first
+    { 'extension' => answered&.local_extension, 'agent_id' => answered&.local_agent_id }
   end
 end

@@ -589,3 +589,26 @@ backups e temporários. Nenhuma alteração na VPS.
 Conferência da árvore de publicação: 289 exemplos backend, 108 testes frontend
 e 24 verificações sintéticas do relatório aprovados. Schema regenerado acompanha
 a migração. Limitações de aparelho/iOS e limpeza Windows continuam documentadas.
+
+### 23/10/2026 — avatar do agente originador nas efetuadas
+
+Corrigido em dev o remetente das bolhas efetuadas: agente comprovado no registro
+histórico da chamada/ramal, nunca o contato ou o usuário logado por suposição.
+Origem ausente ou ambígua recebe ícone neutro; agente conhecido sem foto usa suas
+iniciais. Chamadas recebidas permanecem com o contato.
+
+Validados 127 exemplos backend, 23 testes frontend e o caso real da chamada 24,
+preservando mensagem 2429132, vínculos, gravação e análise. Interface conferida em
+desktop/mobile; bundles Android/iOS e APK Debug recompilados, sem aparelho
+conectado e sem Mac acessível para aceite nativo completo. Sem commit/push nesta
+tarefa, VPS ou novos containers.
+
+Detalhes: `docs/voip-avatar-agente-origem-20261023.md`.
+
+Publicação do restante autorizada em 23/10/2026: incluir a correção de avatar,
+testes e documentação nesta mesma branch, junto das alterações de relatórios
+já publicadas. Bolhas antigas na réplica foram corrigidas apenas com agente
+histórico comprovado, incluindo a conversa 13954, preservando IDs e artefatos.
+Saídas de validação permanecem locais e ignoradas pelo Git; referências nativas
+geradas específicas da máquina foram normalizadas para os caminhos portáteis
+existentes. Sem acesso à VPS ou implantação.
