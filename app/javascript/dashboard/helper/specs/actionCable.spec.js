@@ -1,6 +1,8 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import ActionCableConnector from '../actionCable';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 vi.mock('shared/helpers/mitt', () => ({
   emitter: {
@@ -48,6 +50,23 @@ describe('ActionCableConnector - Copilot Tests', () => {
     vi.useRealTimers();
   });
   describe('copilot event handlers', () => {
+    it('forwards VoIP updates only for the current account without initiating a call', () => {
+      const data = {
+        account_id: 1,
+        service_id: 2,
+        external_call_id: 3,
+        revision: 4,
+      };
+      actionCable.onReceived({ event: 'voip.call.updated', data });
+      expect(emitter.emit).toHaveBeenCalledWith(
+        BUS_EVENTS.VOIP_CALL_UPDATED,
+        data
+      );
+      emitter.emit.mockClear();
+      actionCable.onVoipCallUpdated({ ...data, account_id: 2 });
+      expect(emitter.emit).not.toHaveBeenCalled();
+      expect(mockDispatch).not.toHaveBeenCalled();
+    });
     it('should register the copilot.message.created event handler', () => {
       expect(Object.keys(actionCable.events)).toContain(
         'copilot.message.created'

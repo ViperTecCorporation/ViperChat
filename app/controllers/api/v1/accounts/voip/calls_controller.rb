@@ -8,11 +8,19 @@ class Api::V1::Accounts::Voip::CallsController < Api::V1::Accounts::Voip::BaseCo
     render json: { items: rows.map do |row|
       row.public_payload(remote_identity: identities.dig(row.voip_agent_extension.voip_service_id, row.identity_address))
     end,
-                   total: scope.count, page: page, coverage: 'client_observed' }
+                   total: scope.count, page: page, coverage: scope.exists?(origin: 'provider_authoritative') ? 'mixed' : 'client_observed' }
   end
 
   def show
     render_call(visible_calls.find(params[:id]))
+  end
+
+  def recording
+    call = visible_calls.find(params[:id])
+    artifact = call.voip_external_call&.voip_call_artifact
+    raise ActiveRecord::RecordNotFound unless artifact&.recording&.attached?
+
+    stream_recording(artifact.recording.blob)
   end
 
   def create
@@ -31,6 +39,15 @@ class Api::V1::Accounts::Voip::CallsController < Api::V1::Accounts::Voip::BaseCo
   end
 
   private
+
+  def stream_recording(blob)
+    raise ActiveRecord::RecordNotFound unless ::Voip::RecordingClient::MIME_TYPES.include?(blob.content_type)
+
+    disposition = ActionDispatch::Http::ContentDisposition.format(disposition: 'inline', filename: blob.filename.to_s)
+    response.headers.merge!('Content-Type' => blob.content_type, 'Content-Length' => blob.byte_size.to_s,
+                            'Content-Disposition' => disposition, 'Cache-Control' => 'private, no-store')
+    self.response_body = Enumerator.new { |chunks| blob.download { |chunk| chunks << chunk } }
+  end
 
   def observation_params
     attributes = params.require(:observation).permit(:event_id, :sequence, :state, :sip_code, :end_reason, :resolved_address)

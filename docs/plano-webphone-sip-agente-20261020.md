@@ -1,6 +1,18 @@
 # Plano: webphone SIP/WebRTC por agente e aba Chamadas
 
+> **Última decisão vigente — 22/10/2026:** receber webhooks no ViperChat com `api_access_token` de administrador; o responsável pela central adapta AMI/CEL/CDR ao nosso contrato. Nosso serviço produz o mesmo contrato com outbox SQLite, RabbitMQ e retentativas. Isso substitui a conexão direta AMI, consulta SQL e servidor AMI próprio. Cadastro por empresa, receptor, reconciliador, produtor, recuperação REST periódica com checkpoint criptografado e diagnóstico/reprocessamento administrativo nas duas pontas estão implementados/testados em dev. Ver [contrato webhook-first vigente](contrato-webhooks-voip-v1-20261022.md), especialmente seção 12, que prevalece sobre as seções históricas abaixo. Sem banco legado ou conector instalado pela nossa equipe. Sem VPS, containers adicionais ou publicação. Aceite real e integração nativa em segundo plano permanecem separados.
+
 Plano inicial: 20/10/2026 — America/Cuiaba. Atualização: 21/10/2026. Estado: primeira entrega implementada e validada funcionalmente na réplica dev existente, sem publicação ou implantação na VPS. Limites de aceite nativo, hardware e transferência real estão explícitos no runbook.
+
+**Ampliação autorizada em dev — 22/10:** cadastro do produtor por empresa,
+somente ramais vinculados; seletor `artifactsDelivery: legacy|webhook` mantém
+compatibilidade sem dois envios simultâneos. `call.artifacts.updated` entrega
+gravação/IA ao processador durável do ViperChat, com nota privada única na
+conversa comprovada, deduplicação e preservação dos IDs. Central de chamadas
+reutiliza o player `AudioChip` da bolha, com download autenticado e transcrição/
+resumo. Contrato completo e limites no documento vigente acima; teste sintético
+ponta a ponta na réplica, sem chamadas reais ou VPS. Aceite real posterior pelo
+usuário não equivale a aceite nativo em segundo plano.
 
 Execução e limites de aceite: [runbook da validação na réplica existente](validacao-webphone-sip-agente-20261021.md). Esta atualização separa recursos implementados de testes ainda pendentes. Os resultados das seções históricas ao final não substituem os testes desta implementação.
 
@@ -8,7 +20,7 @@ Complementa o [levantamento do WhatsApp e do código atual](mapeamento-chamadas-
 
 Contrato do serviço/worker analisado em 20/10/2026: [auditoria de REST, eventos e CDR](auditoria-contrato-voip-cdr-20261020.md). Já existe histórico SQLite/JSON e REST paginado; faltam contrato incremental durável, participações e escopo específico de agente para o aceite completo. Não foi acessada a VPS.
 
-**Ordem definida pelo usuário:** implementar primeiro o mecanismo funcional e a interface no ViperChat em dev, usando SIP/WebRTC existente. Depois incrementar serviço VoIP e ViperChat com **webhooks, fila persistente, retentativas e recuperação por REST incremental**. A primeira entrega já possui código funcional e testes locais; a segunda permanece planejada, não ativada. Usar somente a réplica Docker existente, sem criar outros containers nem mexer na VPS. A limpeza dos dois resíduos bloqueados ficou pendente por orientação do usuário e não bloqueia a implementação.
+**Decisão histórica substituída — 22/10/2026:** foi considerada conexão direta via AMI. Não implementar esse caminho nem usar os campos anteriores como configuração final; o contrato webhook-first acima é o vigente. As referências Asterisk/FreePBX/Issabel permanecem no [levantamento histórico](plano-integracao-ami-cel-cdr-20261022.md) para os integradores que produzirão eventos. Eventos/histórico não resolvem sozinhos segundo plano nativo.
 
 ## 1. Objetivo e decisões confirmadas
 
@@ -115,7 +127,7 @@ Na primeira entrega, o ViperChat opera pelo SIP/WebRTC e persiste no próprio ba
 
 Sem a segunda entrega, não garantir perdidas com navegador fechado, atendimento em outro dispositivo, resultado final após desconexão ou histórico completo de transferências. Ao reabrir o app, sessão local sem desfecho fica “aguardando confirmação”, sem inventar estado atendida/perdida ou duração. A interface informa que o histórico do serviço ainda não está sincronizado; registros legados disponíveis continuam preservados. Não ativar polling fingindo que o REST paginado atual já oferece cursor incremental.
 
-Na segunda entrega, **webhook é o caminho de atualização rápida e REST incremental é recuperação/reconciliação obrigatória**, ambos no backend. Eventos chegam por outbox persistente do serviço, com confirmação de recebimento durável no ViperChat e processamento idempotente. O feed REST de alterações, a acrescentar ao serviço, faz backfill e recupera falhas; não consultar apenas a primeira página/últimos inícios, pois isso perde chamada longa, transferência, gravação tardia e registros sujeitos a prune. A bridge Zapo privada não é uma assinatura ViperChat e não deve receber um segundo consumidor tomando a sessão.
+Na segunda entrega vigente, **AMI direto entrega eventos normais e CEL/Cdr habilitados; o histórico é persistido no ViperChat**. Não consultar banco de centrais legadas. Reconexão recupera estado ativo, não todo o passado; recuperação adicional depende de API comprovada e, no nosso serviço, REST incremental próprio. Persistir observações numa inbox e aplicar transições idempotentes, sem presumir eventId/revisão universal no AMI legado. Paginação REST por início não basta para recuperar alterações tardias. A bridge Zapo privada não é uma assinatura ViperChat e não deve receber um segundo consumidor tomando a sessão. Detalhes e limites na seção 7.1.
 
 Separar navegador fechado de bridge offline: o serviço já registra chamadas sem o browser; o worker atualmente não reenvia de forma durável chamadas encerradas enquanto a bridge estava indisponível. Prever recuperação do produtor, sem prometer cobertura que o código ainda não oferece. O aviso textual de chamada e a fila de notas privadas de gravação não substituem CDR.
 
@@ -124,7 +136,7 @@ A gravação pertence ao serviço local/S3; a aba nova usa referência/stream au
 - Separar `direction` de resultado. Saída não atendida não é a mesma coisa que entrada perdida.
 - Estados previstos: iniciando, chamando, atendida/em curso, encerrada, não atendida, perdida, rejeitada, ocupada, cancelada e falha; manter código SIP/motivo original para diagnóstico. Elaborar tabela de tradução com exemplos reais, sem classificar qualquer 487/erro genérico como perdida.
 - Duração de conversa começa no atendimento efetivo; tempo tocando pode ser armazenado separadamente. Clique em atender ou criação de INVITE não inicia duração de fala.
-- Duplicação/retentativa de webhook é idempotente. Evento antigo não reabre chamada terminal; correção posterior só por evidência autoritativa e regra explícita, preservando auditoria.
+- Duplicação de eventos AMI/CEL/Cdr e eventual releitura REST têm aplicação idempotente. Evento antigo não reabre chamada terminal; correção posterior só por evidência autoritativa e regra explícita, preservando auditoria.
 - Ao recuperar conexão, consultar estado/CDR antes de finalizar uma chamada como falha. Não retentar uma discagem automaticamente nem criar um segundo INVITE por timeout de HTTP.
 - Separar estado global da chamada e resultado por agente: se outro agente atendeu, encerrar toque nos demais sem chamar isso de perdida não atendida por ninguém.
 
@@ -183,7 +195,19 @@ Base visual: `WhatsApp.Design/Voip/CallControlsView.xaml`, `AudioCallView.xaml`,
 - Uma rotina de reconexão por binding, sem somar os retries de `VoiceAutoRegister` e `customVoiceClient`. Backoff, logout e mudança de conta cancelam tentativas antigas.
 - Não oferecer troca de serviço durante ligação nem mudar a central por erro de autenticação/ocupado. Re-registro e recuperação de chamada são operações diferentes.
 
-## 7.1. Integração posterior: webhook durável + REST incremental
+## 7.1. Integração vigente: AMI direto + histórico próprio e recuperação REST existente
+
+O backend ViperChat será cliente AMI das centrais Asterisk/FreePBX/Issabel e do nosso serviço VoIP, que implementará um servidor com perfil mínimo compatível. Não haverá intermediário obrigatório nem instalação de conector na central. SIP/WebRTC e o caminho do áudio permanecem separados.
+
+Centrais legadas: eventos normais e `Event: CEL`/`Event: Cdr` na mesma sessão AMI, condicionados a backends nativos, configuração e permissões. O ViperChat grava o histórico na própria base, sem consultar banco legado. Reconectar não solicita replay genérico: consultar canais/bridges ativos e registrar o intervalo sem cobertura. Chamadas encerradas inteiramente durante a queda podem não ser recuperáveis. API histórica legada existente é apenas capacidade adicional futura, não requisito nem garantia universal. Nosso serviço terá REST incremental próprio para recuperar seus registros persistidos, sem expor SQLite remoto.
+
+Ambas as fontes passarão por inbox durável e reconciliador único, preservando IDs e participações, com atualização autorizada da web/apps após persistência. A captura continuará sem browser se o backend estiver conectado; não confundir isso com backend/AMI offline. Push e entrega SIP após despertar são requisitos nativos adicionais. Fontes oficiais, cadastro AMI sem campos de banco, capacidades por versão e aceite no [plano AMI/CEL/CDR de 22/10/2026](plano-integracao-ami-cel-cdr-20261022.md).
+
+**Início autorizado em dev:** reaproveitar `/v1/console/history` com `sync=changes`, snapshot/delta e cursor assinado, preservando consulta paginada e rota de gravação existentes. Ao cadastrar/editar nosso serviço no ViperChat, configurar endereço HTTPS base e token REST protegido, separados das credenciais AMI/SIP; centrais legadas não exigem REST nem banco. O primeiro bloco está discriminado na seção 9 do plano complementar; servidor/consumidor AMI e reconciliação completa continuam pendentes. Não confundir configuração salva e cliente HTTP com sincronização ativa. A etapa passou de documentação para implementação autorizada sem novos containers ou VPS.
+
+## 7.2. Arquitetura anterior: webhook durável + REST incremental (histórico)
+
+**Substituída pela decisão de 22/10/2026 da seção 7.1.** Preservada para rastreabilidade, não como trabalho a executar: endpoints de webhook, entregador HTTP e sua matriz de falhas não integram a etapa vigente. Reaproveitar somente garantias de durabilidade, isolamento, retomada e idempotência no novo transporte. Webhook não é requisito para nosso serviço nesta etapa.
 
 Esta seção define o contrato a preparar no ViperChat na primeira entrega e integrar de fato na segunda. As rotas e campos abaixo são propostos, não recursos já implementados no serviço.
 
@@ -271,7 +295,7 @@ Base account-scoped `/api/v1/accounts/:account_id`:
 | `/voip/calls` e `/:id` | GET com paginação/filtros e detalhe; POST persiste intenção idempotente antes do INVITE do SIP.js. Agente vê suas chamadas; administrador pode consultar a conta. |
 | `/voip/calls/:id/observe` | POST autenticado do agente dono do binding. Sequência/evento idempotentes; conserva auditoria e não reabre chamada terminal por evento antigo. Não é webhook do serviço. |
 | `/voip/favorites` e `/:id` | GET/POST/DELETE dos favoritos do agente, escopados por serviço. |
-| Ingestão de eventos/CDR do serviço | Não implementada nesta entrega. Endpoint assinado, inbox durável, reconciliador autoritativo e cursor REST pertencem à seção 7.1, futura. |
+| Ingestão de eventos/CDR do serviço | Não implementada nesta entrega. Cliente AMI direto, eventos CEL/Cdr, inbox/histórico próprios e reconciliador pertencem à seção 7.1; recuperação REST própria é adicional. Sem leitor SQL legado; webhook é arquitetura anterior da seção 7.2. |
 
 Mute, atender, encerrar, DTMF e REFER são executados uma vez no cliente SIP.js; não há segundo executor backend dessas ações. O backend persiste as observações sem emitir INVITE/BYE/REFER. As tentativas de salvar observações no navegador são limitadas e em memória: não equivalem a fila durável após fechar o navegador.
 
@@ -283,12 +307,13 @@ Mute, atender, encerrar, DTMF e REFER são executados uma vez no cliente SIP.js;
 | 1B — ViperChat: SIP/WebRTC | Registro pelo ramal do agente, áudio, ações, concorrência e reconexão com o serviço já existente. | Testes sintéticos; depois registro/chamadas controladas quando autorizados. Não depender de webhook novo para o fluxo conectado. |
 | 1C — ViperChat: aba e histórico observado | Sidebar, lista/favoritos/detalhes/discador, compacto/completo, mobile com Voltar; backend persiste observações SIP com origem e confirmação limitada. | UI responsiva, navegação sem perder sessão, IDs estáveis; falta de sincronização do serviço informada. Não garantir histórico offline. |
 | 1D — Aceite ViperChat em dev | Validar SIP, observações, perfis, transporte e regressões com sintéticos e chamadas autorizadas. | Áudio bidirecional e estados do fluxo conectado; lacunas de navegador fechado/replay não escondidas. É aceite funcional parcial, não de CDR completo. |
-| 2A — Serviço/worker: entrega confiável | Implementar outbox/webhooks, retries/quarentena, feed REST incremental, escopo/participações e gaps de desconexão/capacidade da auditoria. | Persistência após reinício, IDs/revisões, captura correta de ramais/tempos e recuperação sem duplicar ligação. |
-| 2B — ViperChat: integrar eventos/CDR | Recepção assinada e durável, reconciliador único, checkpoint REST/backfill e projeção de histórico autoritativo. | Navegador fechado, falha de webhook, retomada e atualizações tardias preservadas; observar regras de retenção e associação exata com registros locais. |
-| 2C — Aceite integrado completo | Testar falhas/replay, múltiplos dispositivos e transferências ponta a ponta em dev. | Perdidas/atendimento/duração/participações corretos e mídia não duplicada. Testes bloqueados na auditoria anterior precisam ser efetivamente executados antes desse aceite. |
+| 2A — Contrato e acesso sem conector | Fechar perfil AMI mínimo, fixtures, eventos CEL/Cdr e capacidades; inventariar uma central piloto com autorização. | Acesso protegido, emissão/limites de recuperação explícitos; sem consultar banco ou instalar componente na PBX. |
+| 2B — ViperChat: integração direta | Cadastro AMI sem campos de banco, consumidor backend, inbox/histórico próprios, snapshot de ativos e reconciliação; recuperação REST própria quando habilitada. | Browser fechado com backend conectado, reconexão sem replay presumido, IDs preservados, isolamento por conta/serviço e lacunas visíveis. |
+| 2C — Nosso serviço: compatibilidade | Servidor AMI com subconjunto documentado, CEL/CDR persistidos, participações e REST incremental; tratar gaps worker→serviço da auditoria. | Mesmo consumidor ViperChat funciona nas duas origens; sem mudar áudio/bridge, reproduzir ações SIP ou alegar compatibilidade AMI integral. |
+| 2D — Aceite integrado completo | Quedas/replay, recuperação de histórico, chamadas longas, registros tardios, múltiplos dispositivos e transferências nas origens homologadas. | Resultados/durações/participações corretos, mídias e IDs preservados; cobertura comprovada por fonte. Não equivale a aceite nativo em segundo plano. |
 | Publicação de cada entrega | Backup, prévia/aprovação, flag, imagem/builds e monitoramento/rollback. | Autorização separada do usuário; primeira entrega, se publicada antes da segunda, mantém aviso de cobertura parcial. Sem deploy automático por concluir o plano. |
 
-**Execução atual:** 1A, 1B e 1C implementadas; 1D validada para o fluxo conectado na réplica dev, com 175 exemplos backend e 91 testes frontend aprovados, áudio sintético bidirecional e os limites discriminados no runbook. Não declarar 2A/2B/2C concluídos, nem chamada nativa/hardware ou REFER ponta a ponta aceitos. As pendências do serviço não bloqueiam o mecanismo conectado, mas são obrigatórias para histórico autoritativo com navegador fechado. Nenhuma etapa autoriza mexer na VPS por conta própria.
+**Execução atual:** 1A, 1B e 1C implementadas; 1D validada para o fluxo conectado na réplica dev, com 175 exemplos backend e 91 testes frontend aprovados na rodada histórica, áudio sintético bidirecional e os limites discriminados no runbook. Em 22/10/2026, 2A/2B/2C/2D estão apenas planejadas na nova arquitetura AMI; não declarar novo aceite por atualizar este documento. As pendências são obrigatórias para histórico autoritativo com navegador fechado. Os aceites físicos/REFER posteriores continuam discriminados nas evidências históricas. Nenhuma etapa autoriza mexer na VPS por conta própria.
 
 ### Matriz de testes planejada
 
@@ -303,11 +328,13 @@ Mute, atender, encerrar, DTMF e REFER são executados uma vez no cliente SIP.js;
 - UI mobile/desktop, tema claro/escuro, acentos, fuso, listas grandes, busca server-side e retorno preservando rolagem.
 - Segurança: serialização de usuário, bootstrap, logs e eventos; secrets não disponíveis a outro agente/conta nem em armazenamento persistente do browser.
 - Primeira entrega: observação local sem confirmação do serviço; refresh/perda de rede não fabrica resultado/duração; fixtures de eventos externos não ativam conexão real nem registram chamada duplicada.
-- Segunda entrega: reinício com fila pendente, indisponibilidade HTTP/429/5xx, backoff, autenticação inválida/quarentena, mesmo eventId entregue repetidamente, crash após persistir inbox antes de enfileirar, cursor REST não avançado por webhook fora de ordem e recuperação após cursor expirado. Replay nunca dispara ações SIP.
+- Segunda entrega vigente: eventos normais/CEL/Cdr na mesma sessão, emissão desabilitada ou bloqueada por filtro/permissão, queda/reconexão AMI, snapshot concorrente, autenticação inválida, crash após persistir inbox e evento tardio. Validar chamada ativa versus encerrada na lacuna, browser fechado com backend conectado e ausência de acesso SQL legado. Na recuperação REST própria, checkpoint não avança por evento AMI isolado e retenção expirada fica explícita. Replay não duplica ligação nem executa SIP. Matriz webhook da seção 7.2 é histórica.
 
 Complemento de aceite em 21/10/2026: áudio físico do navegador confirmado pelo usuário nos dois sentidos (chamadas de laboratório 209/210 e 211/212), mute/unmute e liberação das tracks aprovados. A recusa real revelou falha de persistência/aviso, posteriormente corrigida em dev: `answer()` registra `failed / microphone_denied` antes de liberar a sessão, incluindo a corrida de término do SIP; o aviso específico permanece após o fim da chamada e a navegação, com fechamento explícito. Regressão controlada na réplica gravou a chamada sintética 219 sem atendimento/duração fictícios. A recusa física anterior e esta simulação controlada são evidências diferentes; não houve nova negação manual de permissão nesta rodada. Detalhes e limites nativos no runbook.
 
 ## 13. iOS/Android: integração nativa obrigatória
+
+Prioridade vigente de 22/10/2026: primeiro integração direta AMI e histórico próprio da seção 7.1, com limites de recuperação por origem; depois homologação nativa. O backend conectado pode alimentar histórico/notificações sem browser, mas recebimento em segundo plano ainda exige push, CallKit/Telecom e oferta SIP disponível após despertar, conforme o [plano complementar](plano-integracao-ami-cel-cdr-20261022.md#6-web-e-apps-nativos-alcance-da-solução).
 
 Compartilhar agora domínio de chamadas, ações idempotentes, IDs e estados. Separar motor de transporte da UI para um adaptador nativo futuro usar os mesmos registros sem abrir uma segunda ligação.
 
@@ -332,7 +359,7 @@ Ampliação implementada em dev: favoritos em três cartões com avatar/nome por
 
 Implementado em dev: arquitetura sem inbox, ramal por agente/serviço/conta, múltiplos serviços administrativos, modal de seleção/configuração, credenciais criptografadas, sidebar Chamadas, lista/favoritos/detalhes/discador, webphone global compacto/completo e observações autenticadas persistidas. A seta comum das conversas fica na mesma posição do cabeçalho mobile. Não foi necessário atualizar SIP.js além da versão fixada 0.21.2.
 
-Contrato atual de eventos/CDR e REST mapeado localmente na auditoria anexa; não é mais necessário investigar sua existência. A ordem agora é concluir primeiro o mecanismo ViperChat/SIP e a interface em dev, com histórico observado identificado como parcial; depois integrar os webhooks com fila persistente/retentativas e REST incremental. Gaps P0 do serviço permanecem obrigatórios para histórico autoritativo completo, mas não impedem iniciar a primeira entrega. Validar WSS/ICE e autorização antes de chamadas reais. Prints de discador/webphone/menu de áudio refinam aparência sem bloquear lista/detalhes. Uma conexão ativa por agente no ViperChat é o recorte proposto, preservando múltiplos registros autorizados na central.
+Contrato atual de eventos/CDR e REST mapeado localmente na auditoria anexa. Após o mecanismo ViperChat/SIP e a interface dev, a decisão de 22/10/2026 é planejar e integrar AMI direto e consulta CEL/CDR conforme seção 7.1, substituindo a proposta anterior de webhooks. Gaps P0 do serviço permanecem obrigatórios para histórico autoritativo completo; a auditoria anterior não prova compatibilidade AMI nem acesso ao histórico de uma PBX legada. Validar versões, rede, WSS/ICE e autorização antes de testes reais. Uma conexão SIP ativa por agente continua sendo o recorte, preservando múltiplos registros autorizados na central; a observação AMI backend é independente dessa sessão.
 
 Nesta implementação houve alterações de código e migrations aditivas na réplica local, dados sintéticos isolados e chamadas internas controladas. O aceite funcional dev e suas limitações estão no runbook; não houve implantação/acesso à VPS nesta tarefa, publicação de imagem, commit/push ou envio às lojas. As seções abaixo documentam etapas históricas anteriores à implementação VoIP e não representam o aceite atual.
 

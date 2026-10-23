@@ -49,12 +49,35 @@ export class VoipAPI {
     return axios.delete(`${this.url}/services/${id}`);
   }
 
+  diagnostics(serviceId) {
+    return axios.get(`${this.url}/services/${serviceId}/diagnostics`);
+  }
+
+  reprocess(serviceId, kind, recordId) {
+    return axios.post(`${this.url}/services/${serviceId}/reprocess`, {
+      kind,
+      record_id: recordId,
+    });
+  }
+
+  recoverHistory(serviceId, { resetCursor = false } = {}) {
+    return axios.post(`${this.url}/services/${serviceId}/recover_history`, {
+      reset_cursor: resetCursor,
+    });
+  }
+
   calls(params) {
     return axios.get(`${this.url}/calls`, { params });
   }
 
   call(id) {
     return axios.get(`${this.url}/calls/${id}`);
+  }
+
+  recording(id) {
+    return axios.get(`${this.url}/calls/${id}/recording`, {
+      responseType: 'blob',
+    });
   }
 
   directory(params) {

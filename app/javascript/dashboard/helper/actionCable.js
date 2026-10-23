@@ -28,6 +28,7 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.mentionUnreadCountsRetryTimer = null;
     this.filteredUnreadCountsRetryTimer = null;
     this.events = {
+      'voip.call.updated': this.onVoipCallUpdated,
       'message.created': this.onMessageCreated,
       'message.updated': this.onMessageUpdated,
       'conversation.created': this.onConversationCreated,
@@ -68,6 +69,11 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   isAValidEvent = data => {
     return this.app.$store.getters.getCurrentAccountId === data.account_id;
+  };
+
+  onVoipCallUpdated = data => {
+    if (this.isAValidEvent(data))
+      emitter.emit(BUS_EVENTS.VOIP_CALL_UPDATED, data);
   };
 
   onMessageUpdated = data => {

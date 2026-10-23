@@ -1,6 +1,10 @@
 # Auditoria local: REST, eventos e CDR VoIP
 
+> **Última revisão de arquitetura — 22/10/2026:** receber webhooks normalizados pelo responsável da central, sem acesso AMI/SQL legado pelo ViperChat. Nosso serviço emite o mesmo contrato e mantém recuperação REST incremental. O [contrato vigente](contrato-webhooks-voip-v1-20261022.md) substitui a decisão intermediária de AMI direto registrada abaixo. Achados históricos de código continuam válidos apenas no alcance da inspeção original.
+
 20/10/2026 — America/Cuiaba. Complemento do [plano do webphone por agente](plano-webphone-sip-agente-20261020.md).
+
+**Decisão posterior — 22/10/2026:** os achados abaixo são evidência histórica do código inspecionado, não uma especificação de webhook a implementar. Arquitetura vigente: ViperChat conectado diretamente por AMI, com eventos normais/CEL/Cdr formando histórico no próprio ViperChat; nosso serviço oferecerá essa compatibilidade e recuperação adicional REST. **Sem acesso a banco legado, acoplamento SQL ou conector instalado na PBX.** Reconexão AMI não garante replay; cobertura e lacunas devem ser explícitas. Ver [plano AMI/CEL/CDR](plano-integracao-ami-cel-cdr-20261022.md), com fontes oficiais Asterisk/FreePBX/Issabel. Atualização somente documental, não confirmação desses recursos no runtime.
 
 ## 1. Conclusão
 

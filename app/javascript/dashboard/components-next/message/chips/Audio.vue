@@ -14,7 +14,11 @@ import { useEmitter } from 'dashboard/composables/emitter';
 import { emitter } from 'shared/helpers/mitt';
 import { useMessageContext } from '../provider.js';
 
-const { attachment } = defineProps({
+const {
+  attachment,
+  orientation: providedOrientation,
+  compact,
+} = defineProps({
   attachment: {
     type: Object,
     required: true,
@@ -23,6 +27,8 @@ const { attachment } = defineProps({
     type: Boolean,
     default: true,
   },
+  orientation: { type: String, default: '' },
+  compact: { type: Boolean, default: false },
 });
 
 defineOptions({
@@ -30,7 +36,10 @@ defineOptions({
 });
 
 const audioPlayer = useTemplateRef('audioPlayer');
-const { orientation } = useMessageContext();
+const context = providedOrientation ? null : useMessageContext();
+const orientation = computed(
+  () => providedOrientation || context.orientation.value
+);
 
 const shouldLog =
   (import.meta.env?.VITE_CONSOLE_LOG ?? 'true').toString().toLowerCase() ===
@@ -136,6 +145,9 @@ const resetRetryState = () => {
 const audioSrc = computed(() => {
   const url = attachment.dataUrl || '';
   if (!url) return '';
+
+  // Blob URLs are already local, immutable resources; query parameters invalidate them.
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
 
   if (!cacheBust.value) return url;
 
@@ -350,7 +362,10 @@ onBeforeUnmount(() => {
     class="rounded-xl w-full gap-2 p-1.5 flex flex-col items-center border shadow-[0px_2px_8px_0px_rgba(94,94,94,0.06)]"
     :class="containerClass"
   >
-    <div class="flex gap-1 w-full flex-1 items-center justify-start">
+    <div
+      class="flex gap-1 w-full flex-1 items-center justify-start"
+      :class="{ 'flex-wrap': compact }"
+    >
       <button class="p-0 border-0 size-8" @click="playOrPause">
         <Icon
           v-if="isReadyToPlay && isPlaying"
@@ -362,7 +377,10 @@ onBeforeUnmount(() => {
       <div class="tabular-nums text-xs">
         {{ displayCurrentTime }} / {{ displayDuration }}
       </div>
-      <div class="flex-1 items-center flex px-2">
+      <div
+        class="flex-1 min-w-0 items-center flex px-2"
+        :class="compact ? 'order-last basis-full' : ''"
+      >
         <input
           type="range"
           min="0"

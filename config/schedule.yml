@@ -122,3 +122,15 @@ whatsapp_recover_pending_fallbacks_job:
   class: 'Whatsapp::RecoverPendingFallbacksJob'
   active_job: true
   queue: low
+
+voip_recover_provider_events_job:
+  cron: '* * * * *'
+  class: 'Voip::RecoverProviderEventsJob'
+  active_job: true
+  queue: low
+
+voip_recover_history_job:
+  cron: '* * * * *'
+  class: 'Voip::RecoverHistoryJob'
+  active_job: true
+  queue: low

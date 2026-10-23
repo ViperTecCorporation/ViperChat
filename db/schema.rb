@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_20_230002) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_22_200000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1670,40 +1670,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_20_230002) do
     t.index ["uid", "provider"], name: "index_users_on_uid_and_provider", unique: true
   end
 
-  create_table "web_attendance_invitations", force: :cascade do |t|
-    t.bigint "conversation_id", null: false
-    t.bigint "message_id"
-    t.string "token_digest", null: false
-    t.text "encrypted_token", null: false
-    t.integer "cycle", null: false
-    t.datetime "activated_at"
-    t.datetime "revoked_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.bigint "account_id"
-    t.bigint "inbox_id"
-    t.bigint "contact_id"
-    t.index ["account_id"], name: "index_web_attendance_invitations_on_account_id"
-    t.index ["contact_id"], name: "index_web_attendance_invitations_on_contact_id"
-    t.index ["conversation_id"], name: "index_web_attendance_invitations_on_conversation_id"
-    t.index ["inbox_id"], name: "index_web_attendance_invitations_on_inbox_id"
-    t.index ["message_id"], name: "index_web_attendance_invitations_on_message_id"
-    t.index ["token_digest"], name: "index_web_attendance_invitations_on_token_digest", unique: true
-  end
-
-  create_table "web_attendance_sessions", force: :cascade do |t|
-    t.datetime "presence_seen_at"
-    t.boolean "visible", default: false, null: false
-    t.jsonb "presence_entries", default: {}, null: false
-    t.bigint "web_attendance_invitation_id", null: false
-    t.string "token_digest", null: false
-    t.datetime "last_seen_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["token_digest"], name: "index_web_attendance_sessions_on_token_digest", unique: true
-    t.index ["web_attendance_invitation_id"], name: "index_web_sessions_on_invitation"
-  end
-
   create_table "voip_agent_extensions", force: :cascade do |t|
     t.bigint "account_user_id"
     t.bigint "voip_service_id", null: false
@@ -1718,6 +1684,28 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_20_230002) do
     t.index ["account_user_id"], name: "uniq_active_voip_binding", unique: true, where: "(active = true)"
     t.index ["voip_service_id", "extension"], name: "uniq_voip_extension_per_service", unique: true, where: "(account_user_id IS NOT NULL)"
     t.index ["voip_service_id"], name: "index_voip_agent_extensions_on_voip_service_id"
+  end
+
+  create_table "voip_call_artifacts", force: :cascade do |t|
+    t.bigint "voip_external_call_id", null: false
+    t.bigint "message_id"
+    t.bigint "conversation_id"
+    t.bigint "desired_revision", default: 0, null: false
+    t.bigint "applied_revision", default: 0, null: false
+    t.jsonb "snapshot", default: {}, null: false
+    t.string "state", default: "pending", null: false
+    t.string "recording_digest"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "next_attempt_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "last_error_code"
+    t.datetime "last_reprocessed_at"
+    t.bigint "last_reprocessed_by_id"
+    t.index ["conversation_id"], name: "index_voip_call_artifacts_on_conversation_id"
+    t.index ["message_id"], name: "index_voip_call_artifacts_on_message_id"
+    t.index ["state", "next_attempt_at"], name: "index_voip_call_artifacts_on_state_and_next_attempt_at"
+    t.index ["voip_external_call_id"], name: "index_voip_call_artifacts_on_voip_external_call_id", unique: true
   end
 
   create_table "voip_call_observations", force: :cascade do |t|
@@ -1754,10 +1742,26 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_20_230002) do
     t.datetime "updated_at", null: false
     t.string "local_extension", null: false
     t.bigint "local_agent_id", null: false
+    t.bigint "voip_external_call_id"
+    t.string "provider_participant_id"
     t.index ["account_id", "started_at"], name: "index_voip_calls_on_account_id_and_started_at"
     t.index ["account_id"], name: "index_voip_calls_on_account_id"
     t.index ["voip_agent_extension_id", "client_call_id"], name: "uniq_voip_client_call", unique: true
     t.index ["voip_agent_extension_id"], name: "index_voip_calls_on_voip_agent_extension_id"
+    t.index ["voip_external_call_id", "provider_participant_id", "voip_agent_extension_id"], name: "voip_provider_participation", unique: true
+    t.index ["voip_external_call_id"], name: "index_voip_calls_on_voip_external_call_id"
+  end
+
+  create_table "voip_external_calls", force: :cascade do |t|
+    t.bigint "voip_service_id", null: false
+    t.string "source_instance_id", limit: 200, null: false
+    t.string "provider_call_id", limit: 200, null: false
+    t.bigint "revision", default: 0, null: false
+    t.jsonb "snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["voip_service_id", "source_instance_id", "provider_call_id"], name: "voip_external_call_identity", unique: true
+    t.index ["voip_service_id"], name: "index_voip_external_calls_on_voip_service_id"
   end
 
   create_table "voip_favorites", force: :cascade do |t|
@@ -1770,6 +1774,52 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_20_230002) do
     t.index ["account_user_id", "voip_service_id", "address"], name: "uniq_voip_favorite", unique: true
     t.index ["account_user_id"], name: "index_voip_favorites_on_account_user_id"
     t.index ["voip_service_id"], name: "index_voip_favorites_on_voip_service_id"
+  end
+
+  create_table "voip_history_sync_states", force: :cascade do |t|
+    t.bigint "voip_service_id", null: false
+    t.string "state", default: "pending", null: false
+    t.text "encrypted_cursor"
+    t.string "scope_digest"
+    t.string "lease_token"
+    t.datetime "lease_expires_at"
+    t.datetime "last_attempt_at"
+    t.datetime "last_success_at"
+    t.string "last_error_code"
+    t.datetime "next_attempt_at"
+    t.boolean "has_more", default: false, null: false
+    t.boolean "gap_detected", default: false, null: false
+    t.boolean "reset_requested", default: false, null: false
+    t.integer "failures", default: 0, null: false
+    t.datetime "last_requested_at"
+    t.bigint "last_requested_by_id"
+    t.datetime "last_reset_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["state", "next_attempt_at"], name: "index_voip_history_sync_states_on_state_and_next_attempt_at"
+    t.index ["voip_service_id"], name: "index_voip_history_sync_states_on_voip_service_id", unique: true
+  end
+
+  create_table "voip_provider_events", force: :cascade do |t|
+    t.bigint "voip_service_id", null: false
+    t.string "source_instance_id", limit: 200, null: false
+    t.string "event_id", limit: 200, null: false
+    t.string "provider_call_id", limit: 200, null: false
+    t.bigint "revision", null: false
+    t.string "content_digest", null: false
+    t.jsonb "payload", null: false
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "attempts", default: 0, null: false
+    t.datetime "next_attempt_at"
+    t.string "last_error_code"
+    t.datetime "last_reprocessed_at"
+    t.bigint "last_reprocessed_by_id"
+    t.index ["created_at"], name: "voip_pending_provider_events", where: "(processed_at IS NULL)"
+    t.index ["voip_service_id", "source_instance_id", "event_id"], name: "voip_provider_event_identity", unique: true
+    t.index ["voip_service_id", "source_instance_id", "provider_call_id", "revision"], name: "voip_provider_event_revision", unique: true
+    t.index ["voip_service_id"], name: "index_voip_provider_events_on_voip_service_id"
   end
 
   create_table "voip_services", force: :cascade do |t|
@@ -1786,6 +1836,40 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_20_230002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_voip_services_on_account_id"
+  end
+
+  create_table "web_attendance_invitations", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.bigint "message_id"
+    t.string "token_digest", null: false
+    t.text "encrypted_token", null: false
+    t.integer "cycle", null: false
+    t.datetime "activated_at"
+    t.datetime "revoked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "account_id"
+    t.bigint "inbox_id"
+    t.bigint "contact_id"
+    t.index ["account_id"], name: "index_web_attendance_invitations_on_account_id"
+    t.index ["contact_id"], name: "index_web_attendance_invitations_on_contact_id"
+    t.index ["conversation_id"], name: "index_web_attendance_invitations_on_conversation_id"
+    t.index ["inbox_id"], name: "index_web_attendance_invitations_on_inbox_id"
+    t.index ["message_id"], name: "index_web_attendance_invitations_on_message_id"
+    t.index ["token_digest"], name: "index_web_attendance_invitations_on_token_digest", unique: true
+  end
+
+  create_table "web_attendance_sessions", force: :cascade do |t|
+    t.datetime "presence_seen_at"
+    t.boolean "visible", default: false, null: false
+    t.jsonb "presence_entries", default: {}, null: false
+    t.bigint "web_attendance_invitation_id", null: false
+    t.string "token_digest", null: false
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token_digest"], name: "index_web_attendance_sessions_on_token_digest", unique: true
+    t.index ["web_attendance_invitation_id"], name: "index_web_sessions_on_invitation"
   end
 
   create_table "webhooks", force: :cascade do |t|
@@ -2053,6 +2137,21 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_20_230002) do
   add_foreign_key "scheduled_messages", "users", column: "created_by_id"
   add_foreign_key "scheduled_messages", "users", column: "sender_id"
   add_foreign_key "user_sessions", "users"
+  add_foreign_key "voip_agent_extensions", "account_users", on_delete: :nullify
+  add_foreign_key "voip_agent_extensions", "voip_services"
+  add_foreign_key "voip_call_artifacts", "conversations"
+  add_foreign_key "voip_call_artifacts", "messages"
+  add_foreign_key "voip_call_artifacts", "voip_external_calls"
+  add_foreign_key "voip_call_observations", "voip_calls"
+  add_foreign_key "voip_calls", "accounts"
+  add_foreign_key "voip_calls", "voip_agent_extensions"
+  add_foreign_key "voip_calls", "voip_external_calls"
+  add_foreign_key "voip_external_calls", "voip_services"
+  add_foreign_key "voip_favorites", "account_users"
+  add_foreign_key "voip_favorites", "voip_services"
+  add_foreign_key "voip_history_sync_states", "voip_services"
+  add_foreign_key "voip_provider_events", "voip_services"
+  add_foreign_key "voip_services", "accounts"
   add_foreign_key "web_attendance_invitations", "accounts"
   add_foreign_key "web_attendance_invitations", "contacts"
   add_foreign_key "web_attendance_invitations", "conversations"
@@ -2118,12 +2217,4 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_20_230002) do
     "NEW.display_id := nextval('camp_dpid_seq_' || NEW.account_id);"
   end
 
-  add_foreign_key "voip_agent_extensions", "account_users", on_delete: :nullify
-  add_foreign_key "voip_agent_extensions", "voip_services"
-  add_foreign_key "voip_call_observations", "voip_calls"
-  add_foreign_key "voip_calls", "accounts"
-  add_foreign_key "voip_calls", "voip_agent_extensions"
-  add_foreign_key "voip_favorites", "account_users"
-  add_foreign_key "voip_favorites", "voip_services"
-  add_foreign_key "voip_services", "accounts"
 end

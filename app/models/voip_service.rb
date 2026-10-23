@@ -1,8 +1,10 @@
 class VoipService < ApplicationRecord
   include VoipCredentials
+  include VoipIntegrationConfig
   belongs_to :account
   has_many :voip_agent_extensions, dependent: :destroy
   has_many :voip_favorites, dependent: :destroy
+  has_one :history_sync_state, class_name: 'VoipHistorySyncState', dependent: :restrict_with_exception
 
   validates :name, presence: true, length: { maximum: 100 }
   validates :sip_domain, format: { with: /\A[a-zA-Z0-9.-]+(?::[0-9]{1,5})?\z/ }
@@ -22,7 +24,7 @@ class VoipService < ApplicationRecord
   end
 
   def admin_payload
-    public_payload.merge(slice(:wss_url, :sip_domain, :allowed_user_ids)).merge(
+    public_payload.merge(slice(:wss_url, :sip_domain, :allowed_user_ids)).merge(integration_payload).merge(
       stun_url: credentials['stun_url'], turn_url: credentials['turn_url'], turn_username: credentials['turn_username']
     )
   end
@@ -33,6 +35,18 @@ class VoipService < ApplicationRecord
     servers << { urls: values['stun_url'] } if values['stun_url'].present?
     servers << { urls: values['turn_url'], username: values['turn_username'], credential: values['turn_password'] } if values['turn_url'].present?
     servers
+  end
+
+  def history_sync_payload
+    defaults = { cursor_configured: false, has_more: false, gap_detected: false }
+    return defaults.merge(state: 'unsupported') unless integration_provider == 'viperconnect'
+    return defaults.merge(state: 'configuration_required') if credentials['history_company_id'].blank?
+
+    checkpoint = history_sync_state
+    return defaults.merge(state: 'pending') unless checkpoint
+    return checkpoint.public_payload if checkpoint.scope_digest == Voip::SyncHistoryService.configuration_digest(self)
+
+    checkpoint.public_payload.merge('state' => 'pending')
   end
 
   private

@@ -234,6 +234,10 @@ Rails.application.routes.draw do
             get :identity, to: 'directory#identity'
             resources :services, only: [:index, :create, :update, :destroy] do
               get :agents, on: :collection
+              post :events, to: 'events#create'
+              get :diagnostics, to: 'operations#diagnostics'
+              post :reprocess, to: 'operations#reprocess'
+              post :recover_history, to: 'operations#recover_history'
             end
             resource :profile, only: [:show, :update] do
               post :activate
@@ -241,6 +245,7 @@ Rails.application.routes.draw do
             resource :registration, only: [:create]
             resources :calls, only: [:index, :show, :create] do
               post :observe, on: :member
+              get :recording, on: :member
             end
             resources :favorites, only: [:index, :create, :destroy]
           end

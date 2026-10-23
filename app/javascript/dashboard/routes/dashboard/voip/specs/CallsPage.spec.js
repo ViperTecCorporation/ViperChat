@@ -1,5 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import CallsPage from '../CallsPage.vue';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 const mocks = vi.hoisted(() => ({
   calls: vi.fn(),
@@ -91,6 +93,28 @@ describe('Calls page service-safe dialing', () => {
     delete HTMLDialogElement.prototype.showModal;
     delete HTMLDialogElement.prototype.close;
     vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('refreshes provider history without F5, preserves the account boundary and never dials', async () => {
+    vi.useFakeTimers();
+    wrapper = mount(CallsPage);
+    await flushPromises();
+    const before = mocks.calls.mock.calls.length;
+    emitter.emit(BUS_EVENTS.VOIP_CALL_UPDATED, {
+      account_id: 2,
+      service_id: 1,
+    });
+    await vi.advanceTimersByTimeAsync(300);
+    expect(mocks.calls).toHaveBeenCalledTimes(before);
+    emitter.emit(BUS_EVENTS.VOIP_CALL_UPDATED, {
+      account_id: 1,
+      service_id: 1,
+    });
+    await vi.advanceTimersByTimeAsync(300);
+    await flushPromises();
+    expect(mocks.calls).toHaveBeenCalledTimes(before + 1);
+    expect(mocks.dial).not.toHaveBeenCalled();
   });
 
   it('opens the dialer for the explicitly active service without initiating a call', async () => {

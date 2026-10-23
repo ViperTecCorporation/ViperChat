@@ -8,8 +8,11 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { VoipAPI } from 'dashboard/api/voip';
 import { useAgentVoipStore } from 'dashboard/stores/agentVoip';
 import AgentVoipCard from 'dashboard/components/voip/AgentVoipCard.vue';
+import CallArtifacts from 'dashboard/components/voip/CallArtifacts.vue';
 import BackButton from 'dashboard/components/widgets/BackButton.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+import { useEmitter } from 'dashboard/composables/emitter';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 const { t } = useI18n();
 const { accountId, accountScopedRoute } = useAccount();
@@ -150,6 +153,17 @@ async function loadDetail(id) {
     error.value = t('AGENT_VOIP.ERROR');
   }
 }
+const refreshProviderHistory = useDebounceFn(async () => {
+  await load();
+  if (detail.value) loadDetail(detail.value.id);
+}, 250);
+useEmitter(BUS_EVENTS.VOIP_CALL_UPDATED, payload => {
+  if (Number(payload.account_id) !== Number(accountId.value)) return;
+  if (serviceId.value && Number(payload.service_id) !== Number(serviceId.value))
+    return;
+  refreshProviderHistory();
+});
+useEmitter(BUS_EVENTS.WEBSOCKET_RECONNECT, refreshProviderHistory);
 function select(row) {
   listScroll = list.value?.scrollTop || 0;
   router.push(accountScopedRoute('agent_voip_calls', { callId: row.id }));
@@ -617,6 +631,11 @@ useIntervalFn(() => {
               </button>
             </form>
           </article>
+          <CallArtifacts
+            :account-id="accountId"
+            :call-id="detail.id"
+            :artifacts="detail.artifacts"
+          />
         </template>
         <template v-else-if="!route.params.callId">
           <div class="my-auto flex flex-col gap-5">

@@ -4,6 +4,7 @@ class VoipCall < ApplicationRecord
   STATES = (LIVE_STATES + TERMINAL_STATES + ['awaiting_confirmation']).freeze
   belongs_to :account
   belongs_to :voip_agent_extension
+  belongs_to :voip_external_call, optional: true
   has_many :voip_call_observations, dependent: :destroy
   before_validation :snapshot_extension, on: :create
 
@@ -13,7 +14,7 @@ class VoipCall < ApplicationRecord
   validates :sip_call_id, length: { maximum: 256 }
   validates :direction, inclusion: { in: %w[incoming outgoing] }
   validates :state, inclusion: { in: STATES }
-  validates :origin, inclusion: { in: ['client_observed'] }
+  validates :origin, inclusion: { in: %w[client_observed provider_authoritative] }
   validate :account_scope
 
   def identity_address
@@ -31,11 +32,20 @@ class VoipCall < ApplicationRecord
           :answered_at, :ended_at, :sip_code, :end_reason).merge(
             state: effective, service_id: voip_agent_extension.voip_service_id, service_name: voip_agent_extension.voip_service.name,
             agent_id: local_agent_id, extension: local_extension, remote_identity: remote_identity,
-            duration: answered_at && ended_at ? [(ended_at - answered_at).to_i, 0].max : nil
+            duration: answered_at && ended_at ? [(ended_at - answered_at).to_i, 0].max : nil,
+            artifacts: artifact_payload
           )
   end
 
   private
+
+  def artifact_payload
+    artifact = voip_external_call&.voip_call_artifact
+    return unless artifact
+
+    url = "/api/v1/accounts/#{account_id}/voip/calls/#{id}/recording" if artifact.recording.attached?
+    artifact.public_payload.merge('recording_url' => url)
+  end
 
   def snapshot_extension
     self.local_extension = voip_agent_extension.extension

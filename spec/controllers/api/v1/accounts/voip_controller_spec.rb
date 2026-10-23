@@ -25,6 +25,24 @@ RSpec.describe 'Agent VoIP API', type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
+  it 'authorizes recording downloads against the visible call, never a foreign account or another agent' do
+    external = VoipExternalCall.create!(voip_service: service, source_instance_id: 'test', provider_call_id: 'call-1')
+    call.update!(voip_external_call: external)
+    artifact = external.create_voip_call_artifact!
+    artifact.recording.attach(io: StringIO.new('test-audio'), filename: 'call.wav', content_type: 'audio/wav')
+    get "#{base}/calls/#{call.id}/recording", headers: headers
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to eq('test-audio')
+    expect(response.headers).to include('Content-Type' => 'audio/wav', 'Cache-Control' => 'private, no-store')
+    expect(response.headers['Location']).to be_nil
+    stranger = create(:user, account: account, role: :agent)
+    get "#{base}/calls/#{call.id}/recording", headers: stranger.create_new_auth_token
+    expect(response).to have_http_status(:not_found)
+    foreign = create(:user)
+    get "#{base}/calls/#{call.id}/recording", headers: foreign.create_new_auth_token
+    expect(response).not_to have_http_status(:ok)
+  end
+
   it 'lists configured extensions for administrators without exposing credentials or foreign bindings' do
     get "#{base}/services", headers: admin.create_new_auth_token
     expect(response).to have_http_status(:ok)
