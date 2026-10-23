@@ -14,6 +14,7 @@ const api = computed(() => new VoipAPI(accountId.value));
 const rows = ref([]);
 const agents = ref([]);
 const memberId = ref('');
+const agentCard = ref(null);
 const dialog = ref(null);
 const editing = ref(null);
 const form = ref({});
@@ -30,9 +31,15 @@ const configuredExtensions = computed(() =>
     (row.bindings || []).map(binding => ({
       ...binding,
       serviceName: row.name,
+      serviceId: row.id,
     }))
   )
 );
+async function editExtension(binding) {
+  memberId.value = String(binding.account_user_id);
+  await nextTick();
+  await agentCard.value.open(binding.serviceId);
+}
 const selectedAgentNames = computed(() =>
   allowedUsers.value.map(
     id =>
@@ -120,6 +127,7 @@ async function save() {
       'transfer_enabled',
       'integration_provider',
       'webhook_source_instance_id',
+      'reopen_on_incoming',
     ];
     if (form.value.integration_provider === 'viperconnect') {
       fields.push(
@@ -317,6 +325,16 @@ watch(
               {{ t('AGENT_VOIP.DEFAULT_EXTENSION') }}
             </span>
           </div>
+          <button
+            v-if="binding.account_user_id"
+            type="button"
+            :aria-label="`${t('AGENT_VOIP.EDIT')} · ${binding.agent_name} · ${binding.extension}`"
+            :title="t('AGENT_VOIP.EDIT')"
+            class="flex size-11 shrink-0 items-center justify-center rounded-lg text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            @click="editExtension(binding)"
+          >
+            <span aria-hidden="true" class="i-lucide-pencil size-4" />
+          </button>
         </li>
       </ul>
     </section>
@@ -335,8 +353,10 @@ watch(
       </label>
       <AgentVoipCard
         v-if="memberId"
+        ref="agentCard"
         :key="memberId"
         :account-user-id="Number(memberId)"
+        @updated="load"
       />
     </section>
     <dialog
@@ -441,6 +461,7 @@ watch(
             ['enabled', 'ENABLED'],
             ['allow_self_configuration', 'SELF_CONFIG'],
             ['transfer_enabled', 'REFER'],
+            ['reopen_on_incoming', 'REOPEN_ON_INCOMING'],
           ]"
           :key="field"
           class="flex items-center gap-2 text-sm"

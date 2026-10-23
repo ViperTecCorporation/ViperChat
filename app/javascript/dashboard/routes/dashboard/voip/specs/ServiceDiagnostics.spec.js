@@ -73,6 +73,7 @@ describe('Service diagnostics', () => {
   });
   afterEach(() => {
     wrapper?.unmount();
+    vi.useRealTimers();
     delete HTMLDialogElement.prototype.showModal;
     delete HTMLDialogElement.prototype.close;
   });
@@ -206,5 +207,67 @@ describe('Service diagnostics', () => {
     expect(wrapper.text()).toContain('RECOVERY_STATE.invalid_cursor');
     expect(wrapper.text()).toContain('GAP_DETECTED');
     expect(wrapper.text()).toContain('HAS_MORE');
+  });
+  it('automatically releases the recovery button after a queued attempt finishes without resetting the checkpoint', async () => {
+    vi.useFakeTimers();
+    mocks.diagnostics.mockResolvedValueOnce({
+      data: { ...data, recovery: { ...data.recovery, state: 'pending' } },
+    });
+    wrapper = mount(ServiceDiagnostics, {
+      props: { accountId: 1, serviceId: 2 },
+    });
+    await flushPromises();
+    expect(button('RECOVER').element.disabled).toBe(true);
+    await vi.advanceTimersByTimeAsync(5000);
+    await flushPromises();
+    expect(button('RECOVER').element.disabled).toBe(false);
+    expect(wrapper.text()).toContain('CHECKPOINT_SAVED');
+    expect(mocks.diagnostics).toHaveBeenCalledTimes(2);
+    expect(mocks.recover).not.toHaveBeenCalled();
+    expect(mocks.reprocess).not.toHaveBeenCalled();
+  });
+  it('stops refreshing when the diagnostics modal is unmounted', async () => {
+    vi.useFakeTimers();
+    wrapper = mount(ServiceDiagnostics, {
+      props: { accountId: 1, serviceId: 2 },
+    });
+    await flushPromises();
+    wrapper.unmount();
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(mocks.diagnostics).toHaveBeenCalledTimes(1);
+  });
+  it('does not refresh over a confirmation or discard its reset choice', async () => {
+    vi.useFakeTimers();
+    wrapper = mount(ServiceDiagnostics, {
+      props: { accountId: 1, serviceId: 2 },
+    });
+    await flushPromises();
+    await button('RECOVER').trigger('click');
+    await wrapper.find('input[type="checkbox"]').setValue(true);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(mocks.diagnostics).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('input[type="checkbox"]').element.checked).toBe(true);
+    expect(mocks.recover).not.toHaveBeenCalled();
+    await wrapper
+      .findAll('dialog button')
+      .find(item => item.text() === 'AGENT_VOIP.CANCEL')
+      .trigger('click');
+    await vi.advanceTimersByTimeAsync(5000);
+    await flushPromises();
+    expect(mocks.diagnostics).toHaveBeenCalledTimes(2);
+  });
+  it('retries diagnostic reads after a network error without automatically recovering history', async () => {
+    vi.useFakeTimers();
+    mocks.diagnostics.mockRejectedValueOnce(new Error('offline'));
+    wrapper = mount(ServiceDiagnostics, {
+      props: { accountId: 1, serviceId: 2 },
+    });
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    await vi.advanceTimersByTimeAsync(5000);
+    await flushPromises();
+    expect(button('RECOVER').element.disabled).toBe(false);
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(mocks.recover).not.toHaveBeenCalled();
   });
 });

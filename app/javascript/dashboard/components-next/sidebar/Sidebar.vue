@@ -376,6 +376,11 @@ const newReportRoutes = () => [
     to: accountScopedRoute('team_reports_index'),
     activeOn: ['team_reports_show'],
   },
+  {
+    name: 'Reports Partner Inboxes',
+    label: t('PARTNER_REPORT.TITLE'),
+    to: accountScopedRoute('partner_inbox_reports'),
+  },
 ];
 
 const reportRoutes = computed(() => newReportRoutes());

@@ -383,7 +383,7 @@ describe SearchService do
           account.enable_features!(:hide_all_chats_for_agent)
         end
 
-        it 'returns only own and unassigned records for a regular agent' do
+        it 'returns account contacts while restricting conversations and messages for a regular agent' do
           conversation_results = described_class.new(
             current_user: user,
             current_account: account,
@@ -407,8 +407,7 @@ describe SearchService do
           expect(conversation_results).not_to include(other_conversation)
           expect(message_results).to include(own_message, unassigned_message)
           expect(message_results).not_to include(other_message)
-          expect(contact_results).to include(own_contact, unassigned_contact)
-          expect(contact_results).not_to include(other_contact)
+          expect(contact_results).to include(own_contact, unassigned_contact, other_contact)
         end
 
         it 'also removes unassigned records when that account flag is enabled' do

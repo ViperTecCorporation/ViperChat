@@ -20,6 +20,71 @@ RSpec.describe 'Search', type: :request do
   end
 
   describe 'GET /api/v1/accounts/{account.id}/search' do
+    [false, true].product(%w[search search/contacts]).each do |restrict_assignment, endpoint|
+      it "finds account contacts outside the agent inbox through #{endpoint} with assignment restriction #{restrict_assignment}" do
+        account.enable_features!(:hide_all_chats_for_agent, :hide_unassigned_for_agent) if restrict_assignment
+        contact = create(:contact, account: account, email: 'cross-inbox-directory@example.com')
+        restricted = create(:conversation, account: account, contact: contact)
+        create(:message, account: account, conversation: restricted, content: 'cross-inbox-directory private message')
+        foreign_contact = create(:contact, email: contact.email)
+        headers = agent.create_new_auth_token
+
+        get "/api/v1/accounts/#{account.id}/#{endpoint}",
+            headers: headers, params: { q: 'cross-inbox-directory' }, as: :json
+
+        expect(response).to have_http_status(:ok)
+        payload = response.parsed_body.fetch('payload')
+        expect(payload.fetch('contacts').pluck('id')).to include(contact.id)
+        expect(payload.fetch('contacts').pluck('id')).not_to include(foreign_contact.id)
+        expect(payload.fetch('conversations')).to be_empty if endpoint == 'search'
+        expect(payload.fetch('messages')).to be_empty if endpoint == 'search'
+      end
+    end
+
+    it 'keeps contact conversation history and outbound inbox access restricted' do
+      account.enable_features!(:hide_all_chats_for_agent, :hide_unassigned_for_agent)
+      contact = create(:contact, account: account, email: 'cross-inbox-history@example.com')
+      restricted = create(:conversation, account: account, contact: contact)
+
+      get "/api/v1/accounts/#{account.id}/contacts/#{contact.id}/conversations",
+          headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.fetch('payload')).to be_empty
+
+      expect do
+        post "/api/v1/accounts/#{account.id}/conversations",
+             headers: agent.create_new_auth_token, params: { contact_id: contact.id, inbox_id: restricted.inbox_id }, as: :json
+      end.not_to change(Conversation, :count)
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'opens contact details without granting conversations, messages, inboxes or other-account contacts' do
+      account.enable_features!(:hide_all_chats_for_agent, :hide_unassigned_for_agent)
+      contact = create(:contact, account: account, email: 'cross-inbox-directory@example.com')
+      restricted = create(:conversation, account: account, contact: contact)
+      foreign_contact = create(:contact)
+      headers = agent.create_new_auth_token
+
+      get "/api/v1/accounts/#{account.id}/contacts/#{contact.id}", headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+
+      get "/api/v1/accounts/#{account.id}/contacts/#{contact.id}/contactable_inboxes", headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.fetch('payload').map { |entry| entry.dig('inbox', 'id') }).not_to include(restricted.inbox_id)
+
+      get "/api/v1/accounts/#{account.id}/conversations/#{restricted.display_id}", headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      get "/api/v1/accounts/#{account.id}/conversations/#{restricted.display_id}/messages", headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      get "/api/v1/accounts/#{account.id}/inboxes/#{restricted.inbox_id}", headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      get "/api/v1/accounts/#{account.id}/contacts/#{foreign_contact.id}", headers: headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    end
+
     %w[search search/conversations].each do |endpoint|
       it "finds a group by an accent-free multipart name through #{endpoint}" do
         inbox = create(:inbox, account: account)

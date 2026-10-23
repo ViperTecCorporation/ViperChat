@@ -1,5 +1,24 @@
 # Plano: webphone SIP/WebRTC por agente e aba Chamadas
 
+## Entrega dev — eventos na conversa e ajustes operacionais (23/10/2026)
+
+- Cards baseados no visual do canal Voice, com ícone, estado, serviço, ramal, duração e o mesmo AudioChip das bolhas. Um card privado por chamada é atualizado pelos eventos, sem enviar mensagem ao WhatsApp. Chamadas internas não criam cards de cliente.
+- Identificação por telefone confirmado da linha e do contato; caixas parceiras usam a principal. IDs, notas e mídias já publicados não são movidos. Gravação usa o mesmo blob disponível na nota privada.
+- Configuração opcional `reopen_on_incoming`, desligada por padrão, no serviço VoIP do ViperChat. Habilitada: chamada de entrada em andamento reutiliza/reabre conversa única ou cria uma nova conforme regra da caixa. Desabilitada: só registra na conversa existente. Recuperação REST de chamada já terminada não reabre atendimento.
+- ViperConnect: filas VoIP outgoing/dead visíveis para inspeção, sem ações destrutivas; tentativas temporizadas permanecem na outbox SQLite. Editor da empresa agrupa transcrição e resumo com os avisos de segredo junto ao campo correto.
+- Serviço VoIP: registro SIP/WebRTC tardio recebe INVITE se elegível para a onda atual ainda em toque; chamadas atendidas/encerradas não são convidadas novamente. Retenção encontra gravações mesmo após a saída do CDR do catálogo, preservando IDs/referências e marcando `retention_expired`.
+- [Contrato REST completo](voip-rest-consolidacao-20261023.md): rota, autenticação, escopo, cursor, erros, idempotência e gravações. Atualizar receptor/migração antes do produtor com o novo campo opcional `call.business_phone`.
+
+Validação sintética: 118 exemplos backend VoIP/controllers, 57 testes frontend ViperChat, 86 testes selecionados ViperConnect/OpenAPI; serviço VoIP com 247 testes (246 aprovados, um skip por FFmpeg ausente no Windows). Typecheck/build do serviço aprovados; lints sem erros. Playwright com componentes reais em 320/360/390/412/430/844/1280 px, capturas revisadas em `output/playwright/conversation-call-events-*` e `company-ai-layout-*`; sem overflow horizontal. Filas conferidas visualmente com zero botões de purge VoIP. Dados das prévias são sintéticos, não eventos publicados em conversas reais.
+
+Ativação apenas nos containers dev existentes, incluindo migração aditiva na réplica. Serviço VoIP reiniciado e saudável; backup dos quatro JS anteriores em `/tmp/voip-events-registration-retention-before-20261023.tar`. Backup pré-migração da réplica em `/app/tmp/voip-conversation-before-20261023.json` (restrito). Retenção local continua desabilitada (`retentionDays=0`): nenhuma mídia real foi apagada. Sem VPS, novos containers, commit/push ou publicação.
+
+Pendências de aceite: nova chamada real com registro durante o toque e gravação; push/CallKit nativo não faz parte desta entrega. Pacotes Android/iOS não foram gerados nesta rodada: build compartilhado anterior esbarrou no heap de 1536 MB, sem aumentar consumo, e não há aparelho conectado/iOS disponível neste ambiente. Não declarar homologação nativa concluída.
+
+Atualização de 23/10/2026 — cards de ramais: adicionado lápis acessível por nome do agente/ramal, reutilizando AgentVoipCard e o endpoint administrativo existentes. O clique seleciona explicitamente o vínculo do agente e o serviço do card, sem escolher automaticamente outro serviço padrão. Salvar/ativar/desativar atualiza a listagem sem F5; senhas não são pré-carregadas. Regressão de agente/serviço não padrão, preservação de senha e atualização dos cards incluída. Validação: 40 testes frontend em quatro arquivos, ESLint sem erros; Playwright com componentes reais e dados sintéticos em 320/360/390/412/430/844/1280 px, capturas conferidas e sem overflow horizontal. Atualizados os fontes na réplica existente, sem novos containers, gravação de configurações reais ou VPS. Empacotamento nativo pendente: pnpm disponível é 11 versus engine 10; execução direta do build Vite atingiu o limite de heap de 1536 MB, sem aumentar consumo. Nenhum aparelho Android conectado e nenhum novo pacote Android/iOS entregue. Capturas em output/playwright/voip-extension-edit-*.png; temporários de prévia removidos após validação.
+
+Atualização de 23/10/2026: [consolidação de dispositivos, correção de missed e investigação da gravação](correcao-historico-voip-multidispositivo-20261023.md). Validação com a chamada real 288/289, sem exclusão de IDs/histórico; serviço VoIP e réplica atualizados apenas em dev, sem novos containers ou VPS.
+
 > **Última decisão vigente — 22/10/2026:** receber webhooks no ViperChat com `api_access_token` de administrador; o responsável pela central adapta AMI/CEL/CDR ao nosso contrato. Nosso serviço produz o mesmo contrato com outbox SQLite, RabbitMQ e retentativas. Isso substitui a conexão direta AMI, consulta SQL e servidor AMI próprio. Cadastro por empresa, receptor, reconciliador, produtor, recuperação REST periódica com checkpoint criptografado e diagnóstico/reprocessamento administrativo nas duas pontas estão implementados/testados em dev. Ver [contrato webhook-first vigente](contrato-webhooks-voip-v1-20261022.md), especialmente seção 12, que prevalece sobre as seções históricas abaixo. Sem banco legado ou conector instalado pela nossa equipe. Sem VPS, containers adicionais ou publicação. Aceite real e integração nativa em segundo plano permanecem separados.
 
 Plano inicial: 20/10/2026 — America/Cuiaba. Atualização: 21/10/2026. Estado: primeira entrega implementada e validada funcionalmente na réplica dev existente, sem publicação ou implantação na VPS. Limites de aceite nativo, hardware e transferência real estão explícitos no runbook.
@@ -497,3 +516,76 @@ Encerrados os navegadores/servidor próprios e removidos os seis arquivos tempor
 Preparada publicação dos fontes, regressões e deste plano em `feat/agent-voip-webphone`, incluindo homologação de configuração/destinatário, registro automático e recuperação, transferência/seleção de operadores, tons, sidebar compacta sob demanda e ajustes de tema/navegação/fechamento do discador. Bateria combinada final: **143 testes frontend em 17 arquivos, zero falhas**, cobrindo VoIP e sidebar. A validação backend dos ajustes de configuração/identificação foi registrada acima (42 exemplos); não se trata de nova execução da suíte backend completa.
 
 O worktree estava alinhado ao remoto antes do commit. Revisados diff, escopo e possíveis segredos; configurações nativas geradas preexistentes com caminhos da máquina (`android/app/capacitor.build.gradle`, `android/capacitor.settings.gradle`, `ios/App/CapApp-SPM/Package.swift`), capturas e logs locais ficam fora do commit, preservados no disco. A configuração temporária desta bateria foi removida. Bundles/builds e limitações do aceite físico permanecem conforme os registros anteriores. Esta autorização é somente commit/push: sem nova alteração de runtime, containers, imagem/tag ou VPS nesta consolidação.
+
+### Consolidação do relatório de caixas parceiras — 23/10/2026
+
+Por solicitação expressa do usuário, o relatório e seu simulador foram incorporados
+na árvore existente `feat/agent-voip-webphone`, sem criar outra branch e sem
+sobrescrever as alterações VoIP que já estavam pendentes. Os 355 arquivos locais
+preexistentes foram conferidos por SHA256 antes de acrescentar este registro.
+
+As cinco correções de WhatsApp da base 4.16.0 já possuem commits equivalentes
+na branch VoIP (`git cherry` sem patches novos), portanto não foram reaplicadas.
+Foram integrados somente os arquivos novos e os seis pontos de entrada do relatório
+(API, menu, traduções e rotas), preservando a navegação/configuração VoIP.
+As sete capturas foram copiadas com hashes idênticos. Os 14 arquivos funcionais
+integrados conferem com a réplica já existente, normalizando apenas CRLF/LF.
+
+Detalhes funcionais, evidências e limitações continuam em
+`docs/relatorio-caixas-parceiras-custos-meta.md`. A mudança de branch não altera
+regras de faturamento, registros, mídia ou configurações. O aceite nativo continua
+pendente pelas falhas de memória já documentadas; nenhuma compilação pesada nova
+foi iniciada para uma integração de arquivos idênticos.
+
+Sem commit, push, acesso à VPS, novos containers ou descarte das alterações locais.
+Novas branches nesta linha de trabalho exigem alinhamento prévio com o usuário.
+
+Conferência após integração: **42 testes frontend combinados e 24 verificações
+backend aprovados**. Removida a referência local `feat/partner-inbox-cost-report`;
+pasta antiga preservada em detached HEAD, sem perda de fontes, capturas ou
+temporários bloqueados. O trabalho continua na `feat/agent-voip-webphone`, com
+as alterações locais ainda não commitadas.
+
+### 23/10/2026 — pesquisa de contatos independente da caixa
+
+Concluída em dev a separação entre cadastro de contatos da conta e visibilidade
+dos atendimentos. Agentes com diretório permitido encontram contatos mesmo sem
+vínculo à caixa de origem; as conversas, mensagens e caixas continuam protegidas.
+Mantidos ocultação explícita do diretório e isolamento entre contas.
+
+Validação direcionada: **199 exemplos aprovados**, regressão reproduzida antes
+da correção e RuboCop sem infrações. Atualizados somente dois arquivos de backend
+na réplica existente, sem novos containers ou VPS. A conferência READ ONLY do
+contato 3679 confirmou a pesquisa e a manutenção das permissões negativas.
+
+Detalhes e limites: `docs/correcao-pesquisa-contatos-conta-20261023.md`.
+
+### 23/10/2026 — bolha única de chamada, gravação e IA
+
+Implementado em dev: gravação, resumo e transcrição atualizam a bolha privada da
+chamada. Textos recolhíveis, sem outra nota para as chamadas já vinculadas.
+Notas legadas são preservadas por ID e marcadas explicitamente quando seu
+conteúdo passa a ser exibido na bolha; nenhum histórico ou áudio é removido.
+
+Validados 122 exemplos backend e 21 testes frontend; caso real na réplica,
+capturas desktop/mobile, bundles Android/iOS e APK Debug. Sem dispositivo Android
+conectado e Mac inacessível, permanece pendente o aceite nativo em aparelhos.
+Sem novos containers, VPS, commit/push ou publicação de apps.
+
+Detalhes: `docs/voip-bolha-unificada-gravacao-ia-20261023.md`.
+
+### 23/10/2026 — tema, orientação e consolidação das pendências
+
+Bolhas VoIP seguem a cor primária do tema, com recebidas à esquerda e efetuadas
+à direita. Permanecem privadas; notas comuns não mudam. Player compacto abaixo
+de 480 px validado sem corte em 320 px. Fontes já disponíveis na réplica dev.
+
+Por autorização expressa de “commitar tudo”, a consolidação reúne todas as
+alterações funcionais pendentes, incluindo relatório de caixas parceiras,
+histórico/diagnóstico VoIP, pesquisa de contatos, bolha unificada e documentação.
+Ficam fora os caminhos nativos gerados desta máquina, APKs, logs, capturas,
+backups e temporários. Nenhuma alteração na VPS.
+
+Conferência da árvore de publicação: 289 exemplos backend, 108 testes frontend
+e 24 verificações sintéticas do relatório aprovados. Schema regenerado acompanha
+a migração. Limitações de aparelho/iOS e limpeza Windows continuam documentadas.

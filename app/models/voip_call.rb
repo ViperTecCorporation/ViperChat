@@ -17,6 +17,21 @@ class VoipCall < ApplicationRecord
   validates :origin, inclusion: { in: %w[client_observed provider_authoritative] }
   validate :account_scope
 
+  # Keep every SIP dialog for audit, but do not list a losing device as another
+  # call when this exact external call was answered on the same agent binding.
+  scope :consolidated_history, lambda {
+    where(<<~SQL.squish)
+      NOT (voip_calls.state = 'answered_elsewhere' AND EXISTS (
+        SELECT 1 FROM voip_calls answered
+        WHERE answered.voip_external_call_id = voip_calls.voip_external_call_id
+          AND answered.voip_agent_extension_id = voip_calls.voip_agent_extension_id
+          AND answered.direction = voip_calls.direction
+          AND answered.answered_at IS NOT NULL
+          AND answered.id != voip_calls.id
+      ))
+    SQL
+  }
+
   def identity_address
     return remote_address unless direction == 'outgoing'
 

@@ -70,12 +70,7 @@ class Voip::PublishCallArtifactService
   end
 
   def publish_note(snapshot)
-    target = snapshot['note_target']
-    unless target
-      @artifact.state = 'complete'
-      return
-    end
-    conversation = @artifact.conversation || Voip::ArtifactConversationResolver.new(service: @service, artifact: @artifact).resolve(target)
+    conversation = publication_conversation(snapshot)
     return unless conversation
 
     @artifact.conversation = conversation
@@ -87,7 +82,24 @@ class Voip::PublishCallArtifactService
     @artifact.state = 'complete'
   end
 
+  def publication_conversation(snapshot)
+    conversation = @external.reload.call_message&.conversation || @artifact.conversation
+    return conversation if conversation
+
+    target = snapshot['note_target']
+    unless target
+      @artifact.state = 'complete'
+      return
+    end
+    Voip::ArtifactConversationResolver.new(service: @service, artifact: @artifact).resolve(target)
+  end
+
   def update_note(conversation, snapshot)
+    if @external.reload.call_message
+      update_call_message(snapshot)
+      return
+    end
+
     note = @artifact.message || conversation.messages.new(account_id: @service.account_id, inbox_id: conversation.inbox_id,
                                                           message_type: :outgoing, private: true, source_id: "voip-artifact:#{@external.id}")
     note.content = note_text(snapshot)
@@ -95,6 +107,28 @@ class Voip::PublishCallArtifactService
     attach_note_recording(note)
     note.save!
     @artifact.message = note
+  end
+
+  def update_call_message(snapshot)
+    message = @external.call_message
+    raise ArgumentError, 'Call conversation mismatch' unless message.conversation_id == @artifact.conversation.id && message.private?
+
+    analysis = message.content_attributes.fetch('voip_call_analysis', {})
+                      .merge((snapshot['ai'] || {}).slice('summary', 'transcript', 'status').compact)
+    message.content_attributes = message.content_attributes.merge('voip_call_analysis' => analysis)
+    attach_note_recording(message)
+    message.save!
+    consolidate_legacy_note(message)
+    @artifact.message ||= message
+  end
+
+  def consolidate_legacy_note(message)
+    legacy = @artifact.message
+    return unless legacy && legacy.id != message.id
+
+    raise ArgumentError, 'Legacy conversation mismatch' unless legacy.conversation_id == message.conversation_id && legacy.private?
+
+    legacy.update!(content_attributes: legacy.content_attributes.merge('voip_call_consolidated_into' => message.id))
   end
 
   def attach_note_recording(note)

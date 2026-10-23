@@ -63,7 +63,7 @@ class Api::V1::Accounts::Voip::ServicesController < Api::V1::Accounts::Voip::Bas
   def credential_params
     params.require(:service).permit(:stun_url, :turn_url, :turn_username, :turn_password, :clear_turn_password,
                                     :integration_provider, :webhook_source_instance_id, :history_api_url, :history_company_id,
-                                    :history_api_token, :clear_history_api_token).to_h
+                                    :history_api_token, :clear_history_api_token, :reopen_on_incoming).to_h
   end
 
   def merge_credentials(existing, incoming)

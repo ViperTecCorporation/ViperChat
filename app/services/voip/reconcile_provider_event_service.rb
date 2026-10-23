@@ -29,7 +29,7 @@ class Voip::ReconcileProviderEventService
   private
 
   def apply_snapshot
-    snapshot = @event.payload.fetch('call').deep_dup
+    snapshot = normalize_snapshot(@event.payload.fetch('call').deep_dup)
     # Corrections/recordings may arrive after termination, but never resurrect the call.
     if TERMINAL_STATES.include?(@external.snapshot['state']) && TERMINAL_STATES.exclude?(snapshot['state'])
       snapshot['state'] = @external.snapshot['state']
@@ -38,6 +38,18 @@ class Voip::ReconcileProviderEventService
     @external.update!(revision: @event.revision, snapshot: snapshot)
     persist_artifacts(snapshot['artifacts']) if snapshot['artifacts']
     snapshot.fetch('participants').each { |participant| project_participant(participant, snapshot) }
+    Voip::PublishConversationCallService.new(external: @external).perform
+  end
+
+  def normalize_snapshot(snapshot)
+    # Older producers cleared the aggregate answer timestamp at termination.
+    # Only exact participant evidence can correct that summary; keep the event immutable.
+    answered_at = snapshot.fetch('participants').filter_map { |participant| participant['answered_at'] }.min
+    if snapshot['state'] == 'missed' && answered_at
+      snapshot['state'] = 'completed'
+      snapshot['answered_at'] = answered_at
+    end
+    snapshot
   end
 
   def persist_artifacts(snapshot)

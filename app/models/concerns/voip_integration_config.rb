@@ -1,7 +1,7 @@
 module VoipIntegrationConfig
   extend ActiveSupport::Concern
 
-  INTEGRATION_FIELDS = %w[integration_provider webhook_source_instance_id history_api_url history_company_id].freeze
+  INTEGRATION_FIELDS = %w[integration_provider webhook_source_instance_id history_api_url history_company_id reopen_on_incoming].freeze
   SECRET_FIELDS = %w[history_api_token].freeze
   LOOPBACK_HOSTS = %w[localhost 127.0.0.1 ::1].freeze
 

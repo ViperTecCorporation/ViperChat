@@ -154,6 +154,62 @@ const mountMessage = props =>
   });
 
 describe('Message', () => {
+  it('aligns private VoIP calls by call direction even when the sender is the contact', async () => {
+    const wrapper = mountMessage({
+      content: 'Voice Call',
+      private: true,
+      contentType: CONTENT_TYPES.VOICE_CALL,
+      sender: { id: 42, type: 'contact', name: 'Contact' },
+      contentAttributes: {
+        voipExternalCallId: 27,
+        data: { direction: 'outbound', state: 'completed' },
+      },
+    });
+    expect(wrapper.find('[class*="grid-area:bubble"]').classes()).toContain(
+      'justify-end'
+    );
+    expect(wrapper.props('private')).toBe(true);
+    await wrapper.setProps({
+      contentAttributes: {
+        voipExternalCallId: 27,
+        data: { direction: 'inbound', state: 'completed' },
+      },
+    });
+    expect(wrapper.find('[class*="grid-area:bubble"]').classes()).not.toContain(
+      'justify-end'
+    );
+    await wrapper.setProps({
+      contentType: CONTENT_TYPES.TEXT,
+      content: 'Ordinary private note',
+      contentAttributes: {},
+    });
+    expect(wrapper.find('[class*="grid-area:bubble"]').classes()).not.toContain(
+      'justify-end'
+    );
+  });
+
+  it('hides only an explicitly consolidated private VoIP note and preserves other messages', async () => {
+    const wrapper = mountMessage({
+      content: 'Historical note',
+      private: true,
+      contentAttributes: {
+        voipExternalCallId: 27,
+        voipCallConsolidatedInto: 91,
+      },
+    });
+    expect(wrapper.find('[data-message-id]').exists()).toBe(false);
+    await wrapper.setProps({ contentAttributes: { voipExternalCallId: 27 } });
+    expect(wrapper.find('[data-message-id]').exists()).toBe(true);
+    await wrapper.setProps({
+      private: false,
+      contentAttributes: {
+        voipExternalCallId: 27,
+        voipCallConsolidatedInto: 91,
+      },
+    });
+    expect(wrapper.find('[data-message-id]').exists()).toBe(true);
+  });
+
   it('renders multiple contact attachments as a single contact bundle', () => {
     const wrapper = mountMessage({
       content: null,

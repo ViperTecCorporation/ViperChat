@@ -25,6 +25,32 @@ RSpec.describe 'Agent VoIP API', type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
+  it 'consolidates losing devices only for the same external call and binding before filtering and pagination, preserving every id' do
+    external = VoipExternalCall.create!(voip_service: service, source_instance_id: 'test', provider_call_id: 'parallel-devices')
+    call.update!(voip_external_call: external, state: 'ended', answered_at: 15.seconds.ago, ended_at: Time.current)
+    loser = binding.voip_calls.create!(account: account, client_call_id: 'udp-loser', sip_call_id: 'udp-dialog',
+                                       voip_external_call: external, direction: call.direction, remote_address: '0020',
+                                       state: 'answered_elsewhere', started_at: call.started_at, last_observed_at: Time.current)
+    other = create(:user, account: account, role: :agent)
+    other_binding = VoipAgentExtension.create!(account_user: other.account_users.find_by!(account: account), voip_service: service,
+                                               extension: '0011', auth_username: '0011')
+    other_loser = other_binding.voip_calls.create!(account: account, client_call_id: 'other-loser', direction: call.direction,
+                                                   remote_address: '0020', state: 'answered_elsewhere', voip_external_call: external,
+                                                   started_at: call.started_at, last_observed_at: Time.current)
+    original_ids = VoipCall.order(:id).pluck(:id)
+    get "#{base}/calls", headers: admin.create_new_auth_token
+    expect(response.parsed_body['total']).to eq(2)
+    expect(response.parsed_body['items'].pluck('id')).to contain_exactly(call.id, other_loser.id)
+    get "#{base}/calls", params: { state: 'answered_elsewhere' }, headers: headers
+    expect(response.parsed_body['total']).to eq(0)
+    get "#{base}/calls/#{loser.id}", headers: headers
+    expect(response.parsed_body).to include('id' => loser.id, 'state' => 'answered_elsewhere')
+    expect(VoipCall.order(:id).pluck(:id)).to eq(original_ids)
+    call.update!(voip_external_call: nil)
+    get "#{base}/calls", headers: headers
+    expect(response.parsed_body['items'].pluck('id')).to contain_exactly(call.id, loser.id)
+  end
+
   it 'authorizes recording downloads against the visible call, never a foreign account or another agent' do
     external = VoipExternalCall.create!(voip_service: service, source_instance_id: 'test', provider_call_id: 'call-1')
     call.update!(voip_external_call: external)
@@ -50,6 +76,17 @@ RSpec.describe 'Agent VoIP API', type: :request do
     expect(response.body).not_to include('synthetic-sip-secret', 'encrypted_credentials', 'auth_username')
     get "#{base}/services", headers: headers
     expect(response).to have_http_status(:unauthorized)
+  end
+
+  it 'persists the optional incoming conversation policy without exposing service credentials' do
+    patch "#{base}/services/#{service.id}", params: { service: { reopen_on_incoming: true } },
+                                            headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(service.reload.credentials['reopen_on_incoming']).to be(true)
+    patch "#{base}/services/#{service.id}", params: { service: { reopen_on_incoming: false } },
+                                            headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(service.reload.credentials['reopen_on_incoming']).to be(false)
   end
 
   it 'allows an administrator to edit WSS while rejecting insecure LAN WS without changing credentials' do

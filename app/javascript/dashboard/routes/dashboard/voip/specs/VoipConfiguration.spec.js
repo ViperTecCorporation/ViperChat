@@ -194,6 +194,74 @@ describe('VoIP configuration account isolation', () => {
     expect(mocks.saveBinding).not.toHaveBeenCalled();
   });
 
+  it('edits the exact agent and service from an extension card and refreshes the cards after saving', async () => {
+    const services = [
+      { id: 10, name: 'Default central', bindings: [] },
+      {
+        id: 11,
+        name: 'Other central',
+        bindings: [
+          {
+            id: 22,
+            account_user_id: 102,
+            agent_name: 'Maria',
+            extension: '1002',
+            active: false,
+          },
+        ],
+      },
+    ];
+    mocks.agents.mockResolvedValue({
+      data: [{ id: 102, user_id: 202, name: 'Maria' }],
+    });
+    mocks.services.mockResolvedValue({ data: services });
+    mocks.profile.mockResolvedValue({
+      data: {
+        services,
+        bindings: [
+          { id: 20, voip_service_id: 10, active: true, extension: '1001' },
+          {
+            id: 22,
+            voip_service_id: 11,
+            active: false,
+            extension: '1002',
+            credential_configured: true,
+          },
+        ],
+      },
+    });
+    mocks.saveBinding.mockResolvedValue({ data: {} });
+    wrapper = mount(ServicesPage);
+    await flushPromises();
+    await wrapper.find('li button').trigger('click');
+    await flushPromises();
+    expect(mocks.profile).toHaveBeenLastCalledWith(1, 102);
+    const card = wrapper.findComponent(AgentVoipCard);
+    expect(card.find('dialog').attributes()).toHaveProperty('open');
+    expect(card.find('select').element.value).toBe('11');
+    expect(card.find('input').element.value).toBe('1002');
+    expect(card.find('input[type="password"]').element.value).toBe('');
+    await card.find('input').setValue('1003');
+    mocks.services.mockResolvedValueOnce({
+      data: [
+        {
+          ...services[1],
+          bindings: [{ ...services[1].bindings[0], extension: '1003' }],
+        },
+      ],
+    });
+    await card.find('form').trigger('submit');
+    await flushPromises();
+    expect(mocks.saveBinding).toHaveBeenCalledWith(
+      1,
+      11,
+      expect.objectContaining({ extension: '1003', password: '' }),
+      102
+    );
+    expect(wrapper.find('li').text()).toContain('1003');
+    expect(mocks.refreshConfiguration).not.toHaveBeenCalled();
+  });
+
   it('closes the service editor and excludes late services from the old account', async () => {
     let resolveOld;
     mocks.services.mockImplementationOnce(

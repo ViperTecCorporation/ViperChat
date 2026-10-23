@@ -15,6 +15,18 @@ RSpec.describe ContactPolicy, type: :policy do
   let(:agent_context) { { user: agent, account: account, account_user: account.account_users.first } }
 
   permissions :show? do
+    it 'allows same-account contact details without granting access to its inbox or conversation' do
+      account.disable_features!('hide_contacts_for_agent')
+      account.enable_features!('hide_all_chats_for_agent', 'hide_unassigned_for_agent')
+      restricted = create(:conversation, account: account, contact: contact)
+
+      expect(contact_policy).to permit(agent_context, contact)
+      expect(ConversationPolicy.new(agent_context, restricted).show?).to be(false)
+      allow(Current).to receive(:user).and_return(agent)
+      allow(Current).to receive(:account).and_return(account)
+      expect(InboxPolicy.new(agent_context, restricted.inbox).show?).to be(false)
+    end
+
     it 'preserves access for an agent bot in its account' do
       context = { user: build(:agent_bot), account: account, account_user: nil }
       expect(contact_policy).to permit(context, contact)

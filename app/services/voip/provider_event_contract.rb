@@ -4,7 +4,7 @@ class Voip::ProviderEventContract
   STATES = %w[routing ringing active completed missed failed cancelled].freeze
   PARTICIPANT_STATES = %w[offered ringing active completed missed failed cancelled answered_elsewhere].freeze
   ENVELOPE_FIELDS = %w[schema_version event_id event_type occurred_at source_instance_id call_id revision call].freeze
-  CALL_FIELDS = %w[direction state started_at answered_at ended_at from to end_reason participants recording artifacts].freeze
+  CALL_FIELDS = %w[direction state started_at answered_at ended_at from to end_reason participants recording artifacts business_phone].freeze
   PARTICIPANT_FIELDS = %w[id extension state started_at answered_at ended_at sip_call_id].freeze
 
   def self.validate!(payload, source:)
@@ -48,6 +48,7 @@ class Voip::ProviderEventContract
   end
 
   def call_addresses!(call)
+    invalid! if call['business_phone'] && !call['business_phone'].to_s.match?(/\A\+?\d{10,15}\z/)
     text!(call['end_reason'], 128) if call['end_reason']
     %w[from to].each { |key| address!(call[key]) if call[key] }
   end

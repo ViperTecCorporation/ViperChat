@@ -513,8 +513,12 @@ class Message < ApplicationRecord
     send_update_event
   end
 
+  def voip_call_event?
+    voice_call? && content_attributes['voip_external_call_id'].present?
+  end
+
   def send_reply
-    return if web_attendance?
+    return if web_attendance? || voip_call_event?
     return WebAttendance::ReminderDeliveryJob.perform_later(id) if content_attributes['web_absence_request_key'].present?
 
     # FIXME: Giving it few seconds for the attachment to be uploaded to the service
@@ -523,7 +527,7 @@ class Message < ApplicationRecord
   end
 
   def reopen_conversation
-    return if web_attendance?
+    return if web_attendance? || voip_call_event?
     return if conversation.muted?
     return unless incoming?
 

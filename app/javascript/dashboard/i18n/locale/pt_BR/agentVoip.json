@@ -1,5 +1,7 @@
 {
   "AGENT_VOIP": {
+    "REOPEN_ON_INCOMING": "Abrir/reabrir atendimento ao receber chamada (respeita conversa única ou nova conversa da caixa)",
+    "CALL_EVENT": { "routing": "Chamada recebida", "ringing": "Chamando", "active": "Chamada atendida", "completed": "Chamada encerrada", "missed": "Chamada perdida", "failed": "Falha na chamada", "cancelled": "Chamada cancelada", "INBOUND": "Recebida", "OUTBOUND": "Efetuada" },
     "HISTORY_COMPANY": "ID da empresa na ViperConnect",
     "HISTORY_COMPANY_HELP": "Use o ID exato da empresa responsável pelos ramais. A recuperação não infere a empresa pelo telefone.",
     "DIAGNOSTICS": {

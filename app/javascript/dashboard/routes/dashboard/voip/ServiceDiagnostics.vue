@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch, nextTick, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { VoipAPI } from 'dashboard/api/voip';
 
@@ -17,6 +17,9 @@ const confirmation = ref(null);
 const confirmationDialog = ref(null);
 const resetCursor = ref(false);
 let contextVersion = 0;
+let requestVersion = 0;
+let refreshTimer;
+let disposed = false;
 async function requestConfirmation(record) {
   const version = contextVersion;
   confirmation.value = record;
@@ -29,25 +32,44 @@ async function requestConfirmation(record) {
 function date(value) {
   return value ? new Date(value).toLocaleString() : '—';
 }
-async function load() {
+async function load({ background = false } = {}) {
+  const scheduleRefresh = () => {
+    clearTimeout(refreshTimer);
+    if (!disposed) {
+      refreshTimer = setTimeout(() => load({ background: true }), 5000);
+    }
+  };
+  if (disposed) return;
+  if (background && (loading.value || busy.value || confirmation.value)) {
+    scheduleRefresh();
+    return;
+  }
+  clearTimeout(refreshTimer);
   const version = contextVersion;
-  loading.value = true;
+  requestVersion += 1;
+  const request = requestVersion;
+  if (!background) loading.value = true;
   error.value = '';
   try {
     const response = await new VoipAPI(props.accountId).diagnostics(
       props.serviceId
     );
-    if (version === contextVersion) data.value = response.data;
+    if (version === contextVersion && request === requestVersion)
+      data.value = response.data;
   } catch {
-    if (version === contextVersion)
+    if (version === contextVersion && request === requestVersion)
       error.value = t('AGENT_VOIP.DIAGNOSTICS.ERROR');
   } finally {
-    if (version === contextVersion) loading.value = false;
+    if (version === contextVersion && request === requestVersion && !disposed) {
+      loading.value = false;
+      scheduleRefresh();
+    }
   }
 }
 watch(
   () => [props.accountId, props.serviceId],
   () => {
+    clearTimeout(refreshTimer);
     contextVersion += 1;
     data.value = null;
     confirmation.value = null;
@@ -58,6 +80,11 @@ watch(
   },
   { immediate: true }
 );
+onBeforeUnmount(() => {
+  disposed = true;
+  contextVersion += 1;
+  clearTimeout(refreshTimer);
+});
 async function confirm() {
   if (!confirmation.value || busy.value) return;
   const version = contextVersion;

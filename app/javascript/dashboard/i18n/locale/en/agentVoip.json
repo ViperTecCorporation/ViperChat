@@ -1,5 +1,7 @@
 {
   "AGENT_VOIP": {
+    "REOPEN_ON_INCOMING": "Open/reopen conversations for incoming calls (respect the inbox conversation policy)",
+    "CALL_EVENT": { "routing": "Incoming call", "ringing": "Ringing", "active": "Call answered", "completed": "Call ended", "missed": "Missed call", "failed": "Call failed", "cancelled": "Call cancelled", "INBOUND": "Incoming", "OUTBOUND": "Outgoing" },
     "HISTORY_COMPANY": "ViperConnect company ID",
     "HISTORY_COMPANY_HELP": "Use the exact company ID that owns the extensions. Recovery does not infer company scope from phone numbers.",
     "DIAGNOSTICS": {

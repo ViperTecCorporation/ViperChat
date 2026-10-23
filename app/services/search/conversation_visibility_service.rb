@@ -9,12 +9,7 @@ class Search::ConversationVisibilityService
     return contacts_query if account_user.administrator?
     return Contact.none if current_account.feature_enabled?('hide_contacts_for_agent')
 
-    visible_contact_ids = conversations.select(:contact_id)
-    contact_ids_with_conversations = current_account.conversations.select(:contact_id)
-
-    contacts_query.where(id: visible_contact_ids).or(
-      contacts_query.where.not(id: contact_ids_with_conversations)
-    )
+    contacts_query
   end
 
   def assignment_restricted?

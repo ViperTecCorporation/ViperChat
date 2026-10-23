@@ -1,6 +1,6 @@
 class Api::V1::Accounts::Voip::CallsController < Api::V1::Accounts::Voip::BaseController
   def index
-    scope = visible_calls.includes(:voip_call_observations, voip_agent_extension: [:voip_service, :account_user])
+    scope = visible_calls.consolidated_history.includes(:voip_call_observations, voip_agent_extension: [:voip_service, :account_user])
     scope = filtered(scope)
     page = [params[:page].to_i, 1].max
     rows = scope.order(started_at: :desc, id: :desc).limit(5).offset((page - 1) * 5).to_a

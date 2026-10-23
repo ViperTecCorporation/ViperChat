@@ -23,6 +23,7 @@ import CsatResponses from './CsatResponses.vue';
 import BotReports from './BotReports.vue';
 import LiveReports from './LiveReports.vue';
 import SLAReports from './SLAReports.vue';
+import PartnerInboxReports from './PartnerInboxReports.vue';
 
 const meta = {
   featureFlag: FEATURE_FLAGS.REPORTS,
@@ -150,6 +151,12 @@ export default {
         },
         ...oldReportRoutes,
         ...revisedReportRoutes,
+        {
+          path: 'partner_inboxes',
+          name: 'partner_inbox_reports',
+          meta,
+          component: PartnerInboxReports,
+        },
         {
           path: 'sla',
           name: 'sla_reports',

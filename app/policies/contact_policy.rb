@@ -38,8 +38,7 @@ class ContactPolicy < ApplicationPolicy
   def show?
     return true unless record.is_a?(Contact)
     return false unless record.account_id == account.id
-    return true if user.is_a?(AgentBot)
-    return true if @account_user.administrator?
+    return true if directory_access?
 
     visibility = Search::ConversationVisibilityService.new(current_user: user, current_account: account)
     return true unless visibility.assignment_restricted?

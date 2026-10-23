@@ -10,6 +10,7 @@ const props = defineProps({
   accountUserId: { type: Number, default: null },
   compact: { type: Boolean, default: false },
 });
+const emit = defineEmits(['updated']);
 const { t } = useI18n();
 const { accountId } = useAccount();
 const phone = useAgentVoipStore();
@@ -61,11 +62,12 @@ function resetForm() {
   };
 }
 watch(serviceId, resetForm);
-async function open() {
+async function open(preferredServiceId = null) {
   const version = contextVersion;
   try {
     if (!(await load())) return;
-    if (!service.value)
+    if (preferredServiceId !== null) serviceId.value = preferredServiceId;
+    else if (!service.value)
       serviceId.value =
         profile.value.bindings.find(row => row.active)?.voip_service_id || '';
     resetForm();
@@ -101,6 +103,7 @@ async function save() {
     form.value.password = '';
     form.value.clear_password = false;
     if (!(await load())) return;
+    emit('updated');
     if (!props.accountUserId) await phone.refreshConfiguration();
   });
 }
@@ -109,7 +112,7 @@ async function activate() {
     if (props.accountUserId)
       await api.value.activate(binding.value.id, props.accountUserId);
     else await phone.activate(binding.value.id);
-    if (isCurrent()) await load();
+    if (isCurrent() && (await load())) emit('updated');
   });
 }
 async function test() {
@@ -124,7 +127,7 @@ async function deactivate() {
     if (props.accountUserId)
       await api.value.activate(null, props.accountUserId);
     else await phone.activate(null);
-    if (isCurrent()) await load();
+    if (isCurrent() && (await load())) emit('updated');
   });
 }
 watch(
@@ -140,6 +143,7 @@ watch(
   },
   { immediate: true, flush: 'sync' }
 );
+defineExpose({ open });
 </script>
 
 <template>
@@ -160,7 +164,7 @@ watch(
     <button
       class="min-h-11 self-start rounded-lg bg-n-brand px-4 py-2 text-white"
       type="button"
-      @click="open"
+      @click="open()"
     >
       {{ t('AGENT_VOIP.SETTINGS') }}
     </button>
@@ -173,7 +177,7 @@ watch(
     </p>
     <dialog
       ref="dialog"
-      class="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-n-weak bg-n-surface-1 p-0 text-n-slate-12 backdrop:bg-black/50"
+      class="m-auto w-[calc(100%_-_2rem)] max-w-lg rounded-2xl border border-n-weak bg-n-surface-1 p-0 text-n-slate-12 backdrop:bg-black/50"
       @close="form.password = ''"
     >
       <form

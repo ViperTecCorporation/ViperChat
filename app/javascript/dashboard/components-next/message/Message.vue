@@ -44,6 +44,7 @@ import LocationBubble from './bubbles/Location.vue';
 import CSATBubble from './bubbles/CSAT.vue';
 import FormBubble from './bubbles/Form.vue';
 import VoiceCallBubble from './bubbles/VoiceCall.vue';
+import VoipCallBubble from './bubbles/VoipCall.vue';
 import StickerBubble from './bubbles/Sticker.vue';
 import CardsBubble from './bubbles/Cards.vue';
 import UnoapiInteractiveBubble from './bubbles/UnoapiInteractive.vue';
@@ -261,6 +262,16 @@ const isCurrentUserSender = computed(() => {
  * @returns {import('vue').ComputedRef<'left'|'right'|'center'>} The computed orientation
  */
 const orientation = computed(() => {
+  if (
+    props.contentType === CONTENT_TYPES.VOICE_CALL &&
+    (props.contentAttributes?.voipExternalCallId ||
+      props.contentAttributes?.voip_external_call_id)
+  ) {
+    return props.contentAttributes?.data?.direction === 'outbound'
+      ? ORIENTATION.RIGHT
+      : ORIENTATION.LEFT;
+  }
+
   if (props.messageType === MESSAGE_TYPES.ACTIVITY) {
     return ORIENTATION.CENTER;
   }
@@ -417,7 +428,10 @@ const componentToRender = computed(() => {
   }
 
   if (props.contentType === CONTENT_TYPES.VOICE_CALL) {
-    return VoiceCallBubble;
+    return props.contentAttributes?.voipExternalCallId ||
+      props.contentAttributes?.voip_external_call_id
+      ? VoipCallBubble
+      : VoiceCallBubble;
   }
 
   if (props.contentType === CONTENT_TYPES.STICKER) {
@@ -563,6 +577,15 @@ const contextMenuEnabledOptions = computed(() => {
 });
 
 const shouldRenderMessage = computed(() => {
+  if (
+    props.private &&
+    props.contentType !== CONTENT_TYPES.VOICE_CALL &&
+    props.contentAttributes?.voipCallConsolidatedInto &&
+    props.contentAttributes?.voipExternalCallId
+  ) {
+    return false;
+  }
+
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
   const isEmailContentType = props.contentType === CONTENT_TYPES.INCOMING_EMAIL;
   const isUnsupported = props.contentAttributes?.isUnsupported;

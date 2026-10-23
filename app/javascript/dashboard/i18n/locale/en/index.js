@@ -1,4 +1,5 @@
 import advancedFilters from './advancedFilters.json';
+import partnerReport from './partnerReport.json';
 import agentVoip from './agentVoip.json';
 import webAttendance from './webAttendance.json';
 import whatsappUnified from './whatsappUnified.json';
@@ -54,6 +55,7 @@ export default {
   ...whatsappUnified,
   ...webAttendance,
   ...advancedFilters,
+  ...partnerReport,
   ...mediaEditor,
   ...agentBots,
   ...agentMgmt,

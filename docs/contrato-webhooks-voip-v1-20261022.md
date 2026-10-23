@@ -476,3 +476,9 @@ persistido, mantendo o mesmo evento. REST real recuperou os seis envelopes
 sintéticos sem novas bolhas/anexos; duas notas e seus blobs mantiveram os IDs.
 Reprocessamento administrativo nas duas pontas foi validado, sem chamadas reais
 e sem VPS. Dispositivos nativos e disponibilidade prolongada exigem aceite próprio.
+# Atualização de 23/10/2026
+
+Rota REST, cursor, autenticação, erros e consolidação em conversa estão em
+[REST de consolidação](voip-rest-consolidacao-20261023.md). Campo opcional
+`call.business_phone` identifica a linha mesmo com gravação/IA no transporte
+legado. Receptor/migração devem preceder a atualização do produtor.

@@ -58,6 +58,23 @@ RSpec.describe Voip::ReconcileProviderEventService do
     end
   end
 
+  it 'corrects a legacy missed summary only from exact answered participant evidence without changing the source event or leg ids' do
+    payload = envelope.deep_dup
+    payload['event_type'] = 'call.ended'
+    payload['call'].merge!('state' => 'missed', 'ended_at' => '2026-10-22T12:02:00Z')
+    payload['call']['participants'].first.merge!('state' => 'completed', 'answered_at' => '2026-10-22T12:01:00Z',
+                                                 'ended_at' => '2026-10-22T12:02:00Z')
+    payload['call']['participants'] << { 'id' => 'udp-leg', 'sip_call_id' => 'udp-dialog', 'extension' => '1001',
+                                         'state' => 'answered_elsewhere', 'ended_at' => '2026-10-22T12:01:00Z' }
+    event, = Voip::ReceiveProviderEventService.new(service: service, payload: payload).perform
+    Voip::ProcessProviderEventJob.perform_now(event.id)
+    external = VoipExternalCall.find_by!(voip_service: service, provider_call_id: payload['call_id'])
+    expect(external.snapshot).to include('state' => 'completed', 'answered_at' => '2026-10-22T12:01:00Z')
+    expect(event.reload.payload).to eq(payload)
+    expect(external.voip_calls.count).to eq(2)
+    expect(external.voip_calls.consolidated_history.sole).to have_attributes(state: 'ended', sip_call_id: 'synthetic-sip-1')
+  end
+
   it 'keeps transfer legs, answered-elsewhere and internal caller/callee identities distinct' do
     other_agent = create(:user, account: account, role: :agent)
     other_binding = VoipAgentExtension.create!(account_user: other_agent.account_users.find_by!(account: account), voip_service: service,

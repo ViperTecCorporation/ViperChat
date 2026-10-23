@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_22_200000) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_23_050000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1760,6 +1760,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_22_200000) do
     t.jsonb "snapshot", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "conversation_id"
+    t.bigint "call_message_id"
+    t.index ["call_message_id"], name: "index_voip_external_calls_on_call_message_id", unique: true
+    t.index ["conversation_id"], name: "index_voip_external_calls_on_conversation_id"
     t.index ["voip_service_id", "source_instance_id", "provider_call_id"], name: "voip_external_call_identity", unique: true
     t.index ["voip_service_id"], name: "index_voip_external_calls_on_voip_service_id"
   end
@@ -2146,6 +2150,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_22_200000) do
   add_foreign_key "voip_calls", "accounts"
   add_foreign_key "voip_calls", "voip_agent_extensions"
   add_foreign_key "voip_calls", "voip_external_calls"
+  add_foreign_key "voip_external_calls", "conversations"
+  add_foreign_key "voip_external_calls", "messages", column: "call_message_id"
   add_foreign_key "voip_external_calls", "voip_services"
   add_foreign_key "voip_favorites", "account_users"
   add_foreign_key "voip_favorites", "voip_services"

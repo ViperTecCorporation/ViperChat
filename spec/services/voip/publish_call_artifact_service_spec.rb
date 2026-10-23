@@ -72,6 +72,9 @@ RSpec.describe Voip::PublishCallArtifactService do
   end
 
   it 'attaches an authenticated recording once and reuses its blob in the note' do
+    card = create(:message, conversation: conversation, account: account, inbox: channel.inbox, private: true,
+                            content_type: :voice_call, content_attributes: { voip_external_call_id: external.id })
+    external.update!(conversation: conversation, call_message: card)
     snapshot['recording'] = { 'status' => 'available', 'record_id' => 'record-1' }
     file = Tempfile.new(['voip-test', '.wav'])
     file.binmode
@@ -80,11 +83,53 @@ RSpec.describe Voip::PublishCallArtifactService do
     client = instance_double(Voip::RecordingClient, fetch: { file: file, mime: 'audio/wav', digest: 'a' * 64 })
     allow(Voip::RecordingClient).to receive(:new).with(service).and_return(client)
     described_class.new(artifact: artifact).perform
+    expect(artifact.reload.message_id).to eq(card.id)
     expect(artifact.reload.recording).to be_attached
     expect(artifact.message.attachments.sole.file.blob_id).to eq(artifact.recording.blob.id)
+    expect(card.reload.attachments.sole.file.blob_id).to eq(artifact.recording.blob.id)
+    expect(conversation.reload).to be_resolved
     expect { described_class.new(artifact: artifact).perform }.not_to change(Attachment, :count)
     expect(client).to have_received(:fetch).once
   ensure
     file&.close!
+  end
+
+  it 'updates summary and transcript on the existing call card without creating another note' do
+    card = create(:message, conversation: conversation, private: true, content_type: :voice_call,
+                            content_attributes: { voip_external_call_id: external.id, data: { state: 'completed' } })
+    external.update!(conversation: conversation, call_message: card)
+    artifact
+    expect { described_class.new(artifact: artifact).perform }.not_to change(Message, :count)
+    expect(card.reload.content_attributes['voip_call_analysis']).to include('summary' => 'Resumo seguro', 'transcript' => "Olá\nTeste")
+    artifact.update!(desired_revision: 2, state: 'pending', snapshot: snapshot.deep_merge('ai' => { 'summary' => 'Resumo atualizado' }))
+    expect { described_class.new(artifact: artifact).perform }.not_to change(Message, :count)
+    expect(artifact.reload.message_id).to eq(card.id)
+    expect(card.reload.content_attributes.dig('voip_call_analysis', 'summary')).to eq('Resumo atualizado')
+    expect(conversation.reload).to be_resolved
+  end
+
+  it 'preserves the legacy note and its identity while consolidating its display into the call card' do
+    card = create(:message, conversation: conversation, private: true, content_type: :voice_call)
+    legacy = create(:message, conversation: conversation, private: true, content: 'Historical original note',
+                              content_attributes: { voip_external_call_id: external.id.to_s })
+    external.update!(conversation: conversation, call_message: card)
+    artifact.update!(conversation: conversation, message: legacy)
+    expect { described_class.new(artifact: artifact).perform }.not_to change(Message, :count)
+    expect(artifact.reload.message_id).to eq(legacy.id)
+    expect(legacy.reload.content).to eq('Historical original note')
+    expect(legacy.content_attributes['voip_call_consolidated_into']).to eq(card.id)
+    expect(artifact.public_payload['message_id']).to eq(card.id)
+    expect(card.reload.content_attributes.dig('voip_call_analysis', 'transcript')).to eq("Olá\nTeste")
+  end
+
+  it 'uses the proven call card for later analysis even when note_target is omitted' do
+    card = create(:message, conversation: conversation, private: true, content_type: :voice_call)
+    external.update!(conversation: conversation, call_message: card)
+    snapshot.delete('note_target')
+    artifact
+    expect { described_class.new(artifact: artifact).perform }.not_to change(Message, :count)
+    expect(artifact.reload.message_id).to eq(card.id)
+    expect(card.reload.content_attributes.dig('voip_call_analysis', 'summary')).to eq('Resumo seguro')
+    expect(artifact.state).to eq('complete')
   end
 end

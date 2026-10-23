@@ -10,7 +10,7 @@ class VoipCallArtifact < ApplicationRecord
     snapshot.slice('recording', 'ai').merge(
       'publication_state' => state,
       'conversation_id' => conversation&.display_id,
-      'message_id' => message_id,
+      'message_id' => voip_external_call.call_message_id || message_id,
       'recording_available' => recording.attached?
     )
   end

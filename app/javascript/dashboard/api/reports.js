@@ -8,6 +8,10 @@ class ReportsAPI extends ApiClient {
     super('reports', { accountScoped: true, apiVersion: 'v2' });
   }
 
+  getPartnerInboxes(params) {
+    return axios.get(`${this.url}/partner_inboxes`, { params });
+  }
+
   getReports({
     metric,
     from,
