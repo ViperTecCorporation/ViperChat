@@ -10,6 +10,7 @@ import store from 'dashboard/store';
 import { validateLoggedInRoutes } from '../helper/routeHelpers';
 import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
 import AnalyticsHelper from '../helper/AnalyticsHelper';
+import { frontendCache } from 'dashboard/helper/CacheHelper/frontendCache';
 
 const ONBOARDING_STEPS = ['account_details', 'enrichment', 'inbox_setup'];
 const routes = [...dashboard.routes];
@@ -90,7 +91,10 @@ export const initalizeRouter = () => {
     });
 
     await userAuthentication;
-    await validateAuthenticateRoutePermission(to, next, store);
+    await frontendCache.hydrate(Number(to.params?.accountId));
+    const resumePath = frontendCache.takeResumePath(to.path);
+    if (resumePath) return next(resumePath);
+    return validateAuthenticateRoutePermission(to, next, store);
   });
 };
 

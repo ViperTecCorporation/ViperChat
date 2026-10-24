@@ -16,6 +16,41 @@ global.axios = axios;
 vi.mock('axios');
 
 describe('#actions', () => {
+  it('mounts the native cached identity immediately while validation remains pending in the background', async () => {
+    const previousConfig = window.chatwootConfig;
+    const previousUser = window.viperNativeCachedUser;
+    window.chatwootConfig = { isNativeApp: true };
+    window.viperNativeCachedUser = {
+      id: 7,
+      name: 'SYNTHETIC cached user',
+      accounts: [{ id: 1, role: 'agent' }],
+    };
+    const pendingValidation = new Promise(() => {});
+    const backgroundDispatch = vi.fn().mockReturnValue(pendingValidation);
+    const startupCommit = vi.fn();
+    try {
+      await actions.setUser({
+        commit: startupCommit,
+        dispatch: backgroundDispatch,
+      });
+      expect(backgroundDispatch).toHaveBeenCalledWith('validityCheck');
+      expect(startupCommit).toHaveBeenCalledWith(
+        types.SET_CURRENT_USER,
+        window.viperNativeCachedUser
+      );
+      expect(startupCommit).toHaveBeenCalledWith(
+        types.SET_CURRENT_USER_UI_FLAGS,
+        { isFetching: false }
+      );
+    } finally {
+      window.chatwootConfig = previousConfig;
+      window.viperNativeCachedUser = previousUser;
+      const { frontendCache } = await import(
+        'dashboard/helper/CacheHelper/frontendCache'
+      );
+      frontendCache.state.validatingSession = false;
+    }
+  });
   describe('#validityCheck', () => {
     it('propagates native network failures without discarding the session', async () => {
       const previousConfig = window.chatwootConfig;

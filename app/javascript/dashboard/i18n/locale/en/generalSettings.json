@@ -219,7 +219,19 @@
     }
   },
   "NETWORK": {
+    "OUTBOX": {
+      "COMPOSER": "Write a message · sends after reconnecting",
+      "WAITING": "Waiting for connection to send",
+      "SENDING": "Sending…",
+      "REJECTED": "Sending stopped · check access and inbox rules",
+      "EXPIRED": "Sending expired after 24 hours · review the message",
+      "CANCEL": "Cancel sending",
+      "ERROR": "Could not save to the queue. Keep your text and try again. Attachments and templates require a connection."
+    },
     "NOTIFICATION": {
+      "UPDATING": "Updating…",
+      "SAVED_OFFLINE": "Offline · saved data",
+      "CACHED_READ_ONLY": "Saved history · waiting for synchronization",
       "OFFLINE": "Offline",
       "RECONNECTING": "Reconnecting...",
       "RECONNECT_SUCCESS": "Reconnected"

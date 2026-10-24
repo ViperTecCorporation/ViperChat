@@ -65,7 +65,11 @@ describe('#actions', () => {
       expect(commit.mock.calls).toEqual([
         [
           types.UPDATE_CONVERSATION,
-          { id: 1, meta: { sender: { id: 1, name: 'Contact 1' } } },
+          {
+            id: 1,
+            meta: { sender: { id: 1, name: 'Contact 1' } },
+            isCachedSnapshot: false,
+          },
         ],
         ['contacts/SET_CONTACT_ITEM', { id: 1, name: 'Contact 1' }],
       ]);
@@ -448,9 +452,13 @@ describe('#actions', () => {
         data: dataReceived,
       });
       await actions.fetchFilteredConversations({ commit }, dataToSend);
-      expect(commit).toHaveBeenCalledTimes(3);
+      expect(commit).toHaveBeenCalledTimes(4);
       expect(commit.mock.calls).toEqual([
         ['SET_LIST_LOADING_STATUS'],
+        [
+          'reconcileCachedConversationSnapshot',
+          dataReceived.payload.map(conversation => conversation.id),
+        ],
         ['SET_ALL_CONVERSATION', dataReceived.payload],
         ['CLEAR_LIST_LOADING_STATUS'],
       ]);
@@ -475,7 +483,7 @@ describe('#actions', () => {
       await actions.fetchAllConversations({
         commit,
         dispatch,
-        state: { conversationFilters: {} },
+        state: { conversationFilters: {}, allConversations: [] },
       });
 
       expect(commit.mock.calls).toEqual([

@@ -1,6 +1,7 @@
 import types from '../mutation-types';
 import authAPI from '../../api/auth';
 import ConversationApi from '../../api/conversations';
+import { frontendCache } from 'dashboard/helper/CacheHelper/frontendCache';
 
 import { setUser, clearCookiesOnLogout } from '../utils/api';
 import SessionStorage from 'shared/helpers/sessionStorage';
@@ -108,6 +109,10 @@ export const actions = {
       const currentUser = response.data.payload.data;
       setUser(currentUser);
       context.commit(types.SET_CURRENT_USER, currentUser);
+      if (window.chatwootConfig?.isNativeApp) {
+        await window.viperNativeAuth?.updateUser?.(currentUser);
+        await frontendCache.sessionValidated();
+      }
     } catch (error) {
       if (error?.response?.status === 401) {
         clearCookiesOnLogout();
@@ -133,7 +138,14 @@ export const actions = {
     });
   },
   async setUser({ commit, dispatch }) {
-    if (authAPI.hasAuthCookie()) {
+    if (
+      window.chatwootConfig?.isNativeApp &&
+      window.viperNativeCachedUser?.id
+    ) {
+      commit(types.SET_CURRENT_USER, window.viperNativeCachedUser);
+      frontendCache.state.validatingSession = true;
+      dispatch('validityCheck').catch(() => {});
+    } else if (authAPI.hasAuthCookie()) {
       await dispatch('validityCheck');
     } else {
       commit(types.CLEAR_USER);

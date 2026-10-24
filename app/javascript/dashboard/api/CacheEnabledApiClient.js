@@ -1,6 +1,7 @@
 /* global axios */
 import { DataManager } from '../helper/CacheHelper/DataManager';
 import ApiClient from './ApiClient';
+import { frontendCache } from '../helper/CacheHelper/frontendCache';
 
 class CacheEnabledApiClient extends ApiClient {
   constructor(resource, options = {}) {
@@ -36,6 +37,8 @@ class CacheEnabledApiClient extends ApiClient {
   }
 
   async getFromCache() {
+    // The scoped startup snapshot replaces the legacy account-only database.
+    if (frontendCache.scope) return this.getFromNetwork();
     try {
       // IDB is not supported in Firefox private mode: https://bugzilla.mozilla.org/show_bug.cgi?id=781982
       await this.dataManager.initDb();
@@ -64,6 +67,7 @@ class CacheEnabledApiClient extends ApiClient {
   }
 
   async refetchAndCommit(newKey = null) {
+    if (frontendCache.scope) return this.getFromNetwork();
     const response = await this.getFromNetwork();
 
     try {

@@ -2,7 +2,7 @@
 defineProps({ failed: { type: Boolean, default: false } });
 defineEmits(['retry']);
 const copy = {
-  loading: 'Conectando ao servidor…',
+  loading: 'Abrindo…',
   failed:
     'Não foi possível conectar ao servidor. Confira sua conexão e tente novamente.',
   retained: 'Tente novamente sem apagar os dados do aplicativo.',
@@ -12,12 +12,17 @@ const copy = {
 
 <template>
   <div
-    class="fixed inset-0 z-[10000] flex items-center justify-center bg-n-background p-6 text-n-slate-12"
+    :class="
+      failed
+        ? 'fixed inset-0 z-[10000] flex items-center justify-center bg-n-background p-6 text-n-slate-12'
+        : 'pointer-events-none fixed right-3 top-3 z-[10000] rounded-full bg-n-solid-2 px-3 py-1 text-xs text-n-slate-11'
+    "
   >
     <section class="w-full max-w-sm text-center" aria-live="polite">
-      <p class="text-base">{{ failed ? copy.failed : copy.loading }}</p>
-      <progress v-if="!failed" class="mt-4 w-full" :aria-label="copy.loading" />
-      <template v-else>
+      <p :class="failed ? 'text-base' : 'text-xs'">
+        {{ failed ? copy.failed : copy.loading }}
+      </p>
+      <template v-if="failed">
         <p class="mt-3 text-sm text-n-slate-11">{{ copy.retained }}</p>
         <button
           type="button"

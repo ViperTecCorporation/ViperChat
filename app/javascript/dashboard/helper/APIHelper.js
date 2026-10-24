@@ -1,6 +1,10 @@
 import Auth from '../api/auth';
+import { frontendCache } from './CacheHelper/frontendCache';
 
-const parseErrorCode = error => Promise.reject(error);
+const parseErrorCode = error => {
+  frontendCache.denied(error);
+  return Promise.reject(error);
+};
 
 const authHeaders = () => {
   const {
@@ -33,11 +37,12 @@ export default axios => {
     if (window.chatwootConfig?.isNativeApp) {
       Object.assign(config.headers, authHeaders());
     }
-    return config;
+    return frontendCache.request(config);
   });
   // Response parsing interceptor
   wootApi.interceptors.response.use(
     response => {
+      frontendCache.response(response);
       if (window.viperNativeAuth) {
         window.viperNativeAuth.updateHeaders(response.headers);
       }

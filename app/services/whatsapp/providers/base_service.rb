@@ -70,8 +70,8 @@ class Whatsapp::Providers::BaseService
     return if message.blank?
 
     # https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes/#sample-response
-    error_message = error_message(response)
-    return if error_message.blank?
+    error_message = error_message(response).presence
+    error_message ||= "Falha no envio pelo provedor (HTTP #{response.code.to_i}). Confirmação de entrega não recebida."
 
     state = Whatsapp::UnifiedDeliveryStateService.new(message: message, inbox: whatsapp_channel.inbox)
     return if state.api_failure(response: response, error: error_message)

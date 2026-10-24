@@ -30,10 +30,12 @@ export default {
       console.error('[ViperChat] Native push logout cleanup failed', error);
     }
 
-    const response = await axios.delete(urlData.url);
-    deleteIndexedDBOnLogout();
-    clearCookiesOnLogout();
-    return response;
+    try {
+      return await axios.delete(urlData.url);
+    } finally {
+      deleteIndexedDBOnLogout();
+      await clearCookiesOnLogout();
+    }
   },
   hasAuthCookie() {
     return Boolean(

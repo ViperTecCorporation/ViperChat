@@ -5,7 +5,8 @@ describe('native startup connection state', () => {
   it('shows progress and does not retry automatically on failure', async () => {
     vi.useFakeTimers();
     const wrapper = mount(NativeStartup);
-    expect(wrapper.find('progress').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Abrindo');
+    expect(wrapper.find('progress').exists()).toBe(false);
     await wrapper.setProps({ failed: true });
     expect(wrapper.find('progress').exists()).toBe(false);
     expect(wrapper.text()).toContain('Não foi possível conectar');

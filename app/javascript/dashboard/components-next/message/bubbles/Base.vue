@@ -90,6 +90,8 @@ const shouldShowMeta = computed(
   () =>
     !props.hideMeta &&
     (!shouldGroupWithNext.value ||
+      contentAttributes.value?.offlineQueue ||
+      contentAttributes.value?.offline_queue ||
       contentAttributes.value?.viewOnce ||
       contentAttributes.value?.view_once) &&
     variant.value !== MESSAGE_VARIANTS.ACTIVITY

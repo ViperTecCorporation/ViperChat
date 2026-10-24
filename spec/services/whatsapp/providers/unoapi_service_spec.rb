@@ -18,6 +18,47 @@ describe Whatsapp::Providers::UnoapiService do
     )
   end
 
+  describe 'HTTP errors without a JSON error message' do
+    let(:conversation) { create(:conversation, account: whatsapp_channel.account, inbox: whatsapp_channel.inbox) }
+    let(:message) do
+      create(:message, account: whatsapp_channel.account, inbox: whatsapp_channel.inbox,
+                       conversation: conversation, message_type: :outgoing, status: :progress, content: 'teste')
+    end
+
+    before do
+      whatsapp_channel.update!(provider_config: whatsapp_channel.provider_config.merge('phone_number_id' => 'random_id'))
+    end
+
+    [
+      ['text/html', '<!DOCTYPE html><html><title>502 Bad Gateway</title><body>private upstream details</body></html>'],
+      ['text/plain', 'Bad Gateway'],
+      ['text/plain', ''],
+      ['application/json', '{}']
+    ].each do |content_type, body|
+      it "marks the bubble failed for HTTP 502 with #{content_type} and body #{body.inspect}" do
+        request = stub_request(:post, 'https://uno.example.com/v13.0/random_id/messages')
+                  .to_return(status: 502, body: body, headers: { 'Content-Type' => content_type })
+        original_id = message.id
+
+        expect(service.send_message('5511912008012', message)).to be_nil
+        expect(message.reload).to have_attributes(
+          id: original_id, status: 'failed', source_id: nil, content: 'teste',
+          external_error: 'Falha no envio pelo provedor (HTTP 502). Confirmação de entrega não recebida.'
+        )
+        expect(request).to have_been_requested.once
+      end
+    end
+
+    it 'preserves the provider JSON error when available' do
+      stub_request(:post, 'https://uno.example.com/v13.0/random_id/messages')
+        .to_return(status: 409, body: { error: { message: 'Session disconnected' } }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      expect(service.send_message('5511912008012', message)).to be_nil
+      expect(message.reload).to have_attributes(status: 'failed', external_error: 'Session disconnected')
+    end
+  end
+
   describe '#validate_provider_config?' do
     it 'registers a connecting session before validating its newly generated token' do
       whatsapp_channel.provider_config['connect'] = true

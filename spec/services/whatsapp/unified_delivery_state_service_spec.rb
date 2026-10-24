@@ -103,6 +103,26 @@ RSpec.describe Whatsapp::UnifiedDeliveryStateService do
     end
   end
 
+  it 'marks an HTML 502 as uncertain and failed without retrying or switching providers' do
+    outgoing = message
+    request = stub_request(:post, uno.provider_service.send(:messages_path)).to_return(
+      status: 502, body: '<html><title>502 Bad Gateway</title></html>', headers: { 'Content-Type' => 'text/html' }
+    )
+    clear_enqueued_jobs
+
+    Whatsapp::SendOnWhatsappService.new(message: outgoing).perform
+
+    expect(request).to have_been_requested.once
+    expect(outgoing.reload).to have_attributes(status: 'failed', source_id: nil)
+    expect(outgoing.external_error).to eq(Whatsapp::UnifiedDeliveryAttemptService::REVIEW_ERROR)
+    expect(outgoing.content_attributes.dig('whatsapp_delivery', 'unoapi')).to include(
+      'state' => 'uncertain', 'confirmed_failure' => false, 'code' => 502,
+      'error' => 'Falha no envio pelo provedor (HTTP 502). Confirmação de entrega não recebida.'
+    )
+    expect(outgoing.content_attributes.dig('whatsapp_transport', 'provider')).to eq('unoapi')
+    expect(enqueued_jobs.none? { |job| job[:job] == SendReplyJob }).to be(true)
+  end
+
   it 'stops after both providers reject, with no ping-pong or new bubble' do
     outgoing = message
     [uno, meta].each do |channel|

@@ -5,6 +5,9 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { SESSION_STORAGE_KEYS } from 'dashboard/constants/sessionStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import SessionStorage from 'shared/helpers/sessionStorage';
+import { frontendCache } from 'dashboard/helper/CacheHelper/frontendCache';
+import { CACHE_DB } from 'dashboard/helper/CacheHelper/frontendSnapshot';
+import { OUTBOX_DB } from 'dashboard/helper/CacheHelper/offlineOutbox';
 import { emitter } from 'shared/helpers/mitt';
 import {
   ANALYTICS_IDENTITY,
@@ -59,24 +62,27 @@ export const deleteIndexedDBOnLogout = async () => {
     dbs = JSON.parse(localStorage.getItem('cw-idb-names') || '[]');
   }
 
-  dbs.forEach(dbName => {
-    const deleteRequest = window.indexedDB.deleteDatabase(dbName);
+  dbs
+    .filter(dbName => ![CACHE_DB, OUTBOX_DB].includes(dbName))
+    .forEach(dbName => {
+      const deleteRequest = window.indexedDB.deleteDatabase(dbName);
 
-    deleteRequest.onerror = event => {
-      // eslint-disable-next-line no-console
-      console.error(`Error deleting database ${dbName}.`, event);
-    };
+      deleteRequest.onerror = event => {
+        // eslint-disable-next-line no-console
+        console.error(`Error deleting database ${dbName}.`, event);
+      };
 
-    deleteRequest.onsuccess = () => {
-      // eslint-disable-next-line no-console
-      console.log(`Database ${dbName} deleted successfully.`);
-    };
-  });
+      deleteRequest.onsuccess = () => {
+        // eslint-disable-next-line no-console
+        console.log(`Database ${dbName} deleted successfully.`);
+      };
+    });
 
   localStorage.removeItem('cw-idb-names');
 };
 
 export const clearCookiesOnLogout = () => {
+  const clearedCache = frontendCache.clear();
   emitter.emit(CHATWOOT_RESET);
   emitter.emit(ANALYTICS_RESET);
   clearBrowserSessionCookies();
@@ -84,12 +90,16 @@ export const clearCookiesOnLogout = () => {
   clearSessionStorageOnLogout();
   if (window.viperNativeAuth) {
     window.viperNativeSession = null;
-    window.viperNativeAuth.clear().finally(() => window.location.reload());
-    return;
+    window.viperNativeCachedUser = null;
+    return Promise.all([clearedCache, window.viperNativeAuth.clear()]).finally(
+      () => window.location.reload()
+    );
   }
   const globalConfig = window.globalConfig || {};
   const logoutRedirectLink = globalConfig.LOGOUT_REDIRECT_LINK || '/';
-  window.location = logoutRedirectLink;
+  return clearedCache.finally(() => {
+    window.location = logoutRedirectLink;
+  });
 };
 
 export const parseAPIErrorResponse = error => {

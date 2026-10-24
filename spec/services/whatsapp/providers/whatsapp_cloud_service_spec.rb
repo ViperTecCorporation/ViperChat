@@ -694,16 +694,17 @@ describe Whatsapp::Providers::WhatsappCloudService do
         instance_double(
           HTTParty::Response,
           body: '{}',
-          parsed_response: {}
+          parsed_response: {},
+          code: 502
         )
       end
 
-      it 'logs error but does not update message' do
+      it 'marks the message failed with a safe HTTP error instead of leaving it pending' do
         service.instance_variable_set(:@message, message)
         service.send(:handle_error, error_response_object, message)
 
-        expect(message.reload.status).not_to eq('failed')
-        expect(message.reload.external_error).to be_nil
+        expect(message.reload.status).to eq('failed')
+        expect(message.external_error).to eq('Falha no envio pelo provedor (HTTP 502). Confirmação de entrega não recebida.')
       end
     end
   end

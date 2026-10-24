@@ -19,6 +19,10 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   def create
     user = Current.user || @resource
+    if params[:client_message_id].present?
+      @message = Messages::IdempotentCreateService.new(user: user, conversation: @conversation, params: params).perform
+      return
+    end
     mb = Messages::MessageBuilder.new(user, @conversation, params)
     if params[:delivery_destination] == 'web'
       @conversation.with_lock { @message = mb.perform }
@@ -38,7 +42,8 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
     authorize @conversation, :delete_message?
 
     ActiveRecord::Base.transaction do
-      message.update!(content: I18n.t('conversations.messages.deleted'), content_type: :text, content_attributes: { deleted: true })
+      message.update!(content: I18n.t('conversations.messages.deleted'), content_type: :text,
+                      content_attributes: { deleted: true }.merge(outbox_identity_attributes))
       message.attachments.destroy_all
     end
   end
@@ -53,7 +58,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
     service = Messages::StatusUpdateService.new(message, 'sent')
     service.perform
-    message.update!(content_attributes: retry_content_attributes, source_id: nil)
+    message.update!(content_attributes: retry_content_attributes.merge(outbox_identity_attributes), source_id: nil)
     ::SendReplyJob.perform_later(message.id)
   rescue StandardError => e
     render_could_not_create_error(e.message)
@@ -128,6 +133,10 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
     return {} unless message.content_attributes&.dig('whatsapp_interactive', 'type') == 'payment_request'
 
     { 'whatsapp_interactive' => { 'type' => 'payment_request' } }
+  end
+
+  def outbox_identity_attributes
+    message.content_attributes.to_h.slice('client_message_id', 'client_message_digest')
   end
 
   # API inbox check

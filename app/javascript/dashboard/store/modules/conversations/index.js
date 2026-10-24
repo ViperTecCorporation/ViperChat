@@ -35,6 +35,19 @@ const getConversationById = _state => conversationId => {
 
 // mutations
 export const mutations = {
+  markCachedMessagesValidated(_state, id) {
+    const chat = _state.allConversations.find(row => row.id === id);
+    if (chat) chat.hasCachedMessages = false;
+  },
+  reconcileCachedConversationSnapshot(_state, ids) {
+    const visible = new Set(ids);
+    _state.allConversations = _state.allConversations.filter(
+      chat =>
+        !chat.isCachedSnapshot ||
+        visible.has(chat.id) ||
+        chat.id === _state.selectedChatId
+    );
+  },
   hydrateWhatsappTransport(_state, { conversationId, accountId, options }) {
     const chat = getConversationById(_state)(conversationId);
     if (chat && chat.account_id === accountId) {
@@ -74,6 +87,7 @@ export const mutations = {
           allMessagesLoaded: existingConversation.allMessagesLoaded,
           messages: existingConversation.messages,
           dataFetched: existingConversation.dataFetched,
+          hasCachedMessages: existingConversation.hasCachedMessages,
         };
       }
     });
@@ -105,7 +119,11 @@ export const mutations = {
   [types.SET_PREVIOUS_CONVERSATIONS](_state, { id, data }) {
     if (data.length) {
       const [chat] = _state.allConversations.filter(c => c.id === id);
-      chat.messages = sortMessagesChronologically([...data, ...chat.messages]);
+      chat.messages = sortMessagesChronologically([
+        ...new Map(
+          [...chat.messages, ...data].map(message => [message.id, message])
+        ).values(),
+      ]);
     }
   },
   [types.SET_ALL_ATTACHMENTS](_state, { id, data }) {
@@ -335,7 +353,9 @@ export const mutations = {
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
       }
     }
-    chat.messages = sortMessagesChronologically(chat.messages);
+    chat.messages = sortMessagesChronologically([
+      ...new Map(chat.messages.map(row => [row.id, row])).values(),
+    ]);
   },
 
   [types.ADD_CONVERSATION](_state, conversation) {

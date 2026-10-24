@@ -1,142 +1,90 @@
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
+import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useEventListener } from '@vueuse/core';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
-import {
-  isAConversationRoute,
-  isAInboxViewRoute,
-  isNotificationRoute,
-} from 'dashboard/helper/routeHelpers';
-import { useEventListener } from '@vueuse/core';
-
-import Button from 'dashboard/components-next/button/Button.vue';
+import { frontendCache } from 'dashboard/helper/CacheHelper/frontendCache';
 
 const { t } = useI18n();
-const route = useRoute();
-
-const RECONNECTED_BANNER_TIMEOUT = 2000;
-
-const showNotification = ref(!navigator.onLine);
-const isDisconnected = ref(false);
-const isReconnecting = ref(false);
-const isReconnected = ref(false);
-let reconnectTimeout = null;
-
-const bannerText = computed(() => {
-  if (isReconnecting.value) return t('NETWORK.NOTIFICATION.RECONNECTING');
-  if (isReconnected.value) return t('NETWORK.NOTIFICATION.RECONNECT_SUCCESS');
-  return t('NETWORK.NOTIFICATION.OFFLINE');
-});
-
-const iconName = computed(() => (isReconnected.value ? 'wifi' : 'wifi-off'));
-const canRefresh = computed(
-  () => !isReconnecting.value && !isReconnected.value
+const store = useStore();
+const offline = ref(!navigator.onLine);
+const socketPending = ref(false);
+const visible = ref(false);
+let timer;
+const cached = computed(() =>
+  store?.state.conversations?.allConversations.some(
+    chat => chat.isCachedSnapshot || chat.hasCachedMessages
+  )
 );
-
-const refreshPage = () => {
-  window.location.reload();
-};
-
-const closeNotification = () => {
-  showNotification.value = false;
-  isReconnected.value = false;
-  clearTimeout(reconnectTimeout);
-};
-
-const isInAnyOfTheRoutes = routeName => {
-  return (
-    isAConversationRoute(routeName, true) ||
-    isAInboxViewRoute(routeName, true) ||
-    isNotificationRoute(routeName, true)
+const pending = computed(
+  () =>
+    offline.value ||
+    socketPending.value ||
+    cached.value ||
+    frontendCache.state.validatingSession
+);
+const text = computed(() => {
+  if (offline.value)
+    return t(
+      cached.value
+        ? 'NETWORK.NOTIFICATION.SAVED_OFFLINE'
+        : 'NETWORK.NOTIFICATION.OFFLINE'
+    );
+  return t(
+    socketPending.value
+      ? 'NETWORK.NOTIFICATION.RECONNECTING'
+      : 'NETWORK.NOTIFICATION.UPDATING'
   );
-};
-
-const updateWebsocketStatus = () => {
-  isDisconnected.value = true;
-  showNotification.value = true;
-};
-
-const handleReconnectionCompleted = () => {
-  isDisconnected.value = false;
-  isReconnecting.value = false;
-  isReconnected.value = true;
-  showNotification.value = true;
-  reconnectTimeout = setTimeout(closeNotification, RECONNECTED_BANNER_TIMEOUT);
-};
-
-const handleReconnecting = () => {
-  if (isInAnyOfTheRoutes(route.name)) {
-    isReconnecting.value = true;
-    isReconnected.value = false;
-    showNotification.value = true;
-  } else {
-    handleReconnectionCompleted();
-  }
-};
-
-const updateOnlineStatus = event => {
-  // Case: Websocket is not disconnected
-  // If the app goes offline, show the notification
-  // If the app goes online, close the notification
-
-  // Case: Websocket is disconnected
-  // If the app goes offline, show the notification
-  // If the app goes online but the websocket is disconnected, don't close the notification
-  // If the app goes online and the websocket is not disconnected, close the notification
-
-  if (event.type === 'offline') {
-    showNotification.value = true;
-  } else if (event.type === 'online' && !isDisconnected.value) {
-    handleReconnectionCompleted();
-  }
-};
-
-useEventListener('online', updateOnlineStatus);
-useEventListener('offline', updateOnlineStatus);
-useEmitter(BUS_EVENTS.WEBSOCKET_DISCONNECT, updateWebsocketStatus);
-useEmitter(
-  BUS_EVENTS.WEBSOCKET_RECONNECT_COMPLETED,
-  handleReconnectionCompleted
-);
-useEmitter(BUS_EVENTS.WEBSOCKET_RECONNECT, handleReconnecting);
-
-onBeforeUnmount(() => {
-  clearTimeout(reconnectTimeout);
 });
+watch(
+  [pending, offline],
+  () => {
+    clearTimeout(timer);
+    if (!pending.value) visible.value = false;
+    else if (offline.value) visible.value = true;
+    else
+      timer = setTimeout(() => {
+        visible.value = pending.value;
+      }, 1200);
+  },
+  { immediate: true }
+);
+useEventListener('offline', () => {
+  offline.value = true;
+});
+useEventListener('online', () => {
+  offline.value = false;
+});
+useEmitter(BUS_EVENTS.WEBSOCKET_DISCONNECT, () => {
+  socketPending.value = true;
+});
+useEmitter(BUS_EVENTS.WEBSOCKET_RECONNECT, () => {
+  socketPending.value = true;
+});
+useEmitter(BUS_EVENTS.WEBSOCKET_RECONNECT_COMPLETED, () => {
+  socketPending.value = false;
+});
+onBeforeUnmount(() => clearTimeout(timer));
 </script>
 
 <template>
-  <transition name="network-notification-fade" tag="div">
-    <div v-show="showNotification" class="fixed z-50 top-2 left-2 group">
-      <div
-        class="relative flex items-center justify-between w-full px-2 py-1 bg-n-amber-4 dark:bg-n-amber-8 rounded-lg shadow-lg"
-      >
-        <fluent-icon :icon="iconName" class="text-n-amber-12" size="18" />
-        <span class="px-2 text-xs font-medium tracking-wide text-n-amber-12">
-          {{ bannerText }}
-        </span>
-        <Button
-          v-if="canRefresh"
-          ghost
-          sm
-          amber
-          icon="i-lucide-refresh-ccw"
-          :title="$t('NETWORK.BUTTON.REFRESH')"
-          class="!text-n-amber-12 dark:!text-n-amber-9"
-          @click="refreshPage"
-        />
-
-        <Button
-          ghost
-          sm
-          amber
-          icon="i-lucide-x"
-          class="!text-n-amber-12 dark:!text-n-amber-9"
-          @click="closeNotification"
-        />
-      </div>
-    </div>
-  </transition>
+  <aside
+    v-if="visible"
+    role="status"
+    aria-live="polite"
+    class="pointer-events-none fixed right-3 bottom-[calc(env(safe-area-inset-bottom)+0.125rem)] z-40 flex max-w-[calc(100vw-1.5rem)] items-center gap-1 rounded bg-n-solid-2/80 px-1.5 text-[10px] leading-4 text-n-slate-10"
+  >
+    <span
+      aria-hidden="true"
+      class="size-2.5 shrink-0"
+      :class="
+        offline
+          ? 'i-lucide-cloud-off'
+          : 'i-lucide-loader-circle animate-spin motion-reduce:animate-none'
+      "
+    />
+    <span>{{ text }}</span>
+  </aside>
 </template>

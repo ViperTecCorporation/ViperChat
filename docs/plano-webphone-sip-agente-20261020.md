@@ -612,3 +612,66 @@ histórico comprovado, incluindo a conversa 13954, preservando IDs e artefatos.
 Saídas de validação permanecem locais e ignoradas pelo Git; referências nativas
 geradas específicas da máquina foram normalizadas para os caminhos portáteis
 existentes. Sem acesso à VPS ou implantação.
+
+### 23/10/2026 — cache de abertura e reconexão discreta
+
+Cache IndexedDB isolado por usuário/conta/instalação, com TTL de 24h e limite
+de 5 MiB. Restaura conversas e mensagens em modo somente leitura, atualiza pela
+rede e deduplica por ID antes de liberar ações. Sessão nativa validada em segundo
+plano; indicador discreto substitui o aviso grande de reconexão. Sem envio offline.
+221 testes automatizados passaram; ensaio sintético de rede lenta/offline/retorno
+validou dois IDs únicos e nenhum envio. Aplicado só na réplica existente.
+Limitações de dados locais e validação nativa em `docs/cache-frontend-conversas.md`.
+
+### 24/10/2026 — fila offline de textos e notas
+
+Evolução do cache: bolhas aguardando envio com persistência local, cancelamento e
+retomada automática após conexão/autorização. UUID durável no endpoint de mensagens
+impede duplicação em resposta perdida; IDs/transportes/notas e referências são
+preservados. 239 testes frontend e 35 exemplos backend passaram; ensaio sintético
+confirmou três POSTs simulados e apenas duas mensagens. Sem envio real, VPS ou
+novos containers. APK Debug gerado e bundles Android/iOS sincronizados; aceite
+físico/iOS pendente por indisponibilidade. Detalhes em `docs/fila-offline-texto.md`.
+
+### 24/10/2026 — falha de envio HTTP sem JSON
+
+Tratamento de erro dos provedores WhatsApp passa a persistir falha com código
+HTTP quando falta a descrição JSON, evitando bolhas indefinidamente no relógio.
+Preserva erro JSON e a proteção contra retentativa/fallback em entrega incerta.
+118 exemplos aprovados e ensaio sintético na réplica com rollback e zero envios.
+Mensagem original da conversa 17265 preservada, sem reprocessamento retroativo.
+Detalhes: `docs/validacao-whatsapp-http-sem-json-20261024.md`. Sem VPS.
+
+### 24/10/2026 — diagnóstico de estado antigo no cache após F5
+
+Reprodução sintética no browser identificou corrida entre HTTP de reconciliação
+e confirmação nova do socket: `delivered` pode regredir para `progress`/`sent`
+e ser persistido assim no IndexedDB. Corrigido depois de autorização: proteger
+recibos confirmados enquanto o HTTP estava pendente sem tornar cache antigo
+autoritativo. Corrida repetida no browser preservou `delivered` na memória e no
+IndexedDB, com um só ID. 285 testes aprovados e bundles nativos regenerados.
+F5 sem concorrência persistiu corretamente; há debounce de 1200 ms no flush.
+18 testes existentes passaram, mas não cobriam a corrida. Sem mensagens reais,
+alteração no banco ou VPS. Evidência: `docs/diagnostico-cache-status-20261024.md`.
+
+### 24/10/2026 — source_id no cache e ícone antes da API
+
+Corrigida a omissão de `source_id` no snapshot. Recibos entregue/lida agora
+renderizam seus checks já com os dados locais completos, sem esperar o HTTP.
+294 testes passaram, incluindo primeira montagem dos componentes reais de
+recibo/ícone. Playwright confirmou os checks com zero respostas de consulta de
+conversa liberadas. Cache legado precisa de uma consulta online para repor o
+campo antes omitido, sem apagar histórico ou inventar IDs. Bundles Android/iOS
+atualizados. Detalhes: `docs/validacao-cache-source-id-20261024.md`.
+
+### 24/10/2026 — integração do cache e correções de entrega
+
+Publicação solicitada na `feat/agent-voip-webphone`: inclui a base do cache
+IndexedDB e sua fila offline/idempotência, dependências das correções de recibos,
+ícones e erro HTTP sem JSON. Relatório administrativo de chamadas, ajustes de
+artefatos VoIP, layout do prompt nativo e botão de teclado iOS são trabalhos
+separados e não fazem parte deste commit. Sem versão nova, deploy ou VPS.
+Após autorização, somente o estado da mensagem de teste 2429178 foi regularizado
+como falha na réplica; IDs/conteúdo mantidos, sem reenvio ou webhook externo.
+Validação final deste escopo: 324 testes frontend e 126 exemplos backend
+aprovados; revisão staged sem artefatos gerados, credenciais ou fontes da VPS.

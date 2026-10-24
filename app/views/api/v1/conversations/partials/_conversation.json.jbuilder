@@ -27,6 +27,7 @@ json.meta do
 end
 
 json.id conversation.display_id
+json.offline_outbox_version 1
 json.group conversation.group?
 json.group_source_id conversation.group_source_id
 json.group_title conversation.group_title

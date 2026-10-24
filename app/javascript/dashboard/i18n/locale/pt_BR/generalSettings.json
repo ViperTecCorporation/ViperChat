@@ -219,7 +219,19 @@
     }
   },
   "NETWORK": {
+    "OUTBOX": {
+      "COMPOSER": "Escreva uma mensagem · será enviada quando reconectar",
+      "WAITING": "Aguardando conexão para enviar",
+      "SENDING": "Enviando…",
+      "REJECTED": "Envio interrompido · confira acesso e regras da caixa",
+      "EXPIRED": "Envio expirado após 24 horas · revise a mensagem",
+      "CANCEL": "Cancelar envio",
+      "ERROR": "Não foi possível guardar na fila. Preserve o texto e tente novamente. Anexos e templates exigem conexão."
+    },
     "NOTIFICATION": {
+      "UPDATING": "Atualizando…",
+      "SAVED_OFFLINE": "Offline · dados salvos",
+      "CACHED_READ_ONLY": "Histórico salvo · aguardando atualização",
       "OFFLINE": "Desconectado",
       "RECONNECTING": "Reconectando...",
       "RECONNECT_SUCCESS": "Reconectado"

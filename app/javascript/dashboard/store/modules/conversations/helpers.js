@@ -2,16 +2,38 @@ import { CONVERSATION_PRIORITY_ORDER } from 'shared/constants/messages';
 
 export const findPendingMessageIndex = (chat, message) => {
   const { echo_id: tempMessageId } = message;
+  const clientId = message.content_attributes?.client_message_id;
   return chat.messages.findIndex(
-    m => m.id === message.id || m.id === tempMessageId
+    m =>
+      m.id === message.id ||
+      m.id === tempMessageId ||
+      (clientId && m.id === `outbox-${clientId}`)
   );
 };
 
-export const sortMessagesChronologically = messages =>
-  [...messages].sort((left, right) => {
-    const timestampOrder = (left.created_at || 0) - (right.created_at || 0);
-    return timestampOrder || (left.id || 0) - (right.id || 0);
-  });
+export const sortMessagesChronologically = messages => {
+  const accepted = new Set(
+    messages
+      .filter(message => Number.isInteger(message.id))
+      .map(message => message.content_attributes?.client_message_id)
+      .filter(Boolean)
+  );
+  return [...messages]
+    .filter(
+      message =>
+        !String(message.id).startsWith('outbox-') ||
+        !accepted.has(String(message.id).slice(7))
+    )
+    .sort((left, right) => {
+      const timestampOrder = (left.created_at || 0) - (right.created_at || 0);
+      return (
+        timestampOrder ||
+        (Number.isInteger(left.id) && Number.isInteger(right.id)
+          ? left.id - right.id
+          : String(left.id).localeCompare(String(right.id)))
+      );
+    });
+};
 
 const STATUS_ENUM = {
   0: 'open',

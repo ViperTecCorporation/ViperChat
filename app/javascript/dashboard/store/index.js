@@ -1,4 +1,8 @@
 import { createStore } from 'vuex';
+import {
+  frontendCachePlugin,
+  cacheMutations,
+} from 'dashboard/helper/CacheHelper/frontendCache';
 
 import accounts from './modules/accounts';
 import messageFavorites from './modules/messageFavorites';
@@ -62,9 +66,10 @@ import captainScenarios from './captain/scenarios';
 import captainTools from './captain/tools';
 import captainCustomTools from './captain/customTools';
 
-const plugins = [];
+const plugins = [frontendCachePlugin];
 
 export default createStore({
+  mutations: cacheMutations,
   modules: {
     messageFavorites,
     accounts,

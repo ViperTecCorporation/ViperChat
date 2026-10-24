@@ -2,6 +2,7 @@ import {
   clearSession,
   updateSessionHeaders,
   resolveAccountId,
+  updateSessionUser,
 } from './authenticationService';
 import { disableNativePush } from './nativePushService';
 import {
@@ -76,7 +77,10 @@ export const configureNativeEnvironment = ({ installation, session }) => {
   window.viperNativeAccountId = accountId;
   window.errorLoggingConfig = '';
   window.viperNativeSession = session.headers;
+  window.viperNativeCachedUser = session.user;
+  window.viperNativeResumePending = true;
   window.viperNativeAuth = {
+    updateUser: user => updateSessionUser(installation.installationId, user),
     beforeLogout: disableNativePush,
     updateHeaders: headers => {
       const headerObject = Object.fromEntries(

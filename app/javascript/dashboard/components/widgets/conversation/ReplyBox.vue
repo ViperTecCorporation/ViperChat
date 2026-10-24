@@ -1,5 +1,7 @@
 <script>
 import { computed, defineAsyncComponent, useTemplateRef } from 'vue';
+import { frontendCache } from 'dashboard/helper/CacheHelper/frontendCache';
+import { offlineOutbox } from 'dashboard/helper/CacheHelper/offlineOutbox';
 import { DirectUpload } from 'dashboard/helper/multipartUpload';
 import { useWindowSize } from '@vueuse/core';
 import { mapGetters, useStore } from 'vuex';
@@ -447,6 +449,11 @@ export default {
     },
     isPrivate() {
       if (
+        offlineOutbox.waiting(this.currentChat) &&
+        offlineOutbox.canQueue(this.currentChat)
+      )
+        return this.isOnPrivateNote;
+      if (
         this.currentChat.can_reply ||
         this.isAWhatsAppChannel ||
         this.isAPIInbox
@@ -471,6 +478,11 @@ export default {
       return !!stripped.trim();
     },
     isReplyRestricted() {
+      if (
+        offlineOutbox.waiting(this.currentChat) &&
+        offlineOutbox.canQueue(this.currentChat)
+      )
+        return false;
       if (this.isWebDestination) return !this.webAttendanceActive;
       return (
         !this.currentChat?.can_reply &&
@@ -489,6 +501,17 @@ export default {
       );
     },
     messagePlaceHolder() {
+      if (
+        this.currentChat?.isCachedSnapshot ||
+        this.currentChat?.hasCachedMessages ||
+        frontendCache.state.validatingSession
+      ) {
+        return this.$t(
+          offlineOutbox.canQueue(this.currentChat)
+            ? 'NETWORK.OUTBOX.COMPOSER'
+            : 'NETWORK.NOTIFICATION.CACHED_READ_ONLY'
+        );
+      }
       if (this.isEditorDisabled) {
         if (this.isAWhatsAppChannel) {
           return this.$t('CONVERSATION.FOOTER.MESSAGING_RESTRICTED_WHATSAPP');
@@ -803,6 +826,8 @@ export default {
     },
     isEditorDisabled() {
       if (!this.isComposerActive) return true;
+      if (offlineOutbox.waiting(this.currentChat))
+        return !offlineOutbox.canQueue(this.currentChat);
       if (this.showWhatsappTransportSelector)
         return !['selected', 'capability_routing'].includes(
           this.whatsappDraftResolution.reason
@@ -1798,6 +1823,12 @@ export default {
           copilotAcceptedMessage,
         });
       } catch (error) {
+        if (error.outbox) {
+          if (!this.hasMeaningfulEditorContent)
+            this.message = editorMessage || messagePayload.message || '';
+          useAlert(this.$t('NETWORK.OUTBOX.ERROR'));
+          return;
+        }
         const errorMessage =
           error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR');
         useAlert(errorMessage);

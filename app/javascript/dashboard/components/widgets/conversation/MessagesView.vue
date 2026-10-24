@@ -790,7 +790,12 @@ export default {
         :href-link-text="$t('CONVERSATION.INSTAGRAM_RESTRICTION_STATUS_LINK')"
       />
       <Banner
-        v-else-if="!currentChat.can_reply && deliveryDestination !== 'web'"
+        v-else-if="
+          !currentChat.isCachedSnapshot &&
+          !currentChat.hasCachedMessages &&
+          !currentChat.can_reply &&
+          deliveryDestination !== 'web'
+        "
         color-scheme="alert"
         class="mx-2 mt-2 overflow-hidden rounded-lg"
         :banner-message="replyWindowBannerMessage"

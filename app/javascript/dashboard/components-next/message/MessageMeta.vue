@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { messageTimestamp } from 'shared/helpers/timeHelper';
 
 import MessageStatus from './MessageStatus.vue';
+import OutboxStatus from './OutboxStatus.vue';
 import FavoriteIndicator from './FavoriteIndicator.vue';
 import Icon from 'next/icon/Icon.vue';
 import { useInbox } from 'dashboard/composables/useInbox';
@@ -166,7 +167,11 @@ const statusToShow = computed(() => {
       {{ $t('CONVERSATION.VIEW_ONCE') }}
     </span>
     <Icon v-if="isPrivate" icon="i-lucide-lock-keyhole" class="size-3" />
-    <MessageStatus v-if="showStatusIndicator" :status="statusToShow" />
+    <OutboxStatus
+      v-if="contentAttributes.offline_queue || contentAttributes.offlineQueue"
+      :queue="contentAttributes.offline_queue || contentAttributes.offlineQueue"
+    />
+    <MessageStatus v-else-if="showStatusIndicator" :status="statusToShow" />
   </div>
 </template>
 `

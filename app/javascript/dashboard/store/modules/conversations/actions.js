@@ -15,6 +15,8 @@ import { supportsWebAttendance } from 'dashboard/helper/webAttendance';
 import { sortMessagesChronologically } from './helpers';
 import messageTranslateActions from './actions/messageTranslateActions';
 import * as Sentry from '@sentry/vue';
+import { frontendCache } from 'dashboard/helper/CacheHelper/frontendCache';
+import { offlineOutbox } from 'dashboard/helper/CacheHelper/offlineOutbox';
 import {
   handleVoiceCallCreated,
   handleVoiceCallUpdated,
@@ -62,9 +64,13 @@ const actions = {
     commit(types.SET_CURRENT_CHAT_WINDOW, conversation);
   },
   getConversation: async ({ commit }, conversationId) => {
+    frontendCache.restoreConversations();
     try {
       const response = await ConversationApi.show(conversationId);
-      commit(types.UPDATE_CONVERSATION, response.data);
+      commit(types.UPDATE_CONVERSATION, {
+        ...response.data,
+        isCachedSnapshot: false,
+      });
       commit(`contacts/${types.SET_CONTACT_ITEM}`, response.data.meta.sender);
     } catch (error) {
       // Ignore error
@@ -88,12 +94,22 @@ const actions = {
     { commit, state, dispatch },
     { refresh = false } = {}
   ) => {
-    commit(types.SET_LIST_LOADING_STATUS);
+    frontendCache.restoreConversations();
+    commit(
+      state.allConversations.some(chat => chat.isCachedSnapshot)
+        ? types.CLEAR_LIST_LOADING_STATUS
+        : types.SET_LIST_LOADING_STATUS
+    );
     try {
       const params = { ...state.conversationFilters };
       const {
         data: { data },
       } = await ConversationApi.get(params);
+      if (!params.page || Number(params.page) === 1)
+        commit(
+          'reconcileCachedConversationSnapshot',
+          data.payload.map(chat => chat.id)
+        );
       if (refresh)
         commit(
           'reconcileConversationSnapshot',
@@ -113,9 +129,19 @@ const actions = {
   },
 
   fetchFilteredConversations: async ({ commit, dispatch }, params) => {
-    commit(types.SET_LIST_LOADING_STATUS);
+    frontendCache.restoreConversations();
+    commit(
+      frontendCache.state.cachedCount
+        ? types.CLEAR_LIST_LOADING_STATUS
+        : types.SET_LIST_LOADING_STATUS
+    );
     try {
       const { data } = await ConversationApi.filter(params);
+      if (!params.page || Number(params.page) === 1)
+        commit(
+          'reconcileCachedConversationSnapshot',
+          data.payload.map(chat => chat.id)
+        );
       if (params.refresh)
         commit(
           'reconcileConversationSnapshot',
@@ -296,6 +322,13 @@ const actions = {
     try {
       const { messages } = selectedChat;
       if (refresh) {
+        const receiptStatuses = ['progress', 'sent', 'delivered', 'read'];
+        const initialStatuses = new Map(
+          messages.map(message => [message.id, message.status])
+        );
+        const validatingCache = Boolean(
+          selectedChat.hasCachedMessages || selectedChat.isCachedSnapshot
+        );
         let after =
           lastMessageId ||
           messages.filter(message => Number.isInteger(message.id)).at(-1)?.id;
@@ -323,7 +356,28 @@ const actions = {
         const merged = new Map(
           current.messages.map(message => [message.id, message])
         );
-        received.forEach(message => merged.set(message.id, message));
+        received.forEach(message => {
+          const existing = merged.get(message.id);
+          // A receipt received while HTTP was pending is newer than its snapshot.
+          // Unvalidated cache alone must never override the server's state.
+          const keepReceipt =
+            existing &&
+            (!validatingCache ||
+              existing.status !== initialStatuses.get(message.id)) &&
+            receiptStatuses.includes(message.status) &&
+            receiptStatuses.indexOf(existing.status) >
+              receiptStatuses.indexOf(message.status);
+          merged.set(
+            message.id,
+            keepReceipt
+              ? {
+                  ...message,
+                  status: existing.status,
+                  source_id: existing.source_id || message.source_id,
+                }
+              : message
+          );
+        });
         commit(`conversationMetadata/${types.SET_CONVERSATION_METADATA}`, {
           id: conversationId,
           data: latest.meta,
@@ -336,6 +390,7 @@ const actions = {
               Number(a.id) - Number(b.id)
           ),
         });
+        commit('markCachedMessagesValidated', conversationId);
         commit(types.SET_LAST_MESSAGE_ID_IN_SYNC_CONVERSATION, {
           conversationId,
           messageId: null,
@@ -408,6 +463,15 @@ const actions = {
       data.meta?.channel === 'Channel::Whatsapp' && !data.group
         ? dispatch('refreshWhatsappTransport', data.id)
         : Promise.resolve();
+    if (data.isCachedSnapshot || data.hasCachedMessages) {
+      if (data.isCachedSnapshot) await dispatch('getConversation', data.id);
+      await dispatch('syncActiveConversationMessages', {
+        conversationId: data.id,
+        refresh: true,
+      });
+      await transportRefresh;
+      return;
+    }
     if (data.dataFetched === undefined) {
       try {
         await dispatch('fetchPreviousMessages', {
@@ -514,6 +578,14 @@ const actions = {
   },
 
   sendMessageWithData: async ({ commit, dispatch, state }, pendingMessage) => {
+    if (offlineOutbox.supports(pendingMessage)) {
+      try {
+        return await offlineOutbox.send(pendingMessage);
+      } catch (error) {
+        error.outbox = true;
+        throw error;
+      }
+    }
     const { conversation_id: conversationId, id } = pendingMessage;
     try {
       commit(types.ADD_MESSAGE, {

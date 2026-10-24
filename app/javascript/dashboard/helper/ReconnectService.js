@@ -1,6 +1,8 @@
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { differenceInSeconds } from 'date-fns';
+import { frontendCache } from './CacheHelper/frontendCache';
+import { offlineOutbox } from './CacheHelper/offlineOutbox';
 import {
   isAConversationRoute,
   isAInboxViewRoute,
@@ -199,9 +201,12 @@ class ReconnectService {
     clearTimeout(this.retryTimer);
     this.inFlight = (async () => {
       try {
+        if (frontendCache.state.validatingSession)
+          await this.store.dispatch('validityCheck');
         await this.handleRouteSpecificFetch();
         if (this.disposed) return;
         await this.revalidateCaches();
+        offlineOutbox.schedule(0);
         if (this.disposed) return;
         // List refreshes (archive, pin, pull-to-refresh) are not socket events.
         if (this.reconnectPending) {

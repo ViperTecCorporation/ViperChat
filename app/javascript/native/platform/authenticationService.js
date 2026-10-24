@@ -1,5 +1,6 @@
 import { SecureStorage } from './secureStorageService';
 import { startupFetch } from './startupFetch';
+import { frontendCache } from '../../dashboard/helper/CacheHelper/frontendCache';
 
 const AUTH_HEADER_NAMES = [
   'access-token',
@@ -91,9 +92,20 @@ export const saveSession = async (installationId, session) => {
 
 export const clearSession = installationId =>
   Promise.all([
+    frontendCache.clear(),
     SecureStorage.remove({ key: sessionKey(installationId) }),
     SecureStorage.remove({ key: SHARE_CONTEXT_KEY }),
   ]);
+
+export const updateSessionUser = (installationId, user) => {
+  sessionWriteQueue = sessionWriteQueue
+    .catch(() => null)
+    .then(async () => {
+      const session = await loadSession(installationId);
+      if (session) await saveSession(installationId, { ...session, user });
+    });
+  return sessionWriteQueue;
+};
 
 export const login = async ({ installation, email, password }) => {
   const response = await fetch(`${installation.baseUrl}/auth/sign_in`, {

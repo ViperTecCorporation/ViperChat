@@ -2,9 +2,12 @@ import { createApp, h, ref } from 'vue';
 import NativeStartup from './components/NativeStartup.vue';
 import 'dashboard/assets/scss/app.scss';
 import './native.scss';
-import { refreshActiveInstallation } from './platform/installationService';
 import {
-  restoreSession,
+  loadActiveInstallation,
+  refreshActiveInstallation,
+} from './platform/installationService';
+import {
+  loadSession,
   syncShareContext,
 } from './platform/authenticationService';
 import { configureNativeEnvironment } from './platform/nativeEnvironmentService';
@@ -20,7 +23,7 @@ const mountNativeShell = async () => {
 const start = async () => {
   let installation;
   try {
-    installation = await refreshActiveInstallation();
+    installation = await loadActiveInstallation();
   } catch {
     await mountNativeShell();
     return;
@@ -31,8 +34,12 @@ const start = async () => {
     return;
   }
 
-  const session = await restoreSession(installation);
-  if (!session) {
+  const session = await loadSession(installation.installationId);
+  if (
+    !session?.headers ||
+    !session.user?.id ||
+    Number(session.headers.expiry) * 1000 <= Date.now()
+  ) {
     await mountNativeShell();
     return;
   }
@@ -41,6 +48,7 @@ const start = async () => {
   configureNativeEnvironment({ installation, session });
   const { mountDashboard } = await import('../entrypoints/dashboard');
   await mountDashboard();
+  refreshActiveInstallation().catch(() => {});
 };
 
 const failed = ref(false);
